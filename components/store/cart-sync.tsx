@@ -40,9 +40,12 @@ export function CartSync({ userId }: { userId: string | null }) {
                 const formatted = dbItems.map((ci: any) => ({
                     id: ci.product_id,
                     variantId: ci.product_variant_id,
+                    productId: ci.product_id, // Add this
+                    categoryId: ci.products.category_id,
                     name: ci.products.name,
                     variantTitle: ci.product_variants.title,
                     price: Number(ci.unit_price),
+                    mrp: Number(ci.product_variants.price),
                     image: ci.products.thumbnail_url,
                     quantity: ci.quantity,
                     stock: ci.product_variants.stock

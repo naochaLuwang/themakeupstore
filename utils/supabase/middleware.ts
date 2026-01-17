@@ -11,14 +11,10 @@ export async function updateSession(request: NextRequest) {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
-                getAll() {
-                    return request.cookies.getAll()
-                },
+                getAll() { return request.cookies.getAll() },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    })
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+                    supabaseResponse = NextResponse.next({ request })
                     cookiesToSet.forEach(({ name, value, options }) =>
                         supabaseResponse.cookies.set(name, value, options)
                     )
@@ -27,35 +23,48 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    // IMPORTANT: Do not remove getUser(). This refreshes the session if it's expired.
-    // 1. Get user session
     const { data: { user } } = await supabase.auth.getUser()
-
     const path = request.nextUrl.pathname;
 
-    // 2. Define Public Routes (Anyone can see these)
+    // --- ADMIN & WHOLESALE PROTECTION ---
+    if (path.startsWith('/admin') || path.startsWith('/wholesale/portal')) {
+        if (!user) {
+            return NextResponse.redirect(new URL('/login', request.url))
+        }
+
+        // Fetch profile data once for all role-based checks
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_type, is_admin')
+            .eq('id', user.id)
+            .single()
+
+        // 1. Check Admin Access (Check both columns to be safe)
+        if (path.startsWith('/admin')) {
+            if (profile?.user_type !== 'admin' && !profile?.is_admin) {
+                return NextResponse.redirect(new URL('/', request.url))
+            }
+        }
+
+        // 2. Check Wholesale Access
+        if (path.startsWith('/wholesale/portal')) {
+            if (profile?.user_type !== 'wholesale' && !profile?.is_admin) {
+                return NextResponse.redirect(new URL('/wholesale/register', request.url))
+            }
+        }
+    }
+
     const isPublicRoute =
         path === '/' ||
         path.startsWith('/login') ||
         path.startsWith('/signup') ||
         path.startsWith('/auth') ||
-        path.startsWith('/product'); // Assuming product pages are public
+        path.startsWith('/product') ||
+        path.startsWith('/wholesale/register');
 
-    // 3. Define Admin Routes (Only admins can see these)
-    const isAdminRoute = path.startsWith('/admin');
-
-    // REDIRECT LOGIC:
-
-    // If no user and trying to access a non-public route (like /profile or /checkout)
     if (!user && !isPublicRoute) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/login'
-        return NextResponse.redirect(url)
+        return NextResponse.redirect(new URL('/login', request.url))
     }
-
-    // If user is logged in but trying to access /admin, we let the 
-    // AdminLayout handle the specific is_admin check for better UX.
-    // Or you can add a quick check here if you have the user's metadata.
 
     return supabaseResponse
 }

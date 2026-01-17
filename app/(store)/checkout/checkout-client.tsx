@@ -6,13 +6,11 @@ import { CheckoutShipping } from "@/components/store/checkout-shipping"
 import { placeOrder } from "@/app/actions/orders"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-
-import { MapPin, Phone, User, Home, CreditCard, ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, ChevronRight, Ticket, TrendingDown } from "lucide-react"
 import Link from "next/link"
 
 export default function CheckoutClient({ profile }: { profile: any }) {
-    // UPDATED: Destructuring shippingLabel to fix the database saving issue
-    const { items, shippingPrice, selectedShippingId, shippingLabel, clearCart } = useCart()
+    const { items, shippingPrice, selectedShippingId, shippingLabel, clearCart, appliedPromo } = useCart()
     const router = useRouter()
     const [loading, setLoading] = useState(false)
 
@@ -24,167 +22,168 @@ export default function CheckoutClient({ profile }: { profile: any }) {
     })
 
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0)
-    const total = subtotal + shippingPrice
+    const discountAmount = appliedPromo?.discount || 0
+    const total = Math.max(0, subtotal + shippingPrice - discountAmount)
+    const savingsPercentage = appliedPromo ? Math.round((discountAmount / subtotal) * 100) : 0
+
+    // const handlePlaceOrder = async () => {
+    //     if (!address.full_name || !address.phone || !address.pincode || !address.street || !selectedShippingId) {
+    //         return toast.error("Please complete delivery details")
+    //     }
+    //     setLoading(true)
+    //     try {
+    //         const res = await placeOrder(address, items, {
+    //             total, price: shippingPrice, methodName: shippingLabel,
+    //             promoCode: appliedPromo?.code, discountAmount
+    //         })
+    //         if (res.success) {
+    //             clearCart();
+    //             router.push(`/checkout/success?orderId=${res.orderId}`)
+    //         }
+    //     } catch (err) {
+    //         toast.error("Order failed")
+    //     } finally {
+    //         setLoading(false)
+    //     }
+    // }
+
+    // Inside CheckoutClient.tsx
 
     const handlePlaceOrder = async () => {
         if (!address.full_name || !address.phone || !address.pincode || !address.street || !selectedShippingId) {
-            return toast.error("Please ensure all shipping details are complete.")
+            return toast.error("Please complete delivery details")
         }
-
         setLoading(true)
+
         try {
-            const res = await placeOrder({
-                full_name: address.full_name,
-                phone: address.phone,
-                pincode: address.pincode,
-                street: address.street
-            }, items, {
+            // SANITIZE ITEMS HERE
+            const sanitizedItems = items.map(item => ({
+                ...item,
+                // Ensure the 'id' we send is just the productId UUID
+                id: item.productId
+            }))
+
+            const res = await placeOrder(address, sanitizedItems, {
                 total,
                 price: shippingPrice,
-                // SUCCESS: This now sends "Express Delivery" etc. instead of undefined
-                methodName: shippingLabel
+                methodName: shippingLabel,
+                promoCode: appliedPromo?.code,
+                discountAmount
             })
 
             if (res.success) {
-                toast.success("Order placed successfully!")
-                clearCart()
-                router.push(`/checkout/success?orderId=${res.orderId}`);
+                clearCart();
+                router.push(`/checkout/success?orderId=${res.orderId}`)
             } else {
-                toast.error(res.message || "Failed to place order.")
+                // Add this to see the actual error message from the server in a toast
+                toast.error(res.message || "Order failed")
             }
         } catch (err) {
-            toast.error("An unexpected error occurred.")
+            toast.error("An unexpected error occurred")
         } finally {
             setLoading(false)
         }
     }
 
-    if (items.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center py-32 space-y-4">
-                <h2 className="text-2xl font-black uppercase tracking-tighter">Your cart is empty</h2>
-                <Link href="/shop" className="text-sm font-bold underline underline-offset-4">Continue Shopping</Link>
-            </div>
-        )
-    }
-
     return (
-        <div className="container mx-auto px-4 py-12">
-            <div className="flex items-center gap-4 mb-10">
-                <Link href="/cart" className="p-2 hover:bg-white rounded-full transition-colors">
-                    <ArrowLeft className="w-5 h-5" />
-                </Link>
-                <h1 className="text-3xl font-black uppercase tracking-tighter">Checkout</h1>
-            </div>
+        <div className="max-w-6xl mx-auto px-6 py-12 relative pb-32 lg:pb-12">
+            <Link href="/cart" className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 mb-12 transition-all">
+                <ArrowLeft className="w-3 h-3" /> Back to Bag
+            </Link>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                <div className="lg:col-span-2 space-y-10">
-                    {/* Step 1: Shipping Address */}
-                    <section className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
-                            <div className="bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</div>
-                            <h2 className="text-xl font-bold uppercase tracking-tight">Shipping Address</h2>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="relative">
-                                <User className="absolute left-4 top-4 h-4 w-4 text-slate-400" />
-                                <input
-                                    className="w-full pl-12 p-4 border-2 border-slate-100 rounded-[1.25rem] focus:border-slate-900 outline-none transition-all font-medium"
-                                    placeholder="Full Name"
-                                    value={address.full_name}
-                                    onChange={e => setAddress({ ...address, full_name: e.target.value })}
-                                />
-                            </div>
-                            <div className="relative">
-                                <Phone className="absolute left-4 top-4 h-4 w-4 text-slate-400" />
-                                <input
-                                    className="w-full pl-12 p-4 border-2 border-slate-100 rounded-[1.25rem] focus:border-slate-900 outline-none transition-all font-medium"
-                                    placeholder="Phone Number"
-                                    value={address.phone}
-                                    onChange={e => setAddress({ ...address, phone: e.target.value })}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="relative">
-                            <MapPin className="absolute left-4 top-4 h-4 w-4 text-slate-400" />
-                            <input
-                                className="w-full pl-12 p-4 border-2 border-slate-100 rounded-[1.25rem] focus:border-slate-900 outline-none transition-all font-mono font-bold"
-                                placeholder="6-Digit Pincode"
-                                maxLength={6}
-                                value={address.pincode}
-                                onChange={e => setAddress({ ...address, pincode: e.target.value.replace(/\D/g, '') })}
-                            />
-                        </div>
-
-                        <div className="relative">
-                            <Home className="absolute left-4 top-4 h-4 w-4 text-slate-400" />
-                            <textarea
-                                className="w-full pl-12 p-4 border-2 border-slate-100 rounded-[1.25rem] focus:border-slate-900 outline-none transition-all min-h-[120px] font-medium"
-                                placeholder="House No, Building, Street, Area"
-                                value={address.street}
-                                onChange={e => setAddress({ ...address, street: e.target.value })}
-                            />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
+                {/* LEFT: DELIVERY DETAILS */}
+                <div className="lg:col-span-7 space-y-12">
+                    <section>
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] mb-10 border-b pb-4 text-slate-900">01. Destination</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                            <input placeholder="Full Name" className="w-full py-2 bg-transparent border-b outline-none text-sm font-medium focus:border-indigo-500 transition-colors" value={address.full_name} onChange={e => setAddress({ ...address, full_name: e.target.value })} />
+                            <input placeholder="Phone" className="w-full py-2 bg-transparent border-b outline-none text-sm font-medium focus:border-indigo-500 transition-colors" value={address.phone} onChange={e => setAddress({ ...address, phone: e.target.value })} />
+                            <input placeholder="Street Address" className="md:col-span-2 w-full py-2 bg-transparent border-b outline-none text-sm font-medium focus:border-indigo-500 transition-colors" value={address.street} onChange={e => setAddress({ ...address, street: e.target.value })} />
+                            <input placeholder="Pincode" maxLength={6} className="w-full py-2 bg-transparent border-b outline-none text-sm font-medium focus:border-indigo-500 transition-colors" value={address.pincode} onChange={e => setAddress({ ...address, pincode: e.target.value.replace(/\D/g, '') })} />
                         </div>
                     </section>
 
-                    {/* Step 2: Shipping Method */}
-                    <section className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
-                            <div className="bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</div>
-                            <h2 className="text-xl font-bold uppercase tracking-tight">Shipping Method</h2>
-                        </div>
+                    <section className="pt-10 border-t">
                         <CheckoutShipping pincode={address.pincode} />
                     </section>
                 </div>
 
-                {/* Right Column: Sticky Summary */}
-                <div className="lg:col-span-1">
-                    <div className="bg-white p-8 rounded-[2.5rem] border-2 border-slate-100 shadow-xl shadow-slate-200/40 sticky top-24">
-                        <h3 className="font-black text-xl mb-8 flex items-center gap-2 uppercase tracking-tighter">
-                            <CreditCard className="w-5 h-5" /> Order Summary
-                        </h3>
+                {/* RIGHT: FINAL SUMMARY */}
+                <div className="lg:col-span-5">
+                    <div className="p-8 bg-white border-2 border-slate-900 rounded-[2.5rem] shadow-[8px_8px_0px_0px_rgba(15,23,42,0.05)] relative overflow-hidden">
 
-                        <div className="space-y-4 mb-8 pb-8 border-b border-dashed border-slate-200">
-                            <div className="flex justify-between text-slate-500 font-bold text-xs uppercase tracking-widest">
-                                <span>Items Subtotal</span>
+                        {/* SAVINGS BADGE */}
+                        {appliedPromo && (
+                            <div className="absolute top-0 right-0 bg-emerald-500 text-white px-5 py-1.5 rounded-bl-2xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-in slide-in-from-top duration-500">
+                                <TrendingDown className="w-3.5 h-3.5" /> {savingsPercentage}% Saved
+                            </div>
+                        )}
+
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-8">Order Summary</h3>
+
+                        <div className="space-y-4 mb-10 text-[11px] font-bold uppercase tracking-tight">
+                            <div className="flex justify-between text-slate-400">
+                                <span>Subtotal</span>
                                 <span className="text-slate-900">₹{subtotal.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between text-slate-500 font-bold text-xs uppercase tracking-widest">
-                                <span>Shipping Fee</span>
-                                <span className={shippingPrice === 0 ? "text-emerald-600" : "text-slate-900"}>
-                                    {shippingPrice === 0 ? "FREE" : `₹${shippingPrice}`}
-                                </span>
+                            <div className="flex justify-between text-slate-400">
+                                <span>Shipping</span>
+                                <span className="text-slate-900">{shippingPrice === 0 ? "FREE" : `₹${shippingPrice}`}</span>
                             </div>
+
+                            {appliedPromo && (
+                                <div className="flex justify-between text-emerald-600 font-black bg-emerald-50/50 p-3 -mx-3 rounded-xl animate-in fade-in slide-in-from-right duration-500">
+                                    <span className="flex items-center gap-2"><Ticket className="w-3 h-3" /> {appliedPromo.code}</span>
+                                    <span>- ₹{discountAmount.toLocaleString()}</span>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex justify-between items-center mb-10">
-                            <span className="font-black text-slate-400 uppercase text-[10px] tracking-[0.3em]">Payable Amount</span>
-                            <span className="text-4xl font-black italic tracking-tighter">₹{total.toLocaleString()}</span>
+                        <div className="border-t pt-8 mb-10">
+                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2 leading-none">Net Payable</p>
+                            <div className="flex items-baseline gap-3">
+                                <p className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">
+                                    ₹{total.toLocaleString()}
+                                </p>
+                                {appliedPromo && (
+                                    <span className="text-sm text-slate-300 line-through font-bold decoration-slate-300">
+                                        ₹{(subtotal + shippingPrice).toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         <button
                             onClick={handlePlaceOrder}
                             disabled={loading || !selectedShippingId}
-                            className="w-full bg-slate-900 text-white py-6 rounded-[1.5rem] font-black text-lg uppercase tracking-[0.2em] hover:bg-black transition-all active:scale-[0.98] disabled:opacity-20 disabled:grayscale shadow-xl shadow-slate-200"
+                            className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-black active:scale-95 disabled:opacity-20 flex items-center justify-center gap-3 transition-all"
                         >
-                            {loading ? (
-                                <div className="flex items-center justify-center gap-2">
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    <span>Processing</span>
-                                </div>
-                            ) : (
-                                "Confirm Order"
-                            )}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Complete Purchase"}
                         </button>
 
-                        <div className="mt-6 flex items-center justify-center gap-2 text-slate-400">
-                            <div className="h-1 w-1 rounded-full bg-slate-300" />
-                            <p className="text-[9px] font-bold uppercase tracking-widest">Cash on Delivery only</p>
-                            <div className="h-1 w-1 rounded-full bg-slate-300" />
-                        </div>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest text-center mt-6">
+                            Secure Encrypted Checkout
+                        </p>
                     </div>
+                </div>
+            </div>
+
+            {/* MOBILE STICKY BAR */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-white/80 backdrop-blur-xl border-t border-slate-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+                <div className="max-w-md mx-auto flex items-center justify-between gap-4">
+                    <div className="flex flex-col">
+                        <p className="text-[10px] font-black text-slate-400 uppercase leading-none">Total</p>
+                        <p className="text-xl font-black italic text-slate-900 leading-none mt-1">₹{total.toLocaleString()}</p>
+                    </div>
+                    <button
+                        onClick={handlePlaceOrder}
+                        disabled={loading || !selectedShippingId}
+                        className="flex-grow bg-slate-900 text-white py-4 px-8 rounded-2xl font-black text-[11px] uppercase tracking-widest active:scale-95 disabled:opacity-30 flex items-center justify-center gap-3"
+                    >
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay Now"}
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
                 </div>
             </div>
         </div>

@@ -3,10 +3,8 @@
 import { useState } from "react"
 import { ProductImages } from "./product-images"
 import { VariantSelector } from "./variant-selector"
-import { Badge } from "@/components/ui/badge"
 
 export function ProductViewSection({ product }: { product: any }) {
-    // Logic for variants
     const defaultVariant = product.variants.find((v: any) => v.is_default) || product.variants[0];
 
     const getVariantImages = (variant: any) => {
@@ -22,48 +20,40 @@ export function ProductViewSection({ product }: { product: any }) {
 
     const handleVariantChange = (variant: any) => {
         setSelectedVariant(variant);
-        const filtered = getVariantImages(variant);
-        setDisplayImages(filtered);
-        setMainImage(variant.image_url || filtered[0]?.url);
+
+        // Update gallery images (if variant has unique set)
+        const newGallery = getVariantImages(variant);
+        setDisplayImages(newGallery);
+
+        // CRITICAL: Update the specific hero image for this variant
+        // Priority: variant_image_urls[0] > image_url > fallback
+        const newHero = variant.image_url || variant.variant_image_urls?.[0] || product.thumbnail_url;
+        setMainImage(newHero);
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start max-w-7xl mx-auto px-4 py-12">
             {/* Left: Image Gallery */}
-            <ProductImages
-                images={displayImages}
-                thumbnail={product.thumbnail_url}
-                activeImageFromVariant={mainImage}
-            />
+            <div className="w-full">
+                <ProductImages
+                    images={displayImages}
+                    thumbnail={product.thumbnail_url}
+                    activeImageFromVariant={mainImage}
+                />
+            </div>
 
-            {/* Right: Product Info & Selectors */}
-            <div className="flex flex-col">
-                {/* 1. Header Info */}
-                <div className="mb-6">
-                    <p className="text-sm text-muted-foreground uppercase tracking-widest font-semibold">
+            {/* Right: Product Info */}
+            <div className="flex flex-col pt-2 lg:sticky lg:top-10">
+                <header className="mb-10">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-2">
                         {product.brand}
                     </p>
-                    <h1 className="text-4xl font-bold mt-2 text-slate-900">{product.name}</h1>
-                </div>
+                    <h1 className="text-3xl md:text-5xl font-medium tracking-tight text-slate-900 leading-tight">
+                        {product.name}
+                    </h1>
+                </header>
 
-                {/* 2. Pricing Section (Added Tax Label) */}
-                <div className="mb-8">
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-slate-900">
-                            ₹{selectedVariant?.price || product.base_price}
-                        </span>
-                        {/* Optional: Add original price if there's a discount */}
-                    </div>
-                    <p className="text-[11px] font-bold uppercase tracking-tighter text-emerald-600 mt-1">
-                        Inclusive of all taxes
-                    </p>
-                </div>
-
-                <hr className="mb-8" />
-
-                {/* 3. Variant Selector & Add to Cart */}
-                {/* Note: Ensure your VariantSelector contains the Add to Cart button */}
-                <div className="mb-10">
+                <div className="mb-6 border-t border-slate-100 pt-10">
                     <VariantSelector
                         product={product}
                         variants={product.variants}
@@ -71,24 +61,14 @@ export function ProductViewSection({ product }: { product: any }) {
                     />
                 </div>
 
-                {/* 4. Product Description (Moved below Add to Cart) */}
-                <div className="space-y-4 pt-6 border-t border-slate-100">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">
-                        Product Description
-                    </h3>
-                    <p className="text-slate-600 leading-relaxed text-sm md:text-base">
-                        {product.description}
+                <div className="space-y-4 pt-8 border-t border-slate-100">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">
+                        Description
                     </p>
-                </div>
-
-                {/* <div className="pt-8">
-                    <div className="bg-slate-50 p-4 rounded-2xl flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">
-                            Free Delivery on orders over ₹499
-                        </span>
+                    <div className="text-slate-500 leading-relaxed text-sm max-w-prose font-light">
+                        {product.description}
                     </div>
-                </div> */}
+                </div>
             </div>
         </div>
     )

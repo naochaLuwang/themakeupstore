@@ -9,6 +9,9 @@ import { revalidatePath } from "next/cache"
 /**
  * PLACE ORDER
  */
+/**
+ * PLACE ORDER - UPDATED TO INCLUDE MRP
+ */
 export async function placeOrder(formData: any, cartItems: any[], shippingDetails: any) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -25,7 +28,7 @@ export async function placeOrder(formData: any, cartItems: any[], shippingDetail
 
             if (stockErr || !variant) throw new Error(`Product variant not found`)
             if (variant.stock < item.quantity) {
-                throw new Error(`Insufficient stock for ${item.name} (${variant.title}). Only ${variant.stock} left.`)
+                throw new Error(`Insufficient stock for ${item.name}. Only ${variant.stock} left.`)
             }
         }
 
@@ -47,15 +50,16 @@ export async function placeOrder(formData: any, cartItems: any[], shippingDetail
 
         if (orderError) throw orderError
 
-        // 3. Insert Order Items
+        // 3. Insert Order Items (Updated to include MRP)
         const itemsToInsert = cartItems.map(item => ({
             order_id: order.id,
-            product_id: item.id,
+            product_id: item.productId,
             product_variant_id: item.variantId,
             product_name: item.name,
             variant_title: item.variantTitle,
             quantity: item.quantity,
-            unit_price: item.price
+            unit_price: item.price, // This is the discounted price
+            mrp: item.mrp || item.price, // Capture original price, fallback to current price if no discount
         }))
 
         const { error: itemsError } = await supabase
@@ -161,5 +165,62 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
     } catch (error: any) {
         console.error("CANCEL_ORDER_ERROR:", error)
         return { success: false, message: error.message || "Failed to cancel order" }
+    }
+}
+
+export async function createWholesaleOrder(data: {
+    userId: string,
+    total: number,
+    items: any[]
+}) {
+    const supabase = await createClient()
+
+    try {
+        // 1. Create the Master Order
+        const { data: order, error: orderErr } = await supabase
+            .from('orders')
+            .insert({
+                user_id: data.userId,
+                total: data.total,
+                status: 'pending',
+                payment_status: 'unpaid',
+                payment_method: 'B2B_INVOICE',
+                currency: 'INR'
+            })
+            .select()
+            .single()
+
+        if (orderErr) throw new Error(`Order Header Error: ${orderErr.message}`)
+
+        // 2. Prepare Line Items
+        // We use the prices calculated by the Category Logic on the frontend
+        const itemsToInsert = data.items.map(item => ({
+            order_id: order.id,
+            product_id: item.product_id, // Passed from the variant join
+            product_variant_id: item.variant_id,
+            product_name: item.name,
+            quantity: item.qty,
+            unit_price: item.price,
+            currency: 'INR'
+        }))
+
+        // 3. Batch Insert Order Items
+        const { error: itemErr } = await supabase
+            .from('order_items')
+            .insert(itemsToInsert)
+
+        if (itemErr) {
+            await supabase.from('orders').delete().eq('id', order.id)
+            throw new Error(`Order Items Error: ${itemErr.message}`)
+        }
+
+        revalidatePath('/admin/orders')
+        revalidatePath('/b2b/orders')
+
+        return { success: true, orderId: order.id }
+
+    } catch (error: any) {
+        console.error("B2B Order Failure:", error.message)
+        return { success: false, error: error.message }
     }
 }

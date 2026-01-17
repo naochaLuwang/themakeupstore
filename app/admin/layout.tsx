@@ -17,11 +17,12 @@ export default async function AdminLayout({
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, is_admin")
+        .select("full_name, is_admin, user_type")
         .eq("id", user.id)
         .single()
 
-    if (!profile?.is_admin) {
+    const isAdmin = profile?.is_admin || profile?.user_type === 'admin';
+    if (!isAdmin) {
         redirect("/")
     }
 
