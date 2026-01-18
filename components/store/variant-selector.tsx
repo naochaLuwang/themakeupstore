@@ -54,7 +54,7 @@ export function VariantSelector({ product, variants, onVariantChange }: any) {
         };
 
         addItem(item);
-        toast.success(`Added ${quantity} ${product.name} to bag`);
+        // toast.success(`Added ${quantity} ${product.name} to bag`);
     };
 
     return (
