@@ -62,11 +62,11 @@ export default async function Navbar() {
 
                         <div className="flex items-center gap-2 md:gap-4 shrink-0">
                             {!user ? (
-                                <Link href="/login" className="hidden xs:block text-[10px] font-bold uppercase tracking-[0.2em]">Login</Link>
+                                <Link href="/login" className="hidden md:block text-[10px] font-bold uppercase tracking-[0.2em]">Login</Link>
                             ) : (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <button className="focus:outline-none"><User className="w-5 h-5" /></button>
+                                        <button className="focus:outline-none"><User className="w-5 h-5 hidden md:block" /></button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-52 mt-4 rounded-none">
                                         <DropdownMenuItem asChild className="cursor-pointer text-[10px] uppercase py-3">

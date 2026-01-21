@@ -1,90 +1,119 @@
 "use client"
 
-import { useEffect, useRef } from "react" // Added useRef
+import { useEffect, useRef, useState } from "react"
 import { useCart } from "./use-cart"
 import { createClient } from "@/utils/supabase/client"
 
 export function CartSync({ userId }: { userId: string | null }) {
-    const { items, setItems, clearCart } = useCart() // Added clearCart
+    const { items, setItems, clearCart } = useCart()
     const supabase = createClient()
 
-    // Prevent the "Push" logic from running on the very first load
-    // so we don't overwrite the DB with an empty local cart
-    const initialLoadDone = useRef(false)
+    // Track if we have successfully merged the DB state into our Local state
+    const [isSynced, setIsSynced] = useState(false)
+    const initialPullDone = useRef(false)
 
-    // 1. LOGOUT WATCHER: Clear local store if userId vanishes
+    // 1. CLEAR ON LOGOUT
     useEffect(() => {
         if (!userId) {
-            clearCart();
-            initialLoadDone.current = false;
+            clearCart()
+            initialPullDone.current = false
+            setIsSynced(false)
         }
-    }, [userId, clearCart]);
+    }, [userId, clearCart])
 
-    // 2. PULL FROM DB ON LOGIN
+    // 2. PULL & MERGE ON LOGIN
     useEffect(() => {
-        if (!userId) return;
+        if (!userId || initialPullDone.current) return
 
-        async function pullCart() {
-            const { data: cart } = await supabase.from('carts').select('id').eq('user_id', userId).single();
+        async function pullAndMergeCart() {
+            // Get user's cart
+            const { data: cart } = await supabase
+                .from('carts')
+                .select('id')
+                .eq('user_id', userId)
+                .single()
+
             if (!cart) {
-                initialLoadDone.current = true; // No cart exists yet, but load is "done"
-                return;
+                initialPullDone.current = true
+                setIsSynced(true)
+                return
             }
 
-            const { data: dbItems } = await supabase
+            // Fetch items with joined product and variant data
+            const { data: dbItems, error } = await supabase
                 .from('cart_items')
-                .select(`quantity, unit_price, product_id, product_variant_id, products(name, thumbnail_url), product_variants(title, stock)`)
-                .eq('cart_id', cart.id);
+                .select(`
+                    quantity, 
+                    unit_price, 
+                    product_id, 
+                    product_variant_id, 
+                    products!inner(name, thumbnail_url, category_id, base_price), 
+                    product_variants!inner(title, stock, price)
+                `)
+                .eq('cart_id', cart.id)
 
-            if (dbItems) {
+            if (dbItems && dbItems.length > 0) {
                 const formatted = dbItems.map((ci: any) => ({
-                    id: ci.product_id,
+                    id: ci.product_variant_id, // Variant ID is the unique identifier in cart
+                    productId: ci.product_id,
                     variantId: ci.product_variant_id,
-                    productId: ci.product_id, // Add this
                     categoryId: ci.products.category_id,
                     name: ci.products.name,
                     variantTitle: ci.product_variants.title,
                     price: Number(ci.unit_price),
-                    mrp: Number(ci.product_variants.price),
+                    mrp: Number(ci.product_variants.price || ci.products.base_price),
                     image: ci.products.thumbnail_url,
                     quantity: ci.quantity,
                     stock: ci.product_variants.stock
-                }));
-                setItems(formatted);
-                // Mark initial load as done so we can start pushing changes to DB
-                initialLoadDone.current = true;
-            }
-        }
-        pullCart();
-    }, [userId, setItems, supabase]);
+                }))
 
-    // 3. PUSH TO DB ON CHANGE
+                setItems(formatted)
+            }
+
+            initialPullDone.current = true
+            setIsSynced(true)
+        }
+
+        pullAndMergeCart()
+    }, [userId, supabase, setItems])
+
+    // 3. PUSH CHANGES TO DB (Debounced)
     useEffect(() => {
-        // IMPORTANT: Only push if we have a user AND we've finished pulling the initial data
-        if (!userId || !initialLoadDone.current) return;
+        // Only push if: 1. User is logged in, 2. We've finished the initial pull
+        if (!userId || !isSynced) return
 
         const syncToDb = async () => {
-            const { data: cartId } = await supabase.rpc('get_or_create_cart', { p_user_id: userId });
-            if (!cartId) return;
+            try {
+                // Use your RPC to ensure cart exists
+                const { data: cartId, error: rpcError } = await supabase.rpc('get_or_create_cart', {
+                    p_user_id: userId
+                })
 
-            await supabase.from('cart_items').delete().eq('cart_id', cartId);
+                if (!cartId || rpcError) return
 
-            if (items.length > 0) {
-                await supabase.from('cart_items').insert(
-                    items.map(i => ({
+                // Clean and replace
+                await supabase.from('cart_items').delete().eq('cart_id', cartId)
+
+                if (items.length > 0) {
+                    const insertData = items.map(i => ({
                         cart_id: cartId,
-                        product_id: i.id,
+                        product_id: i.productId,
                         product_variant_id: i.variantId,
                         quantity: i.quantity,
-                        unit_price: i.price
+                        unit_price: i.price,
+                        currency: 'INR'
                     }))
-                );
+
+                    await supabase.from('cart_items').insert(insertData)
+                }
+            } catch (err) {
+                console.error("Cart Sync Error:", err)
             }
-        };
+        }
 
-        const debounce = setTimeout(syncToDb, 1500);
-        return () => clearTimeout(debounce);
-    }, [items, userId]);
+        const debounce = setTimeout(syncToDb, 2000) // 2 second debounce to save API calls
+        return () => clearTimeout(debounce)
+    }, [items, userId, isSynced, supabase])
 
-    return null;
+    return null
 }
