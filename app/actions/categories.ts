@@ -11,11 +11,34 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
+/**
+ * Helper to verify admin status on the server
+ */
+async function verifyAdmin(supabase: any) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+
+    return !!profile?.is_admin
+}
+
 export async function createCategory(formData: FormData) {
     const supabase = await createClient()
 
-    // 1. Extract and Validate Text Data
-    const payload = JSON.parse(formData.get("payload") as string)
+    // 1. RLS FIX: Verify Admin Identity
+    const isAdmin = await verifyAdmin(supabase)
+    if (!isAdmin) return { error: "Unauthorized: Admin access required" }
+
+    // 2. Extract and Validate
+    const payloadRaw = formData.get("payload")
+    if (!payloadRaw) return { error: "No data provided" }
+
+    const payload = JSON.parse(payloadRaw as string)
     const file = formData.get("file") as File | null
 
     const validatedFields = categorySchema.safeParse(payload)
@@ -24,9 +47,9 @@ export async function createCategory(formData: FormData) {
     }
 
     try {
-        let imageUrl = ""
+        let imageUrl = validatedFields.data.image_url || ""
 
-        // 2. Upload Image to Cloudinary if file exists
+        // 3. Cloudinary Upload
         if (file && file.size > 0) {
             const buffer = Buffer.from(await file.arrayBuffer())
             const upload: any = await new Promise((resolve, reject) => {
@@ -38,19 +61,20 @@ export async function createCategory(formData: FormData) {
             imageUrl = upload.secure_url
         }
 
-        // 3. Insert into Supabase
+        // 4. Insert into Supabase
         const { error } = await supabase
             .from("categories")
             .insert([{
                 name: validatedFields.data.name,
                 slug: validatedFields.data.slug,
                 parent_id: validatedFields.data.parent_id || null,
-                image_url: imageUrl || validatedFields.data.image_url
+                image_url: imageUrl
             }])
 
         if (error) throw error
 
         revalidatePath("/admin/categories")
+        revalidatePath("/exclusive")
         return { success: true }
 
     } catch (error: any) {
@@ -62,16 +86,22 @@ export async function createCategory(formData: FormData) {
 export async function updateCategory(categoryId: string, formData: FormData) {
     const supabase = await createClient()
 
+    // 1. RLS FIX
+    const isAdmin = await verifyAdmin(supabase)
+    if (!isAdmin) return { error: "Unauthorized" }
+
     try {
-        const payload = JSON.parse(formData.get("payload") as string)
+        const payloadRaw = formData.get("payload")
+        if (!payloadRaw) return { error: "No data provided" }
+
+        const payload = JSON.parse(payloadRaw as string)
         const file = formData.get("file") as File | null
 
         const validatedFields = categorySchema.safeParse(payload)
         if (!validatedFields.success) return { error: "Validation failed" }
 
-        let imageUrl = payload.image_url // Default to current URL
+        let imageUrl = payload.image_url
 
-        // Only upload to Cloudinary if a NEW file was selected
         if (file && file.size > 0) {
             const buffer = Buffer.from(await file.arrayBuffer())
             const upload: any = await new Promise((resolve, reject) => {
@@ -96,15 +126,19 @@ export async function updateCategory(categoryId: string, formData: FormData) {
         if (error) throw error
 
         revalidatePath("/admin/categories")
+        revalidatePath(`/exclusive/${validatedFields.data.slug}`)
         return { success: true }
     } catch (error: any) {
         return { error: error.message }
     }
 }
 
-
 export async function deleteCategory(id: string) {
     const supabase = await createClient()
+
+    // 1. RLS FIX
+    const isAdmin = await verifyAdmin(supabase)
+    if (!isAdmin) return { error: "Unauthorized" }
 
     const { error } = await supabase
         .from("categories")
@@ -116,5 +150,6 @@ export async function deleteCategory(id: string) {
     }
 
     revalidatePath("/admin/categories")
+    revalidatePath("/exclusive")
     return { success: true }
 }

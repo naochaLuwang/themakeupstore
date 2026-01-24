@@ -139,7 +139,7 @@ export function ProductCard({ product }: { product: any }) {
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         {product.brand || "Daciana"}
                     </span>
-                    <h3 className="text-sm font-bold text-slate-900 tracking-tight line-clamp-1">
+                    <h3 className="text-sm font-bold text-slate-900 tracking-tight ">
                         {product.name}
                     </h3>
                 </div>

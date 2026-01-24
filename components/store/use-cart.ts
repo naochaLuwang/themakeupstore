@@ -18,8 +18,8 @@ export interface CartItem {
 
 interface CartStore {
     items: CartItem[];
-    appliedPromo: { code: string; discount: number } | null; // Added
-    setAppliedPromo: (promo: { code: string; discount: number } | null) => void; // Added
+    appliedPromo: { code: string; discount: number } | null;
+    setAppliedPromo: (promo: { code: string; discount: number } | null) => void;
     addItem: (item: CartItem) => void;
     removeItem: (variantId: string) => void;
     updateQuantity: (variantId: string, quantity: number) => void;
@@ -40,7 +40,7 @@ export const useCart = create<CartStore>()(
     persist(
         (set, get) => ({
             items: [],
-            appliedPromo: null, // Initialized
+            appliedPromo: null,
             shippingMethods: [],
             selectedShippingId: null,
             shippingPrice: 0,
@@ -48,21 +48,37 @@ export const useCart = create<CartStore>()(
 
             setAppliedPromo: (promo) => set({ appliedPromo: promo }),
 
-            setItems: (items) => set({ items }),
+            // UX FIX: Sanitize items to ensure no duplicate variantIds ever enter state
+            setItems: (newItems) => {
+                const merged = newItems.reduce((acc: CartItem[], current) => {
+                    const existing = acc.find(item => item.variantId === current.variantId);
+                    if (existing) {
+                        existing.quantity += current.quantity;
+                        return acc;
+                    }
+                    return [...acc, current];
+                }, []);
+                set({ items: merged });
+            },
 
             addItem: (newItem) => {
                 const currentItems = get().items;
-                const existingItem = currentItems.find(item => item.variantId === newItem.variantId);
-                if (existingItem) {
-                    set({
-                        items: currentItems.map(item =>
-                            item.variantId === newItem.variantId
-                                ? { ...item, quantity: Math.min(item.quantity + newItem.quantity, item.stock) }
-                                : item
-                        ),
-                    });
+                const existingItemIndex = currentItems.findIndex(item => item.variantId === newItem.variantId);
+
+                if (existingItemIndex > -1) {
+                    // Item exists: Clone array and update specific index to avoid reference issues
+                    const updatedItems = [...currentItems];
+                    const existing = updatedItems[existingItemIndex];
+
+                    updatedItems[existingItemIndex] = {
+                        ...existing,
+                        quantity: Math.min(existing.quantity + (newItem.quantity || 1), existing.stock)
+                    };
+
+                    set({ items: updatedItems });
                 } else {
-                    set({ items: [...currentItems, newItem] });
+                    // Brand new item: Append to list
+                    set({ items: [...currentItems, { ...newItem, quantity: newItem.quantity || 1 }] });
                 }
             },
 
@@ -92,13 +108,17 @@ export const useCart = create<CartStore>()(
             },
 
             totalItems: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
+
             setShippingMethods: (methods) => set({ shippingMethods: methods }),
+
             setSelectedShipping: (id, price, label) => set({
                 selectedShippingId: id,
                 shippingPrice: price,
                 shippingLabel: label || ''
             }),
+
             clearShipping: () => set({ selectedShippingId: null, shippingPrice: 0, shippingLabel: '' }),
+
             getTotalPrice: () => {
                 const subtotal = get().items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
                 const discount = get().appliedPromo?.discount || 0;
@@ -107,7 +127,9 @@ export const useCart = create<CartStore>()(
         }),
         {
             name: 'shopping-cart',
-            storage: createJSONStorage(() => localStorage)
+            storage: createJSONStorage(() => localStorage),
+            // Ensure we migrate or handle old data versions gracefully
+            version: 1,
         }
     )
 );

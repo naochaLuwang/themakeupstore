@@ -7,7 +7,7 @@ import { Loader2, ArrowLeft, AlertCircle, SlidersHorizontal, ChevronRight } from
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
 
-export default function ExclusiveCategoryPage() {
+export default function EssentialCategoryPage() {
     const { slug } = useParams()
     const [category, setCategory] = React.useState<any>(null)
     const [siblingCategories, setSiblingCategories] = React.useState<any[]>([])

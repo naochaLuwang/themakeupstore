@@ -30,13 +30,18 @@ export default async function Navbar() {
 
                     {/* Navigation Links */}
                     <nav className="hidden lg:flex flex-1 items-center gap-10 min-w-0">
-                        {['Brands', 'New Arrivals', 'Shop', 'Concierge'].map((item) => (
+                        {[
+                            { name: 'Brands', href: '/brands' },
+                            { name: 'New Arrivals', href: '/new-arrivals' },
+                            { name: 'Shop', href: '/shop' },
+                            { name: 'Concierge', href: '/concierge' }
+                        ].map((item) => (
                             <Link
-                                key={item}
-                                href={item === 'Shop' ? '/shop' : '#'}
+                                key={item.name}
+                                href={item.href}
                                 className="text-[10px] font-bold uppercase tracking-[0.3em] text-charcoal whitespace-nowrap dark:text-white hover:text-primary transition-colors relative group"
                             >
-                                {item}
+                                {item.name}
                                 <span className="absolute -bottom-1 left-1/2 w-0 h-[1px] bg-primary transition-all duration-300 group-hover:w-full group-hover:left-0" />
                             </Link>
                         ))}

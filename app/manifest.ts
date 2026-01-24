@@ -3,9 +3,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'Daciana Stationery & Cosmetics',
-        short_name: 'Daciana',
-        description: 'Stationery and Cosmetics Store',
+        name: 'THE MAKEUP STORE WANGKHEI',
+        short_name: 'THE MAKEUP STORE',
+        description: 'One Stop Destination For All Your Makeup Needs.',
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
@@ -19,7 +19,7 @@ export default function manifest(): MetadataRoute.Manifest {
                 purpose: 'maskable',
             },
             {
-                src: '/maskable-icon.png', // Create a new file for this
+                src: '/maskable-icon.png', 
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any',

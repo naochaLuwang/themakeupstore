@@ -8,8 +8,8 @@ import localFont from "next/font/local";
 import NextTopLoader from "nextjs-toploader";
 
 const myBrandFont = localFont({
-  src: "../public/fonts/Anders.ttf", // Adjust 'myfont.ttf' to your actual filename
-  variable: "--font-daciana",       // This creates a CSS variable
+  src: "../public/fonts/Anders.ttf",
+  variable: "--font-daciana",
 });
 
 
@@ -36,10 +36,10 @@ export const viewport = {
 // 2. Full Metadata Configuration
 export const metadata: Metadata = {
   title: {
-    default: "DACIANA |  Stationery & Cosmetics",
-    template: "%s | DACIANA",
+    default: "THE MAKEUP STORE WANGKHEI",
+    template: "%s | THE MAKEUP STORE WANGKHEI",
   },
-  description: "Discover curated premium stationery and luxury cosmetics designed for elegance.",
+  description: "One Stop Destination For All Your Makeup Needs.",
   manifest: "/manifest.webmanifest",
   other: {
     "mobile-web-app-capable": "yes",
@@ -47,21 +47,21 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "DACIANA",
+    title: "THE MAKEUP STORE WANGKHEI",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: "website",
-    siteName: "DACIANA",
-    title: "DACIANA | Stationery & Cosmetics",
-    description: "Curated premium stationery and cosmetics.",
+    siteName: "THE MAKEUP STORE WANGKHEI",
+    title: "THE MAKEUP STORE WANGKHEI",
+    description: "One Stop Destination For All Your Makeup Needs.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "DACIANA",
-    description: "Premium Stationery & Cosmetics",
+    title: "THE MAKEUP STORE WANGKHEI",
+    description: "One Stop Destination For All Your Makeup Needs.",
   },
   icons: {
     apple: [

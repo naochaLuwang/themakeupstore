@@ -7,12 +7,11 @@ import { Loader2, Minus } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
 
-export default function ExclusivePage() {
+export default function EssentialPage() {
     const [subcategories, setSubcategories] = React.useState<any[]>([])
     const [allProducts, setAllProducts] = React.useState<any[]>([])
     const [loading, setLoading] = React.useState(true)
     const supabase = createClient()
-
     React.useEffect(() => {
         async function getData() {
             try {
@@ -23,7 +22,7 @@ export default function ExclusivePage() {
                 const { data: parent, error: pError } = await supabase
                     .from('categories')
                     .select('id, name, slug')
-                    .eq('slug', 'exclusive')
+                    .eq('slug', 'essentials')
                     .single()
 
                 if (pError) {
@@ -87,6 +86,7 @@ export default function ExclusivePage() {
         getData()
     }, [supabase])
 
+
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-white">
             <Loader2 className="w-5 h-5 animate-spin text-slate-200" />
@@ -106,7 +106,7 @@ export default function ExclusivePage() {
                         </span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900">
-                        The <span className="font-serif italic">Exclusive</span> Edit
+                        The <span className="font-serif italic">Everyday Essentials Collection</span>
                     </h1>
                 </header>
 

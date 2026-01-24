@@ -26,7 +26,7 @@ export default function GatewayPage() {
         <Panel
           href="/wholesale"
           label="Professional Kits"
-          title="Artist Wholesale"
+          title="The Makeup Store Wholesale"
           bgImage="/hero-wholesale.png" // Replace with your image
         />
       </main>
@@ -56,7 +56,7 @@ function Panel({ href, label, title, bgImage }: { href: string; label: string; t
         <h2 className="text-white text-4xl md:text-5xl font-serif italic mb-8">
           {title}
         </h2>
-        <div className="h-14 px-10 border border-white text-white flex items-center justify-center text-xs font-bold uppercase tracking-[0.2em] bg-transparent group-hover:bg-white group-hover:text-charcoal transition-all duration-300">
+        <div className="h-14 px-10 border border-white text-white flex items-center justify-center text-xs font-bold uppercase tracking-[0.2em] bg-transparent group-hover:bg-white group-hover:text-black transition-all duration-300">
           Shop Now
         </div>
       </div>
