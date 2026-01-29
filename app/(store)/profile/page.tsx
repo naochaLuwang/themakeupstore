@@ -98,10 +98,10 @@ export default async function ProfilePage() {
 
     const menuItems = [
         { label: "Orders", href: "/profile/orders", icon: ShoppingBag, detail: "History & Tracking" },
-        { label: "Wishlist", href: "/wishlist", icon: Heart, detail: "Your saved items" },
+        { label: "Wishlist", href: "/profile/wishlist", icon: Heart, detail: "Your saved items" },
         { label: "Addresses", href: "/profile/addresses", icon: MapPin, detail: "Shipping destinations" },
-        { label: "Notifications", href: "/profile/notifications", icon: Bell, detail: "Preferences" },
-        { label: "Account Settings", href: "/profile/settings", icon: Settings, detail: "Security & Privacy" },
+        // { label: "Notifications", href: "/profile/notifications", icon: Bell, detail: "Preferences" },
+        // { label: "Account Settings", href: "/profile/settings", icon: Settings, detail: "Security & Privacy" },
     ]
 
     return (
@@ -179,7 +179,7 @@ export default async function ProfilePage() {
                         </button>
                     </form>
                     <p className="mt-8 text-center text-[9px] font-bold text-zinc-300 uppercase tracking-widest">
-                        Daciana Member Since {new Date(profile?.created_at).getFullYear()}
+                        THE MAKEUP STORE Member Since {new Date(profile?.created_at).getFullYear()}
                     </p>
                 </section>
             </main>

@@ -11,6 +11,11 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development", // Only run in production
   workboxOptions: {
     disableDevLogs: true,
+    skipWaiting: true,
+    clientsClaim: true,
+  },
+  fallbacks: {
+    document: "/offline", // This points to your /app/offline/page.tsx or /public/offline.html
   },
 });
 

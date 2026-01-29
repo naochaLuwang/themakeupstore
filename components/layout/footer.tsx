@@ -98,7 +98,7 @@ export function Footer() {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div className="hidden md:flex pt-8 border-t border-slate-100 flex-col md:flex-row justify-between items-center gap-6">
                     <p className="text-slate-400 text-xs font-medium uppercase tracking-tight text-center md:text-left">
                         © 2026 Daciana STATIONERY & COSMETICS. All Rights Reserved.
                     </p>
