@@ -8,7 +8,6 @@ const withPWA = withPWAInit({
   cacheOnFrontEndNav: true,      // Essential for smooth App Router transitions
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
-  disable: process.env.NODE_ENV === "development", // Only run in production
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: true,
