@@ -7,6 +7,8 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { sendPushToUser } from "@/utils/push-notification";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
 /**
  * PLACE ORDER
  */
@@ -195,13 +197,36 @@ export async function placeOrder(
 
 
         try {
-            await sendPushToUser(supabase, user.id, {
-                title: "Order Confirmed! 🎉",
-                body: `Your order #${order.id.slice(0, 8)} has been placed successfully.`,
-                url: `/profile/orders/${order.id}`
-            });
+            // Fetch subscriptions for this user
+            const { data: subs } = await supabase
+                .from('push_subscriptions')
+                .select('subscription_json')
+                .eq('user_id', user.id);
+
+            if (subs && subs.length > 0) {
+                const payload = {
+                    title: "Order Confirmed! 🎉",
+                    body: `Your order #${order.id.slice(0, 8)} has been placed successfully.`,
+                    url: `/profile/orders/${order.id}`
+                };
+
+                // Use absolute URL for server-side fetch
+                await Promise.all(subs.map(s =>
+                    fetch(`${SITE_URL}/api/push`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            subscription: s.subscription_json,
+                            payload
+                        }),
+                        // Important: Server actions don't need to wait for the push 
+                        // to finish if you want the user to see the success screen faster
+                        cache: 'no-store'
+                    })
+                ));
+            }
         } catch (e) {
-            console.error("Push failed but order succeeded:", e);
+            console.error("NOTIFICATION_TRIGGER_ERROR:", e);
         }
 
         revalidatePath("/admin/orders")
