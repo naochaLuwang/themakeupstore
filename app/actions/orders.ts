@@ -5,6 +5,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { sendPushToUser } from "@/utils/push-notification";
 
 /**
  * PLACE ORDER
@@ -190,6 +191,17 @@ export async function placeOrder(
                         .eq('id', item.variantId)
                 }
             }
+        }
+
+
+        try {
+            await sendPushToUser(supabase, user.id, {
+                title: "Order Confirmed! 🎉",
+                body: `Your order #${order.id.slice(0, 8)} has been placed successfully.`,
+                url: `/profile/orders/${order.id}`
+            });
+        } catch (e) {
+            console.error("Push failed but order succeeded:", e);
         }
 
         revalidatePath("/admin/orders")
