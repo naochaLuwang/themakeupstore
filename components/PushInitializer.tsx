@@ -7,43 +7,48 @@ export default function PushInitializer() {
     const supabase = createClient();
 
     useEffect(() => {
-        if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
-            registerPush();
+        // Only run if user is logged in and browser supports it
+        const init = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session && 'serviceWorker' in navigator && 'PushManager' in window) {
+                registerPush(session.user.id);
+            }
         }
+        init();
     }, []);
 
-    async function registerPush() {
-        const registration = await navigator.serviceWorker.ready;
+    async function registerPush(userId: string) {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            let subscription = await registration.pushManager.getSubscription();
 
-        // Check for existing subscription
-        let subscription = await registration.pushManager.getSubscription();
+            if (!subscription) {
+                const convertedVapidKey = urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!);
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
+            }
 
-        if (!subscription) {
-            // Convert VAPID key to Uint8Array
-            const convertedVapidKey = urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!);
-
-            subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: convertedVapidKey
-            });
-        }
-
-        // Save to Supabase
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+            // UPSERT into dedicated table to handle multiple devices
             await supabase
-                .from('profiles')
-                .update({ push_subscription: JSON.stringify(subscription) })
-                .eq('id', user.id);
+                .from('push_subscriptions')
+                .upsert({
+                    user_id: userId,
+                    endpoint: subscription.endpoint,
+                    subscription_json: subscription
+                }, { onConflict: 'endpoint' });
+
+        } catch (err) {
+            console.error("Push registration failed:", err);
         }
     }
 
     return null;
 }
 
-// Utility function
 function urlBase64ToUint8Array(base64String: string) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
