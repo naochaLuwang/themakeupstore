@@ -8,7 +8,8 @@ const withPWA = withPWAInit({
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
-  sw: "sw.js", // Explicitly name the output service worker
+  sw: "sw.js",
+  customWorkerSrc: "worker", // Explicitly name the output service worker
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: true,
