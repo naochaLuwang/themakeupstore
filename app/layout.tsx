@@ -6,6 +6,7 @@ import { CartSync } from "@/components/store/cart-sync";
 import { createClient } from "@/utils/supabase/server";
 import localFont from "next/font/local";
 import NextTopLoader from "nextjs-toploader";
+import PushInitializer from "@/components/PushInitializer"
 
 const myBrandFont = localFont({
   src: "../public/fonts/Anders.ttf",
@@ -90,6 +91,7 @@ export default async function RootLayout({
           shadow="0 0 10px #0f172a,0 0 5px #0f172a"
         />
         <CartSync userId={user?.id || null} />
+        <PushInitializer />
 
         {children}
         <Toaster position="top-right" />
