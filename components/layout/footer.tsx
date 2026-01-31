@@ -51,8 +51,8 @@ export function Footer() {
                             One Stop Destination for All Your Makeup Needs.
                         </p>
                         <div className="flex gap-4">
-                            <Link href="https://www.instagram.com/daciana_stationery_cosmetic" className="p-2 bg-slate-50 rounded-full hover:bg-black hover:text-white transition-all"><Instagram className="w-4 h-4" /></Link>
-                            <Link href="https://www.facebook.com/share/1C4irouDXt/" className="p-2 bg-slate-50 rounded-full hover:bg-black hover:text-white transition-all"><Facebook className="w-4 h-4" /></Link>
+                            <Link href="https://www.instagram.com/the_makeup_store.wangkhei" className="p-2 bg-slate-50 rounded-full hover:bg-black hover:text-white transition-all"><Instagram className="w-4 h-4" /></Link>
+                            <Link href="https://www.facebook.com/themakeupstore.wangkhei" className="p-2 bg-slate-50 rounded-full hover:bg-black hover:text-white transition-all"><Facebook className="w-4 h-4" /></Link>
                         </div>
                     </div>
 

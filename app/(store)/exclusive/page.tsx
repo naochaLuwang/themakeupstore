@@ -26,6 +26,7 @@ export default function ExclusivePage() {
                     .eq('slug', 'exclusive')
                     .single()
 
+
                 if (pError) {
                     console.error("❌ Step 1 Error (Parent):", pError.message)
                     return
@@ -37,6 +38,7 @@ export default function ExclusivePage() {
                     .from('categories')
                     .select('id, name, slug, image_url')
                     .eq('parent_id', parent.id)
+                    .order('name', { ascending: true })
 
                 if (sError) console.error("❌ Step 2 Error (Subs):", sError.message)
                 console.log(`✅ Step 2: Found ${subs?.length || 0} Subcategories`)
@@ -95,10 +97,10 @@ export default function ExclusivePage() {
 
     return (
         <div className="min-h-screen bg-white text-slate-900 pb-20">
-            <main className="max-w-6xl mx-auto px-6 pt-16 md:pt-24">
+            <main className="max-w-6xl mx-auto px-6 pt-6 md:pt-16">
 
                 {/* MINIMAL HERO */}
-                <header className="mb-20">
+                <header className="mb-10">
                     <div className="flex items-center gap-2 mb-3">
                         <Minus className="w-4 h-4 text-slate-300" />
                         <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">

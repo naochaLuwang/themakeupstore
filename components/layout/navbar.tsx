@@ -34,7 +34,7 @@ export default async function Navbar() {
                             { name: 'Brands', href: '/brands' },
                             { name: 'New Arrivals', href: '/new-arrivals' },
                             { name: 'Shop', href: '/shop' },
-                            { name: 'Concierge', href: '/concierge' }
+                            { name: 'Categories', href: '/categories' }
                         ].map((item) => (
                             <Link
                                 key={item.name}
