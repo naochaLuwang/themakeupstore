@@ -12,15 +12,13 @@ export async function sendTestNotification(subscriptionRaw: string) {
     try {
         const subscription = JSON.parse(subscriptionRaw);
 
-        await webpush.sendNotification(
-            subscription,
-            JSON.stringify({
-                title: "Success! 🎉",
-                body: "Your notifications are working perfectly for THE MAKEUP STORE WANGKHEI.",
-                url: "/profile/notifications",
-            })
-        );
+        const payload = JSON.stringify({
+            title: "THE MAKEUP STORE",
+            body: "Test notification working!",
+            url: "/profile/notifications"
+        });
 
+        await webpush.sendNotification(subscription, payload);
         return { success: true };
     } catch (error) {
         console.error("Error sending test notification:", error);
