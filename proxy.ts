@@ -13,10 +13,13 @@ export const config = {
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
          * - manifest.webmanifest (PWA manifest)
-         * - sw.js (Service Worker)
-         * - workbox-*.js (Workbox dependencies)
          */
-        '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|workbox-.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        {
+            source: '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:js|css|png|jpg|jpeg|gif|webp|svg|woff|woff2)$).*)',
+            missing: [
+                { type: 'header', key: 'next-router-prefetch' },
+                { type: 'header', key: 'purpose', value: 'prefetch' },
+            ],
+        },
     ],
-}
-
+};
