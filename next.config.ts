@@ -5,16 +5,17 @@ import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
   dest: "public",
-  cacheOnFrontEndNav: true,      // Essential for smooth App Router transitions
+  cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
+  sw: "sw.js", // Explicitly name the output service worker
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: true,
     clientsClaim: true,
   },
   fallbacks: {
-    document: "/offline", // This points to your /app/offline/page.tsx or /public/offline.html
+    document: "/offline",
   },
 });
 
