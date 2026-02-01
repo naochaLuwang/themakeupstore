@@ -99,7 +99,6 @@ export default async function ProfilePage() {
     const menuItems = [
         { label: "Orders", href: "/profile/orders", icon: ShoppingBag, detail: "History & Tracking" },
         { label: "Wishlist", href: "/profile/wishlist", icon: Heart, detail: "Your saved items" },
-        { label: "Addresses", href: "/profile/addresses", icon: MapPin, detail: "Shipping destinations" },
         { label: "Notifications", href: "/profile/notifications", icon: Bell, detail: "Preferences" },
         // { label: "Account Settings", href: "/profile/settings", icon: Settings, detail: "Security & Privacy" },
     ]

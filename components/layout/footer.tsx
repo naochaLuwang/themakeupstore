@@ -82,7 +82,7 @@ export function Footer() {
                             <div className="flex gap-3">
                                 <MapPin className="w-5 h-5 text-slate-400 shrink-0" />
                                 <span className="text-slate-600 leading-tight">
-                                    Kontha Khabam, Lai Haraopham <br /> Po. Mantripukhri, Imphal- 795002
+                                    Michael Plaza 1st Floor.Wangkhei Angom Leikai Opposite Thangal Temple , 795005, Imphal East , Manipur
                                 </span>
                             </div>
                             <div className="flex gap-3">
@@ -91,7 +91,7 @@ export function Footer() {
                             </div>
                             <div className="flex gap-3">
                                 <Mail className="w-5 h-5 text-slate-400 shrink-0" />
-                                <span className="text-slate-600">dacianaenterprises@gmail.com</span>
+                                <span className="text-slate-600">themakeupstorewangkhei@gmail.com</span>
                             </div>
                         </div>
                     </div>
@@ -100,7 +100,7 @@ export function Footer() {
                 {/* Bottom Bar */}
                 <div className="hidden md:flex pt-8 border-t border-slate-100 flex-col md:flex-row justify-between items-center gap-6">
                     <p className="text-slate-400 text-xs font-medium uppercase tracking-tight text-center md:text-left">
-                        © 2026 Daciana STATIONERY & COSMETICS. All Rights Reserved.
+                        © 2026 THE MAKEUP STORE WANGKHEI. All Rights Reserved.
                     </p>
 
                     <div className="flex items-center gap-6">

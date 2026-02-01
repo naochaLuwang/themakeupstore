@@ -24,7 +24,7 @@ export default function ContactPage() {
                 </div>
             </header>
 
-            <section className="container mx-auto px-4 py-16 md:py-24">
+            <section className="container mx-auto px-4 py-8 md:py-0">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
 
                     {/* Contact Information */}
@@ -69,9 +69,7 @@ export default function ContactPage() {
                         <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900 mb-3">Our Atelier</h3>
                             <p className="text-sm text-slate-500 leading-relaxed">
-                                123 Boutique Square, Design District<br />
-                                Mumbai, Maharashtra 400001<br />
-                                India
+                                The Makeup Store, Michael Plaza 1st Floor.Wangkhei Angom Leikai Opposite Thangal Temple , 795005, Imphal East , Manipur
                             </p>
                         </div>
                     </div>
