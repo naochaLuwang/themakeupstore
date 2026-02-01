@@ -42,7 +42,7 @@ export default function AuthPage() {
                     }
                 })
                 if (error) throw error
-                data.session ? router.push("/profile") : toast.success("Verify your email!")
+                data.session ? router.push("/") : toast.success("Verify your email!")
             } else {
                 const { error } = await supabase.auth.signInWithPassword({ email, password })
                 if (error) throw error

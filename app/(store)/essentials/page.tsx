@@ -123,9 +123,9 @@ export default function EssentialPage() {
                                     />
                                 </div>
                                 <div className="mt-3 flex items-center justify-between">
-                                    <h3 className="text-[13px] font-medium text-slate-700 group-hover:text-black transition-colors">
+                                    {/* <h3 className="text-[13px] font-medium text-slate-700 group-hover:text-black transition-colors">
                                         {cat.name}
-                                    </h3>
+                                    </h3> */}
                                     <span className="text-[10px] text-slate-300 group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
                             </Link>
