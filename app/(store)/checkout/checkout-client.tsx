@@ -1,6 +1,3 @@
-
-
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -24,10 +21,17 @@ export default function CheckoutClient({ profile }: { profile: any }) {
 
     useEffect(() => {
         async function loadAddresses() {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from("user_addresses")
                 .select("*")
+                .eq("user_id", profile.id)
                 .order("is_default", { ascending: false })
+
+
+            if (error) {
+                console.error("Error fetching addresses:", error.message)
+                return
+            }
 
             if (data && data.length > 0) {
                 setSavedAddresses(data)
