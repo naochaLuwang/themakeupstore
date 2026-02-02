@@ -89,8 +89,66 @@ export default function EssentialPage() {
 
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-white">
-            <Loader2 className="w-5 h-5 animate-spin text-slate-200" />
+        <div className="min-h-screen bg-white">
+            <main className="max-w-6xl mx-auto px-6 pt-6 md:pt-16">
+
+                {/* HERO SKELETON */}
+                <header className="mb-10 animate-pulse">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="w-4 h-[1px] bg-slate-200" />
+                        <div className="w-20 h-2 bg-slate-100 rounded-full" />
+                    </div>
+                    <div className="w-3/4 md:w-1/2 h-10 bg-slate-50 rounded-lg" />
+                </header>
+
+                {/* CATEGORY GRID SKELETON */}
+                <section className="mb-24">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="animate-pulse">
+                                <div className="aspect-square bg-slate-50 border border-slate-100 rounded-sm" />
+                                <div className="mt-3 flex justify-between items-center">
+                                    <div className="w-12 h-2 bg-slate-100 rounded-full" />
+                                    <div className="w-3 h-3 bg-slate-50 rounded-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* PRODUCT GALLERY SKELETON */}
+                <section>
+                    <div className="flex items-center justify-between mb-10 border-b border-slate-100 pb-4 animate-pulse">
+                        <div className="w-24 h-2 bg-slate-100 rounded-full" />
+                        <div className="w-10 h-2 bg-slate-50 rounded-full" />
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                            <div key={i} className="space-y-4 animate-pulse">
+                                {/* Image Area */}
+                                <div className="aspect-[3/4] bg-slate-50 rounded-sm" />
+                                {/* Text Area */}
+                                <div className="space-y-2 px-1">
+                                    <div className="w-full h-2.5 bg-slate-100 rounded-full" />
+                                    <div className="w-2/3 h-2.5 bg-slate-50 rounded-full" />
+                                    <div className="pt-2 w-1/3 h-2 bg-slate-100 rounded-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+            </main>
+
+            {/* TOP PROGRESS LINE (SUBTLE) */}
+            <motion.div
+                fixed-top
+                initial={{ scaleX: 0, originX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 2, ease: "easeInOut" }}
+                className="fixed top-0 left-0 right-0 h-[1px] bg-slate-200 z-50"
+            />
         </div>
     )
 

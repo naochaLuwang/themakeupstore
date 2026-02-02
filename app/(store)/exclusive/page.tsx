@@ -88,10 +88,64 @@ export default function ExclusivePage() {
         }
         getData()
     }, [supabase])
-
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-white">
-            <Loader2 className="w-5 h-5 animate-spin text-slate-200" />
+        <div className="min-h-screen bg-white">
+            <main className="max-w-6xl mx-auto px-6 pt-6 md:pt-16">
+
+                {/* 1. HERO SKELETON */}
+                <header className="mb-10 animate-pulse">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="w-4 h-[1px] bg-slate-200" />
+                        <div className="w-20 h-2 bg-slate-100 rounded" />
+                    </div>
+                    <div className="w-64 h-12 bg-slate-50 rounded-lg mb-2" />
+                    <div className="w-48 h-12 bg-slate-100 rounded-lg" />
+                </header>
+
+                {/* 2. CATEGORY BUBBLES SKELETON */}
+                <section className="mb-24">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="animate-pulse">
+                                <div className="aspect-square bg-slate-50 border border-slate-100" />
+                                <div className="mt-3 flex justify-between">
+                                    <div className="w-16 h-2 bg-slate-100 rounded" />
+                                    <div className="w-4 h-2 bg-slate-50 rounded" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* 3. PRODUCT GALLERY SKELETON */}
+                <section>
+                    <div className="flex items-center justify-between mb-10 border-b border-slate-100 pb-4">
+                        <div className="w-32 h-2 bg-slate-100 rounded animate-pulse" />
+                        <div className="w-12 h-2 bg-slate-50 rounded animate-pulse" />
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                            <div key={i} className="space-y-4 animate-pulse">
+                                <div className="aspect-[3/4] bg-slate-50" />
+                                <div className="space-y-2">
+                                    <div className="w-full h-3 bg-slate-100 rounded" />
+                                    <div className="w-2/3 h-3 bg-slate-50 rounded" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+            </main>
+
+            {/* THIN TOP PROGRESS BAR */}
+            <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 1.5, ease: "easeInOut" }}
+                className="fixed top-0 left-0 h-[2px] bg-slate-900 z-50"
+            />
         </div>
     )
 
