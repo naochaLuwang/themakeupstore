@@ -87,7 +87,7 @@ export async function createProduct(formData: FormData) {
                 // 5. LINK VARIANT IMAGES (NEW LOGIC)
                 if (v.image_indices?.length > 0) {
                     const variantImageLinks = v.image_indices.map((idx: number) => ({
-                        variant_id: variant.id,
+                        product_variant_id: variant.id, // FIX: Match your schema column name
                         url: uploadedUrls[idx]
                     }))
                     await supabase.from("variant_images").insert(variantImageLinks)
@@ -200,10 +200,10 @@ export async function updateProduct(productId: string, formData: FormData) {
                 if (vError) throw vError
 
                 // 6. SYNC VARIANT IMAGES (Join Table)
-                await supabase.from("variant_images").delete().eq("variant_id", upsertedVariant.id)
+                await supabase.from("variant_images").delete().eq("product_variant_id", upsertedVariant.id)
                 if (v.image_indices?.length > 0) {
                     const variantImageLinks = v.image_indices.map((idx: number) => ({
-                        variant_id: upsertedVariant.id,
+                        product_variant_id: upsertedVariant.id, // FIX: Match your schema column name
                         url: finalGallery[idx]
                     }))
                     await supabase.from("variant_images").insert(variantImageLinks)

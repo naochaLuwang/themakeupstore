@@ -1,9 +1,9 @@
+// app/admin/products/[id]/edit/page.tsx
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import ProductEditForm from "@/components/admin/product-edit-form";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
-
     const { id } = await params;
     const supabase = await createClient();
 
