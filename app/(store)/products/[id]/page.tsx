@@ -18,7 +18,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         .select(`
             *,
             images:product_images(url, alt),
-            variants:product_variants(*),
+            variants:product_variants(
+      *,
+      variant_images(url, position) 
+    ),
             reviews:product_reviews(*),
             product_categories(
                 categories(id, name, slug)
