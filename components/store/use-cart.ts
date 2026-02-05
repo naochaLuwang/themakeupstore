@@ -5,7 +5,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 export interface CartItem {
     id: string;
     productId: string;
-    categoryId: string;
+    categoryId: string; // Ensure your Product Page passes this!
     variantId: string;
     name: string;
     variantTitle: string;
@@ -18,8 +18,18 @@ export interface CartItem {
 
 interface CartStore {
     items: CartItem[];
-    appliedPromo: { code: string; discount: number } | null;
-    setAppliedPromo: (promo: { code: string; discount: number } | null) => void;
+    // UPDATED: Promo now stores full logic metadata
+    appliedPromo: {
+        code: string;
+        discount_type: 'percentage' | 'fixed';
+        discount_value: number;
+        max_discount_amount?: number;
+        min_order_amount?: number;
+        apply_to: 'all' | 'specific_products' | 'specific_categories';
+        productIds?: string[];
+        categoryIds?: string[];
+    } | null;
+    setAppliedPromo: (promo: any) => void;
     addItem: (item: CartItem) => void;
     removeItem: (variantId: string) => void;
     updateQuantity: (variantId: string, quantity: number) => void;
@@ -33,7 +43,6 @@ interface CartStore {
     setShippingMethods: (methods: any[]) => void;
     setSelectedShipping: (id: string | null, price: number, label?: string) => void;
     clearShipping: () => void;
-    getTotalPrice: () => number;
 }
 
 export const useCart = create<CartStore>()(
@@ -48,7 +57,6 @@ export const useCart = create<CartStore>()(
 
             setAppliedPromo: (promo) => set({ appliedPromo: promo }),
 
-            // UX FIX: Sanitize items to ensure no duplicate variantIds ever enter state
             setItems: (newItems) => {
                 const merged = newItems.reduce((acc: CartItem[], current) => {
                     const existing = acc.find(item => item.variantId === current.variantId);
@@ -66,18 +74,14 @@ export const useCart = create<CartStore>()(
                 const existingItemIndex = currentItems.findIndex(item => item.variantId === newItem.variantId);
 
                 if (existingItemIndex > -1) {
-                    // Item exists: Clone array and update specific index to avoid reference issues
                     const updatedItems = [...currentItems];
                     const existing = updatedItems[existingItemIndex];
-
                     updatedItems[existingItemIndex] = {
                         ...existing,
                         quantity: Math.min(existing.quantity + (newItem.quantity || 1), existing.stock)
                     };
-
                     set({ items: updatedItems });
                 } else {
-                    // Brand new item: Append to list
                     set({ items: [...currentItems, { ...newItem, quantity: newItem.quantity || 1 }] });
                 }
             },
@@ -96,40 +100,28 @@ export const useCart = create<CartStore>()(
                 items: get().items.filter(item => item.variantId !== variantId)
             }),
 
-            clearCart: () => {
-                set({
-                    items: [],
-                    appliedPromo: null,
-                    selectedShippingId: null,
-                    shippingPrice: 0,
-                    shippingLabel: '',
-                    shippingMethods: []
-                });
-            },
+            clearCart: () => set({
+                items: [],
+                appliedPromo: null,
+                selectedShippingId: null,
+                shippingPrice: 0,
+                shippingLabel: '',
+                shippingMethods: []
+            }),
 
             totalItems: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
-
             setShippingMethods: (methods) => set({ shippingMethods: methods }),
-
             setSelectedShipping: (id, price, label) => set({
                 selectedShippingId: id,
                 shippingPrice: price,
                 shippingLabel: label || ''
             }),
-
             clearShipping: () => set({ selectedShippingId: null, shippingPrice: 0, shippingLabel: '' }),
-
-            getTotalPrice: () => {
-                const subtotal = get().items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-                const discount = get().appliedPromo?.discount || 0;
-                return Math.max(0, subtotal + get().shippingPrice - discount);
-            }
         }),
         {
             name: 'shopping-cart',
             storage: createJSONStorage(() => localStorage),
-            // Ensure we migrate or handle old data versions gracefully
-            version: 1,
+            version: 2, // Incremented version because of appliedPromo structure change
         }
     )
 );

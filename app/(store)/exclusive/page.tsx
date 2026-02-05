@@ -77,7 +77,13 @@ export default function ExclusivePage() {
                 }
 
                 const { data: products } = await query
-                setAllProducts(products || [])
+                const processedProducts = products?.map(product => ({
+                    ...product,
+                    // If the direct category_id is null, we assign the parent category ID 
+                    // to ensure promos recognize it as part of this collection
+                    category_id: product.category_id || parent.id
+                }))
+                setAllProducts(processedProducts || [])
             } catch (e) {
                 console.error("Fetch Error:", e)
             } finally {

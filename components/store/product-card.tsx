@@ -45,6 +45,10 @@ export function ProductCard({ product }: { product: any }) {
     const handleQuickAdd = (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
+
+        const catId = product.category_id ||
+            product.product_categories?.[0]?.category_id ||
+            product.categories?.id;
         if (isOutOfStock) return
 
         if (hasMultipleVariants) {
@@ -60,7 +64,7 @@ export function ProductCard({ product }: { product: any }) {
                 image: product.thumbnail_url,
                 quantity: 1,
                 variantTitle: variants.length === 1 ? activeSource.title : "Standard",
-                categoryId: product.category_id,
+                categoryId: catId,
                 stock: Number(activeSource.stock || 0)
             })
 

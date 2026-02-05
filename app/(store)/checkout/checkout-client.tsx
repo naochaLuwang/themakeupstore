@@ -6,7 +6,7 @@ import { CheckoutShipping } from "@/components/store/checkout-shipping"
 import { placeOrder } from "@/app/actions/orders"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Loader2, ChevronRight, Ticket, Check, Plus, ShoppingBag, Pencil, Trash2, MapPin } from "lucide-react"
+import { ArrowLeft, Loader2, ChevronRight, Check, Plus, ShoppingBag, Pencil, Trash2, MapPin } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import {
@@ -19,7 +19,7 @@ import { AddressForm } from "@/components/store/address-form"
 
 export default function CheckoutClient({ profile }: { profile: any }) {
     const supabase = createClient()
-    const { items, shippingPrice, selectedShippingId, shippingLabel, clearCart, appliedPromo } = useCart()
+    const { items, shippingPrice, selectedShippingId, shippingLabel, clearCart } = useCart()
     const router = useRouter()
 
     const [loading, setLoading] = useState(false)
@@ -76,7 +76,7 @@ export default function CheckoutClient({ profile }: { profile: any }) {
     }
 
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0)
-    const total = Math.max(0, subtotal + shippingPrice - (appliedPromo?.discount || 0))
+    const total = subtotal + shippingPrice
 
     const handlePlaceOrder = async () => {
         if (!selectedAddress || !selectedShippingId) {
@@ -88,8 +88,7 @@ export default function CheckoutClient({ profile }: { profile: any }) {
             const res = await placeOrder(
                 selectedAddress,
                 sanitizedItems,
-                { total, price: shippingPrice, methodName: shippingLabel },
-                appliedPromo ? { code: appliedPromo.code, discount: appliedPromo.discount } : undefined
+                { total, price: shippingPrice, methodName: shippingLabel }
             )
 
             if (res.success) {
@@ -185,7 +184,6 @@ export default function CheckoutClient({ profile }: { profile: any }) {
                                 ))}
                             </div>
                         ) : (
-                            /* EMPTY STATE: BIG ADD BUTTON */
                             <button
                                 onClick={() => setIsAddModalOpen(true)}
                                 className="w-full py-16 px-6 border-2 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 group hover:border-slate-900 hover:bg-slate-50/50 transition-all duration-500"
@@ -212,7 +210,6 @@ export default function CheckoutClient({ profile }: { profile: any }) {
                     )}
                 </div>
 
-                {/* SUMMARY PANEL */}
                 <div className="lg:col-span-5">
                     <div className="lg:sticky lg:top-10 space-y-6">
                         <div className="bg-slate-50/50 border border-slate-100 rounded-[2rem] p-8">
@@ -239,12 +236,6 @@ export default function CheckoutClient({ profile }: { profile: any }) {
                                     <span>Logistics</span>
                                     <span className="text-slate-900">{shippingPrice === 0 ? "FREE" : `₹${shippingPrice}`}</span>
                                 </div>
-                                {appliedPromo && (
-                                    <div className="flex justify-between text-[10px] font-black text-emerald-600 uppercase tracking-widest">
-                                        <span className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {appliedPromo.code}</span>
-                                        <span>- ₹{appliedPromo.discount.toLocaleString()}</span>
-                                    </div>
-                                )}
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-slate-200 flex justify-between items-end">
@@ -266,7 +257,6 @@ export default function CheckoutClient({ profile }: { profile: any }) {
                 </div>
             </main>
 
-            {/* MODALS */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogContent className="w-[calc(100%-2rem)] max-w-[440px] rounded-[2rem] p-8 md:p-10 border-none shadow-2xl overflow-hidden">
                     <DialogHeader>
@@ -291,7 +281,6 @@ export default function CheckoutClient({ profile }: { profile: any }) {
                 </DialogContent>
             </Dialog>
 
-            {/* MOBILE HUD */}
             <div className="lg:hidden fixed bottom-[90px] left-0 right-0 z-50 px-6 pointer-events-none">
                 <div className="bg-slate-900/95 backdrop-blur-xl rounded-[2rem] p-4 flex items-center justify-between border border-white/10 shadow-2xl pointer-events-auto max-w-md mx-auto">
                     <div className="pl-4">
