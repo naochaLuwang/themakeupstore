@@ -18,7 +18,8 @@ export const adminConfig = {
         { title: "Orders", href: "/admin/orders", icon: ClipboardList }, // Changed to Checklist icon
         { title: "Inventory", href: "/admin/inventory", icon: PackageSearch }, // Changed to Package Search
         { title: "Customers", href: "/admin/customers", icon: Users }, // Added to match e-commerce flow
-        { title: "Shipping", href: "/admin/shipping", icon: Truck }, // Changed to Truck icon
+        { title: "Shipping", href: "/admin/shipping", icon: Truck },
+        { title: "Pricing", href: "/admin/pricing", icon: PackageSearch },  // Changed to Package Search icon
         { title: "Messages", href: "/admin/messages", icon: Mail },
         { title: "Reviews", href: "/admin/reviews", icon: Star },
         // Added Messages section

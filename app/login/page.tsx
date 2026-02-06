@@ -103,7 +103,7 @@ export default function AuthPage() {
                             onClick={() => { setMode('signup'); setShowPassword(false); }}
                             className={`px-6 py-1.5 text-[10px] font-black uppercase tracking-tight rounded-lg transition-all ${mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            Join
+                            Sign Up
                         </button>
                     </div>
 
