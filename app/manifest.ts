@@ -3,8 +3,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'MAKEUP STORE',
-        short_name: 'MAKEUP STORE',
+        name: 'MakeUpStore',
+        short_name: 'MakeUpStore',
         description: 'One Stop Destination For All Your Makeup Needs.',
         start_url: '/',
         display: 'standalone',
