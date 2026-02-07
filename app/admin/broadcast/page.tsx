@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 
+
 export default function AdminBroadcastForm() {
     const supabase = createClient()
     const [form, setForm] = useState({ title: "", body: "", url: "" })
@@ -28,15 +29,30 @@ export default function AdminBroadcastForm() {
 
     const fetchNetworkStats = async () => {
         try {
-            const { data } = await supabase.from('push_subscriptions').select('user_id');
+            // This will now return ALL rows because you are an Admin
+            const { data, error } = await supabase
+                .from('push_subscriptions')
+                .select('user_id');
+
+            if (error) throw error;
+
             if (data) {
                 const uniqueIds = new Set(data.map(d => d.user_id)).size;
-                setStats({ devices: data.length, users: uniqueIds });
+                setStats({
+                    devices: data.length,
+                    users: uniqueIds
+                });
             }
-        } catch (err) { console.error(err); }
+        } catch (err) {
+            console.error("Admin RLS fetch failed:", err);
+        }
     };
-
-    useEffect(() => { fetchNetworkStats(); }, []);
+    useEffect(() => {
+        fetchNetworkStats();
+        // Optional: Refresh stats every 30 seconds
+        const interval = setInterval(fetchNetworkStats, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const sendBroadcast = async () => {
         if (!form.title || !form.body) return;
