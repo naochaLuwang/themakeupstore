@@ -13,10 +13,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MultiSelect } from "@/components/ui/multi-select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Trash2, Plus, Pipette, Loader2,
-    CheckCircle2, Box, ArrowLeft, GripVertical
+    CheckCircle2, Box, ArrowLeft, GripVertical,
+    X,
+    PlusCircle
 } from "lucide-react"
 import { updateProduct } from "@/app/actions/products"
 import { toast } from "sonner"
@@ -26,6 +28,7 @@ import { useRouter } from "next/navigation"
 import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core"
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { AnimatePresence, motion } from "framer-motion"
 
 // --- SORTABLE IMAGE ITEM ---
 function SortableImage({ url, index, onRemove }: { url: string; index: number; onRemove: (i: number) => void }) {
@@ -87,25 +90,150 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                 <div className="col-span-8 md:col-span-4">
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button type="button" variant="outline" className={`w-full h-11 rounded-xl text-[10px] font-black transition-all ${selectedImages.length > 0 ? 'border-indigo-500 bg-indigo-50 text-indigo-600' : 'border-dashed'}`}>
-                                {selectedImages.length} Linked Media
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className={`group relative w-full h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500
+                    ${selectedImages.length > 0
+                                        ? 'border-indigo-600 bg-white text-indigo-600 shadow-xl shadow-indigo-100/50'
+                                        : 'border-slate-200 bg-white text-slate-400'}`}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    {selectedImages.length > 0 ? (
+                                        <>
+                                            <div className="flex -space-x-2">
+                                                {selectedImages.slice(0, 3).map((url: string, i: number) => (
+                                                    <img key={i} src={url} className="w-5 h-5 rounded-full border-2 border-white object-cover" />
+                                                ))}
+                                            </div>
+                                            <span>{selectedImages.length} Linked</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <PlusCircle className="w-4 h-4 opacity-50" />
+                                            <span>Link Media Assets</span>
+                                        </>
+                                    )}
+                                </div>
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-[2.5rem] max-w-xl">
-                            <DialogHeader>
-                                <DialogTitle className="font-black uppercase">Link Shade Media</DialogTitle>
-                            </DialogHeader>
-                            {/* Added scrollable container with max-height */}
-                            <div className="grid grid-cols-3 gap-3 pt-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                                {previews.map((url: string) => {
-                                    const isSelected = selectedImages.includes(url);
-                                    return (
-                                        <button key={url} type="button" onClick={() => toggleVariantImage(index, url)} className={`relative aspect-square rounded-[1.5rem] border-2 transition-all overflow-hidden ${isSelected ? 'border-indigo-500 ring-4 ring-indigo-50' : 'border-transparent opacity-100 '}`}>
-                                            <img src={url} className="w-full h-full object-cover" />
-                                            {isSelected && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-indigo-500 bg-white rounded-full" />}
-                                        </button>
-                                    )
-                                })}
+
+                        <DialogContent
+                            className="!fixed !inset-0 !m-0 !p-0 !max-w-none !w-screen !h-screen !translate-x-0 !translate-y-0 !top-0 !left-0 border-none rounded-none flex flex-col bg-white z-[9999] outline-none overflow-hidden"
+                            onOpenAutoFocus={(e) => e.preventDefault()}
+                        >
+                            {/* HEADER: Compacted slightly for more vertical room */}
+                            <div className="h-28 px-10 flex items-center justify-between border-b border-slate-100 bg-white shrink-0">
+                                <div className="space-y-1">
+                                    <DialogTitle className="text-4xl font-black uppercase tracking-tighter italic text-slate-900 leading-none">
+                                        Media Library
+                                    </DialogTitle>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em]">
+                                            Workspace Management • {selectedImages.length} Assets Linked
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <DialogClose asChild>
+                                    <Button variant="ghost" className="w-14 h-14 rounded-2xl bg-slate-50 hover:bg-slate-900 hover:text-white transition-all duration-300">
+                                        <X className="w-6 h-6" />
+                                    </Button>
+                                </DialogClose>
+                            </div>
+
+                            {/* GRID: Smaller card size, more columns */}
+                            <div className="flex-1 overflow-y-auto p-10 bg-[#fafafa] custom-scrollbar">
+                                {/* UI FIX: Using auto-fill with a 240px minimum. 
+                   This allows for 6-8 images per row on standard desktops.
+                */}
+                                <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-8 w-full pb-32">
+                                    {previews.map((url: string, imgIndex: number) => {
+                                        const selectedIdx = selectedImages.indexOf(url);
+                                        const isSelected = selectedIdx !== -1;
+
+                                        return (
+                                            <button
+                                                key={url}
+                                                type="button"
+                                                onClick={() => toggleVariantImage(index, url)}
+                                                className="group relative w-full text-left"
+                                            >
+                                                <div className={`relative aspect-square rounded-[2.5rem] overflow-hidden transition-all duration-500 
+                                    ${isSelected
+                                                        ? 'ring-[10px] ring-indigo-600 ring-offset-4 scale-[0.95] shadow-xl shadow-indigo-100'
+                                                        : 'hover:-translate-y-2 hover:shadow-xl hover:shadow-slate-200 shadow-sm border border-slate-100'}`}
+                                                >
+                                                    <img
+                                                        src={url}
+                                                        className={`w-full h-full object-cover transition-all duration-700 
+                                            ${isSelected ? 'brightness-[0.3]' : 'group-hover:scale-105'}`}
+                                                    />
+
+                                                    <AnimatePresence>
+                                                        {isSelected && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                                className="absolute inset-0 flex flex-col items-center justify-center"
+                                                            >
+                                                                <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center border-[4px] border-indigo-600 shadow-xl">
+                                                                    <span className="text-2xl font-black text-indigo-600 italic">
+                                                                        {selectedIdx + 1}
+                                                                    </span>
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {!isSelected && (
+                                                        <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/5 transition-colors flex items-center justify-center">
+                                                            <div className="w-14 h-14 rounded-full bg-white shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 flex items-center justify-center">
+                                                                <Plus className="w-6 h-6 text-indigo-600" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="mt-4 px-2 flex justify-between items-center">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">
+                                                        Asset_{imgIndex + 1}
+                                                    </p>
+                                                    {isSelected && (
+                                                        <span className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">
+                                                            Linked
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* FOOTER: Slimmed down to match new card scale */}
+                            <div className="h-28 px-10 border-t border-slate-100 bg-white flex items-center justify-between shrink-0">
+                                <div className="hidden md:block">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
+                                        Primary identification is set by Position #1. <br />
+                                        Drag or re-click to adjust sequence.
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => {/* reset logic */ }}
+                                        className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 hover:text-red-500 transition-colors"
+                                    >
+                                        Clear All
+                                    </button>
+                                    <DialogClose asChild>
+                                        <Button className="px-16 h-14 rounded-2xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-[0.5em] hover:bg-indigo-600 transition-all shadow-xl active:scale-95">
+                                            Update Selection
+                                        </Button>
+                                    </DialogClose>
+                                </div>
                             </div>
                         </DialogContent>
                     </Dialog>
