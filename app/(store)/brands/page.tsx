@@ -12,6 +12,7 @@ export default function BrandsPage() {
     const [searchQuery, setSearchQuery] = React.useState("")
     const [loading, setLoading] = React.useState(true)
     const supabase = createClient()
+    const BLACKLISTED_NAMES = ["Foundation", "Concealer", "Face Primer", "Lipstick"]
 
     React.useEffect(() => {
         async function fetchBrands() {
@@ -43,9 +44,14 @@ export default function BrandsPage() {
         fetchBrands()
     }, [supabase])
 
-    const filteredBrands = brands.filter(b =>
-        b.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredBrands = brands.filter(b => {
+        const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const isNotBlacklisted = !BLACKLISTED_NAMES.some(name =>
+            b.name.toLowerCase() === name.toLowerCase()
+        );
+
+        return matchesSearch && isNotBlacklisted;
+    })
 
     // Get unique starting letters for the A-Z jump
     const alphabet = Array.from(new Set(brands.map(b => b.name[0].toUpperCase()))).sort()
