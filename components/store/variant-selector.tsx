@@ -264,12 +264,12 @@ export function VariantSelector({ product, variants, onVariantChange }: any) {
             {/* QUANTITY & ACTION */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between border-y border-slate-50 py-5">
-                    <div className="flex flex-col gap-1">
+                    {/* <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Quantity</label>
                         <span className="text-[9px] text-slate-300 uppercase tracking-widest">
                             {selectedVariant.stock > 0 ? `${selectedVariant.stock} available` : "No stock available"}
                         </span>
-                    </div>
+                    </div> */}
                     <div className="flex items-center bg-slate-50 p-1 rounded-full border border-slate-100">
                         <button
                             disabled={quantity <= 1 || selectedVariant.stock <= 0}
