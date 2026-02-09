@@ -231,3 +231,21 @@
 .text-primary {
   color: var(--primary);
 }
+
+@layer components {
+  .journal-article-content h2 {
+    @apply text-3xl font-serif italic mt-12 mb-6 text-zinc-900;
+  }
+
+  .journal-article-content p {
+    @apply text-lg leading-relaxed text-zinc-600 mb-6;
+  }
+
+  .journal-article-content ul {
+    @apply list-disc ml-6 mb-6 space-y-2 text-zinc-600;
+  }
+
+  .journal-article-content blockquote {
+    @apply border-l-4 border-black pl-6 italic my-10 text-zinc-500;
+  }
+}
