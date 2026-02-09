@@ -32,11 +32,11 @@ export default async function ProfilePage() {
         { label: "Wishlist", href: "/profile/wishlist", icon: Heart, detail: "Your saved items" },
         { label: "Notifications", href: "/profile/notifications", icon: Bell, detail: "Preferences" },
         { label: "Addresses", href: "/profile/addresses", icon: MapPin, detail: "Shipping registry" },
-        // { label: "Account Settings", href: "/profile/settings", icon: Settings, detail: "Security & Privacy" },
+        { label: "Account Settings", href: "/profile/settings", icon: Settings, detail: "Security & Privacy" },
     ]
 
     return (
-        <div className="min-h-screen bg-white pb-32">
+        <div className="min-h-auto bg-white pb-0">
             {/* STICKY HEADER AREA */}
             <header className="px-6 pt-16 pb-8 border-b border-zinc-50 bg-white/80 backdrop-blur-md sticky top-0 z-10">
                 <div className="flex items-center justify-between">

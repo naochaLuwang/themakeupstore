@@ -4,9 +4,11 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import {
-    Phone, MapPin, Mail, Instagram,
-    Facebook, ShieldCheck, Lock, Globe, Volume2
+    Phone, MapPin, Mail,
+    ShieldCheck, Lock, Globe, Volume2
 } from "lucide-react"
+
+import { Instagram, Facebook, MessageCircle } from "lucide-react";
 
 export function Footer() {
     const supabase = createClient()
@@ -84,7 +86,7 @@ export function Footer() {
                 <div className="md:hidden flex flex-col items-center text-center space-y-10">
                     {/* Centered Brand Name */}
                     <div className="space-y-2">
-                        <h2 className="text-2xl font-black tracking-[0.2em] text-zinc-900">
+                        <h2 className="text-2xl font-black tracking-[0.2em] font-daciana text-zinc-900">
                             THE MAKEUP STORE
                         </h2>
                         <p className="text-[9px] tracking-[0.4em] text-zinc-400 uppercase">Wangkhei</p>
@@ -92,15 +94,35 @@ export function Footer() {
 
                     {/* Iconic Row (Sound, Globe, Mail) */}
                     <div className="flex items-center gap-10 text-zinc-400">
-                        <button className="hover:text-black transition-colors">
-                            <Volume2 className="w-5 h-5 stroke-[1.5]" />
-                        </button>
-                        <Link href="/location">
-                            <Globe className="w-5 h-5 stroke-[1.5]" />
-                        </Link>
-                        <Link href="/contact">
-                            <Mail className="w-5 h-5 stroke-[1.5]" />
-                        </Link>
+                        {/* WhatsApp - UX Tip: Use a wa.me link for direct chat */}
+                        <a
+                            href="https://wa.me/919999999999?text=Hello! I have a question about my order."
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-green-600 transition-colors"
+                        >
+                            <MessageCircle className="w-5 h-5 stroke-[1.5]" />
+                        </a>
+
+                        {/* Instagram */}
+                        <a
+                            href="https://instagram.com/yourhandle"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-pink-600 transition-colors"
+                        >
+                            <Instagram className="w-5 h-5 stroke-[1.5]" />
+                        </a>
+
+                        {/* Facebook */}
+                        <a
+                            href="https://facebook.com/yourpage"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-blue-600 transition-colors"
+                        >
+                            <Facebook className="w-5 h-5 stroke-[1.5]" />
+                        </a>
                     </div>
 
                     {/* Horizontal Links */}
@@ -108,7 +130,7 @@ export function Footer() {
                         <Link href="/legal/privacy_policy">Privacy Policy</Link>
                         <Link href="/legal/terms_and_conditions">Terms of Use</Link>
                         <Link href="/contact">Contact Us</Link>
-                        <Link href="/shipping">Shipping</Link>
+                        <Link href="/legal/return_policy">Return Policy</Link>
                     </div>
 
                     {/* Copyright */}
