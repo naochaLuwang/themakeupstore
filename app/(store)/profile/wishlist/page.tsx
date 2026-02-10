@@ -1,10 +1,100 @@
+// "use client"
+
+// import * as React from "react"
+// import { motion, AnimatePresence } from "framer-motion"
+// import { Loader2, Trash2 } from "lucide-react"
+// import { createClient } from "@/utils/supabase/client"
+// import { ProductCard } from "@/components/store/product-card"
+
+// export default function WishlistPage() {
+//     const [items, setItems] = React.useState<any[]>([])
+//     const [loading, setLoading] = React.useState(true)
+//     const supabase = createClient()
+
+//     const fetchWishlist = React.useCallback(async () => {
+//         const { data: { user } } = await supabase.auth.getUser()
+//         if (!user) return
+
+//         const { data } = await supabase
+//             .from('wishlist')
+//             .select(`id, product:products (*, product_variants (*))`)
+//             .eq('user_id', user.id)
+
+//         if (data) {
+//             setItems(data.map(item => ({
+//                 ...item.product,
+//                 wishlist_id: item.id
+//             })))
+//         }
+//         setLoading(false)
+//     }, [supabase])
+
+//     const handleRemove = async (wishlistId: string) => {
+//         // Step 1: Remove from UI immediately
+//         setItems(prev => prev.filter(item => item.wishlist_id !== wishlistId))
+
+//         // Step 2: Delete from Database
+//         const { error } = await supabase
+//             .from('wishlist')
+//             .delete()
+//             .eq('id', wishlistId)
+
+//         if (!error) {
+//             // Step 3: Tell Navbar to DECREASE. 
+//             // We pass the new count directly so the Navbar doesn't have to guess.
+//             window.dispatchEvent(new CustomEvent("wishlist-sync", {
+//                 detail: { count: items.length - 1 }
+//             }))
+//         } else {
+//             fetchWishlist() // Rollback on error
+//         }
+//     }
+
+//     React.useEffect(() => { fetchWishlist() }, [fetchWishlist])
+
+//     if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto" /></div>
+
+//     return (
+//         <div className="max-w-7xl mx-auto px-6 pt-12">
+//             <h1 className="text-5xl font-black mb-12 uppercase tracking-tighter">Wishlist</h1>
+//             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+//                 <AnimatePresence mode="popLayout">
+//                     {items.map((product) => (
+//                         <motion.div
+//                             key={product.wishlist_id}
+//                             layout
+//                             exit={{ opacity: 0, scale: 0.8, filter: "blur(10px)" }}
+//                             className="relative group"
+//                         >
+//                             <ProductCard product={product} />
+//                             {/* We use the Trash button here, but styled to fit your UI */}
+//                             <button
+//                                 onClick={(e) => {
+//                                     e.preventDefault()
+//                                     e.stopPropagation()
+//                                     handleRemove(product.wishlist_id)
+//                                 }}
+//                                 className="absolute top-4 right-4 z-50 p-2 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
+//                             >
+//                                 <Trash2 className="w-4 h-4" />
+//                             </button>
+//                         </motion.div>
+//                     ))}
+//                 </AnimatePresence>
+//             </div>
+//         </div>
+//     )
+// }
+
+
 "use client"
 
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2, Trash2 } from "lucide-react"
+import { Trash2, ShoppingBag, ArrowRight } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
+import Link from "next/link"
 
 export default function WishlistPage() {
     const [items, setItems] = React.useState<any[]>([])
@@ -26,62 +116,115 @@ export default function WishlistPage() {
                 wishlist_id: item.id
             })))
         }
-        setLoading(false)
+
+        // Small delay to match the Profile loading feel
+        setTimeout(() => setLoading(false), 800)
     }, [supabase])
 
     const handleRemove = async (wishlistId: string) => {
-        // Step 1: Remove from UI immediately
         setItems(prev => prev.filter(item => item.wishlist_id !== wishlistId))
-
-        // Step 2: Delete from Database
         const { error } = await supabase
             .from('wishlist')
             .delete()
             .eq('id', wishlistId)
 
         if (!error) {
-            // Step 3: Tell Navbar to DECREASE. 
-            // We pass the new count directly so the Navbar doesn't have to guess.
             window.dispatchEvent(new CustomEvent("wishlist-sync", {
                 detail: { count: items.length - 1 }
             }))
         } else {
-            fetchWishlist() // Rollback on error
+            fetchWishlist()
         }
     }
 
     React.useEffect(() => { fetchWishlist() }, [fetchWishlist])
 
-    if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto" /></div>
-
     return (
-        <div className="max-w-7xl mx-auto px-6 pt-12">
-            <h1 className="text-5xl font-black mb-12 uppercase tracking-tighter">Wishlist</h1>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <AnimatePresence mode="popLayout">
-                    {items.map((product) => (
+        <div className="relative min-h-screen bg-white">
+            {/* 1. EDITORIAL LOADING SCREEN */}
+            <AnimatePresence mode="wait">
+                {loading && (
+                    <motion.div
+                        key="loader"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center"
+                    >
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-900 mb-2">The Makeup Store</h2>
                         <motion.div
-                            key={product.wishlist_id}
-                            layout
-                            exit={{ opacity: 0, scale: 0.8, filter: "blur(10px)" }}
-                            className="relative group"
+                            animate={{ width: ["0%", "40%", "0%"] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                            className="h-[1px] bg-slate-900"
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 2. MAIN CONTENT */}
+            {!loading && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="max-w-7xl mx-auto px-6 pt-20 pb-20"
+                >
+                    <header className="mb-12">
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-2">Your Curated List</p>
+                        <h1 className="text-5xl font-serif italic tracking-tighter uppercase text-slate-900 leading-none">Wishlist</h1>
+                    </header>
+
+                    {items.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
+                            <AnimatePresence mode="popLayout">
+                                {items.map((product) => (
+                                    <motion.div
+                                        key={product.wishlist_id}
+                                        layout
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
+                                        className="relative group"
+                                    >
+                                        <ProductCard product={product} />
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                handleRemove(product.wishlist_id)
+                                            }}
+                                            className="absolute top-3 right-3 z-30 p-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all border border-zinc-100 text-red-500 hover:bg-red-50"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    ) : (
+                        /* 3. EMPTY STATE: EXPLORE COLLECTION */
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center justify-center py-32 text-center"
                         >
-                            <ProductCard product={product} />
-                            {/* We use the Trash button here, but styled to fit your UI */}
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    handleRemove(product.wishlist_id)
-                                }}
-                                className="absolute top-4 right-4 z-50 p-2 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
+                            <div className="w-20 h-20 bg-zinc-50 rounded-full flex items-center justify-center mb-6">
+                                <ShoppingBag className="w-8 h-8 text-zinc-200" />
+                            </div>
+                            <h2 className="text-2xl font-serif italic uppercase tracking-tighter text-slate-900 mb-2">Your collection is empty</h2>
+                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-10 max-w-[200px] leading-loose">
+                                Save your favorite beauty essentials here for later.
+                            </p>
+
+                            <Link
+                                href="/shop"
+                                className="group flex items-center gap-4 bg-slate-900 text-white px-10 py-5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
                             >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                                Explore Collection
+                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            </Link>
                         </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
+                    )}
+                </motion.div>
+            )}
         </div>
     )
 }
