@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.themakeupstore.twa",
+            "sha256_cert_fingerprints": [
+                "36:01:4F:80:8C:E1:8E:50:3D:9C:27:4A:2F:F1:9B:80:C6:7B:DD:E5:AA:C9:07:74:95:37:55:10:EE:22:42:FF"
+            ]
+        }
+    }
+]
