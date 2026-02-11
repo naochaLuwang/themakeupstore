@@ -12,7 +12,7 @@ export default function BrandsPage() {
     const [searchQuery, setSearchQuery] = React.useState("")
     const [loading, setLoading] = React.useState(true)
     const supabase = createClient()
-    const BLACKLISTED_NAMES = ["Foundation", "Concealer", "Face Primer", "Lipstick"]
+    const BLACKLISTED_NAMES = ["Foundation", "Concealer", "Face Primer", "Lipstick", "Lip Gloss", "Lip Liner", "Liquid Lipstick"]
 
     React.useEffect(() => {
         async function fetchBrands() {
@@ -58,7 +58,7 @@ export default function BrandsPage() {
 
     return (
         <div className="min-h-screen bg-white text-[#1A1A1A] pb-32 selection:bg-primary/10">
-            <main className="max-w-6xl mx-auto px-6 pt-16 md:pt-16">
+            <main className="max-w-6xl mx-auto px-6 pt-8 md:pt-16">
 
                 {/* HEADER & SEARCH */}
                 <header className="mb-12 space-y-8">
@@ -104,7 +104,7 @@ export default function BrandsPage() {
 
                 {/* BRANDS GRID */}
                 {loading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {[...Array(10)].map((_, i) => (
                             <div key={i} className="animate-pulse space-y-4">
                                 <div className="aspect-square bg-zinc-50" />
