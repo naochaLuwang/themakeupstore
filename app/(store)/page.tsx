@@ -13,9 +13,9 @@ export default async function GatewayPage() {
 
       {/* 1. MAIN SPLIT PANELS (Remains for high-impact entry) */}
       <main className="flex flex-col md:flex-row w-full h-screen shrink-0">
-        <Panel href="/exclusive" label="Premium Curation" title="Exclusive Edit" bgImage="/hero-sub.png" />
+        <Panel href="/exclusive" label="Premium Curation" title="Exclusive Selection" bgImage="/hero-sub.png" />
         <Panel href="/essentials" label="Daily Rituals" title="Everyday Essentials" bgImage="/hero-essential.png" />
-        <Panel href="/wholesale" label="Professional Kits" title="Pro Wholesale" bgImage="/hero-wholesale.png" />
+        <Panel href="/wholesale" label="Professional Kits" title="The Makeup Store Wholesale" bgImage="/hero-wholesale.png" />
       </main>
 
       {/* 2. REDESIGNED CURATED SELECTION: EDITORIAL GRID */}

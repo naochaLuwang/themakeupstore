@@ -164,8 +164,8 @@ export default function EssentialPage() {
                             Collection
                         </span>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900">
-                        The <span className="font-serif italic">Everyday Essentials Collection</span>
+                    <h1 className="text-3xl md:text-5xl font-light tracking-tight text-slate-900">
+                        The <span className="font-serif ">Everyday Essentials Collection</span>
                     </h1>
                 </header>
 
@@ -173,7 +173,7 @@ export default function EssentialPage() {
                 <section className="mb-24">
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                         {subcategories.map((cat) => (
-                            <Link key={cat.id} href={`/exclusive/${cat.slug}`} className="group block">
+                            <Link key={cat.id} href={`/essentials/${cat.slug}`} className="group block">
                                 <div className="relative aspect-square overflow-hidden bg-slate-50 border border-slate-100 transition-all duration-500 group-hover:border-slate-300">
                                     <div
                                         className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"

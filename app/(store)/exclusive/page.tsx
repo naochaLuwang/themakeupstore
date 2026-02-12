@@ -120,13 +120,13 @@ export default function ExclusivePage() {
                         </span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900">
-                        The <span className="font-serif italic">Exclusive</span> Edit
+                        <span className="font-serif text-black">Exclusive</span> Selection
                     </h1>
                 </header>
 
                 {/* CATEGORIES */}
-                <section className="mb-24">
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                <section className="mb-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {subcategories.map((cat) => (
                             <Link key={cat.id} href={`/exclusive/${cat.slug}`} className="group block">
                                 <div className="relative aspect-square overflow-hidden bg-slate-50 border border-slate-100 transition-all duration-500 group-hover:border-slate-300">
@@ -147,10 +147,10 @@ export default function ExclusivePage() {
                 {/* GALLERY */}
                 <section>
                     <div className="flex items-center justify-between mb-10 border-b border-slate-100 pb-4">
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                            The Full Archive
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
+                            The Exclusive Collections
                         </h2>
-                        <span className="text-[10px] font-medium text-slate-300">
+                        <span className="text-[10px] font-medium text-slate-600">
                             {allProducts.length} Items
                         </span>
                     </div>
