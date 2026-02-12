@@ -1,12 +1,13 @@
 import { createClient } from "@/utils/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Package, Layers, Eye, EyeOff } from "lucide-react"
+import { Plus, Package, Layers, Eye, EyeOff, Trash2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { ProductSearch } from "@/components/admin/product-search"
 import { CategoryFilter } from "@/components/admin/category-filter"
 import { revalidatePath } from "next/cache"
+import { DeleteProductButton } from "@/components/admin/delete-product-button"
 
 export default async function ProductsPage({
     searchParams,
@@ -60,6 +61,22 @@ export default async function ProductsPage({
             .update({ status: newStatus })
             .eq("id", id)
 
+        revalidatePath("/admin/products")
+    }
+
+    async function deleteProduct(formData: FormData) {
+        "use server"
+        const id = formData.get("productId") as string
+        const supabase = await createClient()
+
+        const { error } = await supabase
+            .from("products")
+            .delete()
+            .eq("id", id)
+
+        if (error) {
+            console.error("Delete error:", error.message)
+        }
         revalidatePath("/admin/products")
     }
 
@@ -166,6 +183,11 @@ export default async function ProductsPage({
                                                     <Button variant="secondary" size="sm" asChild className="h-9 px-4 rounded-xl font-bold uppercase text-[10px] tracking-widest">
                                                         <Link href={`/admin/products/edit/${product.id}`}>Edit</Link>
                                                     </Button>
+
+                                                    <DeleteProductButton
+                                                        productId={product.id}
+                                                        onDelete={deleteProduct}
+                                                    />
                                                 </div>
                                             </td>
                                         </tr>

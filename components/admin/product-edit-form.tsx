@@ -85,7 +85,7 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                     <Input className="rounded-xl h-11 bg-slate-50/50 border-none font-bold" placeholder="Shade Name" {...form.register(`variants.${index}.title`)} />
                 </div>
 
-                {/* MEDIA LINKER */}
+                
                 {/* MEDIA LINKER */}
                 <div className="col-span-8 md:col-span-4">
                     <Dialog>

@@ -226,3 +226,6 @@ export async function updateProduct(productId: string, formData: FormData) {
         return { success: false, error: error.message }
     }
 }
+
+
+// 4. Server Action for Deletion
