@@ -165,11 +165,11 @@ export default function WishlistPage() {
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="max-w-7xl mx-auto px-6 pt-20 pb-20"
+                    className="max-w-7xl mx-auto px-6 pt-8 pb-8"
                 >
                     <header className="mb-12">
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-2">Your Curated List</p>
-                        <h1 className="text-5xl font-serif italic tracking-tighter uppercase text-slate-900 leading-none">Wishlist</h1>
+                        <h1 className="text-3xl font-black  tracking-tighter uppercase text-slate-900 leading-none">Wishlist</h1>
                     </header>
 
                     {items.length > 0 ? (
