@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from "react"
 import { ProductImages } from "./product-images"
-import { VariantSelector } from "./variant-selector"
+import  VariantSelector  from "./variant-selector"
 
 export function ProductViewSection({ product }: { product: any }) {
     // Identify the starting variant
