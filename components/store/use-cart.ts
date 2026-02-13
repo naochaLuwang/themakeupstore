@@ -126,6 +126,172 @@
 //     )
 // );
 
+// "use client"
+
+// import { create } from 'zustand';
+// import { persist, createJSONStorage } from 'zustand/middleware';
+
+// export interface CartItem {
+//     id: string;
+//     productId: string;
+//     categoryId: string;
+//     variantId: string;
+//     name: string;
+//     variantTitle: string;
+//     price: number;
+//     mrp: number;
+//     image: string;
+//     quantity: number;
+//     stock: number;
+// }
+
+// interface CartStore {
+//     items: CartItem[];
+//     appliedPromo: any | null;
+
+//     // Shipping State (Matched to your Admin Setup)
+//     shippingPrice: number;
+//     baseShippingPrice: number;
+//     shippingLabel: string;
+//     selectedShippingId: string | null;
+//      // Renamed from selectedMethodId to fix the error
+
+//     // Actions
+//     addItem: (item: CartItem) => void;
+//     removeItem: (variantId: string) => void;
+//     updateQuantity: (variantId: string, quantity: number) => void;
+//     setItems: (items: CartItem[]) => void;
+//     setAppliedPromo: (promo: any) => void;
+
+//     // Logistics Engine
+//     setShippingMethod: (method: { id: string, name: string, price: number }) => void;
+//     autoCalculateShipping: () => void;
+
+
+
+//     clearCart: () => void;
+//     totalItems: () => number;
+//     getSubtotal: () => number;
+//     clearShipping: () => void;
+// }
+
+// export const useCart = create<CartStore>()(
+//     persist(
+//         (set, get) => ({
+//             items: [],
+//             appliedPromo: null,
+//             shippingPrice: 0,
+//             baseShippingPrice: 0,
+//             shippingLabel: '',
+//             selectedShippingId: null, // Initial state renamed
+
+//             getSubtotal: () => {
+//                 return get().items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+//             },
+
+//             setShippingMethod: (method) => {
+//                 const subtotal = get().getSubtotal();
+//                 const FREE_SHIPPING_THRESHOLD = 5000;
+
+//                 const isFree = subtotal >= FREE_SHIPPING_THRESHOLD && subtotal > 0;
+
+//                 set({
+//                     selectedShippingId: method.id, // Corrected reference
+//                     shippingLabel: method.name,
+//                     baseShippingPrice: method.price,
+//                     shippingPrice: isFree ? 0 : method.price
+//                 });
+//             },
+
+//             autoCalculateShipping: () => {
+//                 const { selectedShippingId, baseShippingPrice } = get(); // Corrected reference
+//                 if (!selectedShippingId) return;
+
+//                 const subtotal = get().getSubtotal();
+//                 const FREE_SHIPPING_THRESHOLD = 5000;
+
+//                 const isFree = subtotal >= FREE_SHIPPING_THRESHOLD && subtotal > 0;
+
+//                 set({
+//                     shippingPrice: isFree ? 0 : baseShippingPrice
+//                 });
+//             },
+
+//             addItem: (newItem) => {
+//                 const currentItems = get().items;
+//                 const existingIndex = currentItems.findIndex(item => item.variantId === newItem.variantId);
+//                 let updatedItems;
+
+//                 if (existingIndex > -1) {
+//                     updatedItems = [...currentItems];
+//                     const existing = updatedItems[existingIndex];
+//                     updatedItems[existingIndex] = {
+//                         ...existing,
+//                         quantity: Math.min(existing.quantity + (newItem.quantity || 1), existing.stock)
+//                     };
+//                 } else {
+//                     updatedItems = [...currentItems, { ...newItem, quantity: newItem.quantity || 1 }];
+//                 }
+
+//                 set({ items: updatedItems });
+//                 get().autoCalculateShipping();
+//             },
+
+//             updateQuantity: (variantId, quantity) => {
+//                 const updatedItems = get().items.map(item =>
+//                     item.variantId === variantId
+//                         ? { ...item, quantity: Math.max(1, Math.min(quantity, item.stock)) }
+//                         : item
+//                 );
+//                 set({ items: updatedItems });
+//                 get().autoCalculateShipping();
+//             },
+
+//             removeItem: (variantId) => {
+//                 const remainingItems = get().items.filter(item => item.variantId !== variantId);
+//                 set({ items: remainingItems });
+
+//                 if (remainingItems.length === 0) {
+//                     get().clearShipping();
+//                 } else {
+//                     get().autoCalculateShipping();
+//                 }
+//             },
+
+//             setItems: (newItems) => {
+//                 set({ items: newItems });
+//                 get().autoCalculateShipping();
+//             },
+
+//             setAppliedPromo: (promo) => set({ appliedPromo: promo }),
+
+//             clearCart: () => set({
+//                 items: [],
+//                 appliedPromo: null,
+//                 selectedShippingId: null, // Corrected reference
+//                 shippingPrice: 0,
+//                 baseShippingPrice: 0,
+//                 shippingLabel: ''
+//             }),
+
+//             clearShipping: () => set({
+//                 selectedShippingId: null, // Corrected reference
+//                 shippingPrice: 0,
+//                 baseShippingPrice: 0,
+//                 shippingLabel: ''
+//             }),
+
+//             totalItems: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
+//         }),
+//         {
+//             name: 'shopping-cart',
+//             storage: createJSONStorage(() => localStorage),
+//             version: 7, // Bumped version to reset previous conflicting data
+//         }
+//     )
+// );
+
+
 "use client"
 
 import { create } from 'zustand';
@@ -149,11 +315,11 @@ interface CartStore {
     items: CartItem[];
     appliedPromo: any | null;
 
-    // Shipping State (Matched to your Admin Setup)
+    // Shipping State
     shippingPrice: number;
     baseShippingPrice: number;
     shippingLabel: string;
-    selectedShippingId: string | null; // Renamed from selectedMethodId to fix the error
+    selectedShippingId: string | null;
 
     // Actions
     addItem: (item: CartItem) => void;
@@ -163,9 +329,11 @@ interface CartStore {
     setAppliedPromo: (promo: any) => void;
 
     // Logistics Engine
+    // ADDED BACK/RENAMED to match your component calls
     setShippingMethod: (method: { id: string, name: string, price: number }) => void;
-    autoCalculateShipping: () => void;
+    setSelectedShipping: (id: string | null, price: number, label?: string) => void;
 
+    autoCalculateShipping: () => void;
     clearCart: () => void;
     totalItems: () => number;
     getSubtotal: () => number;
@@ -180,34 +348,43 @@ export const useCart = create<CartStore>()(
             shippingPrice: 0,
             baseShippingPrice: 0,
             shippingLabel: '',
-            selectedShippingId: null, // Initial state renamed
+            selectedShippingId: null,
 
             getSubtotal: () => {
                 return get().items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
             },
 
+            // This handles the new object-based logic
             setShippingMethod: (method) => {
                 const subtotal = get().getSubtotal();
-                const FREE_SHIPPING_THRESHOLD = 5000;
-
-                const isFree = subtotal >= FREE_SHIPPING_THRESHOLD && subtotal > 0;
+                const isFree = subtotal >= 5000 && subtotal > 0;
 
                 set({
-                    selectedShippingId: method.id, // Corrected reference
+                    selectedShippingId: method.id,
                     shippingLabel: method.name,
                     baseShippingPrice: method.price,
                     shippingPrice: isFree ? 0 : method.price
                 });
             },
 
+            // This fixes the Type Error by providing the function your component is looking for
+            setSelectedShipping: (id, price, label) => {
+                const subtotal = get().getSubtotal();
+                const isFree = subtotal >= 5000 && subtotal > 0;
+
+                set({
+                    selectedShippingId: id,
+                    baseShippingPrice: price,
+                    shippingPrice: isFree ? 0 : price,
+                    shippingLabel: label || ''
+                });
+            },
+
             autoCalculateShipping: () => {
-                const { selectedShippingId, baseShippingPrice } = get(); // Corrected reference
+                const { selectedShippingId, baseShippingPrice } = get();
                 if (!selectedShippingId) return;
 
-                const subtotal = get().getSubtotal();
-                const FREE_SHIPPING_THRESHOLD = 5000;
-
-                const isFree = subtotal >= FREE_SHIPPING_THRESHOLD && subtotal > 0;
+                const isFree = get().getSubtotal() >= 5000;
 
                 set({
                     shippingPrice: isFree ? 0 : baseShippingPrice
@@ -221,10 +398,9 @@ export const useCart = create<CartStore>()(
 
                 if (existingIndex > -1) {
                     updatedItems = [...currentItems];
-                    const existing = updatedItems[existingIndex];
                     updatedItems[existingIndex] = {
-                        ...existing,
-                        quantity: Math.min(existing.quantity + (newItem.quantity || 1), existing.stock)
+                        ...updatedItems[existingIndex],
+                        quantity: Math.min(updatedItems[existingIndex].quantity + (newItem.quantity || 1), updatedItems[existingIndex].stock)
                     };
                 } else {
                     updatedItems = [...currentItems, { ...newItem, quantity: newItem.quantity || 1 }];
@@ -235,24 +411,21 @@ export const useCart = create<CartStore>()(
             },
 
             updateQuantity: (variantId, quantity) => {
-                const updatedItems = get().items.map(item =>
-                    item.variantId === variantId
-                        ? { ...item, quantity: Math.max(1, Math.min(quantity, item.stock)) }
-                        : item
-                );
-                set({ items: updatedItems });
+                set({
+                    items: get().items.map(item =>
+                        item.variantId === variantId
+                            ? { ...item, quantity: Math.max(1, Math.min(quantity, item.stock)) }
+                            : item
+                    )
+                });
                 get().autoCalculateShipping();
             },
 
             removeItem: (variantId) => {
                 const remainingItems = get().items.filter(item => item.variantId !== variantId);
                 set({ items: remainingItems });
-
-                if (remainingItems.length === 0) {
-                    get().clearShipping();
-                } else {
-                    get().autoCalculateShipping();
-                }
+                if (remainingItems.length === 0) get().clearShipping();
+                else get().autoCalculateShipping();
             },
 
             setItems: (newItems) => {
@@ -265,14 +438,14 @@ export const useCart = create<CartStore>()(
             clearCart: () => set({
                 items: [],
                 appliedPromo: null,
-                selectedShippingId: null, // Corrected reference
+                selectedShippingId: null,
                 shippingPrice: 0,
                 baseShippingPrice: 0,
                 shippingLabel: ''
             }),
 
             clearShipping: () => set({
-                selectedShippingId: null, // Corrected reference
+                selectedShippingId: null,
                 shippingPrice: 0,
                 baseShippingPrice: 0,
                 shippingLabel: ''
@@ -283,7 +456,7 @@ export const useCart = create<CartStore>()(
         {
             name: 'shopping-cart',
             storage: createJSONStorage(() => localStorage),
-            version: 7, // Bumped version to reset previous conflicting data
+            version: 8, // Bumped to 8 to clear any v7 naming conflicts
         }
     )
 );
