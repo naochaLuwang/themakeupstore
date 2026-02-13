@@ -7,30 +7,14 @@
 // import { usePathname } from "next/navigation"
 // import {
 //     Home,
-//     ShoppingBag,
 //     User,
 //     Award,
-//     LayoutGrid,
-//     Store
+//     LayoutGrid
 // } from "lucide-react"
-// import { motion, useAnimation } from "framer-motion" // Added useAnimation
-// import { useCart } from "@/components/store/use-cart"
+// import { motion } from "framer-motion"
 
 // export function BottomNav() {
 //     const pathname = usePathname()
-//     const { items } = useCart()
-//     const cartCount = items?.length || 0
-//     const controls = useAnimation() // Animation controller for the bag
-
-//     // Trigger bounce animation when cartCount changes
-//     React.useEffect(() => {
-//         if (cartCount > 0) {
-//             controls.start({
-//                 scale: [1, 1.4, 0.9, 1.1, 1],
-//                 transition: { duration: 0.4, ease: "easeInOut" }
-//             })
-//         }
-//     }, [cartCount, controls])
 
 //     const triggerHaptic = () => {
 //         if (typeof window !== "undefined" && window.navigator.vibrate) {
@@ -42,15 +26,13 @@
 //         { name: 'Home', href: '/', icon: Home },
 //         { name: 'Brands', href: '/brands', icon: Award },
 //         { name: 'Categories', href: '/categories', icon: LayoutGrid },
-//         { name: 'Shop All', href: '/shop', icon: Store },
-//         { name: 'Bag', href: '/cart', icon: ShoppingBag, count: cartCount, animate: true },
 //         { name: 'Account', href: '/profile', icon: User },
 //     ]
 
 //     return (
 //         <div className="fixed bottom-0 left-0 right-0 z-[400] lg:hidden">
-//             <div className="bg-white/90 backdrop-blur-xl border-t border-slate-100 px-1 pt-2 pb-safe shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.08)]">
-//                 <nav className="flex items-center justify-between h-14 max-w-md mx-auto">
+//             <div className="bg-white/90 backdrop-blur-xl border-t border-slate-100 px-2 pt-2 pb-safe shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.08)]">
+//                 <nav className="flex items-center justify-around h-14 max-w-sm mx-auto">
 //                     {navItems.map((item) => {
 //                         const isActive = pathname === item.href
 
@@ -59,28 +41,15 @@
 //                                 key={item.name}
 //                                 href={item.href}
 //                                 onClick={triggerHaptic}
-//                                 className="relative flex flex-col items-center justify-center flex-1 h-full group outline-none min-w-[55px]"
+//                                 className="relative flex flex-col items-center justify-center flex-1 h-full group outline-none"
 //                             >
-//                                 <motion.div
-//                                     className="relative"
-//                                     animate={item.animate ? controls : {}} // Apply bounce only to Bag
-//                                 >
+//                                 <div className="relative">
 //                                     <item.icon
-//                                         className={`w-[18px] h-[18px] transition-all duration-300 transform ${isActive
+//                                         className={`w-[20px] h-[20px] transition-all duration-300 transform ${isActive
 //                                             ? "text-slate-900 stroke-[2.5] scale-110"
 //                                             : "text-slate-400 stroke-[1.5] group-active:scale-90"
 //                                             }`}
 //                                     />
-
-//                                     {item.count !== undefined && item.count > 0 && (
-//                                         <motion.span
-//                                             initial={{ scale: 0 }}
-//                                             animate={{ scale: 1 }}
-//                                             className="absolute -top-2 -right-2.5 min-w-[14px] h-[14px] px-1 bg-slate-900 text-white text-[7px] font-black rounded-full flex items-center justify-center border-2 border-white"
-//                                         >
-//                                             {item.count}
-//                                         </motion.span>
-//                                     )}
 
 //                                     {isActive && (
 //                                         <motion.div
@@ -93,9 +62,9 @@
 //                                             }}
 //                                         />
 //                                     )}
-//                                 </motion.div>
+//                                 </div>
 
-//                                 <span className={`text-[7px] mt-2 font-bold uppercase tracking-[0.05em] whitespace-nowrap transition-colors duration-300 ${isActive ? "text-slate-900" : "text-slate-400"
+//                                 <span className={`text-[8px] mt-2 font-black uppercase tracking-[0.1em] transition-colors duration-300 ${isActive ? "text-slate-900" : "text-slate-400"
 //                                     }`}>
 //                                     {item.name}
 //                                 </span>
@@ -125,6 +94,10 @@ import { motion } from "framer-motion"
 export function BottomNav() {
     const pathname = usePathname()
 
+    // UX Logic: Tunneling Effect. 
+    // We hide navigation on checkout to minimize cognitive friction and exit intent.
+    const isCheckoutPage = pathname.startsWith('/checkout')
+
     const triggerHaptic = () => {
         if (typeof window !== "undefined" && window.navigator.vibrate) {
             window.navigator.vibrate(10)
@@ -137,6 +110,9 @@ export function BottomNav() {
         { name: 'Categories', href: '/categories', icon: LayoutGrid },
         { name: 'Account', href: '/profile', icon: User },
     ]
+
+    // If we are on the checkout flow, render nothing
+    if (isCheckoutPage) return null
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-[400] lg:hidden">
