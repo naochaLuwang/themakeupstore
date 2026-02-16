@@ -9,7 +9,7 @@ export default function OrderSuccessPage() {
     const orderId = searchParams.get("orderId")
 
     return (
-        <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
+        <div className="min-h-auto bg-white flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
 
             <div className="w-full max-w-xl space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
 
@@ -49,7 +49,7 @@ export default function OrderSuccessPage() {
                     </div>
 
                     <div className="pt-8 space-y-6">
-                        <div className="flex items-start gap-4">
+                        {/* <div className="flex items-start gap-4">
                             <div className="p-2.5 bg-white rounded-xl border border-slate-100">
                                 <FileText className="w-4 h-4 text-slate-400" />
                             </div>
@@ -59,7 +59,7 @@ export default function OrderSuccessPage() {
                                     A summary has been sent to your registered address.
                                 </p>
                             </div>
-                        </div>
+                        </div> */}
 
                         <Link
                             href={`/profile/orders/${orderId}`}

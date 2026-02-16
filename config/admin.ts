@@ -4,10 +4,15 @@ import {
     FolderTree,
     Settings,
     Users,
-    PackageSearch, // Better for Inventory
-    Truck,         // Better for Shipping
-    ClipboardList, Mail,
-    Star // Better for Orders
+    PackageSearch,
+    Truck,
+    ClipboardList,
+    Mail,
+    Star,
+    Radio,      // New for Broadcast
+    BarChart3,  // New for Reports
+    DollarSign, // For Revenue Report
+    TrendingUp  // For Sales Report
 } from "lucide-react"
 
 export const adminConfig = {
@@ -15,14 +20,30 @@ export const adminConfig = {
         { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { title: "Products", href: "/admin/products", icon: ShoppingBag },
         { title: "Categories", href: "/admin/categories", icon: FolderTree },
-        { title: "Orders", href: "/admin/orders", icon: ClipboardList }, // Changed to Checklist icon
-        { title: "Inventory", href: "/admin/inventory", icon: PackageSearch }, // Changed to Package Search
-        { title: "Customers", href: "/admin/customers", icon: Users }, // Added to match e-commerce flow
+        { title: "Orders", href: "/admin/orders", icon: ClipboardList },
+        { title: "Inventory", href: "/admin/inventory", icon: PackageSearch },
+        { title: "Customers", href: "/admin/customers", icon: Users },
         { title: "Shipping", href: "/admin/shipping", icon: Truck },
-        { title: "Pricing", href: "/admin/pricing", icon: PackageSearch },  // Changed to Package Search icon
+        { title: "Pricing", href: "/admin/pricing", icon: PackageSearch },
+
+        // --- Added Broadcast Section ---
+        { title: "Broadcast", href: "/admin/broadcast", icon: Radio },
+
         { title: "Messages", href: "/admin/messages", icon: Mail },
         { title: "Reviews", href: "/admin/reviews", icon: Star },
-        // Added Messages section
+
+        // --- Added Reports Section ---
+        {
+            title: "Revenue Report",
+            href: "/admin/reports/revenue",
+            icon: DollarSign
+        },
+        {
+            title: "Sales Report",
+            href: "/admin/reports/sales",
+            icon: BarChart3
+        },
+
         { title: "Legal Settings", href: "/admin/settings/legal", icon: Settings },
     ],
 }

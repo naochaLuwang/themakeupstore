@@ -75,7 +75,7 @@ export default function ShopClient({ initialProducts, searchQuery }: { initialPr
             <div className={`transition-all duration-700 ease-in-out ${isFilterOpen ? 'blur-2xl scale-[0.96] opacity-30 pointer-events-none' : 'blur-0 scale-100 opacity-100 pointer-events-auto'}`}>
 
                 {/* DYNAMIC HEADER */}
-                <div className="bg-white pt-8 pb-16 border-b border-zinc-50">
+                <div className="bg-white pt-8 pb-8 border-b border-zinc-50">
                     <div className="max-w-6xl mx-auto px-6">
                         <motion.div
                             initial={{ width: 0 }} animate={{ width: 32 }}
@@ -85,7 +85,7 @@ export default function ShopClient({ initialProducts, searchQuery }: { initialPr
                             {searchQuery ? (
                                 <><span className="text-zinc-300 italic">Found:</span> <br />{searchQuery}</>
                             ) : (
-                                <>The <br /><span className="italic font-normal">Collection</span></>
+                                <>The <br /><span className=" font-normal">Collection</span></>
                             )}
                         </h1>
                         <div className="flex items-center justify-between">

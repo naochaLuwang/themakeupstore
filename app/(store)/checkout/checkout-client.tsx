@@ -353,18 +353,20 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
                         onClick={handlePlaceOrder}
                         disabled={loading || !selectedShippingId}
                         className={`
-                            relative h-14 px-8 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all duration-300
-                            ${!selectedShippingId
+        relative h-14 px-8 
+        min-w-[180px] flex items-center justify-center /* Fixes the shrinking issue */
+        rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all duration-300
+        ${!selectedShippingId
                                 ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                                 : "bg-slate-900 text-white shadow-[0_15px_30px_-10px_rgba(0,0,0,0.3)] active:scale-95"}
-                        `}
+    `}
                     >
                         {loading ? (
                             <Loader2 className="animate-spin w-5 h-5" />
                         ) : (
                             <div className="flex items-center gap-3">
                                 <span>Place Order</span>
-                                <ChevronRight className="w-4 h-4 opacity-50" />
+                                <ChevronRight className="w-4 h-4 opacity-50 transition-transform group-hover:translate-x-1" />
                             </div>
                         )}
                     </Button>
