@@ -31,6 +31,7 @@ export const adminConfig = {
 
         { title: "Messages", href: "/admin/messages", icon: Mail },
         { title: "Reviews", href: "/admin/reviews", icon: Star },
+        { title: "Back in Stock Request", href: "/admin/inventory/demand", icon: TrendingUp },
 
         // --- Added Reports Section ---
         {
