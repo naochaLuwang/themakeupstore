@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
-import { updateVariantStock } from "@/app/actions/inventory"
+// import { updateVariantStock } from "@/app/actions/inventory"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
@@ -14,14 +14,14 @@ export function StockInput({ variantId, initialStock }: { variantId: string, ini
         if (isNaN(stockNum)) return
 
         setLoading(true)
-        const res = await updateVariantStock(variantId, stockNum)
+        // const res = await updateVariantStock(variantId, stockNum)
         setLoading(false)
 
-        if (res?.error) {
-            toast.error("Failed to update stock")
-        } else {
-            toast.success("Stock updated")
-        }
+        // if (res?.error) {
+        //     toast.error("Failed to update stock")
+        // } else {
+        //     toast.success("Stock updated")
+        // }
     }
 
     return (
