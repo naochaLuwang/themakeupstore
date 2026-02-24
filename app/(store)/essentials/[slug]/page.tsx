@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { Loader2, ArrowLeft, AlertCircle, SlidersHorizontal, ChevronRight } from "lucide-react"
+import { AlertCircle, ChevronRight } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
 
@@ -24,7 +24,6 @@ export default function EssentialCategoryPage() {
             setError(null)
 
             try {
-                // 1. Get the current category
                 const { data: catData, error: catError } = await supabase
                     .from('categories')
                     .select('id, name, slug, parent_id')
@@ -34,8 +33,6 @@ export default function EssentialCategoryPage() {
                 if (catError) throw catError
                 setCategory(catData)
 
-                // 2. Fetch "Sibling" categories for the sticky nav
-                // This finds all other categories under the same parent "Exclusive"
                 if (catData.parent_id) {
                     const { data: siblings } = await supabase
                         .from('categories')
@@ -45,7 +42,6 @@ export default function EssentialCategoryPage() {
                     if (siblings) setSiblingCategories(siblings)
                 }
 
-                // 3. Junction Table Fetch
                 const { data: junctionData } = await supabase
                     .from('product_categories')
                     .select('product_id')
@@ -53,7 +49,6 @@ export default function EssentialCategoryPage() {
 
                 const junctionProductIds = junctionData?.map(j => j.product_id) || []
 
-                // 4. Products Query
                 let query = supabase
                     .from('products')
                     .select('*, product_variants(*)')
@@ -79,91 +74,85 @@ export default function EssentialCategoryPage() {
         fetchContent()
     }, [slug, supabase])
 
+    // --- SHARED NAV COMPONENT (Eliminates Flickering) ---
+    const StickyNav = ({ isDataLoaded }: { isDataLoaded: boolean }) => (
+        <nav className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-100">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center px-4 h-auto sm:h-14 py-3 sm:py-0">
+
+                {/* Breadcrumb Area */}
+                <div className="flex items-center gap-2 mb-3 sm:mb-0 sm:mr-8 flex-shrink-0">
+                    <Link href="/exclusive" className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-black transition-colors">
+                        Hub
+                    </Link>
+                    <ChevronRight className="w-3 h-3 text-slate-200" />
+                    {isDataLoaded ? (
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-900 truncate max-w-[150px]">
+                            {category?.name}
+                        </span>
+                    ) : (
+                        <div className="w-16 h-2 bg-slate-100 animate-pulse rounded" />
+                    )}
+                </div>
+
+                {/* Pill Navigation Area */}
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0 touch-pan-x">
+                    {siblingCategories.length > 0 ? (
+                        siblingCategories.map((sib) => {
+                            const isActive = sib.slug === slug;
+                            return (
+                                <Link
+                                    key={sib.slug}
+                                    href={`/exclusive/${sib.slug}`}
+                                    className={`
+                                        text-[9px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-full 
+                                        whitespace-nowrap transition-all duration-300 border
+                                        ${isActive
+                                            ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-200'
+                                            : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-300'}
+                                    `}
+                                >
+                                    {sib.name}
+                                </Link>
+                            )
+                        })
+                    ) : (
+                        // Skeleton pills for loading state
+                        [1, 2, 3, 4].map((i) => (
+                            <div key={i} className="w-20 h-8 bg-slate-50 border border-slate-100 rounded-full animate-pulse flex-shrink-0" />
+                        ))
+                    )}
+                </div>
+            </div>
+        </nav>
+    )
+
     if (loading) return (
         <div className="min-h-screen bg-white">
-            {/* SKELETON NAV */}
-            <nav className="sticky top-0 z-50 w-full bg-white border-b border-slate-100">
-                <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-8 animate-pulse">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-2 bg-slate-100 rounded" />
-                        <div className="w-3 h-3 bg-slate-50 rounded" />
-                        <div className="w-16 h-2 bg-slate-200 rounded" />
-                    </div>
-                    <div className="flex gap-6">
-                        <div className="w-12 h-2 bg-slate-100 rounded" />
-                        <div className="w-12 h-2 bg-slate-100 rounded" />
-                        <div className="w-12 h-2 bg-slate-100 rounded" />
-                    </div>
-                </div>
-            </nav>
-
+            <StickyNav isDataLoaded={false} />
             <main className="max-w-7xl mx-auto px-6 pt-12">
-                {/* SKELETON HEADER */}
+                {/* MATCHED 9XL SKELETON HEADER */}
                 <header className="mb-20 animate-pulse">
-                    <div className="w-full md:w-3/4 h-16 md:h-24 bg-slate-100 rounded-sm mb-4" />
-                    <div className="w-1/2 md:w-1/4 h-16 md:h-24 bg-slate-50 rounded-sm" />
+                    <div className="w-full md:w-3/4 h-24 md:h-32 bg-slate-50 rounded-sm mb-4" />
                 </header>
 
-                {/* SKELETON GRID */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12">
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                         <div key={i} className="space-y-4 animate-pulse">
-                            {/* Product Image Area */}
                             <div className="aspect-[3/4] bg-slate-50 rounded-sm border border-slate-50" />
-
-                            {/* Product Meta Area */}
                             <div className="space-y-3">
                                 <div className="w-full h-3 bg-slate-100 rounded" />
                                 <div className="w-2/3 h-3 bg-slate-50 rounded" />
-                                <div className="pt-2 flex justify-between">
-                                    <div className="w-12 h-2 bg-slate-100 rounded" />
-                                    <div className="w-8 h-2 bg-slate-50 rounded" />
-                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
             </main>
-
-            {/* ULTRA-THIN BOTTOM SCANLINE (DECORATIVE) */}
-            <div className="fixed bottom-0 left-0 w-full h-[1px] bg-slate-100 overflow-hidden">
-                <div className="w-full h-full bg-slate-900 animate-[scan_2s_linear_infinite]" />
-            </div>
         </div>
     )
 
     return (
         <div className="min-h-screen bg-white text-slate-900 pb-32">
-
-            {/* STICKY SUB-NAV */}
-            <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-slate-100">
-                <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between overflow-x-auto no-scrollbar gap-8">
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <Link href="/exclusive" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-black transition-colors">
-                            Hub
-                        </Link>
-                        <ChevronRight className="w-3 h-3 text-slate-200" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">
-                            {category?.name}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-6 pr-4">
-                        {siblingCategories.map((sib) => (
-                            <Link
-                                key={sib.slug}
-                                href={`/exclusive/${sib.slug}`}
-                                className={`text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap transition-all
-                                    ${sib.slug === slug
-                                        ? 'text-slate-900 border-b-2 border-slate-900 pb-1'
-                                        : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                                {sib.name}
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-            </nav>
+            <StickyNav isDataLoaded={true} />
 
             <main className="max-w-7xl mx-auto px-6 pt-12">
                 {error ? (
@@ -178,16 +167,10 @@ export default function EssentialCategoryPage() {
                             <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none mb-6">
                                 {category?.name}<span className="text-slate-100">_</span>
                             </h1>
-                            {/* <div className="flex items-center gap-6">
-                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">
-                                    Segment Vol. {products.length}
-                                </p>
-                                <div className="h-px w-20 bg-slate-100" />
-                            </div> */}
                         </header>
 
                         {products.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12 animate-in fade-in duration-700">
                                 {products.map((product) => (
                                     <ProductCard key={product.id} product={product} />
                                 ))}
@@ -202,7 +185,11 @@ export default function EssentialCategoryPage() {
                     </>
                 )}
             </main>
+
+            {/* DECORATIVE BOTTOM SCANLINE */}
+            <div className="fixed bottom-0 left-0 w-full h-[1px] bg-slate-100 overflow-hidden">
+                <div className="w-full h-full bg-slate-900 animate-[scan_2s_linear_infinite]" />
+            </div>
         </div>
     )
 }
-

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { createClient } from "@/utils/supabase/client"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export function NavSearch() {
     const instanceId = useId()
@@ -18,6 +19,7 @@ export function NavSearch() {
     const containerRef = useRef<HTMLDivElement>(null)
     const supabase = createClient()
 
+    const router = useRouter()
     // 1. Load history on mount
     useEffect(() => {
         setMounted(true)
@@ -189,15 +191,19 @@ export function NavSearch() {
                     )}
 
                     {/* GLOBAL FOOTER */}
-                    <Link
-                        href="/shop"
-                        className="block py-4 text-center text-[9px] font-bold tracking-[0.4em] text-charcoal bg-zinc-50/50 hover:bg-zinc-100 hover:text-primary border-t border-charcoal/5 uppercase transition-all"
-                        onClick={clearSearch}
+                    <button
+                        onClick={() => {
+                            const target = isSearching ? `/search?q=${encodeURIComponent(query)}` : '/shop';
+                            router.push(target);
+                            setIsOpen(false);
+                        }}
+                        className="w-full block py-4 text-center text-[9px] font-bold tracking-[0.4em] text-charcoal bg-zinc-50/50 hover:bg-zinc-100 hover:text-primary border-t border-charcoal/5 uppercase transition-all"
                     >
-                        View All Collections
-                    </Link>
+                        {isSearching ? `View All results for "${query}"` : "View All Collections"}
+                    </button>
                 </div>
             )}
         </div>
     )
 }
+
