@@ -11,7 +11,8 @@ import {
     X,
     Check,
     Search,
-    RotateCcw
+    RotateCcw,
+    ChevronRight
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
@@ -113,6 +114,51 @@ export default function CategoryPage() {
         p.name?.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
+    const StickyNav = ({ isDataLoaded }: { isDataLoaded: boolean }) => (
+        <nav className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-100">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center px-4 h-auto sm:h-14 py-3 sm:py-0">
+                <div className="flex items-center gap-2 mb-3 sm:mb-0 sm:mr-8 flex-shrink-0">
+                    <Link href="/exclusive" className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-black transition-colors">
+                        Hub
+                    </Link>
+                    <ChevronRight className="w-3 h-3 text-slate-200" />
+                    {isDataLoaded ? (
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-900 truncate max-w-[150px]">
+                            {category?.name}
+                        </span>
+                    ) : (
+                        <div className="w-16 h-2 bg-slate-100 animate-pulse rounded" />
+                    )}
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0 touch-pan-x">
+                    {siblingCategories.length > 0 ? (
+                        siblingCategories.map((sib) => {
+                            const isActive = sib.slug === slug;
+                            return (
+                                <Link
+                                    key={sib.slug}
+                                    href={`/exclusive/${sib.slug}`}
+                                    className={`text-[9px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 border
+                                        ${isActive
+                                            ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-200'
+                                            : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-300'}`}
+                                >
+                                    {sib.name}
+                                </Link>
+                            )
+                        })
+                    ) : (
+                        // Skeleton pills
+                        [1, 2, 3, 4].map((i) => (
+                            <div key={i} className="w-20 h-8 bg-slate-50 border border-slate-100 rounded-full animate-pulse flex-shrink-0" />
+                        ))
+                    )}
+                </div>
+            </div>
+        </nav>
+    )
+
     return (
         <div className="min-h-screen bg-white text-[#1A1A1A] pb-20 selection:bg-black/5 antialiased">
 
@@ -135,7 +181,7 @@ export default function CategoryPage() {
 
             {/* MAIN INTERFACE */}
             <div className={`transition-all duration-700 ${isFilterOpen ? 'blur-2xl scale-[0.98] opacity-40 pointer-events-none' : ''}`}>
-                <nav className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-zinc-50">
+                {/* <nav className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-zinc-50">
                     <div className="max-w-7xl mx-auto px-4 h-12 flex items-center justify-between">
                         <Link href="/categories" className="flex items-center gap-2">
                             <ArrowLeft className="w-3 h-3 text-zinc-400" />
@@ -150,7 +196,9 @@ export default function CategoryPage() {
                         </div>
                         <div className="w-8" />
                     </div>
-                </nav>
+                </nav> */}
+
+                <StickyNav isDataLoaded={!initialLoading} />
 
                 <main className="max-w-7xl mx-auto px-6 pt-6">
                     <header className="mb-8">
