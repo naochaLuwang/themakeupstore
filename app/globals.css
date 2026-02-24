@@ -249,3 +249,11 @@
     @apply border-l-4 border-black pl-6 italic my-10 text-zinc-500;
   }
 }
+
+
+.bg-holi-mesh {
+  background-color: #fffdf5;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(255, 20, 147, 0.1) 0, transparent 50%), 
+    radial-gradient(at 100% 100%, rgba(255, 215, 0, 0.1) 0, transparent 50%);
+}
