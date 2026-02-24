@@ -81,34 +81,83 @@ export default function CategoryPage() {
     }, [slug, supabase])
 
     // Product Fetch (Re-runs on filter changes, but doesn't trigger initialLoading)
+    // React.useEffect(() => {
+    //     async function fetchProducts() {
+    //         if (!category?.id) return
+
+    //         const { data: junctionData } = await supabase.from('product_categories').select('product_id').eq('category_id', category.id)
+    //         const ids = junctionData?.map(j => j.product_id) || []
+
+    //         let query = supabase.from('products').select('*, product_variants(*)').eq('status', 'active')
+    //         if (ids.length > 0) query = query.or(`category_id.eq.${category.id},id.in.(${ids.join(',')})`)
+    //         else query = query.eq('category_id', category.id)
+
+    //         if (selectedBrand) query = query.eq('brand', selectedBrand)
+
+    //         const { data: prodData } = await query.order('name')
+
+    //         let processed = [...(prodData || [])]
+    //         if (sortBy === 'price-low') processed.sort((a, b) => (a.product_variants?.[0]?.price || 0) - (b.product_variants?.[0]?.price || 0))
+    //         if (sortBy === 'price-high') processed.sort((a, b) => (b.product_variants?.[0]?.price || 0) - (a.product_variants?.[0]?.price || 0))
+    //         if (sortBy === 'newest') processed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    //         setProducts(processed)
+    //         if (brands.length === 0) {
+    //             setBrands(Array.from(new Set(prodData?.map(p => p.brand).filter(Boolean) as string[])).sort())
+    //         }
+    //     }
+    //     fetchProducts()
+    // }, [category, sortBy, selectedBrand, supabase])
+
     React.useEffect(() => {
         async function fetchProducts() {
             if (!category?.id) return
 
-            const { data: junctionData } = await supabase.from('product_categories').select('product_id').eq('category_id', category.id)
+            const { data: junctionData } = await supabase
+                .from('product_categories')
+                .select('product_id')
+                .eq('category_id', category.id)
+
             const ids = junctionData?.map(j => j.product_id) || []
 
-            let query = supabase.from('products').select('*, product_variants(*)').eq('status', 'active')
-            if (ids.length > 0) query = query.or(`category_id.eq.${category.id},id.in.(${ids.join(',')})`)
-            else query = query.eq('category_id', category.id)
+            let query = supabase
+                .from('products')
+                .select('*, product_variants(*)')
+                .eq('status', 'active')
+
+            if (ids.length > 0) {
+                query = query.or(`category_id.eq.${category.id},id.in.(${ids.join(',')})`)
+            } else {
+                query = query.eq('category_id', category.id)
+            }
 
             if (selectedBrand) query = query.eq('brand', selectedBrand)
 
+            // Initial database fetch is alphabetical
             const { data: prodData } = await query.order('name')
 
             let processed = [...(prodData || [])]
-            if (sortBy === 'price-low') processed.sort((a, b) => (a.product_variants?.[0]?.price || 0) - (b.product_variants?.[0]?.price || 0))
-            if (sortBy === 'price-high') processed.sort((a, b) => (b.product_variants?.[0]?.price || 0) - (a.product_variants?.[0]?.price || 0))
-            if (sortBy === 'newest') processed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+            // --- SORTING LOGIC ---
+            if (sortBy === 'price-low') {
+                processed.sort((a, b) => (a.product_variants?.[0]?.price || 0) - (b.product_variants?.[0]?.price || 0))
+            } else if (sortBy === 'price-high') {
+                processed.sort((a, b) => (b.product_variants?.[0]?.price || 0) - (a.product_variants?.[0]?.price || 0))
+            } else if (sortBy === 'newest') {
+                processed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            } else {
+                // Explicitly sort alphabetically if sortBy is 'alpha' or default
+                processed.sort((a, b) => a.name.localeCompare(b.name))
+            }
 
             setProducts(processed)
+
             if (brands.length === 0) {
                 setBrands(Array.from(new Set(prodData?.map(p => p.brand).filter(Boolean) as string[])).sort())
             }
         }
         fetchProducts()
     }, [category, sortBy, selectedBrand, supabase])
-
     const filteredProducts = products.filter(p =>
         p.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.name?.toLowerCase().includes(searchQuery.toLowerCase())
