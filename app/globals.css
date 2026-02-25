@@ -6,24 +6,68 @@
   --charcoal: #1A1A1A;
   --background-light: #FDFBF7;
   --background-dark: #121212;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary-btn: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* --- NATIVE APP SCROLLBAR & GESTURE OVERRIDES --- */
+html,
+body {
+  scrollbar-width: none !important;
+  /* Firefox */
+  -ms-overflow-style: none !important;
+  /* IE and Edge */
+  overscroll-behavior-y: contain;
+  /* Stops pull-to-refresh & glow */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 @layer base {
-  body {
-    @apply bg-[var(--background-light)] text-[var(--charcoal)] antialiased;
+  * {
+    @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
+    /* Removes blue tap flash on mobile */
   }
-}
 
-body::-webkit-scrollbar {
-  display: none;
-  /* Chrome, Safari and Opera */
-}
-
-body {
-  -ms-overflow-style: none;
-  /* IE and Edge */
-  scrollbar-width: none;
-  /* Firefox */
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
 }
 
 .material-symbols-outlined {
@@ -33,7 +77,6 @@ body {
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* This maps 'font-daciana' to the variable we created in layout.tsx */
   --font-daciana: var(--font-daciana);
 }
 
@@ -80,41 +123,6 @@ body {
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -149,61 +157,16 @@ body {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-@media print {
-  .no-print {
-    display: none !important;
-  }
-
-  body {
-    background: white;
-  }
-
-  main {
-    padding: 0 !important;
-    margin: 0;
-  }
-}
-
-@layer components {
-  .split-panel {
-    /* Standard CSS property is safer than Tailwind's arbitrary square brackets here */
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.5s ease;
-    @apply relative overflow-hidden;
-  }
-
-  @media (min-width: 1024px) {
-
-    /* Use !important or higher specificity to override the default width */
-    .split-container:hover .split-panel:not(:hover) {
-      width: 45% !important;
-      filter: grayscale(0.2) brightness(0.8);
-    }
-
-    .split-container:hover .split-panel:hover {
-      width: 55% !important;
-      filter: grayscale(0) brightness(1);
-    }
-  }
-}
-
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
-    display: none;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 
   .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
   }
 }
 
@@ -223,7 +186,7 @@ body {
   animation: scroll 40s linear infinite;
 }
 
-/* Utility for the luxury colors */
+/* Luxury Color Helpers */
 .bg-background-light {
   background-color: var(--background-light);
 }
@@ -245,6 +208,23 @@ body {
 }
 
 @layer components {
+  .split-panel {
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.5s ease;
+    @apply relative overflow-hidden;
+  }
+
+  @media (min-width: 1024px) {
+    .split-container:hover .split-panel:not(:hover) {
+      width: 45% !important;
+      filter: grayscale(0.2) brightness(0.8);
+    }
+
+    .split-container:hover .split-panel:hover {
+      width: 55% !important;
+      filter: grayscale(0) brightness(1);
+    }
+  }
+
   .journal-article-content h2 {
     @apply text-3xl font-serif italic mt-12 mb-6 text-zinc-900;
   }
@@ -262,10 +242,24 @@ body {
   }
 }
 
-
 .bg-holi-mesh {
   background-color: #fffdf5;
   background-image:
     radial-gradient(at 0% 0%, rgba(255, 20, 147, 0.1) 0, transparent 50%),
     radial-gradient(at 100% 100%, rgba(255, 215, 0, 0.1) 0, transparent 50%);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0;
+  }
 }
