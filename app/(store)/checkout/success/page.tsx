@@ -26,7 +26,7 @@ export default function OrderSuccessPage() {
                             Order Confirmed
                         </h1>
                         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
-                            Your shipment is being processed
+                            Your shipment is being prepared and will be on its way soon.
                         </p>
                     </div>
                 </header>

@@ -1,147 +1,3 @@
-// import { createClient } from "@/utils/supabase/server"
-// import { Badge } from "@/components/ui/badge"
-// import { StockInput } from "@/components/admin/stock-input"
-// import { ProductSearch } from "@/components/admin/product-search"
-// import { StockStatusFilter } from "@/components/admin/inventory-filters"
-// import { PaginationControlled } from "@/components/ui/pagination-controlled"
-// import { Package, AlertTriangle } from "lucide-react"
-
-// const ITEMS_PER_PAGE = 10
-
-// export default async function InventoryPage({
-//     searchParams,
-// }: {
-//     searchParams: Promise<{ query?: string; status?: string; page?: string }>
-// }) {
-//     const { query, status, page } = await searchParams
-//     const supabase = await createClient()
-
-//     const currentPage = Number(page) || 1
-//     const from = (currentPage - 1) * ITEMS_PER_PAGE
-//     const to = from + ITEMS_PER_PAGE - 1
-
-//     // 1. Build Query with Join
-//     // Note: products!inner is used so that filtering by product name works
-//     let dbQuery = supabase
-//         .from("product_variants")
-//         .select(`
-//       id,
-//       sku,
-//       title,
-//       stock,
-//       price,
-//       products!inner (
-//         name,
-//         has_variants
-//       )
-//     `, { count: "exact" })
-
-//     // 2. Apply Search (SKU or Product Name)
-//     // Fallback logic for src/app/admin/inventory/page.tsx
-//     if (query) {
-//         dbQuery = dbQuery.filter('products.name', 'ilike', `%${query}%`)
-//         // Note: This will act as an "AND" with the SKU if you add another filter.
-//         // To keep it as an "OR", the string syntax in Step 1 is the only way.
-//     }
-
-//     // 3. Apply Stock Status Filter
-//     if (status === "out") {
-//         dbQuery = dbQuery.eq("stock", 0)
-//     } else if (status === "low") {
-//         dbQuery = dbQuery.gt("stock", 0).lte("stock", 10)
-//     } else if (status === "in") {
-//         dbQuery = dbQuery.gt("stock", 10)
-//     }
-
-//     // 4. Execute Query with Pagination
-//     const { data: inventory, count, error } = await dbQuery
-//         .order("stock", { ascending: true })
-//         .range(from, to)
-
-//     const totalPages = Math.ceil((count || 0) / ITEMS_PER_PAGE)
-
-//     if (error) console.error("Inventory Error:", error)
-
-//     return (
-//         <div className="flex-1 space-y-4 p-8 pt-6">
-//             <div className="flex items-center justify-between">
-//                 <h2 className="text-3xl font-bold tracking-tight">Inventory</h2>
-//                 <div className="flex items-center gap-3">
-//                     <StockStatusFilter />
-//                     <ProductSearch />
-//                 </div>
-//             </div>
-
-//             <div className="rounded-md border bg-white overflow-hidden">
-//                 <table className="w-full text-sm">
-//                     <thead className="bg-slate-50 border-b">
-//                         <tr className="text-left font-medium">
-//                             <th className="p-4">Product / Variant</th>
-//                             <th className="p-4">SKU</th>
-//                             <th className="p-4">Current Stock</th>
-//                             <th className="p-4">Status</th>
-//                             <th className="p-4 text-right">Quick Update</th>
-//                         </tr>
-//                     </thead>
-//                     <tbody className="divide-y">
-//                         {inventory?.length ? (
-//                             inventory.map((item: any) => (
-//                                 <tr key={item.id} className="hover:bg-slate-50/50">
-//                                     <td className="p-4">
-//                                         <div className="font-medium text-slate-900">
-//                                             {item.products?.name}
-//                                         </div>
-//                                         <div className="text-xs text-muted-foreground italic">
-//                                             {item.title === "Default" ? "Simple Product" : item.title}
-//                                         </div>
-//                                     </td>
-//                                     <td className="p-4 font-mono text-xs text-slate-500">
-//                                         {item.sku}
-//                                     </td>
-//                                     <td className="p-4">
-//                                         <span className={item.stock <= 5 ? "text-red-600 font-bold" : "text-slate-700 font-medium"}>
-//                                             {item.stock}
-//                                         </span>
-//                                     </td>
-//                                     <td className="p-4">
-//                                         {item.stock <= 0 ? (
-//                                             <Badge variant="destructive" className="gap-1">
-//                                                 <AlertTriangle className="h-3 w-3" /> Out of Stock
-//                                             </Badge>
-//                                         ) : item.stock <= 10 ? (
-//                                             <Badge variant="outline" className="text-amber-600 border-amber-600 bg-amber-50">
-//                                                 Low Stock
-//                                             </Badge>
-//                                         ) : (
-//                                             <Badge variant="outline" className="text-emerald-600 border-emerald-600 bg-emerald-50">
-//                                                 In Stock
-//                                             </Badge>
-//                                         )}
-//                                     </td>
-//                                     <td className="p-4 text-right">
-//                                         <StockInput variantId={item.id} initialStock={item.stock} />
-//                                     </td>
-//                                 </tr>
-//                             ))
-//                         ) : (
-//                             <tr>
-//                                 <td colSpan={5} className="p-20 text-center text-muted-foreground">
-//                                     <Package className="h-10 w-10 mx-auto mb-4 opacity-20" />
-//                                     <p>No inventory found matching your criteria.</p>
-//                                 </td>
-//                             </tr>
-//                         )}
-//                     </tbody>
-//                 </table>
-//             </div>
-
-//             {/* Pagination component */}
-//             <PaginationControlled totalPages={totalPages} />
-//         </div>
-//     )
-// }
-
-
 
 // import { createClient } from "@/utils/supabase/server"
 // import { ProductSearch } from "@/components/admin/product-search"
@@ -164,13 +20,14 @@
 //     const from = (currentPage - 1) * ITEMS_PER_PAGE
 //     const to = from + ITEMS_PER_PAGE - 1
 
-//     // Fetch categories for the filter dropdown
+//     // 1. Fetch all categories for the dropdown
 //     const { data: categoriesData } = await supabase
 //         .from("categories")
 //         .select("id, name")
 //         .order("name")
 
-//     // The query with the explicit relationship fix
+//     // 2. Build the Query
+//     // We join product_variants -> products -> product_categories
 //     let dbQuery = supabase
 //         .from("product_variants")
 //         .select(`
@@ -180,17 +37,19 @@
 //             stock, 
 //             price,
 //             products!inner ( 
-//                 name, 
-//                 category_id,
-//                 categories!products_category_id_fkey ( name )
+//                 name,
+//                 product_categories!inner (
+//                     category_id
+//                 )
 //             )
 //         `, { count: "exact" })
 
-//     // Apply Filters
+//     // 3. Apply the Many-to-Many Category Filter
 //     if (category && category !== "all") {
-//         dbQuery = dbQuery.eq('products.category_id', category)
+//         dbQuery = dbQuery.eq('products.product_categories.category_id', category)
 //     }
 
+//     // 4. Apply Other Filters
 //     if (query) {
 //         dbQuery = dbQuery.ilike('products.name', `%${query}%`)
 //     }
@@ -205,31 +64,31 @@
 //         .order("stock", { ascending: true })
 //         .range(from, to)
 
-//     if (error) {
-//         console.error("Supabase Inventory Error:", error.message)
-//     }
+//     if (error) console.error("Filter Error:", error.message)
 
 //     const totalPages = Math.ceil((count || 0) / ITEMS_PER_PAGE)
 
 //     return (
 //         <div className="flex-1 space-y-4 p-8 pt-6">
-//             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+//             <div className="flex items-center justify-between">
 //                 <div>
-//                     <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase">Inventory</h2>
-//                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-//                         Total Records: {count || 0}
+//                     <h2 className="text-3xl font-black tracking-tighter uppercase italic">Inventory</h2>
+//                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+//                         {count || 0} variants available
 //                     </p>
 //                 </div>
-//                 <div className="flex flex-wrap items-center gap-3">
+//                 <div className="flex items-center gap-3">
 //                     <CategoryFilter categories={categoriesData || []} />
 //                     <StockStatusFilter />
 //                     <ProductSearch />
 //                 </div>
 //             </div>
 
+
+
 //             {!inventory || inventory.length === 0 ? (
-//                 <div className="p-20 border-2 border-dashed rounded-[2rem] text-center bg-white shadow-sm">
-//                     <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No matching variants found</p>
+//                 <div className="p-20 border-2 border-dashed rounded-[2rem] text-center bg-white">
+//                     <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No data found in this category</p>
 //                 </div>
 //             ) : (
 //                 <InventoryTableClient initialInventory={inventory} />
@@ -239,12 +98,15 @@
 //         </div>
 //     )
 // }
+
+
 import { createClient } from "@/utils/supabase/server"
 import { ProductSearch } from "@/components/admin/product-search"
 import { StockStatusFilter } from "@/components/admin/inventory-filters"
 import { PaginationControlled } from "@/components/ui/pagination-controlled"
 import { InventoryTableClient } from "@/components/admin/inventory-table-client"
 import { CategoryFilter } from "@/components/admin/category-filter"
+import { LayoutGrid, Filter } from "lucide-react"
 
 const ITEMS_PER_PAGE = 10
 
@@ -260,14 +122,11 @@ export default async function InventoryPage({
     const from = (currentPage - 1) * ITEMS_PER_PAGE
     const to = from + ITEMS_PER_PAGE - 1
 
-    // 1. Fetch all categories for the dropdown
     const { data: categoriesData } = await supabase
         .from("categories")
         .select("id, name")
         .order("name")
 
-    // 2. Build the Query
-    // We join product_variants -> products -> product_categories
     let dbQuery = supabase
         .from("product_variants")
         .select(`
@@ -284,12 +143,10 @@ export default async function InventoryPage({
             )
         `, { count: "exact" })
 
-    // 3. Apply the Many-to-Many Category Filter
     if (category && category !== "all") {
         dbQuery = dbQuery.eq('products.product_categories.category_id', category)
     }
 
-    // 4. Apply Other Filters
     if (query) {
         dbQuery = dbQuery.ilike('products.name', `%${query}%`)
     }
@@ -309,32 +166,62 @@ export default async function InventoryPage({
     const totalPages = Math.ceil((count || 0) / ITEMS_PER_PAGE)
 
     return (
-        <div className="flex-1 space-y-4 p-8 pt-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-3xl font-black tracking-tighter uppercase italic">Inventory</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        {count || 0} variants available
-                    </p>
+        <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 lg:pb-12">
+
+            {/* RESPONSIVE HEADER */}
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h2 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase italic text-slate-900">
+                            Inventory
+                        </h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                            {count || 0} variants synced
+                        </p>
+                    </div>
+                    {/* Mobile Only Quick Stats Icon */}
+                    <div className="lg:hidden p-3 bg-slate-100 rounded-2xl">
+                        <LayoutGrid className="w-5 h-5 text-slate-600" />
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <CategoryFilter categories={categoriesData || []} />
-                    <StockStatusFilter />
-                    <ProductSearch />
+
+                {/* FILTERS CONTAINER */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full lg:w-auto">
+                    <div className="flex-1 lg:w-64">
+                        <ProductSearch />
+                    </div>
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+                        <div className="flex-shrink-0">
+                            <CategoryFilter categories={categoriesData || []} />
+                        </div>
+                        <div className="flex-shrink-0">
+                            <StockStatusFilter />
+                        </div>
+                    </div>
                 </div>
             </div>
 
+            {/* MAIN CONTENT AREA */}
+            <div className="relative">
+                {!inventory || inventory.length === 0 ? (
+                    <div className="p-16 border-2 border-dashed rounded-[2.5rem] border-slate-200 text-center bg-white shadow-sm">
+                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Filter className="w-6 h-6 text-slate-300" />
+                        </div>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                            No matching stock found
+                        </p>
+                    </div>
+                ) : (
+                    /* This component needs to handle the switch between Table (Desktop) and Cards (Mobile) */
+                    <InventoryTableClient initialInventory={inventory} />
+                )}
+            </div>
 
-
-            {!inventory || inventory.length === 0 ? (
-                <div className="p-20 border-2 border-dashed rounded-[2rem] text-center bg-white">
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No data found in this category</p>
-                </div>
-            ) : (
-                <InventoryTableClient initialInventory={inventory} />
-            )}
-
-            <PaginationControlled totalPages={totalPages} />
+            {/* STICKY PAGINATION FOR MOBILE EASE */}
+            <div className="flex justify-center pt-4">
+                <PaginationControlled totalPages={totalPages} />
+            </div>
         </div>
     )
 }

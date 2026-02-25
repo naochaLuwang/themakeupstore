@@ -77,7 +77,7 @@ export function Footer() {
                         <h4 className="font-bold uppercase text-xs tracking-widest text-slate-400">Visit Us</h4>
                         <div className="space-y-4 text-sm text-slate-600">
                             <p className="leading-relaxed">Michael Plaza 1st Floor, Wangkhei Angom Leikai, Imphal</p>
-                            <p className="font-bold">+91 6909013764</p>
+                            <p className="font-bold">+91 7338331909</p>
                         </div>
                     </div>
                 </div>
@@ -126,7 +126,7 @@ export function Footer() {
                     </div>
 
                     {/* Horizontal Links */}
-                    <div className="flex flex-wrap justify-center gap-x-6 gap-y-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                    <div className="md:flex hidden flex-wrap justify-center gap-x-6 gap-y-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                         <Link href="/legal/privacy_policy">Privacy Policy</Link>
                         <Link href="/legal/terms_and_conditions">Terms of Use</Link>
                         <Link href="/contact">Contact Us</Link>
@@ -142,7 +142,7 @@ export function Footer() {
                     {isAdmin && (
                         <Link
                             href="/admin"
-                            className="bg-zinc-900 text-white px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                            className="bg-zinc-900 text-white px-5 py-3 mb-10 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
                         >
                             <Lock className="w-3 h-3" /> Staff Dashboard
                         </Link>

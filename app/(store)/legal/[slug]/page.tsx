@@ -18,7 +18,7 @@ export default async function PublicLegalPage({ params }: { params: Promise<{ sl
             <article className="container mx-auto max-w-2xl">
                 <header className="mb-12 text-center">
                     <span className="font-daciana text-primary tracking-[0.4em] uppercase text-[10px] mb-4 block">
-                        Daciana Legal
+                        THE MAKEUP STORE LEGAL
                     </span>
                     <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-slate-900 uppercase">
                         {slug.replace(/_/g, ' ')}

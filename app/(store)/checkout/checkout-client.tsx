@@ -68,7 +68,7 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
 
     const subtotal = getSubtotal()
     const currentSubtotal = mounted ? subtotal : 0
-    const threshold = 5000
+    const threshold = 3000
     const total = currentSubtotal + shippingPrice
     const isFreeShipping = currentSubtotal >= threshold && selectedShippingId
 

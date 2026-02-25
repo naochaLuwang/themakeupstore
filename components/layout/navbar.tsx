@@ -53,7 +53,7 @@ export default async function Navbar() {
                     <div className="flex-shrink-0 text-center px-2">
                         <Link href="/" className="flex flex-col items-center group">
                             <span className="text-sm md:text-2xl font-daciana font-bold tracking-[0.1em] md:tracking-[0.2em] leading-none text-charcoal dark:text-white uppercase">THE MAKEUP STORE</span>
-                            <span className="text-[6px] md:text-[7px] font-bold tracking-[0.3em] md:tracking-[0.5em] text-primary uppercase mt-1 md:mt-2 opacity-80">WANGKHEI</span>
+                            <span className="text-[9px] md:text-[7px] font-bold tracking-[0.3em] md:tracking-[0.5em] text-primary uppercase mt-1 md:mt-2 opacity-80">WANGKHEI</span>
                         </Link>
                     </div>
 

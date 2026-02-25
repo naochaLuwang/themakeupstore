@@ -357,7 +357,7 @@ export const useCart = create<CartStore>()(
             // This handles the new object-based logic
             setShippingMethod: (method) => {
                 const subtotal = get().getSubtotal();
-                const isFree = subtotal >= 5000 && subtotal > 0;
+                const isFree = subtotal >= 3000 && subtotal > 0;
 
                 set({
                     selectedShippingId: method.id,
@@ -370,7 +370,7 @@ export const useCart = create<CartStore>()(
             // This fixes the Type Error by providing the function your component is looking for
             setSelectedShipping: (id, price, label) => {
                 const subtotal = get().getSubtotal();
-                const isFree = subtotal >= 5000 && subtotal > 0;
+                const isFree = subtotal >= 3000 && subtotal > 0;
 
                 set({
                     selectedShippingId: id,
@@ -384,7 +384,7 @@ export const useCart = create<CartStore>()(
                 const { selectedShippingId, baseShippingPrice } = get();
                 if (!selectedShippingId) return;
 
-                const isFree = get().getSubtotal() >= 5000;
+                const isFree = get().getSubtotal() >= 3000;
 
                 set({
                     shippingPrice: isFree ? 0 : baseShippingPrice

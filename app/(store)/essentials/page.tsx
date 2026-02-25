@@ -143,7 +143,6 @@ export default function EssentialPage() {
 
             {/* TOP PROGRESS LINE (SUBTLE) */}
             <motion.div
-                fixed-top
                 initial={{ scaleX: 0, originX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ duration: 2, ease: "easeInOut" }}

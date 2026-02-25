@@ -44,7 +44,7 @@ body::-webkit-scrollbar {
 }
 
 :root {
-  --primary: #D4AF37;
+  --primary: #000000;
   --charcoal: #1A1A1A;
   --background-light: #FDFBF7;
   --background-dark: #121212;
