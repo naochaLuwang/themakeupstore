@@ -5,9 +5,9 @@
         ],
         "target": {
             "namespace": "android_app",
-            "package_name": "com.themakeupstore.twa",
+            "package_name": "com.themakeupstorewangkhei.twa",
             "sha256_cert_fingerprints": [
-                "36:01:4F:80:8C:E1:8E:50:3D:9C:27:4A:2F:F1:9B:80:C6:7B:DD:E5:AA:C9:07:74:95:37:55:10:EE:22:42:FF"
+                "77:C0:B2:C5:D3:50:7E:BF:C0:FD:7C:AC:B7:E1:1F:BD:E8:5F:F2:DB:F1:B6:20:B7:A0:50:78:66:4B:D9:68:6F"
             ]
         }
     }
