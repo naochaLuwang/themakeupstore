@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { motion } from 'framer-motion'
-import { ArrowRight, ChevronRight, ShoppingBag } from 'lucide-react'
+import { ArrowRight, ChevronRight, Heart, ShoppingBag } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -41,7 +41,7 @@ export default function HoliOffersPage() {
                     .eq('status', 'active')
                     .limit(12);
 
-                // 2. Fetch ALL valid categories (We want all of them, regardless of product count)
+                // 2. Fetch ALL valid categories
                 const { data: catData } = await supabase
                     .from('categories')
                     .select('*')
@@ -70,8 +70,8 @@ export default function HoliOffersPage() {
 
     if (loading) return (
         <div className="h-screen flex flex-col items-center justify-center bg-white gap-4">
-            <div className="w-10 h-10 border-4 border-pink-100 border-t-pink-500 rounded-full animate-spin" />
-            <p className="text-xs font-semibold text-pink-500 uppercase tracking-widest">Curating Beauty...</p>
+            <div className="w-10 h-10 border-4 border-pink-100 border-t-[#fc2779] rounded-full animate-spin" />
+            <p className="text-xs font-bold text-[#fc2779] uppercase tracking-widest">Curating Beauty...</p>
         </div>
     )
 
@@ -79,7 +79,7 @@ export default function HoliOffersPage() {
         <div className="min-h-screen bg-[#fafafa] font-sans pb-20 overflow-hidden">
 
             {/* EDITORIAL HERO BANNER */}
-            <section className="relative w-full py-16 md:py-24 bg-gradient-to-r from-pink-500 via-rose-400 to-orange-300 overflow-hidden flex flex-col items-center justify-center text-center px-4">
+            <section className="relative w-full py-16 md:py-24 bg-gradient-to-r from-[#fc2779] via-rose-400 to-orange-300 overflow-hidden flex flex-col items-center justify-center text-center px-4">
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('/noise.png')] opacity-20 mix-blend-overlay pointer-events-none" />
                 <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/20 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-yellow-300/30 rounded-full blur-3xl pointer-events-none" />
@@ -90,7 +90,7 @@ export default function HoliOffersPage() {
                     transition={{ duration: 0.8 }}
                     className="relative z-10 space-y-6 max-w-3xl"
                 >
-                    <span className="inline-block bg-white text-pink-600 font-bold text-[10px] md:text-xs px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md">
+                    <span className="inline-block bg-white text-[#fc2779] font-bold text-[10px] md:text-xs px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md">
                         The Grand Beauty Sale
                     </span>
                     <h1 className="text-5xl md:text-8xl font-serif italic text-white leading-tight drop-shadow-lg">
@@ -113,12 +113,12 @@ export default function HoliOffersPage() {
                     <section>
                         <div className="flex items-center justify-between mb-6 pr-4 md:pr-0">
                             <h2 className="text-2xl font-serif text-slate-900">Crazy Price Drops</h2>
-                            <Link href="/shop" className="text-sm font-semibold text-pink-600 hover:text-pink-700 flex items-center gap-1">
+                            <Link href="/shop" className="text-sm font-semibold text-[#fc2779] hover:text-pink-700 flex items-center gap-1">
                                 View All <ChevronRight className="w-4 h-4" />
                             </Link>
                         </div>
 
-                        <div className="flex overflow-x-auto gap-4 pb-6 snap-x no-scrollbar pr-4 md:pr-0">
+                        <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 snap-x no-scrollbar pr-4 md:pr-0">
                             {discountedProducts.map((product) => (
                                 <ProductCard key={product.id} product={product} />
                             ))}
@@ -170,7 +170,6 @@ function CategoryBanner({ cat, index }: any) {
                 </div>
 
                 <div className="absolute bottom-0 left-0 w-full p-4 md:p-6 flex flex-col justify-end text-left text-white">
-                    {/* Hardcoded/Mapped Custom Label */}
                     <span className="bg-[#fc2779] text-white text-[9px] md:text-[11px] font-black px-2 py-1 md:px-3 md:py-1.5 rounded-sm w-fit mb-2 md:mb-3 uppercase tracking-widest shadow-md">
                         {cat.displayDiscount}
                     </span>
@@ -184,6 +183,7 @@ function CategoryBanner({ cat, index }: any) {
     )
 }
 
+// REDESIGNED PRODUCT CARD
 function ProductCard({ product }: any) {
     const originalPrice = product.base_price || 0;
     const discount = product.discount_value || 0;
@@ -196,34 +196,43 @@ function ProductCard({ product }: any) {
     }
 
     return (
-        <div className="snap-start shrink-0 w-40 md:w-56 group bg-white p-3 rounded-xl border border-slate-100 hover:shadow-lg transition-all duration-300 relative flex flex-col h-full">
-            {discount > 0 && (
-                <div className="absolute top-2 left-2 z-10 bg-[#fc2779] text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
-                    {product.discount_type === 'percentage' ? `${discount}% OFF` : `₹${discount} OFF`}
-                </div>
-            )}
+        <div className="snap-start shrink-0 w-44 md:w-56 group bg-white rounded-2xl border border-pink-50 hover:border-pink-100 shadow-sm hover:shadow-xl transition-all duration-500 relative flex flex-col h-full overflow-hidden">
 
-            <div className="relative aspect-[4/5] rounded-lg bg-slate-50 overflow-hidden mb-3">
-                <Image src={product.thumbnail_url || '/placeholder.png'} alt={product.name} fill className="object-contain p-2 group-hover:scale-105 transition-transform duration-500" />
+            {/* Image Section - Edge to Edge */}
+            <div className="relative aspect-[4/5] w-full bg-slate-50 overflow-hidden">
+                {/* Ribbon Discount Tag */}
+                {discount > 0 && (
+                    <div className="absolute top-3 left-0 z-10 bg-[#fc2779] text-white text-[10px] font-black px-2 py-1 rounded-r-md shadow-md tracking-wider">
+                        {product.discount_type === 'percentage' ? `${discount}% OFF` : `₹${discount} OFF`}
+                    </div>
+                )}
+
+                {/* Floating Wishlist Button */}
+                <button className="absolute top-3 right-3 z-10 p-1.5 md:p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-400 hover:text-[#fc2779] hover:bg-white shadow-sm transition-all active:scale-95">
+                    <Heart className="w-4 h-4" />
+                </button>
+
+                <Image src={product.thumbnail_url || '/placeholder.png'} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
             </div>
 
-            <div className="flex flex-col flex-grow text-center px-1">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 truncate">{product.brand || 'Premium'}</h4>
-                <p className="text-sm font-semibold text-slate-800 line-clamp-2 leading-tight mb-3 flex-grow">{product.name}</p>
+            {/* Content Section */}
+            <div className="flex flex-col flex-grow p-3 md:p-4">
+                <h4 className="text-[10px] md:text-[11px] font-bold text-[#fc2779] uppercase tracking-widest mb-1 truncate">{product.brand || 'Premium'}</h4>
+                <p className="text-xs md:text-sm font-semibold text-slate-800 line-clamp-2 leading-snug mb-3 flex-grow">{product.name}</p>
 
-                <div className="flex items-baseline justify-center gap-2 mb-4">
-                    <span className="text-base md:text-lg font-black text-slate-900">₹{Math.round(salePrice)}</span>
+                <div className="flex items-center gap-2 mb-4">
+                    <span className="text-base md:text-lg font-black text-slate-900 tracking-tight">₹{Math.round(salePrice)}</span>
                     {salePrice < originalPrice && (
-                        <span className="text-xs text-slate-400 line-through">₹{originalPrice}</span>
+                        <span className="text-xs md:text-sm text-slate-400 line-through decoration-slate-300">₹{originalPrice}</span>
                     )}
                 </div>
-            </div>
 
-            <Link href={`/products/${product.id}`} className="mt-auto">
-                <button className="w-full py-2.5 bg-pink-50 border border-pink-100 text-[#fc2779] rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#fc2779] hover:text-white transition-colors flex items-center justify-center gap-2">
-                    <ShoppingBag className="w-3 h-3 md:w-4 md:h-4" /> Add to Bag
-                </button>
-            </Link>
+                <Link href={`/products/${product.id}`} className="mt-auto block w-full">
+                    <button className="w-full py-2.5 md:py-3 bg-white border border-[#fc2779] text-[#fc2779] rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest hover:bg-[#fc2779] hover:text-white transition-all duration-300 flex items-center justify-center gap-2 group/btn">
+                        <ShoppingBag className="w-3 h-3 md:w-4 md:h-4 group-hover/btn:scale-110 transition-transform" /> Add to Bag
+                    </button>
+                </Link>
+            </div>
         </div>
     )
 }
@@ -261,7 +270,7 @@ function CountdownTimer({ start, end }: { start: number, end: number }) {
     }, [start, end]);
 
     if (status === "ended") {
-        return <div className="text-white font-bold tracking-widest uppercase bg-black/40 px-6 py-2 rounded-full">Sale Ended</div>
+        return <div className="text-white font-bold tracking-widest uppercase bg-black/40 px-6 py-2 rounded-full shadow-lg">Sale Ended</div>
     }
 
     return (

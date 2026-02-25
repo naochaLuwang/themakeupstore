@@ -208,7 +208,6 @@
 //     )
 // }
 
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -233,19 +232,32 @@ export default function ShippingAdmin() {
             .select('*, shipping_methods(*)')
             .order('pincode', { ascending: true })
 
-        if (error) toast.error("Failed to load zones")
+        if (error) {
+            console.error("Fetch Zones Error:", error)
+            toast.error("Failed to load zones")
+        }
         if (data) setZones(data)
     }
 
+    // Safely cast to strings to prevent crashes if DB returns integers
     const filteredZones = zones.filter(z =>
-        z.pincode.includes(searchQuery) || z.name.toLowerCase().includes(searchQuery.toLowerCase())
+        String(z.pincode || "").includes(searchQuery) ||
+        String(z.name || "").toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     async function addZone() {
         if (!newZone.name || !newZone.pincode) return toast.error("Area Name and Pincode are required")
-        const { error } = await supabase.from('shipping_zones').insert([newZone])
+
+        const payload = {
+            name: newZone.name,
+            pincode: String(newZone.pincode),
+            description: newZone.description ? newZone.description : null
+        }
+
+        const { error } = await supabase.from('shipping_zones').insert([payload])
 
         if (error) {
+            console.error("Add Zone Error:", error)
             toast.error(error.message)
         } else {
             toast.success("Zone created successfully")
@@ -256,7 +268,6 @@ export default function ShippingAdmin() {
 
     return (
         <div className="container mx-auto py-8 max-w-6xl px-4 space-y-8 bg-[#FAFAFA] min-h-screen">
-            {/* Header & Quick Search */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
@@ -274,7 +285,6 @@ export default function ShippingAdmin() {
                 </div>
             </div>
 
-            {/* Main Creator Bar */}
             <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-end shadow-sm">
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
                     <div className="space-y-1">
@@ -290,12 +300,11 @@ export default function ShippingAdmin() {
                         <Input placeholder="Optional details" value={newZone.description} onChange={(e) => setNewZone({ ...newZone, description: e.target.value })} className="h-11 border-slate-200 bg-slate-50 rounded-xl text-sm" />
                     </div>
                 </div>
-                <Button onClick={addZone} className="w-full lg:w-auto rounded-xl px-8 bg-slate-900 h-11 font-bold text-sm tracking-wide">
+                <Button type="button" onClick={addZone} className="w-full lg:w-auto rounded-xl px-8 bg-slate-900 h-11 font-bold text-sm tracking-wide">
                     <Plus className="w-5 h-5 mr-2" /> Create Zone
                 </Button>
             </div>
 
-            {/* List View */}
             <div className="grid grid-cols-1 gap-6">
                 {filteredZones.map((zone) => (
                     <ZoneCard key={zone.id} zone={zone} refresh={fetchZones} />
@@ -316,9 +325,16 @@ function ZoneCard({ zone, refresh }: { zone: any, refresh: () => void }) {
     const [editData, setEditData] = useState({ name: zone.name, pincode: zone.pincode })
 
     async function handleUpdate() {
-        const { error } = await supabase.from('shipping_zones').update(editData).eq('id', zone.id)
-        if (error) toast.error(error.message)
-        else {
+        const payload = {
+            name: editData.name,
+            pincode: String(editData.pincode)
+        }
+        const { error } = await supabase.from('shipping_zones').update(payload).eq('id', zone.id)
+
+        if (error) {
+            console.error("Update Zone Error:", error)
+            toast.error(error.message)
+        } else {
             toast.success("Zone updated")
             setIsEditing(false)
             refresh()
@@ -327,12 +343,15 @@ function ZoneCard({ zone, refresh }: { zone: any, refresh: () => void }) {
 
     async function handleDeleteZone() {
         if (!confirm(`Are you sure? This deletes ${zone.name} and all its rates.`)) return
+
         const { error: mErr } = await supabase.from('shipping_methods').delete().eq('zone_id', zone.id)
         if (mErr) return toast.error("Failed to clear rates first")
 
         const { error } = await supabase.from('shipping_zones').delete().eq('id', zone.id)
-        if (error) toast.error(error.message)
-        else {
+        if (error) {
+            console.error("Delete Zone Error:", error)
+            toast.error(error.message)
+        } else {
             toast.success("Zone deleted")
             refresh()
         }
@@ -341,13 +360,12 @@ function ZoneCard({ zone, refresh }: { zone: any, refresh: () => void }) {
     return (
         <Card className="border-slate-200 shadow-sm rounded-3xl overflow-hidden bg-white">
             <div className="flex flex-col lg:flex-row">
-                {/* Zone Header Info */}
                 <div className="p-6 lg:w-80 bg-slate-50/50 border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col">
                     <div className="flex items-center justify-between mb-6">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Location</span>
                         <div className="flex items-center gap-1">
-                            <button onClick={() => setIsEditing(!isEditing)} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500"><Pencil className="w-4 h-4" /></button>
-                            <button onClick={handleDeleteZone} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                            <button type="button" onClick={() => setIsEditing(!isEditing)} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500"><Pencil className="w-4 h-4" /></button>
+                            <button type="button" onClick={handleDeleteZone} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                         </div>
                     </div>
 
@@ -356,8 +374,8 @@ function ZoneCard({ zone, refresh }: { zone: any, refresh: () => void }) {
                             <Input className="h-11 text-sm font-bold" value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} />
                             <Input className="h-11 text-sm font-mono" value={editData.pincode} onChange={(e) => setEditData({ ...editData, pincode: e.target.value })} />
                             <div className="flex gap-2">
-                                <Button className="h-10 flex-1 bg-emerald-600" onClick={handleUpdate}>Save</Button>
-                                <Button variant="outline" className="h-10 flex-1" onClick={() => setIsEditing(false)}>X</Button>
+                                <Button type="button" className="h-10 flex-1 bg-emerald-600" onClick={handleUpdate}>Save</Button>
+                                <Button type="button" variant="outline" className="h-10 flex-1" onClick={() => setIsEditing(false)}>X</Button>
                             </div>
                         </div>
                     ) : (
@@ -371,7 +389,6 @@ function ZoneCard({ zone, refresh }: { zone: any, refresh: () => void }) {
                     )}
                 </div>
 
-                {/* Rates List */}
                 <div className="p-6 flex-1 bg-white">
                     <div className="grid grid-cols-1 gap-3">
                         {zone.shipping_methods?.map((m: any) => (
@@ -391,13 +408,18 @@ function MethodRow({ method, refresh }: { method: any, refresh: () => void }) {
     const [data, setData] = useState({ name: method.name, price: method.price.toString(), time: method.delivery_time_label })
 
     async function handleUpdate() {
-        const { error } = await supabase.from('shipping_methods').update({
+        const payload = {
             name: data.name,
-            price: parseFloat(data.price),
+            price: Number(data.price),
             delivery_time_label: data.time
-        }).eq('id', method.id)
-        if (error) toast.error(error.message)
-        else {
+        }
+
+        const { error } = await supabase.from('shipping_methods').update(payload).eq('id', method.id)
+
+        if (error) {
+            console.error("Update Method Error:", error)
+            toast.error(error.message)
+        } else {
             toast.success("Updated")
             setIsEditing(false)
             refresh()
@@ -418,8 +440,8 @@ function MethodRow({ method, refresh }: { method: any, refresh: () => void }) {
                         <Input className="h-11 text-sm" value={data.time} onChange={(e) => setData({ ...data, time: e.target.value })} />
                     </div>
                     <div className="flex gap-2">
-                        <Button onClick={handleUpdate} className="h-11 w-11 bg-emerald-600 p-0"><Check className="w-5 h-5" /></Button>
-                        <Button onClick={() => setIsEditing(false)} variant="outline" className="h-11 w-11 p-0"><X className="w-5 h-5" /></Button>
+                        <Button type="button" onClick={handleUpdate} className="h-11 w-11 bg-emerald-600 p-0"><Check className="w-5 h-5" /></Button>
+                        <Button type="button" onClick={() => setIsEditing(false)} variant="outline" className="h-11 w-11 p-0"><X className="w-5 h-5" /></Button>
                     </div>
                 </div>
             ) : (
@@ -441,15 +463,14 @@ function MethodRow({ method, refresh }: { method: any, refresh: () => void }) {
                         </div>
                     </div>
                     <div className="flex gap-2 mt-4 md:mt-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setIsEditing(true)} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:border-slate-400 shadow-sm"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={async () => { if (confirm("Delete rate?")) { await supabase.from('shipping_methods').delete().eq('id', method.id); refresh(); } }} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-red-500 hover:border-red-200 shadow-sm"><Trash2 className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => setIsEditing(true)} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:border-slate-400 shadow-sm"><Pencil className="w-4 h-4" /></button>
+                        <button type="button" onClick={async () => { if (confirm("Delete rate?")) { await supabase.from('shipping_methods').delete().eq('id', method.id); refresh(); } }} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-red-500 hover:border-red-200 shadow-sm"><Trash2 className="w-4 h-4" /></button>
                     </div>
                 </>
             )}
         </div>
     )
 }
-
 function AddMethodMini({ zoneId, refresh }: { zoneId: string, refresh: () => void }) {
     const supabase = createClient()
     const [open, setOpen] = useState(false)
@@ -457,46 +478,105 @@ function AddMethodMini({ zoneId, refresh }: { zoneId: string, refresh: () => voi
 
     async function handleAdd() {
         if (!data.name || !data.price) return toast.error("Name and Price required")
-        const { error } = await supabase.from('shipping_methods').insert([{
+
+        const payload = {
             zone_id: zoneId,
             name: data.name,
-            price: parseFloat(data.price),
+            price: Number(data.price),
             delivery_time_label: data.time || "2-3 Days"
-        }])
-        if (error) toast.error(error.message)
-        else {
-            toast.success("Rate added")
+        }
+
+        const { error } = await supabase.from('shipping_methods').insert([payload])
+
+        if (error) {
+            console.error("Add Method Error:", error)
+            toast.error(error.message)
+        } else {
+            toast.success("Shipping rate added successfully")
             setData({ name: "", price: "", time: "" })
             setOpen(false)
             refresh()
         }
     }
 
+    // --- CLOSED STATE ---
     if (!open) return (
-        <button onClick={() => setOpen(true)} className="h-20 w-full border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-slate-500 hover:bg-slate-50 hover:border-slate-400 transition-all bg-white group">
-            <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-bold uppercase tracking-[0.1em]">Add New Shipping Rate</span>
+        <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="h-16 w-full border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700 transition-all bg-white group shadow-sm"
+        >
+            <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold uppercase tracking-widest">Add New Shipping Rate</span>
         </button>
     )
 
+    // --- OPEN STATE ---
     return (
-        <div className="flex flex-col lg:flex-row items-end gap-4 p-5 bg-slate-900 rounded-2xl animate-in slide-in-from-top-4 duration-300 w-full shadow-2xl">
-            <div className="flex-[2] w-full space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Service Name</label>
-                <Input autoFocus placeholder="e.g. Express Home Delivery" className="h-12 text-sm bg-white/10 border-transparent text-white placeholder:text-slate-500 focus-visible:ring-emerald-500 w-full" value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} />
+        <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/40 animate-in fade-in slide-in-from-top-2 duration-300 w-full space-y-5">
+
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Configure New Rate</h4>
+                <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors">
+                    <X className="w-5 h-5" />
+                </button>
             </div>
-            <div className="flex-1 w-full space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Price (₹)</label>
-                <Input placeholder="50" type="number" className="h-12 text-sm bg-white/10 border-transparent text-white placeholder:text-slate-500 focus-visible:ring-emerald-500 w-full" value={data.price} onChange={(e) => setData({ ...data, price: e.target.value })} />
+
+            {/* Form Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="md:col-span-5 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Service Name</label>
+                    <Input
+                        autoFocus
+                        placeholder="e.g. Express Home Delivery"
+                        className="h-11 text-sm bg-slate-50 border-slate-200 text-slate-900 focus-visible:ring-emerald-500 w-full"
+                        value={data.name}
+                        onChange={(e) => setData({ ...data, name: e.target.value })}
+                    />
+                </div>
+
+                <div className="md:col-span-3 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Price (₹)</label>
+                    <Input
+                        placeholder="50"
+                        type="number"
+                        className="h-11 text-sm bg-slate-50 border-slate-200 text-slate-900 focus-visible:ring-emerald-500 w-full"
+                        value={data.price}
+                        onChange={(e) => setData({ ...data, price: e.target.value })}
+                    />
+                </div>
+
+                <div className="md:col-span-4 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Estimated Time</label>
+                    <Input
+                        placeholder="e.g. 24 Hours"
+                        className="h-11 text-sm bg-slate-50 border-slate-200 text-slate-900 focus-visible:ring-emerald-500 w-full"
+                        value={data.time}
+                        onChange={(e) => setData({ ...data, time: e.target.value })}
+                    />
+                </div>
             </div>
-            <div className="flex-1 w-full space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Estimated Time</label>
-                <Input placeholder="e.g. 24 Hours" className="h-12 text-sm bg-white/10 border-transparent text-white placeholder:text-slate-500 focus-visible:ring-emerald-500 w-full" value={data.time} onChange={(e) => setData({ ...data, time: e.target.value })} />
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-2">
+                <Button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    variant="outline"
+                    className="h-10 px-6 text-xs font-bold uppercase tracking-widest text-slate-600 border-slate-200 hover:bg-slate-50"
+                >
+                    Cancel
+                </Button>
+                <Button
+                    type="button"
+                    onClick={handleAdd}
+                    className="h-10 px-6 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20"
+                >
+                    <Check className="w-4 h-4 mr-2" /> Save Rate
+                </Button>
             </div>
-            <div className="flex gap-2 w-full lg:w-auto">
-                <Button onClick={handleAdd} className="h-12 flex-1 lg:w-14 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 p-0"><Check className="w-6 h-6" /></Button>
-                <Button onClick={() => setOpen(false)} variant="ghost" className="h-12 flex-1 lg:w-14 text-slate-400 hover:text-white hover:bg-white/10 p-0"><X className="w-6 h-6" /></Button>
-            </div>
+
         </div>
     )
 }

@@ -6,20 +6,18 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+
     matcher: [
         /*
          * Match all request paths except for the ones starting with:
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
-         * - manifest.webmanifest (PWA manifest)
+         * - manifest.json (PWA manifest)
+         * - .well-known (Digital Asset Links for Android TWA)
+         * - Any file with an extension (e.g., .png, .jpg, .svg)
          */
-        {
-            source: '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:js|css|png|jpg|jpeg|gif|webp|svg|woff|woff2)$).*)',
-            missing: [
-                { type: 'header', key: 'next-router-prefetch' },
-                { type: 'header', key: 'purpose', value: 'prefetch' },
-            ],
-        },
+        '/((?!_next/static|_next/image|favicon.ico|manifest\\.json|\\.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
-};
+}
+
