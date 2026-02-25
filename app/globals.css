@@ -14,6 +14,18 @@
   }
 }
 
+body::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+body {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
 }
@@ -253,7 +265,7 @@
 
 .bg-holi-mesh {
   background-color: #fffdf5;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(255, 20, 147, 0.1) 0, transparent 50%), 
+  background-image:
+    radial-gradient(at 0% 0%, rgba(255, 20, 147, 0.1) 0, transparent 50%),
     radial-gradient(at 100% 100%, rgba(255, 215, 0, 0.1) 0, transparent 50%);
 }
