@@ -30,6 +30,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 
@@ -81,7 +82,7 @@ export default async function RootLayout({
 
 
   return (
-    <html lang="en">
+    <html lang="en" className="no-scrollbar">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${myBrandFont.variable} antialiased`}
       >
