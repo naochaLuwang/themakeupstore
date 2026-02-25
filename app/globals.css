@@ -43,16 +43,32 @@
 /* --- NATIVE APP SCROLLBAR & GESTURE OVERRIDES --- */
 html,
 body {
-  scrollbar-width: none !important;
-  /* Firefox */
-  -ms-overflow-style: none !important;
-  /* IE and Edge */
-  overscroll-behavior-y: contain;
-  /* Stops pull-to-refresh & glow */
+  /* Force the container to be exactly the size of the device */
+  height: 100% !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  /* This kills the system-level scrollbar */
+  position: fixed !important;
+  overscroll-behavior-y: none !important;
 }
 
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
+main,
+#root,
+[data-radix-scroll-area-viewport] {
+  height: 100% !important;
+  width: 100% !important;
+  overflow-y: auto !important;
+  /* Enable scrolling here instead */
+  -webkit-overflow-scrolling: touch;
+  /* Keep it smooth on mobile */
+
+  /* Hide scrollbar on this internal container */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+main::-webkit-scrollbar,
+#root::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
