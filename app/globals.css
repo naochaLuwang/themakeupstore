@@ -4,12 +4,35 @@
 /* --- 1. NATIVE APP OVERRIDES (MUST BE AT THE TOP) --- */
 html,
 body {
-  /* Hides scrollbars in all browsers */
+  position: fixed;
+  column-gap: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+/* 2. Create the internal scroll area */
+#app-scroller {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Keeps scrolling smooth */
+
+  /* Hide standard scrollbars */
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
+}
 
-  /* Prevents the 'rubber-band' effect and pull-to-refresh glow */
-  overscroll-behavior-y: contain;
+#app-scroller::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 /* Chrome, Safari, and Android TWA Engine */

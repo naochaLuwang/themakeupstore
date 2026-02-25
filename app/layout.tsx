@@ -86,16 +86,17 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${myBrandFont.variable} antialiased`}
       >
-        <NextTopLoader
-          color="#0f172a" // Matches your slate-900
-          showSpinner={false}
-          shadow="0 0 10px #0f172a,0 0 5px #0f172a"
-        />
-        <CartSync userId={user?.id || null} />
-        <PushInitializer />
+        <div id="app-scroller">
+          <NextTopLoader color="#0f172a" showSpinner={false} />
+          <CartSync userId={user?.id || null} />
+          <PushInitializer />
 
-        {children}
-        <Toaster position="top-right" />
+          <main>
+            {children}
+          </main>
+
+          <Toaster position="top-right" />
+        </div>
       </body>
     </html>
   );
