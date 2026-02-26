@@ -2,295 +2,322 @@
 
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { motion } from 'framer-motion'
-import { ArrowRight, ChevronRight, Heart, ShoppingBag } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Sparkles, Zap, ChevronRight, Loader2, Flame, ArrowRight, TrendingUp } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { ProductCard } from '@/components/store/product-card'
 
-// --- CONFIGURATION ---
-const EXCLUDED_SLUGS = ['test', 'uncategorized', 'hidden'];
-
-// Date Logic (IST timezone conversion might be needed depending on your server)
-const SALE_START_DATE = new Date("2026-02-26T00:00:00").getTime();
 const SALE_END_DATE = new Date("2026-03-05T23:59:59").getTime();
+const SALE_START_DATE = new Date("2026-03-02T00:00:00").getTime();
 
-// Custom Labels for Categories. Add your category slugs here.
-const CATEGORY_DISCOUNT_LABELS: Record<string, string> = {
-    'makeup': 'Up to 40% Off',
-    'skincare': 'Up to 30% Off',
-    'fragrance': 'Flat 20% Off',
-    'haircare': 'Up to 50% Off'
+// --- DYNAMIC CONTENT MAPPING ---
+// You can change these strings to anything: "BOGO", "Save ₹500", "New", etc.
+const CATEGORY_META: Record<string, { label: string, color: string }> = {
+    'mac-cosmetics': { label: 'Upto 40% Off', color: 'text-[#fc2779]' },
+    'default': { label: 'Upto 30% Off', color: 'text-[#fc2779]' },
 };
-const DEFAULT_DISCOUNT_LABEL = 'Up to 30% Off';
 
 export default function HoliOffersPage() {
-    const [categories, setCategories] = useState<any[]>([])
-    const [discountedProducts, setDiscountedProducts] = useState<any[]>([])
+    const [sections, setSections] = useState<{ exclusive: any[], essentials: any[] }>({ exclusive: [], essentials: [] })
+    const [products, setProducts] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [liveViewers, setLiveViewers] = useState(142) // UI-only social proof
+
     const supabase = createClient()
 
     useEffect(() => {
-        async function fetchHoliData() {
+        // Social proof simulation
+        const interval = setInterval(() => {
+            setLiveViewers(prev => prev + (Math.random() > 0.5 ? 1 : -1))
+        }, 5000)
+
+        async function fetchData() {
             setLoading(true);
             try {
-                // 1. Fetch products that are actually on discount for the scroller
+                const { data: catData } = await supabase.from('categories').select('*');
+                if (catData) {
+                    const exclusiveParent = catData.find(c => c.slug.toLowerCase() === 'exclusive');
+                    const essentialsParent = catData.find(c => c.slug.toLowerCase() === 'essentials');
+                    setSections({
+                        exclusive: catData.filter(c => c.parent_id === exclusiveParent?.id),
+                        essentials: catData.filter(c => c.parent_id === essentialsParent?.id)
+                    });
+                }
                 const { data: prodData } = await supabase
                     .from('products')
-                    .select('id, name, category_id, base_price, discount_value, discount_type, thumbnail_url, brand')
-                    .neq('discount_type', 'none')
+                    .select(`*, product_variants (*)`)
                     .eq('status', 'active')
+                    .order('created_at', { ascending: false })
                     .limit(12);
-
-                // 2. Fetch ALL valid categories
-                const { data: catData } = await supabase
-                    .from('categories')
-                    .select('*')
-                    .not('slug', 'in', `(${EXCLUDED_SLUGS.join(',')})`);
-
-                if (catData) {
-                    // Map the custom discount label based on the category slug
-                    const processedCats = catData.map(cat => ({
-                        ...cat,
-                        displayDiscount: CATEGORY_DISCOUNT_LABELS[cat.slug] || DEFAULT_DISCOUNT_LABEL
-                    }));
-                    setCategories(processedCats);
-                }
-
-                if (prodData) {
-                    setDiscountedProducts(prodData);
-                }
-            } catch (err) {
-                console.error("Fetch Error:", err);
-            } finally {
-                setLoading(false);
-            }
+                setProducts(prodData || []);
+            } catch (err) { console.error(err); } finally { setLoading(false); }
         }
-        fetchHoliData();
+        fetchData();
+        return () => clearInterval(interval);
     }, [supabase]);
 
-    if (loading) return (
-        <div className="h-screen flex flex-col items-center justify-center bg-white gap-4">
-            <div className="w-10 h-10 border-4 border-pink-100 border-t-[#fc2779] rounded-full animate-spin" />
-            <p className="text-xs font-bold text-[#fc2779] uppercase tracking-widest">Curating Beauty...</p>
-        </div>
-    )
+    if (loading) return <LoadingScreen />;
 
     return (
-        <div className="min-h-screen bg-[#fafafa] font-sans pb-20 overflow-hidden">
+        <div className="min-h-screen bg-[#FDFDFD] text-slate-950 pb-20 overflow-hidden font-sans">
 
-            {/* EDITORIAL HERO BANNER */}
-            <section className="relative w-full py-16 md:py-24 bg-gradient-to-r from-[#fc2779] via-rose-400 to-orange-300 overflow-hidden flex flex-col items-center justify-center text-center px-4">
-                <div className="absolute top-0 left-0 w-full h-full bg-[url('/noise.png')] opacity-20 mix-blend-overlay pointer-events-none" />
-                <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/20 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-yellow-300/30 rounded-full blur-3xl pointer-events-none" />
+            {/* 1. HERO WITH LIVE BADGE */}
+            <section className="px-4 pt-6">
+                <div className="relative h-[280px] md:h-[450px] w-full rounded-[3rem] overflow-hidden shadow-2xl border-[8px] border-white group">
+                    <Image
+                        src="https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=2070&auto=format&fit=crop"
+                        fill className="object-cover contrast-[1.1] brightness-[0.8] group-hover:scale-105 transition-transform duration-[5s]" alt="Yaoshang Edit" priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
-                    className="relative z-10 space-y-6 max-w-3xl"
-                >
-                    <span className="inline-block bg-white text-[#fc2779] font-bold text-[10px] md:text-xs px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md">
-                        The Grand Beauty Sale
-                    </span>
-                    <h1 className="text-5xl md:text-8xl font-serif italic text-white leading-tight drop-shadow-lg">
-                        Holi Color Splash
-                    </h1>
-                    <p className="text-white/90 text-sm md:text-xl font-medium tracking-wide pb-4">
-                        Explore the Biggest Price Drops of the Season
-                    </p>
-
-                    <div className="flex justify-center">
-                        <CountdownTimer start={SALE_START_DATE} end={SALE_END_DATE} />
+                    {/* Live Social Proof Badge */}
+                    <div className="absolute top-6 right-6 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-full flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest">{liveViewers} Shopping Now</span>
                     </div>
-                </motion.div>
+
+                    <div className="absolute bottom-8 left-8 md:bottom-16 md:left-16 space-y-4 max-w-xl">
+                        <div className="flex items-center gap-2 bg-[#fc2779] px-4 py-1.5 rounded-full w-fit shadow-lg shadow-pink-500/40">
+                            <Flame className="w-3.5 h-3.5 text-white fill-white" />
+                            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">The Yaoshang Edit '26</span>
+                        </div>
+                        <h1 className="text-5xl md:text-8xl font-serif italic text-white leading-[0.85] tracking-tighter">
+                            Pure <br /> <span className="text-yellow-300">Pigments</span>
+                        </h1>
+                        <p className="text-[10px] md:text-sm font-medium text-white/60 max-w-xs leading-relaxed uppercase tracking-widest">
+                            Curated luxury for the festival of colors.
+                        </p>
+                    </div>
+                </div>
             </section>
 
-            <main className="max-w-7xl mx-auto pl-4 pr-0 md:px-6 lg:px-8 mt-12 space-y-12 md:space-y-16">
+            <main className="mt-12 space-y-16">
 
-                {/* HORIZONTAL PRODUCT SCROLL */}
-                {discountedProducts.length > 0 && (
-                    <section>
-                        <div className="flex items-center justify-between mb-6 pr-4 md:pr-0">
-                            <h2 className="text-2xl font-serif text-slate-900">Crazy Price Drops</h2>
-                            <Link href="/shop" className="text-sm font-semibold text-[#fc2779] hover:text-pink-700 flex items-center gap-1">
-                                View All <ChevronRight className="w-4 h-4" />
+                {/* 2. THE EXCLUSIVE EDIT */}
+                {sections.exclusive.length > 0 && (
+                    <section className="px-5">
+                        <div className="flex items-end justify-between mb-8">
+                            <div className="space-y-1">
+                                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#fc2779]">Luxury Edit</h2>
+                                <h3 className="text-2xl font-serif italic">The Exclusive Splash</h3>
+                            </div>
+                            <Link href="/exclusive" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 group">
+                                View All <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </div>
-
-                        <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 snap-x no-scrollbar pr-4 md:pr-0">
-                            {discountedProducts.map((product) => (
-                                <ProductCard key={product.id} product={product} />
+                        <div className="flex overflow-x-auto gap-10 no-scrollbar pb-4 -mx-5 px-5">
+                            {sections.exclusive.map((cat) => (
+                                <CategoryStoryItem key={cat.id} cat={cat} basePath="exclusive" />
                             ))}
                         </div>
                     </section>
                 )}
 
-                {/* EDITORIAL CATEGORY BANNERS - NATIVE APP STYLE SCROLL */}
-                <section>
-                    <div className="flex items-center justify-between mb-6 pr-4 md:pr-0 text-center md:text-left">
-                        <h2 className="text-2xl font-serif text-slate-900">Shop By Category</h2>
-                    </div>
+                {/* 3. YAOSHANG FLASH BAR */}
+                <section className="px-5">
+                    <div className="relative group rounded-[2.2rem] p-[1.5px] overflow-hidden shadow-2xl shadow-pink-500/10">
+                        {/* 1. DYNAMIC AURORA BORDER - Changes intensity based on sale state */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#fc2779] via-[#7001fa] to-[#ffda79] animate-gradient-x opacity-80" />
 
-                    {/* Flex on mobile (horizontal scroll), Grid on desktop */}
-                    <div className="flex overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pb-6 snap-x no-scrollbar pr-4 md:pr-0">
-                        {categories.map((cat, idx) => (
-                            <CategoryBanner key={cat.id} cat={cat} index={idx} />
-                        ))}
+                        {/* 2. MAIN PILL BODY */}
+                        <div className="relative bg-white/95 backdrop-blur-3xl rounded-[2.1rem] py-3 px-5 md:px-8 flex flex-row items-center justify-between gap-3">
+
+                            {/* Left: Branding & Status Logic */}
+                            <div className="flex items-center gap-3 shrink-0">
+                                <div className="relative">
+                                    {/* Pulsing Glow only when Live */}
+                                    <div className={`absolute inset-0 rounded-xl blur-lg transition-opacity duration-1000 ${new Date().getTime() >= SALE_START_DATE ? 'bg-pink-500 opacity-30 animate-pulse' : 'bg-slate-200 opacity-0'}`} />
+
+                                    <div className="relative w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center shadow-lg transition-transform group-hover:rotate-6">
+                                        {new Date().getTime() >= SALE_START_DATE ? (
+                                            <Zap className="w-5 h-5 text-yellow-300 fill-yellow-300" />
+                                        ) : (
+                                            <Sparkles className="w-5 h-5 text-pink-400" />
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`w-1.5 h-1.5 rounded-full ${new Date().getTime() >= SALE_START_DATE ? 'bg-pink-500 animate-ping' : 'bg-slate-300'}`} />
+                                        <p className={`text-[8px] font-black uppercase tracking-[0.3em] ${new Date().getTime() >= SALE_START_DATE ? 'text-[#fc2779]' : 'text-slate-400'}`}>
+                                            {new Date().getTime() >= SALE_START_DATE ? 'Live Now' : 'Coming Soon'}
+                                        </p>
+                                    </div>
+                                    <h3 className="text-sm md:text-lg font-serif italic font-bold text-slate-900 leading-none tracking-tighter">
+                                        Yaoshang <span className="text-[#fc2779]">Drop</span>
+                                    </h3>
+                                </div>
+                            </div>
+
+                            {/* Middle: The Dynamic Countdown Housing */}
+                            <div className="flex-1 flex justify-center">
+                                <div className="bg-slate-50 border border-slate-100 px-4 py-2 rounded-[1.2rem] shadow-inner transition-all group-hover:bg-white">
+                                    <SaleCountdown start={SALE_START_DATE} end={SALE_END_DATE} />
+                                </div>
+                            </div>
+
+                            {/* Right: Smart Link */}
+                            <Link
+                                href={new Date().getTime() >= SALE_START_DATE ? "/shop" : "#waitlist"}
+                                className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90 shadow-lg ${new Date().getTime() >= SALE_START_DATE ? 'bg-slate-950 text-white hover:bg-[#fc2779]' : 'bg-slate-100 text-slate-400'}`}
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </Link>
+                        </div>
                     </div>
                 </section>
 
+                {/* 4. ESSENTIALS */}
+                {sections.essentials.length > 0 && (
+                    <section className="px-5">
+                        <div className="flex items-end justify-between mb-8">
+                            <div className="space-y-1">
+                                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Daily Rituals</h2>
+                                <h3 className="text-2xl font-serif italic">Essential Curations</h3>
+                            </div>
+                        </div>
+                        <div className="flex overflow-x-auto gap-10 no-scrollbar pb-4 -mx-5 px-5">
+                            {sections.essentials.map((cat) => (
+                                <CategoryStoryItem key={cat.id} cat={cat} basePath="essentials" />
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* 5. PRODUCT GRID */}
+                <section className="px-5 space-y-10 pt-8">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 pb-10">
+                        <div className="space-y-2">
+                            <span className="text-[9px] font-black text-[#fc2779] uppercase tracking-[0.5em] px-3 py-1 bg-pink-50 rounded-full">New Arrivals</span>
+                            <h2 className="text-4xl md:text-6xl font-serif italic text-slate-900 tracking-tighter">Handpicked Favorites</h2>
+                        </div>
+                        <Link href="/shop" className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 border border-slate-200 px-6 py-3 rounded-full hover:bg-slate-900 hover:text-white transition-all">
+                            View Full Catalog <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 md:gap-x-12 gap-y-16">
+                        {products.map((product) => (
+                            <ProductCard key={product.id} product={product} />
+                        ))}
+                    </div>
+                </section>
             </main>
         </div>
     )
 }
 
-// --- SUB-COMPONENTS ---
+function CategoryStoryItem({ cat, basePath }: { cat: any, basePath: string }) {
+    const meta = CATEGORY_META[cat.slug.toLowerCase()] || CATEGORY_META.default;
 
-function CategoryBanner({ cat, index }: any) {
     return (
         <Link
-            href={`/category/${cat.slug}`}
-            className="snap-start shrink-0 w-[240px] md:w-full block"
+            href={`/${basePath}/${cat.slug}`}
+            className="group flex flex-col items-center gap-4 shrink-0 active:scale-95 transition-transform"
         >
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="group relative h-[180px] md:h-[260px] rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-500 border border-slate-100 cursor-pointer"
-            >
-                <div className="absolute inset-0">
-                    {cat.image_url ? (
-                        <Image src={cat.image_url} alt={cat.name} fill className="object-cover group-hover:scale-105 transition-transform duration-1000" />
-                    ) : (
-                        <div className="w-full h-full bg-pink-50" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
+            {/* The Gradient Ring */}
+            <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full p-[3px] bg-gradient-to-tr from-[#fc2779] via-pink-400 to-orange-300 group-hover:shadow-[0_0_20px_rgba(252,39,121,0.3)] transition-all duration-500">
+                <div className="w-full h-full rounded-full border-[3px] border-white overflow-hidden relative shadow-inner bg-slate-50">
+                    <Image
+                        src={cat.image_url || '/placeholder.png'}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-700"
+                        alt={cat.name}
+                    />
                 </div>
 
-                <div className="absolute bottom-0 left-0 w-full p-4 md:p-6 flex flex-col justify-end text-left text-white">
-                    <span className="bg-[#fc2779] text-white text-[9px] md:text-[11px] font-black px-2 py-1 md:px-3 md:py-1.5 rounded-sm w-fit mb-2 md:mb-3 uppercase tracking-widest shadow-md">
-                        {cat.displayDiscount}
-                    </span>
-                    <h3 className="text-xl md:text-3xl font-serif mb-1 md:mb-2 leading-tight">{cat.name}</h3>
-                    <p className="text-[10px] md:text-xs font-semibold opacity-90 flex items-center gap-1 group-hover:text-pink-300 transition-colors">
-                        Explore <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
-                    </p>
+                {/* Visual UX: Live indicator for top-tier deals */}
+                {meta.label.includes('BOGO') && (
+                    <div className="absolute top-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full animate-pulse z-10" />
+                )}
+            </div>
+
+            <div className="text-center space-y-1.5">
+                <span className="text-[10px] md:text-[12px] font-black uppercase tracking-tighter text-slate-800 block leading-none">
+                    {cat.name}
+                </span>
+
+                {/* Dynamic Offer Pill */}
+                <div className={`text-[9px] md:text-[10px] font-bold uppercase italic tracking-tighter px-2.5 py-1 rounded-full bg-white shadow-sm border border-slate-100 ${meta.color}`}>
+                    {meta.label}
                 </div>
-            </motion.div>
+            </div>
         </Link>
     )
 }
 
-// REDESIGNED PRODUCT CARD
-function ProductCard({ product }: any) {
-    const originalPrice = product.base_price || 0;
-    const discount = product.discount_value || 0;
-    let salePrice = originalPrice;
-
-    if (product.discount_type === 'percentage') {
-        salePrice = originalPrice - (originalPrice * (discount / 100));
-    } else if (product.discount_type === 'amount') {
-        salePrice = originalPrice - discount;
-    }
-
+function LoadingScreen() {
     return (
-        <div className="snap-start shrink-0 w-44 md:w-56 group bg-white rounded-2xl border border-pink-50 hover:border-pink-100 shadow-sm hover:shadow-xl transition-all duration-500 relative flex flex-col h-full overflow-hidden">
-
-            {/* Image Section - Edge to Edge */}
-            <div className="relative aspect-[4/5] w-full bg-slate-50 overflow-hidden">
-                {/* Ribbon Discount Tag */}
-                {discount > 0 && (
-                    <div className="absolute top-3 left-0 z-10 bg-[#fc2779] text-white text-[10px] font-black px-2 py-1 rounded-r-md shadow-md tracking-wider">
-                        {product.discount_type === 'percentage' ? `${discount}% OFF` : `₹${discount} OFF`}
-                    </div>
-                )}
-
-                {/* Floating Wishlist Button */}
-                <button className="absolute top-3 right-3 z-10 p-1.5 md:p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-400 hover:text-[#fc2779] hover:bg-white shadow-sm transition-all active:scale-95">
-                    <Heart className="w-4 h-4" />
-                </button>
-
-                <Image src={product.thumbnail_url || '/placeholder.png'} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-white gap-6">
+            <div className="relative">
+                <Loader2 className="w-12 h-12 text-[#fc2779] animate-spin" />
+                <div className="absolute inset-0 bg-[#fc2779]/10 rounded-full animate-ping" />
             </div>
-
-            {/* Content Section */}
-            <div className="flex flex-col flex-grow p-3 md:p-4">
-                <h4 className="text-[10px] md:text-[11px] font-bold text-[#fc2779] uppercase tracking-widest mb-1 truncate">{product.brand || 'Premium'}</h4>
-                <p className="text-xs md:text-sm font-semibold text-slate-800 line-clamp-2 leading-snug mb-3 flex-grow">{product.name}</p>
-
-                <div className="flex items-center gap-2 mb-4">
-                    <span className="text-base md:text-lg font-black text-slate-900 tracking-tight">₹{Math.round(salePrice)}</span>
-                    {salePrice < originalPrice && (
-                        <span className="text-xs md:text-sm text-slate-400 line-through decoration-slate-300">₹{originalPrice}</span>
-                    )}
-                </div>
-
-                <Link href={`/products/${product.id}`} className="mt-auto block w-full">
-                    <button className="w-full py-2.5 md:py-3 bg-white border border-[#fc2779] text-[#fc2779] rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest hover:bg-[#fc2779] hover:text-white transition-all duration-300 flex items-center justify-center gap-2 group/btn">
-                        <ShoppingBag className="w-3 h-3 md:w-4 md:h-4 group-hover/btn:scale-110 transition-transform" /> Add to Bag
-                    </button>
-                </Link>
-            </div>
+            <p className="text-[10px] font-black text-[#fc2779] uppercase tracking-[0.8em] animate-pulse">Curating Splash</p>
         </div>
     )
 }
-
-function CountdownTimer({ start, end }: { start: number, end: number }) {
-    const [timeLeft, setTimeLeft] = useState({ Days: 0, Hrs: 0, Mins: 0, Secs: 0 });
-    const [status, setStatus] = useState<"upcoming" | "live" | "ended">("upcoming");
+function SaleCountdown({ start, end }: { start: number, end: number }) {
+    const [timeLeft, setTimeLeft] = useState<any>(null);
+    const [status, setStatus] = useState<'Upcoming' | 'Live' | 'Ended'>('Upcoming');
 
     useEffect(() => {
-        const interval = setInterval(() => {
+        const timer = setInterval(() => {
             const now = new Date().getTime();
 
-            // Determine phase
-            if (now > end) {
-                setStatus("ended");
-                clearInterval(interval);
-                return;
+            if (now < start) {
+                setStatus('Upcoming');
+                updateTime(start - now);
+            } else if (now >= start && now < end) {
+                setStatus('Live');
+                updateTime(end - now);
+            } else {
+                setStatus('Ended');
+                clearInterval(timer);
             }
-
-            const isLive = now >= start;
-            setStatus(isLive ? "live" : "upcoming");
-
-            // Calculate distance to next event
-            const target = isLive ? end : start;
-            const d = target - now;
-
-            setTimeLeft({
-                Days: Math.floor(d / (86400000)),
-                Hrs: Math.floor((d % 86400000) / 3600000),
-                Mins: Math.floor((d % 3600000) / 60000),
-                Secs: Math.floor((d % 60000) / 1000)
-            });
         }, 1000);
-        return () => clearInterval(interval);
+
+        const updateTime = (diff: number) => {
+            setTimeLeft({
+                d: Math.floor(diff / 86400000),
+                h: Math.floor((diff % 86400000) / 3600000),
+                m: Math.floor((diff % 3600000) / 60000),
+                s: Math.floor((diff % 60000) / 1000)
+            });
+        };
+
+        return () => clearInterval(timer);
     }, [start, end]);
 
-    if (status === "ended") {
-        return <div className="text-white font-bold tracking-widest uppercase bg-black/40 px-6 py-2 rounded-full shadow-lg">Sale Ended</div>
-    }
+    if (status === 'Ended' || !timeLeft) return <span className="text-[10px] font-black uppercase text-slate-300 tracking-widest">Splash Ended</span>;
 
     return (
-        <div className="flex flex-col items-center">
-            <span className="text-white text-[10px] md:text-xs font-bold uppercase tracking-widest mb-3 drop-shadow-md">
-                {status === "upcoming" ? "Sale Starts In:" : "Ends In:"}
+        <div className="flex items-center gap-3">
+            {/* Phase Label */}
+            <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest text-slate-400 hidden sm:block">
+                {status === 'Upcoming' ? 'Starts In' : 'Ends In'}
             </span>
-            <div className="flex gap-2 md:gap-4 bg-white/20 backdrop-blur-md p-3 md:p-4 rounded-2xl border border-white/30 shadow-xl">
-                {Object.entries(timeLeft).map(([label, val], idx) => (
-                    <React.Fragment key={label}>
-                        <div className="flex flex-col items-center min-w-[35px] md:min-w-[60px]">
-                            <span className="text-2xl md:text-4xl font-black text-white leading-none tracking-tighter tabular-nums drop-shadow-md">
-                                {String(val).padStart(2, '0')}
-                            </span>
-                            <span className="text-[8px] md:text-[10px] font-bold text-yellow-300 uppercase tracking-widest mt-1 md:mt-2">{label}</span>
-                        </div>
-                        {idx < 3 && <span className="text-xl md:text-4xl font-black text-white/50 pb-3 md:pb-3">:</span>}
-                    </React.Fragment>
-                ))}
+
+            <div className="flex items-center gap-2 md:gap-3">
+                {timeLeft.d > 0 && <TimeUnit value={timeLeft.d} label="D" />}
+                <TimeUnit value={timeLeft.h} label="H" />
+                <span className="text-slate-200 font-light">:</span>
+                <TimeUnit value={timeLeft.m} label="M" />
+                <span className="text-slate-200 font-light">:</span>
+                <TimeUnit value={timeLeft.s} label="S" />
             </div>
         </div>
-    )
+    );
+}
+
+function TimeUnit({ value, label }: { value: number, label: string }) {
+    return (
+        <div className="flex flex-col items-center min-w-[18px]">
+            <span className="text-xs md:text-sm font-black text-slate-900 tabular-nums leading-none">
+                {String(value).padStart(2, '0')}
+            </span>
+            <span className="text-[6px] font-bold text-slate-400 uppercase mt-0.5 tracking-tighter">{label}</span>
+        </div>
+    );
 }

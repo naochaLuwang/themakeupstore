@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import ShopClient from "./shop-client"
 
 export const metadata = {
-    title: "Shop All Products | DACIANA",
+    title: "Shop All Products | THE MAKEUP STORE WANGKHEI",
     description: "Browse our latest collection of premium products.",
 }
 

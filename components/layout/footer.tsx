@@ -77,7 +77,7 @@ export function Footer() {
                         <h4 className="font-bold uppercase text-xs tracking-widest text-slate-400">Visit Us</h4>
                         <div className="space-y-4 text-sm text-slate-600">
                             <p className="leading-relaxed">Michael Plaza 1st Floor, Wangkhei Angom Leikai, Imphal</p>
-                            <p className="font-bold">+91 7338331909</p>
+                            {/* <p className="font-bold">+91 </p> */}
                         </div>
                     </div>
                 </div>
