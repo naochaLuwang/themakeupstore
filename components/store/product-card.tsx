@@ -271,7 +271,6 @@
 //     )
 // }
 
-
 "use client"
 
 import * as React from "react"
@@ -279,7 +278,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Heart, ShoppingBag, Plus, X, Check, Palette, Handbag, Sparkles, Star } from "lucide-react"
+import { Heart, ShoppingBag, Plus, X, Check, Palette, Handbag, Sparkles, ArrowDown } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { useCart } from "@/components/store/use-cart"
 import { motion, AnimatePresence } from "framer-motion"
@@ -299,7 +298,6 @@ export function ProductCard({ product }: { product: any }) {
         setMounted(true)
     }, [])
 
-    // DATA LOGIC
     const variants = product.product_variants || []
     const hasMultipleVariants = variants.length > 1
     const activeSource = variants.length > 0
@@ -316,6 +314,7 @@ export function ProductCard({ product }: { product: any }) {
     else if (dType === 'amount' && dValue > 0) salePrice = originalPrice - dValue
 
     const discountPercentage = Math.round(((mrp - salePrice) / mrp) * 100)
+    const priceDifference = mrp - salePrice
     const isOutOfStock = (variants.length > 0 ? variants.reduce((acc: number, v: any) => acc + Number(v.stock || 0), 0) : Number(activeSource?.stock || 0)) <= 0
 
     const handleQuickAdd = (e: React.MouseEvent) => {
@@ -360,19 +359,19 @@ export function ProductCard({ product }: { product: any }) {
     }
 
     return (
-        <div className="group relative flex flex-col bg-white rounded-3xl p-2 transition-all duration-500 hover:shadow-[0_20px_40px_rgba(252,39,121,0.08)]">
+        <div className="group relative flex flex-col bg-white border-r border-b border-pink-50 h-full transition-all duration-300 hover:z-10 hover:shadow-[0_0_20px_rgba(252,39,121,0.1)]">
 
-            {/* WISHLIST BUTTON (Nykaa Style) */}
+            {/* WISHLIST ICON - Pure Nykaa Physiology */}
             <button
                 onClick={toggleWishlist}
                 disabled={isPending}
-                className="absolute top-4 right-4 z-30 p-2.5 rounded-full bg-white/90 backdrop-blur-md shadow-md transition-all active:scale-75 group/heart"
+                className="absolute top-2 right-2 z-30 p-2"
             >
-                <Heart className={`w-4 h-4 transition-all ${isWishlisted ? "fill-[#fc2779] text-[#fc2779]" : "text-slate-300 group-hover/heart:text-[#fc2779]"}`} />
+                <Heart className={`w-5 h-5 transition-transform duration-300 active:scale-125 ${isWishlisted ? "fill-[#fc2779] text-[#fc2779]" : "text-slate-300 hover:text-pink-300"}`} />
             </button>
 
             {/* IMAGE SECTION */}
-            <Link href={`/products/${product.id}`} className="block relative aspect-[3/4] overflow-hidden rounded-2xl bg-[#F9F9F9]">
+            <Link href={`/products/${product.id}`} className="block relative aspect-[3/4] overflow-hidden bg-[#FDFDFD]">
                 {product.thumbnail_url ? (
                     <Image
                         src={product.thumbnail_url}
@@ -381,77 +380,83 @@ export function ProductCard({ product }: { product: any }) {
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-pink-50/30">
+                    <div className="w-full h-full flex items-center justify-center bg-pink-50/5">
                         <ShoppingBag className="w-8 h-8 text-pink-100" />
                     </div>
                 )}
 
                 {/* BESTSELLER TAG */}
                 {!isOutOfStock && product.is_bestseller && (
-                    <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-[#fc2779] px-2 py-1 rounded-md shadow-lg shadow-pink-500/20">
-                        <Sparkles className="w-2.5 h-2.5 text-white fill-white" />
-                        <span className="text-[8px] font-black text-white uppercase tracking-widest">Bestseller</span>
+                    <div className="absolute top-0 left-0 z-10 bg-[#fc2779] text-white px-2 py-1 flex items-center gap-1 shadow-md">
+                        <Sparkles className="w-2.5 h-2.5 fill-white" />
+                        <span className="text-[8px] font-black uppercase tracking-widest">Bestseller</span>
                     </div>
                 )}
 
-                {/* OUT OF STOCK OVERLAY */}
                 {isOutOfStock && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
-                        <span className="text-[10px] font-black text-slate-900 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-xl uppercase tracking-widest">
-                            Restocking Soon
-                        </span>
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
+                        <div className="border border-slate-300 bg-white/90 px-3 py-1.5">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Out of Stock</span>
+                        </div>
                     </div>
                 )}
             </Link>
 
             {/* PRODUCT DETAILS */}
-            <div className="mt-3 px-2 pb-2 space-y-2">
-                <div className="space-y-0.5">
-                    <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black text-[#fc2779] uppercase tracking-widest leading-none">
-                            {product.brand || "Exclusive"}
-                        </span>
-                        {/* Rating Mockup for Nykaa Feel */}
-                        <div className="flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded-md">
-                            <span className="text-[9px] font-black text-emerald-700 leading-none">4.5</span>
-                            <Star className="w-2 h-2 text-emerald-700 fill-emerald-700" />
-                        </div>
-                    </div>
-                    <h3 className="text-[13px] font-bold text-slate-800 line-clamp-1 group-hover:text-[#fc2779] transition-colors">{product.name}</h3>
+            <div className="flex flex-col flex-1 p-3 pt-4 gap-2.5">
+                <div className="space-y-1">
+                    <span className="text-[9px] font-black text-[#fc2779] uppercase tracking-[0.2em]">
+                        {product.brand || "Exclusive Boutique"}
+                    </span>
+                    <h3 className="text-[12px] font-bold text-slate-800 leading-snug">
+                        {product.name}
+                    </h3>
                 </div>
 
-                {/* PRICE SECTION (Nykaa Style MRP vs SALE) */}
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-black text-slate-900">₹{Math.round(salePrice).toLocaleString()}</span>
+                {/* PRICE DROPPED INDICATOR - Emerald Dewy Style */}
+                {!isOutOfStock && priceDifference > 0 && (
+                    <div className="flex items-center gap-1 text-[#2e7d32] bg-[#edf7ed] w-fit px-2 py-0.5 border border-[#c8e6c9]/50">
+                        <ArrowDown className="w-2.5 h-2.5 stroke-[3]" />
+                        <span className="text-[9px] font-black uppercase tracking-wider">
+                            Price Dropped ₹{Math.round(priceDifference).toLocaleString()}
+                        </span>
+                    </div>
+                )}
+
+                <div className="mt-auto space-y-3">
+                    {/* PRICE SECTION */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[15px] font-black text-slate-950 tracking-tight">
+                            ₹{Math.round(salePrice).toLocaleString()}
+                        </span>
                         {salePrice < mrp && (
                             <>
                                 <span className="text-[11px] text-slate-400 line-through font-medium">₹{Math.round(mrp).toLocaleString()}</span>
-                                <span className="text-[11px] font-black text-[#fc2779]">{discountPercentage}% Off</span>
+                                <span className="text-[11px] font-black text-[#fc2779]">{discountPercentage}% OFF</span>
                             </>
                         )}
                     </div>
 
-                    {/* ADD TO BAG BUTTON (Integrated into Card Bottom) */}
+                    {/* ACTION BUTTON */}
                     {!isOutOfStock && (
                         <button
                             onClick={handleQuickAdd}
-                            className={`w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                            className={`w-full py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300
                                 ${justAdded
-                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
-                                    : 'bg-white border-2 border-[#fc2779] text-[#fc2779] hover:bg-[#fc2779] hover:text-white active:scale-95'}`}
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-white border border-[#fc2779] text-[#fc2779] hover:bg-[#fc2779] hover:text-white active:scale-95'}`}
                         >
                             {justAdded ? (
-                                <><Check className="w-3.5 h-3.5 stroke-[4]" /> Added</>
+                                <><Check className="inline-block w-3.5 h-3.5 mr-1 stroke-[4]" /> Added</>
                             ) : (
-                                <><Handbag className="w-3.5 h-3.5 stroke-[3]" /> Add to Bag</>
+                                <><Plus className="inline-block w-3.5 h-3.5 mr-1 stroke-[3]" /> Add to Bag</>
                             )}
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* VARIANT SELECTOR PORTAL (Nykaa Sheet Style) */}
+            {/* VARIANT PORTAL */}
             {mounted && createPortal(
                 <AnimatePresence>
                     {showVariantSelector && (
@@ -459,27 +464,24 @@ export function ProductCard({ product }: { product: any }) {
                             <motion.div
                                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                                 onClick={() => setShowVariantSelector(false)}
-                                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
                             />
                             <motion.div
                                 initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                className="relative w-full max-w-lg bg-white rounded-t-[3rem] p-8 pb-10 shadow-2xl"
+                                transition={{ type: "tween", duration: 0.3 }}
+                                className="relative w-full max-w-lg bg-white shadow-2xl overflow-hidden"
                             >
-                                <div className="flex justify-between items-center mb-8">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-6 h-1 bg-[#fc2779] rounded-full" />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#fc2779]">Pick Your Shade</span>
-                                        </div>
-                                        <h4 className="text-2xl font-black text-slate-900 leading-none">Choose Variant</h4>
+                                <div className="p-5 border-b border-pink-50 flex justify-between items-center">
+                                    <div className="space-y-0.5">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#fc2779]">Catalogue Selection</p>
+                                        <h4 className="text-lg font-bold text-slate-950 uppercase tracking-tight">Select Shade</h4>
                                     </div>
-                                    <button onClick={() => setShowVariantSelector(false)} className="h-10 w-10 flex items-center justify-center bg-slate-50 rounded-full transition-transform active:rotate-90">
-                                        <X className="w-5 h-5 text-slate-400" />
+                                    <button onClick={() => setShowVariantSelector(false)} className="p-2 hover:rotate-90 transition-transform">
+                                        <X className="w-6 h-6 text-slate-400" />
                                     </button>
                                 </div>
 
-                                <div className="space-y-3 max-h-[50vh] overflow-y-auto no-scrollbar">
+                                <div className="max-h-[60vh] overflow-y-auto divide-y divide-pink-50">
                                     {variants.map((v: any) => {
                                         const vStock = Number(v.stock || 0)
                                         const isVOut = vStock <= 0
@@ -488,7 +490,6 @@ export function ProductCard({ product }: { product: any }) {
                                         const vSale = (v.discount_type === 'percentage')
                                             ? vBase - (vBase * (v.discount_value / 100))
                                             : (v.discount_type === 'amount') ? vBase - v.discount_value : vBase
-                                        const vDisc = Math.round(((vMRP - vSale) / vMRP) * 100)
 
                                         return (
                                             <button
@@ -506,22 +507,19 @@ export function ProductCard({ product }: { product: any }) {
                                                     setJustAdded(true)
                                                     setTimeout(() => setJustAdded(false), 2000)
                                                 }}
-                                                className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all active:scale-[0.98]
-                                                    ${isVOut ? 'opacity-40 bg-slate-50 cursor-not-allowed' : 'border-slate-50 hover:border-[#fc2779] hover:bg-pink-50/30'}`}
+                                                className={`w-full flex items-center justify-between p-5 text-left transition-colors
+                                                    ${isVOut ? 'opacity-30 cursor-not-allowed bg-slate-50' : 'hover:bg-pink-50/20'}`}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-xl border border-white shadow-md flex items-center justify-center" style={{ backgroundColor: v.hex_code || '#F1F5F9' }}>
-                                                        {!v.hex_code && <Palette className="w-5 h-5 text-slate-300" />}
+                                                    <div className="h-12 w-12 border border-slate-100 shadow-inner" style={{ backgroundColor: v.hex_code || '#f8fafc' }}>
+                                                        {!v.hex_code && <Palette className="w-6 h-6 text-slate-200" />}
                                                     </div>
-                                                    <div className="text-left">
-                                                        <p className="text-[12px] font-black text-slate-900 uppercase tracking-wide leading-none">{v.title}</p>
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-sm font-bold text-[#fc2779]">₹{Math.round(vSale).toLocaleString()}</span>
-                                                            {vDisc > 0 && <span className="text-[10px] text-slate-400 line-through">₹{Math.round(vMRP).toLocaleString()}</span>}
-                                                        </div>
+                                                    <div>
+                                                        <p className="text-[13px] font-black text-slate-950 uppercase">{v.title}</p>
+                                                        <p className="text-sm font-bold text-[#fc2779]">₹{Math.round(vSale).toLocaleString()}</p>
                                                     </div>
                                                 </div>
-                                                {!isVOut && <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100"><Plus className="w-4 h-4 text-[#fc2779]" /></div>}
+                                                {!isVOut && <Plus className="w-5 h-5 text-slate-300" />}
                                             </button>
                                         )
                                     })}

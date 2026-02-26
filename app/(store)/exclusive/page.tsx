@@ -145,29 +145,43 @@ export default function ExclusivePage() {
 
                 {/* PRODUCT GALLERY */}
                 <section className="pt-10">
-                    <div className="flex items-center justify-between mb-10 border-b border-pink-100 pb-6">
+                    {/* 1. HEADER SECTION (Clean Boutique Style) */}
+                    <div className="flex items-center justify-between mb-0 border-t border-x border-pink-50 bg-white p-6">
                         <div className="flex items-center gap-3">
-                            <LayoutGrid className="w-4 h-4 text-[#fc2779]" />
-                            <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                            <div className="w-1.5 h-6 bg-[#fc2779]" /> {/* Nykaa Accent Bar */}
+                            <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-900">
                                 High-End Selection
                             </h2>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 bg-white px-3 py-1 rounded-full border border-pink-50">
-                            {allProducts.length} Items
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-[#fc2779] uppercase tracking-widest">
+                                {allProducts.length} Results
+                            </span>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 md:gap-x-8 gap-y-12">
+                    {/* 2. THE ZERO-GAP GRID SYSTEM */}
+                    {/* gap-0 removes all spacing; border-t/border-l on parent + border-b/border-r on children creates the perfect 1px grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 border-t border-l border-pink-50 bg-white overflow-hidden">
                         {allProducts.map((product) => (
                             <motion.div
                                 key={product.id}
-                                whileHover={{ y: -8 }}
-                                className="bg-white p-2 rounded-[2.5rem] shadow-sm border border-pink-50 hover:shadow-xl hover:shadow-pink-500/5 transition-all duration-500"
+                                initial={{ opacity: 0 }}
+                                whileInView={{ opacity: 1 }}
+                                viewport={{ once: true }}
+                                className="relative bg-white transition-colors duration-300 hover:bg-pink-50/5"
                             >
+                                {/* Note: Ensure your ProductCard inside has:
+                    - rounded-none
+                    - border-r border-b border-pink-50 
+                */}
                                 <ProductCard product={product} />
                             </motion.div>
                         ))}
                     </div>
+
+                    {/* 3. OPTIONAL: DECORATIVE SCANLINE (Nykaa Boutique Detail) */}
+                    <div className="w-full h-[1px] bg-pink-50 mt-12 opacity-50" />
                 </section>
             </main>
         </div>

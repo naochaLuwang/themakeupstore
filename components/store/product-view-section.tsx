@@ -232,7 +232,7 @@ export function ProductViewSection({ product }: { product: any }) {
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start max-w-7xl mx-auto px-6 py-8 md:py-16 bg-white">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start max-w-7xl mx-auto px-2 py-0 md:py-16 bg-white">
             {/* LEFT: MINIMAL GALLERY */}
             <div className="w-full">
                 <ProductImages
@@ -304,7 +304,7 @@ export function ProductViewSection({ product }: { product: any }) {
                 )}
 
                 {/* THE NARRATION */}
-                <div className="space-y-8 pt-12 border-t border-slate-50 mt-12">
+                <div className="space-y-8 pt-0 border-t border-slate-50 mt-5">
                     <div className="flex items-center justify-between">
                         <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">
                             The Narration
