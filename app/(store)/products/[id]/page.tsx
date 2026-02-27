@@ -65,7 +65,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             )} */}
 
             {/* Reviews Section */}
-            <div className="mt-24">
+            <div className="mt-2">
                 <ReviewsSection
                     reviews={product.reviews || []}
                     productId={product.id}

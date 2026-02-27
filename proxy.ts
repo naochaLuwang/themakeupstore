@@ -16,6 +16,6 @@ export const config = {
          * - manifest.json (Fallback)
          * - .well-known (Digital Asset Links for Android TWA)
          */
-        '/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest|manifest\\.json|\\.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|legal|favicon.ico|manifest\\.webmanifest|manifest\\.json|\\.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

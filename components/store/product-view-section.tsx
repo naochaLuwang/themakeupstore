@@ -243,7 +243,7 @@ export function ProductViewSection({ product }: { product: any }) {
 
             {/* RIGHT: CLEAN CONTENT */}
             <div className="flex flex-col pt-0 lg:sticky lg:top-10">
-                <header className="mb-12">
+                <header className="mb-0">
                     <div className="flex items-center gap-3 mb-4">
                         <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#fc2779]">
                             {product.brand || "Exclusive"}
@@ -265,7 +265,7 @@ export function ProductViewSection({ product }: { product: any }) {
                     )}
                 </header>
 
-                <div className="mb-10 border-t border-slate-50 pt-8">
+                <div className="mb-2 border-t border-slate-50 pt-8">
                     <VariantSelector
                         product={product}
                         variants={product.variants}
@@ -307,7 +307,7 @@ export function ProductViewSection({ product }: { product: any }) {
                 <div className="space-y-8 pt-0 border-t border-slate-50 mt-5">
                     <div className="flex items-center justify-between">
                         <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">
-                            The Narration
+                            Description
                         </p>
                         <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
                             <ShieldCheck className="w-3 h-3" /> Certified Authentic

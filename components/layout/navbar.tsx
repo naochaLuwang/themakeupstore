@@ -106,7 +106,7 @@ export default async function Navbar() {
                     </div>
                 </div>
                 <div className="md:hidden pb-4 px-1">
-                    <div className="border-b border-charcoal/10">
+                    <div >
                         <NavSearch key="mobile-search" />
                     </div>
                 </div>
