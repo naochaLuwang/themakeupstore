@@ -357,18 +357,18 @@ export default function AuthPage() {
                             <div className="grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-top-2">
                                 <div className="relative">
                                     <User className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
-                                    <Input name="fullName" placeholder="FULL NAME" className="h-12 pl-10 rounded-xl border-slate-100 bg-slate-50/50 text-[10px] font-bold tracking-widest uppercase focus:bg-white transition-all" required />
+                                    <Input name="fullName" placeholder="FULL NAME" className="h-12 pl-10 rounded-xl border-slate-100 bg-slate-50/50 text-[10px] font-bold tracking-widest  focus:bg-white transition-all" required />
                                 </div>
                                 <div className="relative">
                                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
-                                    <Input name="phone" type="tel" placeholder="PHONE" className="h-12 pl-10 rounded-xl border-slate-100 bg-slate-50/50 text-[10px] font-bold tracking-widest uppercase focus:bg-white transition-all" required />
+                                    <Input name="phone" type="tel" placeholder="PHONE" className="h-12 pl-10 rounded-xl border-slate-100 bg-slate-50/50 text-[10px] font-bold tracking-widest  focus:bg-white transition-all" required />
                                 </div>
                             </div>
                         )}
 
                         <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
-                            <Input name="email" type="email" placeholder="EMAIL ADDRESS" className="h-12 pl-10 rounded-xl border-slate-100 bg-slate-50/50 text-[10px] font-bold tracking-widest uppercase focus:bg-white transition-all" required />
+                            <Input name="email" type="email" placeholder="EMAIL ADDRESS" className="h-12 pl-10 rounded-xl border-slate-100 bg-slate-50/50 text-[10px] font-bold tracking-widest  focus:bg-white transition-all" required />
                         </div>
 
                         <div className="relative">
@@ -377,7 +377,7 @@ export default function AuthPage() {
                                 name="password"
                                 type={showPassword ? "text" : "password"}
                                 placeholder="PASSWORD"
-                                className="h-12 pl-10 pr-10 rounded-xl border-slate-100 bg-slate-50/50 text-[10px] font-bold tracking-widest uppercase focus:bg-white transition-all"
+                                className="h-12 pl-10 pr-10 rounded-xl border-slate-100 bg-slate-50/50 text-[10px] font-bold tracking-widest  focus:bg-white transition-all"
                                 required
                             />
                             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-[#fc2779]">
