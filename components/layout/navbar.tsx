@@ -59,7 +59,7 @@ export default async function Navbar() {
 
                     {/* Actions */}
                     <div className="flex flex-1 items-center justify-end gap-2 md:gap-4 min-w-0">
-                        <div className="hidden xl:block xl:w-64 border-b border-charcoal/10 focus-within:border-primary transition-colors mr-2">
+                        <div className="hidden xl:block xl:w-64  focus-within:border-primary transition-colors mr-2">
                             <NavSearch key="desktop-search" />
                         </div>
 
