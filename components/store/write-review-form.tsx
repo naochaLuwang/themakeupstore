@@ -84,7 +84,7 @@ export function WriteReviewForm({ productId, user }: { productId: string, user: 
 
             <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Your Experience</label>
-                <Textarea name="comment" required placeholder="Share your thoughts on this DACIANA piece..." className="bg-white border-slate-100 rounded-xl min-h-[100px]" />
+                <Textarea name="comment" required placeholder="Share your thoughts " className="bg-white border-slate-100 rounded-xl min-h-[100px]" />
             </div>
 
             <div className="flex gap-3 pt-2">

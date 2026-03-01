@@ -251,7 +251,7 @@ export function Footer() {
                 <div className="xl:hidden flex flex-col items-center text-center space-y-12 py-4">
                     {/* Brand Branding */}
                     <div className="space-y-3">
-                        <h2 className="text-2xl md:text-3xl font-black tracking-[0.3em] text-zinc-900 uppercase">
+                        <h2 className="text-xl md:text-3xl font-daciana font-black tracking-[0.3em] text-zinc-900 uppercase">
                             THE MAKEUP STORE
                         </h2>
                         <div className="flex items-center justify-center gap-4">
@@ -275,7 +275,7 @@ export function Footer() {
                     </div>
 
                     {/* Tablet Friendly Link Grid - Wider spacing for large tablets */}
-                    <div className="flex flex-wrap justify-center gap-x-10 gap-y-6 px-4 text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                    <div className=" hidden md:flex flex-wrap justify-center gap-x-10 gap-y-6 px-4 text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
                         <Link href="/shop" className="hover:text-zinc-900">Shop All</Link>
                         <Link href="/legal/privacy_policy" className="hover:text-zinc-900">Privacy</Link>
                         <Link href="/legal/terms_and_conditions" className="hover:text-zinc-900">Terms</Link>

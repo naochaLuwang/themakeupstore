@@ -325,3 +325,4 @@ function CartItemRow({ item, onRemove, onWishlist, onUpdate }: any) {
         </div>
     )
 }
+

@@ -313,11 +313,11 @@ export function NavSearch() {
                 <Search className={`w-4 h-4 transition-colors ${loading ? 'text-pink-200' : 'text-[#fc2779]'}`} />
                 <Input
                     id={`search-input-${instanceId}`}
-                    placeholder="Search beauty products..."
+                    placeholder="SHOP BY BRAND OR PRODUCT"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => setIsOpen(true)}
-                    className="h-10 w-full bg-transparent border-none rounded-none px-3 text-[11px] font-bold tracking-wider placeholder:text-slate-400 focus-visible:ring-0 uppercase"
+                    className="h-10 w-full bg-transparent border-none rounded-none px-3 text-[12px] font-bold tracking-wider placeholder:text-slate-400 focus-visible:ring-0 uppercase"
                     autoComplete="off"
                 />
                 <div className="flex items-center gap-2">

@@ -37,10 +37,10 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
                 <div className="flex-1 lg:flex-none">
                     <Link href="/" className="flex flex-col group min-w-fit">
                         <span className="text-xl md:text-2xl font-black font-daciana tracking-[0.15em] leading-none text-slate-900 group-hover:text-primary transition-colors uppercase">
-                            DACIANA
+                            THE MAKEUP STORE
                         </span>
                         <span className="text-[7px] md:text-[8px] font-bold tracking-[0.3em] text-slate-400 uppercase whitespace-nowrap mt-1">
-                            Stationery & Cosmetics
+                            WANGKHEI
                         </span>
                     </Link>
                 </div>

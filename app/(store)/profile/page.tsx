@@ -362,10 +362,20 @@ export default function ProfilePage() {
                     <motion.div
                         key="loader"
                         initial={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-white flex items-center justify-center"
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
+                        className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center"
                     >
-                        <div className="w-12 h-[1px] bg-[#fc2779]" />
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-black mb-4">
+                            The Makeup Store
+                        </h2>
+                        <div className="w-24 overflow-hidden">
+                            <motion.div
+                                animate={{ x: ["-100%", "100%"] }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                className="h-[1.5px] bg-black w-full"
+                            />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -425,11 +435,24 @@ export default function ProfilePage() {
                         </div>
 
                         {/* MINIMALIST ID TAG */}
-                        <div className="bg-white rounded-[2rem] border border-slate-200 p-6 flex items-center justify-between">
-                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Store ID</p>
-                            <p className="text-[10px] font-mono font-bold text-slate-400">
-                                DAC-{profile?.id?.slice(0, 8).toUpperCase()}
-                            </p>
+                        <div className="relative overflow-hidden bg-[#fffafa] rounded-2xl border border-pink-100/50 p-6 flex items-center justify-between group">
+                            {/* Subtle Decorative Background Element */}
+                            <div className="absolute -right-4 -top-4 w-12 h-12 bg-[#fc2779]/5 rounded-full blur-xl transition-all group-hover:bg-[#fc2779]/10" />
+
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-black text-zinc-900 uppercase tracking-[0.3em]">
+                                    Store <span className="text-[#fc2779]">Identity</span>
+                                </p>
+                                <p className="text-[8px] text-pink-300 font-medium uppercase tracking-widest">
+                                    Boutique Member
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col items-end">
+                                <p className="text-[11px] font-mono font-black text-[#fc2779] tracking-tighter bg-[#fc2779]/5 px-3 py-1 rounded-full border border-[#fc2779]/10">
+                                    MUSW—{profile?.id?.slice(0, 8).toUpperCase()}
+                                </p>
+                            </div>
                         </div>
 
                         {/* SIGN OUT BUTTON (COLORED) */}
