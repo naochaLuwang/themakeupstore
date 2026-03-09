@@ -340,7 +340,7 @@ export function MobileMenu({ user }: { user: any }) {
                             <Zap className="absolute -right-4 -top-4 w-24 h-24 text-pink-100/50 rotate-12" />
                             <div className="relative z-10 space-y-4">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-[#fc2779] uppercase tracking-[0.2em]">Boutique Experience</p>
+                                    <p className="text-[10px] font-black text-[#fc2779] uppercase tracking-[0.2em]">App Experience</p>
                                     <p className="text-[12px] font-bold text-slate-700 leading-tight">
                                         Add to home screen for faster shopping & exclusive restock alerts.
                                     </p>

@@ -9,7 +9,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
 
     return (
         <div className="flex flex-col min-h-screen">
-            <PWAPrompt />
+            {/* <PWAPrompt /> */}
             <Navbar />
             <main className="flex-grow">
 
