@@ -277,7 +277,7 @@ export default function AuthPage() {
     const handleGoogleLogin = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: 'https://www.themakeupstorewangkhei.com/auth/callback' },
+            options: { redirectTo: 'https://themakeupstorewangkhei.com/auth/callback' },
         })
         if (error) toast.error(error.message)
     }
