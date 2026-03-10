@@ -1,59 +1,25 @@
-// import { createClient } from '@/utils/supabase/server'
-// import { NextResponse } from 'next/server'
-
-// // Replace the start of your GET function with this
-// export async function GET(request: Request) {
-//     const requestUrl = new URL(request.url)
-//     const code = requestUrl.searchParams.get('code')
-
-//     // Check if we are in production
-//     const isProd = process.env.NODE_ENV === 'production'
-//     const SITE_URL = isProd
-//         ? 'https://themakeupstorewangkhei.com'
-//         : 'http://localhost:3000'
-
-//     if (code) {
-//         const supabase = await createClient()
-//         // The exchangeCodeForSession is where it usually fails if URLs don't match
-//         const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-//         if (!error) {
-//             return NextResponse.redirect(`${SITE_URL}/`)
-//         }
-
-//         // Log the actual error to your Hostinger console so you can see it
-//         console.error("Auth Callback Error:", error.message)
-//     }
-
-//     return NextResponse.redirect(`${SITE_URL}/login?error=auth-callback-failed`)
-// }
-
-
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-    const requestUrl = new URL(request.url)
-    const code = requestUrl.searchParams.get('code')
-
-    // Use the naked domain since that is your code's preference
-    const SITE_URL = 'https://themakeupstorewangkhei.com'
+    const { searchParams, origin } = new URL(request.url)
+    const code = searchParams.get('code')
+    const next = searchParams.get('next') ?? '/'
 
     if (code) {
         const supabase = await createClient()
 
-        // We tell Supabase EXACTLY which callback URL was registered
-        // This fixes the mismatch caused by Hostinger's CDN proxy
+        // This exchanges the code for a session using the current request's origin
         const { error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
-            // Success! Send them to the homepage
-            return NextResponse.redirect(`${SITE_URL}/`)
+            // Success! Redirect to the page the user was trying to reach
+            return NextResponse.redirect(`${origin}${next}`)
         }
 
-        console.error("Auth Callback Error:", error.message)
+        console.error("Auth Error:", error.message)
     }
 
-    // If we reach here, something failed
-    return NextResponse.redirect(`${SITE_URL}/login?error=auth-callback-failed`)
+    // Return the user to the login page on the current origin if it fails
+    return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`)
 }
