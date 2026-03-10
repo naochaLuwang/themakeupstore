@@ -2,24 +2,27 @@ import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-    const { searchParams, origin } = new URL(request.url)
-    const code = searchParams.get('code')
-    const next = searchParams.get('next') ?? '/'
+    const requestUrl = new URL(request.url)
+    const code = requestUrl.searchParams.get('code')
+
+    // This dynamically gets 'https://themakeupstorewangkhei.com' 
+    // without any extra characters or wildcards.
+    const origin = requestUrl.origin
 
     if (code) {
         const supabase = await createClient()
 
-        // This exchanges the code for a session using the current request's origin
+        // Exchange the code for a session
         const { error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
-            // Success! Redirect to the page the user was trying to reach
-            return NextResponse.redirect(`${origin}${next}`)
+            // Success! Redirect to the clean homepage
+            return NextResponse.redirect(`${origin}/`)
         }
 
-        console.error("Auth Error:", error.message)
+        console.error("Auth Exchange Error:", error.message)
     }
 
-    // Return the user to the login page on the current origin if it fails
+    // Failure: Send back to login
     return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`)
 }
