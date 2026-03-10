@@ -120,32 +120,122 @@ export async function placeOrder(
     }
 }
 
+// export async function cancelOrderAndRestoreStock(orderId: string) {
+//     const supabase = await createClient()
+
+//     try {
+//         // 1. Get current user for security check
+//         const { data: { user } } = await supabase.auth.getUser()
+//         if (!user) throw new Error("Authentication required")
+
+//         // 2. Fetch order, items, and user_id
+//         const { data: order, error: orderFetchErr } = await supabase
+//             .from('orders')
+//             .select('status, user_id, order_items(product_variant_id, quantity)')
+//             .eq('id', orderId)
+//             .single()
+
+//         if (orderFetchErr || !order) throw new Error("Order not found")
+
+//         // 3. SECURITY: Verify ownership
+//         // Only allow the person who placed the order or an admin to cancel it
+//         // If you have a specific way to identify admins, add that logic here
+//         if (order.user_id !== user.id) {
+//             throw new Error("Unauthorized: You do not have permission to cancel this order")
+//         }
+
+//         // 4. STATUS CHECK: Prevent cancelling shipped/delivered items
+//         const protectedStatuses = ['shipped', 'delivered']
+//         if (protectedStatuses.includes(order.status.toLowerCase())) {
+//             throw new Error(`Cannot cancel order once it has been ${order.status}.`)
+//         }
+
+//         if (order.status === 'cancelled') {
+//             throw new Error("Order is already cancelled")
+//         }
+
+//         // 5. UPDATE: Set status to cancelled
+//         const { error: updateErr } = await supabase
+//             .from('orders')
+//             .update({ status: 'cancelled' })
+//             .eq('id', orderId)
+
+//         if (updateErr) throw updateErr
+
+//         // 6. RESTORE STOCK: Loop through items and increment inventory
+//         const items = order.order_items
+//         for (const item of items) {
+//             const { error: rpcErr } = await supabase.rpc('increment_stock', {
+//                 row_id: item.product_variant_id,
+//                 amount: item.quantity
+//             })
+
+//             // Fallback if the RPC function isn't found in your Supabase DB
+//             if (rpcErr) {
+//                 const { data: v } = await supabase
+//                     .from('product_variants')
+//                     .select('stock')
+//                     .eq('id', item.product_variant_id)
+//                     .single()
+
+//                 if (v) {
+//                     await supabase
+//                         .from("product_variants")
+//                         .update({ stock: v.stock + item.quantity })
+//                         .eq("id", item.product_variant_id)
+//                 }
+//             }
+//         }
+
+//         // 7. CACHE CLEARING: Refresh all relevant routes
+//         revalidatePath("/admin/orders")
+//         revalidatePath("/admin/products")
+//         revalidatePath("/profile")
+//         revalidatePath(`/profile/orders/${orderId}`) // Refresh the specific details page
+
+//         return { success: true }
+//     } catch (error: any) {
+//         console.error("CANCEL_ORDER_ERROR:", error)
+//         return { success: false, message: error.message || "Failed to cancel order" }
+//     }
+// }
+
+
 export async function cancelOrderAndRestoreStock(orderId: string) {
     const supabase = await createClient()
 
     try {
-        // 1. Get current user for security check
+        // 1. Get current user session
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error("Authentication required")
 
-        // 2. Fetch order, items, and user_id
-        const { data: order, error: orderFetchErr } = await supabase
-            .from('orders')
-            .select('status, user_id, order_items(product_variant_id, quantity)')
-            .eq('id', orderId)
-            .single()
+        // 2. Fetch Order and Admin Status in parallel for speed
+        const [orderRes, profileRes] = await Promise.all([
+            supabase
+                .from('orders')
+                .select('status, user_id, order_items(product_variant_id, quantity)')
+                .eq('id', orderId)
+                .single(),
+            supabase
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', user.id)
+                .single()
+        ])
 
-        if (orderFetchErr || !order) throw new Error("Order not found")
+        if (orderRes.error || !orderRes.data) throw new Error("Order not found")
+        
+        const order = orderRes.data
+        const isAdmin = profileRes.data?.is_admin || false
 
-        // 3. SECURITY: Verify ownership
-        // Only allow the person who placed the order or an admin to cancel it
-        // If you have a specific way to identify admins, add that logic here
-        if (order.user_id !== user.id) {
+        // 3. UPDATED SECURITY: Allow if owner OR Admin
+        // This was the part blocking your admin previously
+        if (order.user_id !== user.id && !isAdmin) {
             throw new Error("Unauthorized: You do not have permission to cancel this order")
         }
 
-        // 4. STATUS CHECK: Prevent cancelling shipped/delivered items
-        const protectedStatuses = ['shipped', 'delivered']
+        // 4. STATUS CHECK: Prevent cancelling completed logic
+        const protectedStatuses = ['shipped', 'delivered', 'dispatched']
         if (protectedStatuses.includes(order.status.toLowerCase())) {
             throw new Error(`Cannot cancel order once it has been ${order.status}.`)
         }
@@ -154,46 +244,56 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
             throw new Error("Order is already cancelled")
         }
 
-        // 5. UPDATE: Set status to cancelled
+        // 5. UPDATE: Set status to cancelled in the database
         const { error: updateErr } = await supabase
             .from('orders')
-            .update({ status: 'cancelled' })
+            .update({ 
+                status: 'cancelled',
+                updated_at: new Date().toISOString() 
+            })
             .eq('id', orderId)
 
         if (updateErr) throw updateErr
 
         // 6. RESTORE STOCK: Loop through items and increment inventory
-        const items = order.order_items
+        const items = order.order_items || []
+        
         for (const item of items) {
+            if (!item.product_variant_id) continue;
+
+            // Try the database function first (Cleanest way)
             const { error: rpcErr } = await supabase.rpc('increment_stock', {
                 row_id: item.product_variant_id,
                 amount: item.quantity
             })
 
-            // Fallback if the RPC function isn't found in your Supabase DB
+            // Fallback: Manual update if RPC is missing
             if (rpcErr) {
-                const { data: v } = await supabase
+                console.warn("RPC increment_stock failed, falling back to manual update")
+                const { data: variant } = await supabase
                     .from('product_variants')
                     .select('stock')
                     .eq('id', item.product_variant_id)
                     .single()
 
-                if (v) {
+                if (variant) {
                     await supabase
                         .from("product_variants")
-                        .update({ stock: v.stock + item.quantity })
+                        .update({ stock: variant.stock + item.quantity })
                         .eq("id", item.product_variant_id)
                 }
             }
         }
 
-        // 7. CACHE CLEARING: Refresh all relevant routes
+        // 7. CACHE CLEARING: Update the UI for both Admin and User
         revalidatePath("/admin/orders")
         revalidatePath("/admin/products")
         revalidatePath("/profile")
-        revalidatePath(`/profile/orders/${orderId}`) // Refresh the specific details page
+        revalidatePath(`/profile/orders/${orderId}`)
+        revalidatePath(`/admin/orders/${orderId}`)
 
-        return { success: true }
+        return { success: true, message: "Order cancelled and stock restored." }
+
     } catch (error: any) {
         console.error("CANCEL_ORDER_ERROR:", error)
         return { success: false, message: error.message || "Failed to cancel order" }
