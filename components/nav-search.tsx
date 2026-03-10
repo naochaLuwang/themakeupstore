@@ -1,7 +1,9 @@
+
+
 // "use client"
 
 // import { useState, useEffect, useRef, useId } from "react"
-// import { Search, Loader2, X, AlertCircle, Clock, Trash2 } from "lucide-react"
+// import { Search, Loader2, X, AlertCircle, Clock, Trash2, Sparkles, ChevronRight } from "lucide-react"
 // import { Input } from "@/components/ui/input"
 // import { createClient } from "@/utils/supabase/client"
 // import Image from "next/image"
@@ -18,9 +20,8 @@
 //     const [isOpen, setIsOpen] = useState(false)
 //     const containerRef = useRef<HTMLDivElement>(null)
 //     const supabase = createClient()
-
 //     const router = useRouter()
-//     // 1. Load history on mount
+
 //     useEffect(() => {
 //         setMounted(true)
 //         const saved = localStorage.getItem("recent_searches")
@@ -34,7 +35,6 @@
 //         }
 //     }, [])
 
-//     // 2. Clear everything
 //     const clearSearch = () => {
 //         setQuery("")
 //         setResults([])
@@ -48,7 +48,6 @@
 //         localStorage.removeItem("recent_searches")
 //     }
 
-//     // 3. Save to history and reset UI
 //     const saveToHistory = (product: any) => {
 //         if (!product?.id) return
 //         const historyItem = {
@@ -59,7 +58,7 @@
 //         const updated = [historyItem, ...recentSearches.filter(p => p.id !== product.id)].slice(0, 3)
 //         setRecentSearches(updated)
 //         localStorage.setItem("recent_searches", JSON.stringify(updated))
-//         clearSearch() // This closes the dropdown and empties input
+//         clearSearch()
 //     }
 
 //     useEffect(() => {
@@ -72,11 +71,8 @@
 //         return () => document.removeEventListener("mousedown", handleClickOutside)
 //     }, [])
 
-//     // 4. Search Logic
 //     useEffect(() => {
 //         if (!mounted) return
-
-//         // If query is too short, reset results so we show History instead
 //         if (query.trim().length < 2) {
 //             setResults([])
 //             setLoading(false)
@@ -87,7 +83,7 @@
 //             setLoading(true)
 //             const { data, error } = await supabase
 //                 .from('products')
-//                 .select('id, name, thumbnail_url')
+//                 .select('id, name, thumbnail_url, brand')
 //                 .ilike('name', `%${query}%`)
 //                 .limit(5)
 
@@ -99,107 +95,122 @@
 //         return () => clearTimeout(debounce)
 //     }, [query, supabase, mounted])
 
-//     // State Helpers
 //     const isSearching = query.trim().length >= 2;
 //     const showHistory = !isSearching && recentSearches.length > 0;
 
 //     return (
 //         <div className="relative w-full" ref={containerRef} suppressHydrationWarning>
-//             <div className="relative flex items-center group">
+//             {/* SEARCH INPUT FIELD */}
+//             <div className="relative flex items-center group bg-slate-50 rounded-full px-4 border border-pink-50 transition-all focus-within:bg-white focus-within:ring-2 focus-within:ring-pink-100 focus-within:border-[#fc2779]/30">
+//                 <Search className={`w-4 h-4 transition-colors ${loading ? 'text-pink-200' : 'text-[#fc2779]'}`} />
 //                 <Input
 //                     id={`search-input-${instanceId}`}
-//                     placeholder="FIND A PRODUCT..."
+//                     placeholder="SHOP BY BRAND OR PRODUCT"
 //                     value={query}
 //                     onChange={(e) => setQuery(e.target.value)}
 //                     onFocus={() => setIsOpen(true)}
-//                     className="h-9 w-full bg-transparent border-none rounded-none px-0 text-[10px] tracking-[0.25em] placeholder:text-zinc-400 focus-visible:ring-0"
+//                     className="h-10 w-full bg-transparent border-none rounded-none px-3 text-[12px] font-bold tracking-wider placeholder:text-slate-400 focus-visible:ring-0 uppercase"
 //                     autoComplete="off"
 //                 />
-//                 <div className="absolute right-0 flex items-center gap-2">
+//                 <div className="flex items-center gap-2">
 //                     {loading ? (
-//                         <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-//                     ) : query.length > 0 ? (
-//                         <button onClick={clearSearch} type="button">
-//                             <X className="w-3.5 h-3.5 text-zinc-400 hover:text-charcoal" />
+//                         <Loader2 className="w-4 h-4 animate-spin text-[#fc2779]" />
+//                     ) : query.length > 0 && (
+//                         <button onClick={clearSearch} type="button" className="p-1 hover:bg-pink-50 rounded-full">
+//                             <X className="w-4 h-4 text-slate-400 hover:text-[#fc2779]" />
 //                         </button>
-//                     ) : (
-//                         <Search className="w-3.5 h-3.5 text-charcoal/40" />
 //                     )}
 //                 </div>
 //             </div>
 
 //             {mounted && isOpen && (
-//                 <div className="absolute top-[calc(100%+1px)] left-0 right-0 bg-white shadow-2xl border border-charcoal/5 z-[999] animate-in fade-in slide-in-from-top-2 duration-300">
+//                 <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white shadow-[0_10px_40px_rgba(252,39,121,0.12)] border border-pink-50 z-[999] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
 
-//                     {/* MODE 1: LIVE SEARCH RESULTS */}
+//                     {/* LIVE SEARCH RESULTS */}
 //                     {isSearching ? (
-//                         results.length > 0 ? (
-//                             <div className="flex flex-col">
-//                                 {results.map((product) => (
+//                         <div className="flex flex-col">
+//                             <div className="px-5 py-3 bg-pink-50/30 flex items-center gap-2">
+//                                 <Sparkles className="w-3 h-3 text-[#fc2779]" />
+//                                 <span className="text-[9px] font-black tracking-widest text-[#fc2779] uppercase">Matching Your Style</span>
+//                             </div>
+//                             {results.length > 0 ? (
+//                                 <div className="divide-y divide-pink-50">
+//                                     {results.map((product) => (
+//                                         <Link
+//                                             key={`${instanceId}-live-${product.id}`}
+//                                             href={`/products/${product.id}`}
+//                                             onClick={() => saveToHistory(product)}
+//                                             className="flex items-center gap-4 p-4 hover:bg-pink-50/50 transition-all group"
+//                                         >
+//                                             <div className="relative w-12 h-12 bg-slate-100 rounded-lg overflow-hidden shrink-0 border border-pink-50 shadow-sm">
+//                                                 <Image src={product.thumbnail_url || "/placeholder.png"} alt="" fill className="object-cover transition-transform group-hover:scale-110" sizes="48px" />
+//                                             </div>
+//                                             <div className="flex flex-col gap-0.5">
+//                                                 <span className="text-[8px] font-black text-[#fc2779] uppercase tracking-tighter">
+//                                                     {product.brand || "Exclusive"}
+//                                                 </span>
+//                                                 <span className="text-[11px] font-bold text-slate-800 tracking-tight uppercase group-hover:text-[#fc2779] transition-colors">
+//                                                     {product.name}
+//                                                 </span>
+//                                             </div>
+//                                             <ChevronRight className="w-3.5 h-3.5 ml-auto text-slate-200 group-hover:text-[#fc2779] transition-all" />
+//                                         </Link>
+//                                     ))}
+//                                 </div>
+//                             ) : !loading && (
+//                                 <div className="p-12 text-center flex flex-col items-center gap-3">
+//                                     <div className="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center">
+//                                         <AlertCircle className="w-6 h-6 text-[#fc2779] stroke-[1.5]" />
+//                                     </div>
+//                                     <p className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Shade not found. Try another?</p>
+//                                 </div>
+//                             )}
+//                         </div>
+//                     ) : null}
+
+//                     {/* RECENT SEARCHES */}
+//                     {showHistory && (
+//                         <div className="flex flex-col">
+//                             <div className="px-5 py-3 bg-slate-50 border-b border-pink-50 flex items-center justify-between">
+//                                 <div className="flex items-center gap-2">
+//                                     <Clock className="w-3 h-3 text-slate-400" />
+//                                     <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase">Recently Viewed</span>
+//                                 </div>
+//                                 <button onClick={clearHistory} className="text-[9px] font-black tracking-widest text-pink-400 hover:text-[#fc2779] uppercase transition-colors flex items-center gap-1">
+//                                     <Trash2 className="w-3 h-3" />
+//                                     Clear
+//                                 </button>
+//                             </div>
+//                             <div className="divide-y divide-pink-50">
+//                                 {recentSearches.map((product) => (
 //                                     <Link
-//                                         key={`${instanceId}-live-${product.id}`}
+//                                         key={`${instanceId}-history-${product.id}`}
 //                                         href={`/products/${product.id}`}
-//                                         onClick={() => saveToHistory(product)}
-//                                         className="flex items-center gap-5 p-4 hover:bg-zinc-50 transition-colors border-b border-charcoal/5 last:border-none group"
+//                                         onClick={clearSearch}
+//                                         className="flex items-center gap-4 p-4 hover:bg-pink-50/50 transition-all group"
 //                                     >
-//                                         <div className="relative w-12 h-14 bg-zinc-100 shrink-0">
-//                                             <Image src={product.thumbnail_url || "/placeholder.png"} alt="" fill className="object-cover" sizes="48px" />
+//                                         <div className="relative w-10 h-10 bg-slate-100 rounded-md overflow-hidden shrink-0 border border-pink-50">
+//                                             <Image src={product.thumbnail_url || "/placeholder.png"} alt="" fill className="object-cover" sizes="40px" />
 //                                         </div>
-//                                         <span className="text-[10px] font-medium text-zinc-500 group-hover:text-charcoal transition-colors tracking-[0.1em] uppercase">
+//                                         <span className="text-[11px] font-bold text-slate-600 group-hover:text-slate-900 transition-colors uppercase tracking-tight">
 //                                             {product.name}
 //                                         </span>
 //                                     </Link>
 //                                 ))}
 //                             </div>
-//                         ) : !loading && (
-//                             <div className="p-10 text-center flex flex-col items-center gap-3">
-//                                 <AlertCircle className="w-6 h-6 text-zinc-200 stroke-[1px]" />
-//                                 <p className="text-[9px] font-bold tracking-[0.3em] text-zinc-400 uppercase">No matching products</p>
-//                             </div>
-//                         )
-//                     ) : null}
-
-//                     {/* MODE 2: RECENT SEARCHES (Only if not searching) */}
-//                     {showHistory && (
-//                         <div className="flex flex-col">
-//                             <div className="px-5 py-3 bg-zinc-50/50 border-b border-charcoal/5 flex items-center justify-between">
-//                                 <div className="flex items-center gap-2">
-//                                     <Clock className="w-3 h-3 text-zinc-400" />
-//                                     <span className="text-[8px] font-bold tracking-[0.2em] text-zinc-400 uppercase">Recently Viewed</span>
-//                                 </div>
-//                                 <button onClick={clearHistory} className="text-[8px] font-bold tracking-[0.1em] text-red-400 hover:text-red-600 uppercase transition-colors flex items-center gap-1">
-//                                     <Trash2 className="w-2.5 h-2.5" />
-//                                     Clear
-//                                 </button>
-//                             </div>
-//                             {recentSearches.map((product) => (
-//                                 <Link
-//                                     key={`${instanceId}-history-${product.id}`}
-//                                     href={`/products/${product.id}`}
-//                                     onClick={clearSearch}
-//                                     className="flex items-center gap-5 p-4 hover:bg-zinc-50 transition-colors border-b border-charcoal/5 last:border-none group"
-//                                 >
-//                                     <div className="relative w-10 h-12 bg-zinc-100 shrink-0">
-//                                         <Image src={product.thumbnail_url || "/placeholder.png"} alt="" fill className="object-cover" sizes="40px" />
-//                                     </div>
-//                                     <span className="text-[10px] font-medium text-zinc-500 group-hover:text-charcoal transition-colors tracking-[0.1em] uppercase">
-//                                         {product.name}
-//                                     </span>
-//                                 </Link>
-//                             ))}
 //                         </div>
 //                     )}
 
-//                     {/* GLOBAL FOOTER */}
+//                     {/* GLOBAL FOOTER CTA */}
 //                     <button
 //                         onClick={() => {
 //                             const target = isSearching ? `/search?q=${encodeURIComponent(query)}` : '/shop';
 //                             router.push(target);
 //                             setIsOpen(false);
 //                         }}
-//                         className="w-full block py-4 text-center text-[9px] font-bold tracking-[0.4em] text-charcoal bg-zinc-50/50 hover:bg-zinc-100 hover:text-primary border-t border-charcoal/5 uppercase transition-all"
+//                         className="w-full block py-5 text-center text-[10px] font-black tracking-[0.3em] text-white bg-[#fc2779] hover:bg-pink-600 uppercase transition-all shadow-[0_-4px_15px_rgba(252,39,121,0.2)]"
 //                     >
-//                         {isSearching ? `View All results for "${query}"` : "View All Collections"}
+//                         {isSearching ? `View all results for "${query}"` : "Discover the Collection"}
 //                     </button>
 //                 </div>
 //             )}
@@ -308,8 +319,8 @@ export function NavSearch() {
 
     return (
         <div className="relative w-full" ref={containerRef} suppressHydrationWarning>
-            {/* SEARCH INPUT FIELD */}
-            <div className="relative flex items-center group bg-slate-50 rounded-full px-4 border border-pink-50 transition-all focus-within:bg-white focus-within:ring-2 focus-within:ring-pink-100 focus-within:border-[#fc2779]/30">
+            {/* SEARCH INPUT FIELD - Semi-transparent background */}
+            <div className="relative flex items-center group bg-slate-100/40 backdrop-blur-sm rounded-full px-4 border border-pink-50/50 transition-all focus-within:bg-white focus-within:ring-2 focus-within:ring-pink-100 focus-within:border-[#fc2779]/30">
                 <Search className={`w-4 h-4 transition-colors ${loading ? 'text-pink-200' : 'text-[#fc2779]'}`} />
                 <Input
                     id={`search-input-${instanceId}`}
@@ -332,25 +343,26 @@ export function NavSearch() {
             </div>
 
             {mounted && isOpen && (
-                <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white shadow-[0_10px_40px_rgba(252,39,121,0.12)] border border-pink-50 z-[999] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                /* DROPDOWN - Glassmorphism applied here */
+                <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white/90 backdrop-blur-xl shadow-[0_20px_50px_rgba(252,39,121,0.15)] border border-white/40 z-[999] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
 
                     {/* LIVE SEARCH RESULTS */}
                     {isSearching ? (
                         <div className="flex flex-col">
-                            <div className="px-5 py-3 bg-pink-50/30 flex items-center gap-2">
+                            <div className="px-5 py-3 bg-[#fc2779]/5 flex items-center gap-2 border-b border-pink-50/50">
                                 <Sparkles className="w-3 h-3 text-[#fc2779]" />
-                                <span className="text-[9px] font-black tracking-widest text-[#fc2779] uppercase">Matching Your Style</span>
+                                <span className="text-[9px] font-black tracking-widest text-[#fc2779] uppercase">Beauty Match Found</span>
                             </div>
                             {results.length > 0 ? (
-                                <div className="divide-y divide-pink-50">
+                                <div className="divide-y divide-pink-50/50">
                                     {results.map((product) => (
                                         <Link
                                             key={`${instanceId}-live-${product.id}`}
                                             href={`/products/${product.id}`}
                                             onClick={() => saveToHistory(product)}
-                                            className="flex items-center gap-4 p-4 hover:bg-pink-50/50 transition-all group"
+                                            className="flex items-center gap-4 p-4 hover:bg-[#fc2779]/5 transition-all group"
                                         >
-                                            <div className="relative w-12 h-12 bg-slate-100 rounded-lg overflow-hidden shrink-0 border border-pink-50 shadow-sm">
+                                            <div className="relative w-12 h-12 bg-white/50 rounded-lg overflow-hidden shrink-0 border border-pink-50 shadow-sm">
                                                 <Image src={product.thumbnail_url || "/placeholder.png"} alt="" fill className="object-cover transition-transform group-hover:scale-110" sizes="48px" />
                                             </div>
                                             <div className="flex flex-col gap-0.5">
@@ -367,10 +379,10 @@ export function NavSearch() {
                                 </div>
                             ) : !loading && (
                                 <div className="p-12 text-center flex flex-col items-center gap-3">
-                                    <div className="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center">
+                                    <div className="w-12 h-12 bg-pink-50/50 rounded-full flex items-center justify-center">
                                         <AlertCircle className="w-6 h-6 text-[#fc2779] stroke-[1.5]" />
                                     </div>
-                                    <p className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Shade not found. Try another?</p>
+                                    <p className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Product not found. Try another?</p>
                                 </div>
                             )}
                         </div>
@@ -379,7 +391,7 @@ export function NavSearch() {
                     {/* RECENT SEARCHES */}
                     {showHistory && (
                         <div className="flex flex-col">
-                            <div className="px-5 py-3 bg-slate-50 border-b border-pink-50 flex items-center justify-between">
+                            <div className="px-5 py-3 bg-slate-50/40 border-b border-pink-50/50 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Clock className="w-3 h-3 text-slate-400" />
                                     <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase">Recently Viewed</span>
@@ -389,15 +401,15 @@ export function NavSearch() {
                                     Clear
                                 </button>
                             </div>
-                            <div className="divide-y divide-pink-50">
+                            <div className="divide-y divide-pink-50/50">
                                 {recentSearches.map((product) => (
                                     <Link
                                         key={`${instanceId}-history-${product.id}`}
                                         href={`/products/${product.id}`}
                                         onClick={clearSearch}
-                                        className="flex items-center gap-4 p-4 hover:bg-pink-50/50 transition-all group"
+                                        className="flex items-center gap-4 p-4 hover:bg-[#fc2779]/5 transition-all group"
                                     >
-                                        <div className="relative w-10 h-10 bg-slate-100 rounded-md overflow-hidden shrink-0 border border-pink-50">
+                                        <div className="relative w-10 h-10 bg-white/50 rounded-md overflow-hidden shrink-0 border border-pink-50">
                                             <Image src={product.thumbnail_url || "/placeholder.png"} alt="" fill className="object-cover" sizes="40px" />
                                         </div>
                                         <span className="text-[11px] font-bold text-slate-600 group-hover:text-slate-900 transition-colors uppercase tracking-tight">
@@ -409,16 +421,16 @@ export function NavSearch() {
                         </div>
                     )}
 
-                    {/* GLOBAL FOOTER CTA */}
+                    {/* GLOBAL FOOTER CTA - Solid color to ground the dropdown */}
                     <button
                         onClick={() => {
                             const target = isSearching ? `/search?q=${encodeURIComponent(query)}` : '/shop';
                             router.push(target);
                             setIsOpen(false);
                         }}
-                        className="w-full block py-5 text-center text-[10px] font-black tracking-[0.3em] text-white bg-[#fc2779] hover:bg-pink-600 uppercase transition-all shadow-[0_-4px_15px_rgba(252,39,121,0.2)]"
+                        className="w-full block py-5 text-center text-[10px] font-black tracking-[0.3em] text-white bg-[#fc2779] hover:bg-pink-600 uppercase transition-all shadow-[0_-4px_20px_rgba(252,39,121,0.3)]"
                     >
-                        {isSearching ? `View all results for "${query}"` : "Discover the Collection"}
+                        {isSearching ? `See all results for "${query}"` : "Discover More"}
                     </button>
                 </div>
             )}
