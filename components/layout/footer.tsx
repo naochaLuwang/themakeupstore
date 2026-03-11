@@ -266,7 +266,7 @@ export function Footer() {
                         <a href="https://wa.me/..." className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#25D366] transition-all active:scale-90">
                             <MessageCircle className="w-6 h-6 stroke-[1.5]" />
                         </a>
-                        <a href="https://instagram.com/..." className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#fc2779] transition-all active:scale-90">
+                        <a href="https://www.instagram.com/the_makeup_store.wangkhei/" className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#fc2779] transition-all active:scale-90">
                             <Instagram className="w-6 h-6 stroke-[1.5]" />
                         </a>
                         <a href="https://facebook.com/..." className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#1877F2] transition-all active:scale-90">

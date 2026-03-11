@@ -40,7 +40,7 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email Us</p>
-                                        <p className="text-slate-900 font-bold">hello@daciana.com</p>
+                                        <p className="text-slate-900 font-bold">support@themakeupstorewangkhei.com</p>
                                     </div>
                                 </div>
 
@@ -60,7 +60,7 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Business Hours</p>
-                                        <p className="text-slate-900 font-bold">Mon — Fri: 10AM - 6PM</p>
+                                        <p className="text-slate-900 font-bold">10AM - 7:30 PM</p>
                                     </div>
                                 </div>
                             </div>
