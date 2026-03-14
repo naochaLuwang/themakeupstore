@@ -249,12 +249,12 @@ export function ProductViewSection({ product }: { product: any }) {
                             {product.brand || "Exclusive"}
                         </span>
                         <div className="w-[1px] h-3 bg-slate-200" />
-                        <div className="flex items-center gap-1 text-slate-400 text-[9px] font-bold">
+                        {/* <div className="flex items-center gap-1 text-slate-400 text-[9px] font-bold">
                             4.5 <Star className="w-2.5 h-2.5 fill-slate-200 text-transparent" />
-                        </div>
+                        </div> */}
                     </div>
 
-                    <h1 className="text-3xl md:text-5xl font-light tracking-tighter text-slate-900 leading-tight">
+                    <h1 className="text-2xl md:text-5xl font-light tracking-tighter text-slate-900 leading-tight">
                         {product.name}
                     </h1>
 

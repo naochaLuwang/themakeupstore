@@ -886,11 +886,11 @@ export default function VariantSelector({ product, variants = [], onVariantChang
                     </button>
                 </div>
 
-                {currentStock > 0 && currentStock < 5 && (
+                {/* {currentStock > 0 && currentStock < 5 && (
                     <p className="text-center text-[9px] font-black uppercase tracking-widest text-amber-600">
                         Hurry! Only {currentStock} items left in stock
                     </p>
-                )}
+                )} */}
             </div>
 
             {/* 4. LOGISTICS SECTION */}
