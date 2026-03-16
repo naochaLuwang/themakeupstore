@@ -513,7 +513,7 @@ export default function CartPage() {
 
                                 {totalDiscount > 0 && (
                                     <div className="flex justify-between text-[13px] font-bold text-emerald-600">
-                                        <span className="uppercase tracking-wider">Boutique Discount</span>
+                                        <span className="uppercase tracking-wider"> Discount</span>
                                         <span>-₹{totalDiscount.toLocaleString()}</span>
                                     </div>
                                 )}
