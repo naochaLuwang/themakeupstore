@@ -263,7 +263,7 @@ export function Footer() {
 
                     {/* Social Row - Larger touch targets for tablet users */}
                     <div className="flex items-center gap-12 md:gap-16">
-                        <a href="https://wa.me/..." className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#25D366] transition-all active:scale-90">
+                        <a href="https://wa.me/8794833630" className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#25D366] transition-all active:scale-90">
                             <MessageCircle className="w-6 h-6 stroke-[1.5]" />
                         </a>
                         <a href="https://www.instagram.com/the_makeup_store.wangkhei/" className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#fc2779] transition-all active:scale-90">
