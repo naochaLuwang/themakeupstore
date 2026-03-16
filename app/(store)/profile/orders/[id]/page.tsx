@@ -25,7 +25,7 @@ export default async function OrderDetailsPage(props: { params: tParams }) {
     if (error || !order) return notFound()
 
     const address = order.shipping_address as any
-    const whatsappUrl = `https://wa.me/916909013764?text=${encodeURIComponent(`Query regarding Order: ${id}`)}`
+    const whatsappUrl = `https://wa.me/8794833630?text=${encodeURIComponent(`Query regarding Order: ${id}`)}`
 
     const discount = Number(order.promo_discount_amount) || 0
     const shipping = Number(order.shipping_price) || 0

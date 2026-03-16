@@ -88,7 +88,7 @@ export default function OrderInvoicePage() {
 
             <div className="max-w-4xl mx-auto flex justify-between items-center mb-8 no-print">
                 <Button variant="ghost" asChild className="rounded-full font-bold">
-                    <Link href={`/orders/${id}`}><ArrowLeft className="w-4 h-4 mr-2" /> Back</Link>
+                    <Link href={`/admin/orders`}><ArrowLeft className="w-4 h-4 mr-2" /> Back</Link>
                 </Button>
 
                 <div className="flex gap-3">

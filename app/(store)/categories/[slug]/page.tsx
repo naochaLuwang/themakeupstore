@@ -140,7 +140,7 @@ export default function CategoryPage() {
         <nav className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-pink-50">
             <div className="max-w-7xl mx-auto px-4 py-4">
                 <div className="flex items-center gap-2 mb-4">
-                    <Link href="/exclusive" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hub</Link>
+                    <Link href="/categories" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hub</Link>
                     <ChevronRight className="w-3 h-3 text-slate-300" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#fc2779]">
                         {isDataLoaded ? category?.name : '...'}
