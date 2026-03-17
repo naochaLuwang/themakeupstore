@@ -224,7 +224,7 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
         ])
 
         if (orderRes.error || !orderRes.data) throw new Error("Order not found")
-        
+
         const order = orderRes.data
         const isAdmin = profileRes.data?.is_admin || false
 
@@ -247,9 +247,9 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
         // 5. UPDATE: Set status to cancelled in the database
         const { error: updateErr } = await supabase
             .from('orders')
-            .update({ 
+            .update({
                 status: 'cancelled',
-                updated_at: new Date().toISOString() 
+                updated_at: new Date().toISOString()
             })
             .eq('id', orderId)
 
@@ -257,7 +257,7 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
 
         // 6. RESTORE STOCK: Loop through items and increment inventory
         const items = order.order_items || []
-        
+
         for (const item of items) {
             if (!item.product_variant_id) continue;
 
@@ -355,4 +355,57 @@ export async function createWholesaleOrder(data: {
         console.error("B2B Order Failure:", error.message)
         return { success: false, error: error.message }
     }
+}
+
+
+// app/actions/orders.ts
+export async function updateOrderPOS(orderId: string, items: any[], globalDiscount: number = 0) {
+    const supabase = await createClient()
+
+    // 1. DELETE ALL existing items for this order first
+    const { error: deleteError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderId);
+
+    if (deleteError) return { success: false, message: "Clean up failed: " + deleteError.message };
+
+    // 2. PREPARE data for insertion
+    // Remove the temporary 'id' from the frontend so Supabase generates fresh DB UUIDs
+    const cleanItems = items.map(item => ({
+        order_id: orderId,
+        product_id: item.product_id,
+        product_variant_id: item.product_variant_id,
+        product_name: item.product_name,
+        variant_title: item.variant_title,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        mrp: item.mrp,
+        sku: item.sku
+    }));
+
+    // 3. INSERT the fresh set
+    const { error: insertError } = await supabase
+        .from('order_items')
+        .insert(cleanItems);
+
+    if (insertError) return { success: false, message: "Insertion failed: " + insertError.message };
+
+    // 4. UPDATE ORDER TOTALS
+    const itemsTotal = items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0);
+    const finalTotal = itemsTotal - globalDiscount;
+
+    const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({
+            total: finalTotal,
+            promo_discount_amount: globalDiscount,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+    if (orderUpdateError) return { success: false, message: "Order total sync failed" };
+
+    revalidatePath('/admin/orders');
+    return { success: true };
 }
