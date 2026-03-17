@@ -66,25 +66,47 @@ export default function OrderInvoicePage() {
     return (
         <div className={`min-h-screen py-10 px-4 transition-colors duration-500 ${isThermal ? 'bg-zinc-200' : 'bg-white'}`}>
             <style jsx global>{`
-                @media print {
-                    header, footer, nav { display: none !important; }
-                    @page { 
-                        size: ${isThermal ? '58mm auto' : 'A4'}; 
-                        margin: 0; 
-                    }
-                    body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .no-print { display: none !important; }
-                    #printable-invoice {
-                        border: none !important;
-                        box-shadow: none !important;
-                        position: absolute;
-                        top: 0; left: 0;
-                        width: ${isThermal ? '80mm' : '100%'} !important;
-                        padding: ${isThermal ? '5mm' : '15mm'} !important;
-                        border-radius: 0 !important;
-                    }
-                }
-            `}</style>
+    @media print {
+        /* Hide UI elements */
+        header, footer, nav, button, .no-print { 
+            display: none !important; 
+        }
+
+        @page { 
+            /* Strict POS paper width */
+            size: ${isThermal ? '58mm auto' : 'A4'}; 
+            margin: 0; 
+        }
+
+        body { 
+            background: white !important; 
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact; 
+        }
+
+        #printable-invoice {
+            border: none !important;
+            box-shadow: none !important;
+            position: absolute;
+            top: 0; 
+            left: 0;
+            /* Force exact 58mm width for thermal printers */
+            width: ${isThermal ? '58mm' : '100%'} !important;
+            /* Minimal padding to maximize text area on narrow paper */
+            padding: ${isThermal ? '1mm' : '12mm'} !important; 
+            border-radius: 0 !important;
+            /* Force fonts to stay black (gray scales look muddy on thermal) */
+            color: black !important;
+        }
+
+        /* Ensure QR code doesn't get cut off */
+        svg {
+            max-width: 100% !important;
+        }
+    }
+`}</style>
 
             <div className="max-w-4xl mx-auto flex justify-between items-center mb-8 no-print">
                 <Button variant="ghost" asChild className="rounded-full font-bold">
@@ -338,6 +360,16 @@ export default function OrderInvoicePage() {
                             </div>
                         )}
                     </div>
+
+                    {isThermal && (
+                        <div className="flex flex-col border-t border-dotted border-slate-100 mt-1 pt-1">
+                            <span className="font-bold uppercase text-slate-500 text-[8px]">Address:</span>
+                            <p className="leading-tight text-slate-700">
+                                {order.shipping_address?.street}, {order.shipping_address?.area_name || ''}
+                                {order.shipping_address?.pincode ? ` - ${order.shipping_address.pincode}` : ''}
+                            </p>
+                        </div>
+                    )}
 
                     {!isThermal && (
                         <div>
