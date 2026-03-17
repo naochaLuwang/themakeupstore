@@ -294,7 +294,7 @@ export default function OrderInvoicePage() {
                         <div className={`text-[9px] text-slate-500 font-medium mt-2 leading-tight ${isThermal ? 'text-center' : ''}`}>
                             <p>Wangkhei Angom Leikai</p>
                             <p>Manipur 795005</p>
-                            {isThermal && <p className="mt-1 font-bold">PH: [Your Phone]</p>}
+                            {/* {isThermal && <p className="mt-1 font-bold">PH: [Your Phone]</p>} */}
                         </div>
                     </div>
                     {!isThermal && (
