@@ -36,6 +36,12 @@ const nextConfig: NextConfig = {
         hostname: 'res.cloudinary.com',
         port: '',
         pathname: '/dnix4q1rl/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/dnix4q1rl/**'
       }
     ],
     formats: ['image/avif', 'image/webp'],

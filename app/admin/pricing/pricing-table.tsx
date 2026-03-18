@@ -259,13 +259,12 @@
 //     )
 // }
 
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from "react"
 import { updatePricing } from "@/app/actions/pricing"
 import { toast } from "sonner"
-import { Loader2, Save, Search, Zap, Package, CheckSquare, Square, Filter } from "lucide-react"
+import { Loader2, Save, Search, Zap, CheckSquare, Square, Filter } from "lucide-react"
 
 export default function PricingTable({
     initialProducts: serverProducts,
@@ -274,7 +273,6 @@ export default function PricingTable({
     initialProducts: any[],
     categories: any[]
 }) {
-    // 1. Maintain local state for the products to reflect updates instantly
     const [products, setProducts] = useState(serverProducts)
     const [loadingId, setLoadingId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
@@ -282,7 +280,6 @@ export default function PricingTable({
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isBulkUpdating, setIsBulkUpdating] = useState(false)
 
-    // Sync local state if server props change
     useEffect(() => {
         setProducts(serverProducts)
     }, [serverProducts])
@@ -322,7 +319,6 @@ export default function PricingTable({
         }
     }
 
-    // 2. Updated handleSave to update local state
     const handleSave = async (id: string, type: 'product' | 'variant', rowData: any) => {
         setLoadingId(id)
         try {
@@ -333,7 +329,6 @@ export default function PricingTable({
                 discount_value: parseFloat(rowData.discount_value) || 0
             })
 
-            // Update local state so UI reflects change
             setProducts(currentProducts => currentProducts.map(p => {
                 if (type === 'product' && p.id === id) {
                     return { ...p, base_price: rowData.price, discount_type: rowData.discount_type, discount_value: rowData.discount_value }
@@ -351,7 +346,6 @@ export default function PricingTable({
                 }
                 return p
             }))
-
             return true
         } catch (err: any) {
             toast.error(`Error updating ${id}`)
@@ -444,6 +438,7 @@ export default function PricingTable({
                             <th className="p-6">MSRP (₹)</th>
                             <th className="p-6">Type</th>
                             <th className="p-6">Value</th>
+                            <th className="p-6 text-indigo-600 font-black italic">Sale Price (₹)</th>
                             <th className="p-6 text-right">Action</th>
                         </tr>
                     </thead>
@@ -480,14 +475,12 @@ export default function PricingTable({
 }
 
 function PriceRow({ item, type, isVariant, onSave, isLoading, isSelected, onSelect }: any) {
-    // 3. Initialize data from props
     const [data, setData] = useState({
         price: (type === 'product' ? item.base_price : item.price) ?? 0,
         discount_type: item.discount_type || 'none',
         discount_value: item.discount_value ?? 0
     })
 
-    // 4. CRITICAL: Update internal input state when item props change (Bulk Update fix)
     useEffect(() => {
         setData({
             price: (type === 'product' ? item.base_price : item.price) ?? 0,
@@ -495,6 +488,33 @@ function PriceRow({ item, type, isVariant, onSave, isLoading, isSelected, onSele
             discount_value: item.discount_value ?? 0
         })
     }, [item, type])
+
+    // Helper: Calculate sale price based on current state
+    const currentSalePrice = useMemo(() => {
+        const msrp = parseFloat(data.price as any) || 0;
+        const disc = parseFloat(data.discount_value as any) || 0;
+
+        if (data.discount_type === 'percentage') {
+            return Math.round(msrp - (msrp * (disc / 100)));
+        } else if (data.discount_type === 'amount') {
+            return Math.round(msrp - disc);
+        }
+        return Math.round(msrp);
+    }, [data.price, data.discount_type, data.discount_value]);
+
+    // NEW: Handle editing the Sale Price directly
+    const handleSalePriceChange = (newSalePrice: string) => {
+        const target = parseFloat(newSalePrice) || 0;
+        const msrp = parseFloat(data.price as any) || 0;
+
+        // When user types a Sale Price, we force it to a 'Flat Amount' discount type
+        // to ensure the math stays exactly what they typed.
+        setData({
+            ...data,
+            discount_type: 'amount',
+            discount_value: Math.max(0, msrp - target)
+        });
+    }
 
     return (
         <tr className={`group transition-all hover:bg-slate-50/50 ${isSelected ? 'bg-indigo-50/40' : isVariant ? 'bg-slate-50/10' : 'bg-white'}`}>
@@ -538,6 +558,27 @@ function PriceRow({ item, type, isVariant, onSave, isLoading, isSelected, onSele
                     className="w-20 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-indigo-500 outline-none font-bold text-sm disabled:opacity-10"
                 />
             </td>
+
+            {/* EDITABLE SALE PRICE COLUMN */}
+            <td className="p-6">
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1 text-indigo-600">
+                        <span className="text-xs font-black italic">₹</span>
+                        <input
+                            type="number"
+                            value={currentSalePrice}
+                            onChange={(e) => handleSalePriceChange(e.target.value)}
+                            className="w-20 bg-transparent border-b border-indigo-100 hover:border-indigo-500 focus:border-indigo-600 outline-none font-black text-sm transition-all"
+                        />
+                    </div>
+                    {data.discount_type !== 'none' && (
+                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">
+                            Saving ₹{Math.round(parseFloat(data.price as any) - currentSalePrice).toLocaleString()}
+                        </span>
+                    )}
+                </div>
+            </td>
+
             <td className="p-6 text-right">
                 <button
                     onClick={() => onSave(item.id, type, data)}

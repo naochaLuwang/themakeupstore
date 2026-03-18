@@ -4,18 +4,20 @@ import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-    Sparkles, Zap, ChevronRight, Loader2,
-    Flame, ArrowRight, Smartphone, Gift,
-    ShieldCheck, Star
+    Smartphone, Gift, Star, ChevronRight,
+    Loader2, Tag, Percent, ArrowRight,
+    ShoppingBag, Sparkles
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ProductCard } from '@/components/store/product-card'
 
-const SALE_END_DATE = new Date("2026-03-31T23:59:59").getTime();
+const NYKAA_PINK = '#fc2779';
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1596462502278-27bfac4033c8?w=200&q=80';
 
 export default function AppPromotionalOfferPage() {
     const [products, setProducts] = useState<any[]>([])
+    const [categories, setCategories] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('app-exclusive')
 
@@ -25,13 +27,30 @@ export default function AppPromotionalOfferPage() {
         async function fetchData() {
             setLoading(true);
             try {
-                const { data: prodData } = await supabase
+                // 1. Fetch Active Products
+                const { data: prodData, error: prodError } = await supabase
                     .from('products')
                     .select(`*, product_variants (*)`)
                     .eq('status', 'active')
                     .limit(8);
+
+                if (prodError) throw prodError;
                 setProducts(prodData || []);
-            } catch (err) { console.error(err); } finally { setLoading(false); }
+
+                // 2. Fetch Categories from DB
+                const { data: catData, error: catError } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .limit(10); // Adjust limit as needed
+
+                if (catError) throw catError;
+                setCategories(catData || []);
+
+            } catch (err) {
+                console.error("Error fetching data:", err);
+            } finally {
+                setLoading(false);
+            }
         }
         fetchData();
     }, [supabase]);
@@ -39,142 +58,143 @@ export default function AppPromotionalOfferPage() {
     if (loading) return <LoadingScreen />;
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] text-slate-950 pb-32 overflow-hidden selection:bg-pink-500 selection:text-white">
-
-            {/* 1. DYNAMIC TOP NAVIGATION (APP THEME) */}
-            <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-4 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                        <Smartphone className="w-5 h-5 text-white" />
+        <div className="min-h-screen bg-[#F4F4F5] text-gray-900 pb-28 font-sans">
+            {/* 1. BRAND NAVIGATION HEADER */}
+            <header className="sticky top-0 z-50 bg-white shadow-sm px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="bg-black text-white p-1.5 rounded-md">
+                        <Smartphone className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest">App Exclusive</span>
+                    <div>
+                        <h1 className="text-sm font-bold tracking-tight leading-none uppercase">Daciana</h1>
+                        <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">App Exclusive Offers</p>
+                    </div>
                 </div>
-                <div className="bg-pink-50 text-[#fc2779] px-3 py-1 rounded-full text-[9px] font-black uppercase">
-                    Code: APP500
+                <div className="bg-pink-50 border border-pink-100 text-[#fc2779] px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide shadow-sm">
+                    Code: DACIANA500
                 </div>
-            </nav>
+            </header>
 
-            {/* 2. THE IMMERSIVE APP HERO */}
-            <section className="px-5 pt-8">
+            {/* 2. THE HERO BANNER */}
+            <section className="px-4 pt-4">
                 <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="relative h-[480px] w-full rounded-[3.5rem] overflow-hidden shadow-[0_40px_80px_-15px_rgba(0,0,0,0.2)]"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-md bg-white"
                 >
                     <Image
                         src="https://images.unsplash.com/photo-1596462502278-27bfac4033c8?q=80&w=2080&auto=format&fit=crop"
-                        fill className="object-cover scale-110" alt="App Offer"
+                        fill
+                        className="object-cover"
+                        alt="App Exclusive Beauty Offers"
+                        priority
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/90" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                    {/* Floating Feature Tags */}
-                    <div className="absolute top-8 left-8 flex flex-col gap-2">
-                        <div className="bg-white/20 backdrop-blur-md border border-white/30 px-4 py-2 rounded-2xl flex items-center gap-2 w-fit">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            <span className="text-[10px] font-bold text-white uppercase tracking-tighter">4.9 Rated App</span>
-                        </div>
+                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-sm flex items-center gap-1">
+                        <Star className="w-3 h-3 text-[#fc2779] fill-[#fc2779]" />
+                        <span className="text-[10px] font-bold text-gray-900 uppercase">Top Rated</span>
                     </div>
 
-                    <div className="absolute bottom-10 left-8 right-8 space-y-6">
-                        <div className="space-y-2">
-                            <h1 className="text-6xl font-black text-white leading-[0.9] tracking-tighter uppercase">
-                                Better <br /> On The <span className="text-[#fc2779] italic font-serif lowercase">app.</span>
-                            </h1>
-                            <p className="text-white/70 text-xs font-medium max-w-[240px] leading-relaxed uppercase tracking-widest">
-                                Unlock early access & hidden discounts available nowhere else.
-                            </p>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button className="flex-1 h-14 bg-white text-black rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-transform">
-                                <Gift className="w-4 h-4" /> Claim App Reward
-                            </button>
-                        </div>
+                    <div className="absolute bottom-6 left-5 right-5 text-white">
+                        <h2 className="text-3xl font-black leading-tight mb-2 uppercase tracking-wide">
+                            Unlock Your <br />
+                            <span className="text-[#fc2779]">Beauty Bonus</span>
+                        </h2>
+                        <p className="text-sm font-medium opacity-90 mb-4 max-w-[250px]">
+                            Download the Daciana app for early access to sales and secret discounts.
+                        </p>
+                        <button className="bg-[#fc2779] text-white w-full py-3.5 rounded-md font-bold text-sm uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 hover:bg-[#e01b68] transition-colors">
+                            <Gift className="w-4 h-4" /> Claim App Reward
+                        </button>
                     </div>
                 </motion.div>
             </section>
 
-            {/* 3. APP PERKS GRID */}
-            <section className="px-5 mt-12 grid grid-cols-2 gap-4">
-                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-3">
-                    <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500">
-                        <Zap className="w-5 h-5 fill-current" />
-                    </div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest">Flash Access</h4>
-                    <p className="text-[9px] text-slate-400 font-medium">Get notified 2 hours before the crowd.</p>
+            {/* 3. CATEGORY BUBBLES (Fetched from DB) */}
+            <section className="mt-8 bg-white py-6 border-y border-gray-200">
+                <div className="px-4 flex items-center justify-between mb-4">
+                    <h3 className="text-base font-bold text-gray-800 uppercase tracking-tight">Shop by Category</h3>
                 </div>
-                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-3">
-                    <div className="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
-                        <ShieldCheck className="w-5 h-5" />
-                    </div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest">App Warranty</h4>
-                    <p className="text-[9px] text-slate-400 font-medium">Extended 1-year coverage on all devices.</p>
-                </div>
-            </section>
-
-            {/* 4. THE CATEGORY "REELS" */}
-            <section className="mt-16 space-y-8">
-                <div className="px-6 flex items-center justify-between">
-                    <h3 className="text-xl font-black uppercase tracking-tighter italic font-serif">Trending Reels</h3>
-                    <div className="h-[1px] flex-1 bg-slate-100 mx-6" />
-                </div>
-
-                <div className="flex overflow-x-auto gap-6 no-scrollbar px-6">
-                    {['Serum', 'Lipstick', 'Palettes', 'Glow'].map((item, i) => (
-                        <div key={i} className="flex flex-col items-center gap-3 shrink-0">
-                            <div className="w-20 h-20 rounded-full p-1 border-2 border-[#fc2779] rotate-12">
-                                <div className="w-full h-full rounded-full bg-slate-200 overflow-hidden relative">
-                                    <Image src={`https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=200&auto=format&fit=crop`} fill alt="cat" className="object-cover" />
+                <div className="flex overflow-x-auto gap-4 px-4 pb-2 no-scrollbar">
+                    {categories.length > 0 ? (
+                        categories.map((category) => (
+                            <div key={category.id} className="flex flex-col items-center gap-2 shrink-0 w-20 cursor-pointer group">
+                                <div className="w-16 h-16 rounded-full p-[2px] border border-gray-300 group-hover:border-[#fc2779] transition-colors duration-300">
+                                    <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-100">
+                                        <Image
+                                            src={category.image_url || FALLBACK_IMAGE}
+                                            fill
+                                            alt={category.name}
+                                            className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                        />
+                                    </div>
                                 </div>
+                                <span className="text-[11px] font-semibold text-gray-700 text-center line-clamp-1">{category.name}</span>
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-tighter">{item}</span>
-                        </div>
-                    ))}
+                        ))
+                    ) : (
+                        <div className="text-xs text-gray-400 italic px-4">No categories found.</div>
+                    )}
                 </div>
             </section>
 
-            {/* 5. DYNAMIC OFFER TABS */}
-            <section className="mt-20 px-5 space-y-8">
-                <div className="flex bg-slate-100 p-1.5 rounded-3xl">
+            {/* 4. OFFER TABS & PRODUCT GRID */}
+            <section className="mt-6 px-4">
+                <div className="flex border-b border-gray-300 mb-6">
                     <button
                         onClick={() => setActiveTab('app-exclusive')}
-                        className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'app-exclusive' ? 'bg-white shadow-md text-black' : 'text-slate-400'}`}
+                        className={`flex-1 pb-3 text-xs font-bold uppercase tracking-wider transition-colors relative ${activeTab === 'app-exclusive' ? 'text-[#fc2779]' : 'text-gray-500'}`}
                     >
-                        App Only
+                        App Only Offers
+                        {activeTab === 'app-exclusive' && (
+                            <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-[#fc2779]" />
+                        )}
                     </button>
                     <button
-                        onClick={() => setActiveTab('best-sellers')}
-                        className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'best-sellers' ? 'bg-white shadow-md text-black' : 'text-slate-400'}`}
+                        onClick={() => setActiveTab('trending')}
+                        className={`flex-1 pb-3 text-xs font-bold uppercase tracking-wider transition-colors relative ${activeTab === 'trending' ? 'text-[#fc2779]' : 'text-gray-500'}`}
                     >
-                        Best Sellers
+                        Trending Now
+                        {activeTab === 'trending' && (
+                            <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-[#fc2779]" />
+                        )}
                     </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-6 gap-y-12">
+                <div className="grid grid-cols-2 gap-3">
                     {products.map((product) => (
-                        <div key={product.id} className="relative">
+                        <div key={product.id} className="relative bg-white rounded-md p-2 shadow-sm border border-gray-100 group cursor-pointer">
                             <ProductCard product={product} />
-                            <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-md text-white text-[7px] font-black px-2 py-1 rounded-md uppercase tracking-widest">
-                                - ₹500
+
+                            <div className="absolute top-2 left-2 bg-black text-white text-[9px] font-bold px-1.5 py-0.5 rounded-sm flex items-center gap-1 uppercase">
+                                <Tag className="w-2.5 h-2.5" />
+                                -₹500 Off
                             </div>
                         </div>
                     ))}
                 </div>
+
+                <button className="w-full mt-6 py-3 border border-gray-300 rounded-md text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center justify-center gap-2 hover:bg-gray-50">
+                    View All Products <ArrowRight className="w-4 h-4" />
+                </button>
             </section>
 
-            {/* 6. STICKY APP CTA (THE CONVERTER) */}
-            <div className="fixed bottom-8 left-4 right-4 z-[60]">
-                <div className="bg-slate-950 rounded-[2.5rem] p-3 pl-8 flex items-center justify-between shadow-2xl border border-white/10 overflow-hidden relative">
-                    {/* Animated background glow */}
-                    <div className="absolute -left-10 top-0 w-32 h-full bg-[#fc2779] blur-[50px] opacity-30 animate-pulse" />
-
-                    <div className="relative">
-                        <p className="text-[10px] text-pink-400 font-black uppercase tracking-[0.2em] mb-1">New User Offer</p>
-                        <h4 className="text-white font-serif italic text-lg leading-none">Flat ₹500 Off</h4>
+            {/* 5. APP DOWNLOAD CTA BTM BAR */}
+            <div className="fixed bottom-0 left-0 right-0 z-[60] bg-white border-t border-gray-200 px-4 py-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-pink-50 p-2 rounded-md border border-pink-100">
+                            <Percent className="w-5 h-5 text-[#fc2779]" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">First App Order</p>
+                            <h4 className="text-gray-900 font-black text-sm uppercase">Get Flat ₹500 Off</h4>
+                        </div>
                     </div>
 
-                    <button className="h-14 px-8 bg-white text-black rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#fc2779] hover:text-white transition-all">
-                        Download Now
+                    <button className="bg-black text-white px-5 py-2.5 rounded-md text-[11px] font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors shrink-0">
+                        Get App
                     </button>
                 </div>
             </div>
@@ -184,9 +204,9 @@ export default function AppPromotionalOfferPage() {
 
 function LoadingScreen() {
     return (
-        <div className="h-screen w-full flex flex-col items-center justify-center bg-[#f8fafc] gap-6">
-            <Loader2 className="w-10 h-10 text-[#fc2779] animate-spin" />
-            <p className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-400">Booting Store</p>
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-white gap-4">
+            <Loader2 className="w-8 h-8 text-[#fc2779] animate-spin" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Loading Daciana...</p>
         </div>
     )
 }
