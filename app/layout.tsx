@@ -11,6 +11,7 @@ import NextTopLoader from "nextjs-toploader";
 import PushInitializer from "@/components/PushInitializer"
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import PresenceTracker from "@/components/admin/PresenceTracker";
 
 const myBrandFont = localFont({
   src: "../public/fonts/Anders.ttf",
@@ -100,6 +101,7 @@ export default async function RootLayout({
           <NextTopLoader color="#0f172a" showSpinner={false} />
           <CartSync userId={user?.id || null} />
           <PushInitializer />
+          <PresenceTracker user={user} />
 
           <main>
             {children}

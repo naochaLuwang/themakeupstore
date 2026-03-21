@@ -406,3 +406,4 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
         </div>
     )
 }
+
