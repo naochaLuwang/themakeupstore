@@ -1,4 +1,5 @@
 "use client"
+
 import { useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { usePathname } from "next/navigation"
@@ -8,40 +9,34 @@ export default function PresenceTracker({ user }: { user: any }) {
     const pathname = usePathname()
 
     useEffect(() => {
-        // DEBUG: Ensure this component is actually mounting
-        console.log("Presence Tracker Mounted for:", user?.email || "Guest")
-
-        const sessionKey = user?.id || `guest_${Math.random().toString(36).substring(2, 7)}`
-
-        // Use 'online-traffic' exactly as in the Admin Page
-        const channel = supabase.channel('online-traffic', {
-            config: { presence: { key: sessionKey } }
-        })
-
-        channel
-            .on('presence', { event: 'sync' }, () => {
-                console.log("Presence Synced:", channel.presenceState())
-            })
-            .subscribe(async (status) => {
-                console.log("Subscription Status:", status)
-                if (status === 'SUBSCRIBED') {
-                    const tracked = await channel.track({
-                        id: sessionKey,
-                        name: user?.user_metadata?.full_name || 'Anonymous Guest',
-                        email: user?.email || null,
-                        entry_time: new Date().toISOString(),
-                        current_page: pathname,
-                        device: window.innerWidth < 768 ? 'Mobile' : 'Desktop'
-                    })
-                    console.log("Tracking Result:", tracked)
-                }
-            })
-
-        return () => {
-            console.log("Unsubscribing from Presence")
-            channel.unsubscribe()
+        // 1. VISITOR ID: Stays the same forever on this browser
+        let visitorId = localStorage.getItem('site_visitor_id')
+        if (!visitorId) {
+            visitorId = `v_${Math.random().toString(36).substring(2, 15)}`
+            localStorage.setItem('site_visitor_id', visitorId)
         }
-    }, [user, pathname]) // Re-track when pathname changes
+
+        // 2. SESSION ID: Stays the same until the tab is closed
+        let sessionId = sessionStorage.getItem('site_session_id')
+        if (!sessionId) {
+            sessionId = `s_${Math.random().toString(36).substring(2, 15)}`
+            sessionStorage.setItem('site_session_id', sessionId)
+        }
+
+        const logHit = async () => {
+            await supabase.from('visitor_history').insert({
+                visitor_id: visitorId,
+                session_id: sessionId,
+                user_id: user?.id || null,
+                user_name: user?.user_metadata?.full_name || 'Guest',
+                path: pathname,
+                device: window.innerWidth < 768 ? 'Mobile' : 'Desktop',
+                referrer: document.referrer || 'Direct'
+            })
+        }
+
+        logHit()
+    }, [user, pathname, supabase])
 
     return null
 }
