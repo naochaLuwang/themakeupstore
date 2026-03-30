@@ -5,14 +5,15 @@ import { useCart } from "./use-cart"
 import { createClient } from "@/utils/supabase/client"
 
 export function CartSync({ userId }: { userId: string | null }) {
-    const { items, setItems, clearCart } = useCart()
+    const { items, mergeItems, clearCart } = useCart()
     const supabase = createClient()
 
     // Track if we have successfully merged the DB state into our Local state
     const [isSynced, setIsSynced] = useState(false)
     const initialPullDone = useRef(false)
 
-    // 1. CLEAR ON LOGOUT
+    // 1. (RESTORED) CLEAR ON LOGOUT 
+    // This isoloates user sessions while allowing guest -> user merging
     useEffect(() => {
         if (!userId) {
             clearCart()
@@ -67,7 +68,7 @@ export function CartSync({ userId }: { userId: string | null }) {
                     stock: ci.product_variants.stock
                 }))
 
-                setItems(formatted)
+                mergeItems(formatted)
             }
 
             initialPullDone.current = true
@@ -75,7 +76,7 @@ export function CartSync({ userId }: { userId: string | null }) {
         }
 
         pullAndMergeCart()
-    }, [userId, supabase, setItems])
+    }, [userId, supabase, mergeItems])
 
     // 3. PUSH CHANGES TO DB (Debounced)
     useEffect(() => {

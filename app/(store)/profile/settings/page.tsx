@@ -154,6 +154,7 @@ import {
 import { createClient } from "@/utils/supabase/client"
 import { AnimatePresence, motion } from "framer-motion"
 import { toast } from "sonner"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 export default function SettingsPage() {
     const router = useRouter()
@@ -242,6 +243,12 @@ export default function SettingsPage() {
             </header>
 
             <main className="px-6 py-8 max-w-2xl mx-auto space-y-10">
+                <Breadcrumbs
+                    items={[
+                        { label: 'Profile', href: '/profile' },
+                        { label: 'Account Settings', href: '/profile/settings' }
+                    ]}
+                />
 
                 {/* SECTION: IDENTITY */}
                 <section>

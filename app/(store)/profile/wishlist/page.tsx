@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Trash2, ShoppingBag, ArrowRight } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
 import Link from "next/link"
 
 export default function WishlistPage() {
@@ -80,6 +81,7 @@ export default function WishlistPage() {
                     animate={{ opacity: 1 }}
                     className="max-w-7xl mx-auto px-6 pt-8 pb-8"
                 >
+                    <Breadcrumbs items={[{ label: 'Profile', href: '/profile' }, { label: 'My Wishlist', href: '/profile/wishlist' }]} />
                     <header className="mb-12">
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-2">Your Curated List</p>
                         <h1 className="text-3xl font-black  tracking-tighter uppercase text-slate-900 leading-none">Wishlist</h1>

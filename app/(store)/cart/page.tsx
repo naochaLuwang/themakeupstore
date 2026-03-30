@@ -330,6 +330,7 @@ import { useEffect, useState, useMemo, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { toast } from "sonner"
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 export default function CartPage() {
     const { items, removeItem, updateQuantity, setItems } = useCart() as any
@@ -467,6 +468,7 @@ export default function CartPage() {
     return (
         <div className="bg-[#FBFCFD] min-h-screen pb-64 lg:pb-32 selection:bg-black selection:text-white antialiased">
             <div className="max-w-5xl mx-auto px-4 py-8 lg:py-20">
+                <Breadcrumbs items={[{ label: 'Bag', href: '/cart' }]} />
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                     <div className="lg:col-span-7">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">

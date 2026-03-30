@@ -311,6 +311,8 @@ import {
     LogOut, ChevronRight, ShieldCheck, Bell,
     Sparkles, User
 } from "lucide-react"
+import { SignatureLoader } from "@/components/store/signature-loader"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null)
@@ -357,35 +359,15 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-[#F8F8F8] pb-24 antialiased selection:bg-pink-100">
             {/* 1. SIGNATURE LOADER */}
-            <AnimatePresence mode="wait">
-                {loading && (
-                    <motion.div
-                        key="loader"
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
-                        className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center"
-                    >
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-black mb-4">
-                            The Makeup Store
-                        </h2>
-                        <div className="w-24 overflow-hidden">
-                            <motion.div
-                                animate={{ x: ["-100%", "100%"] }}
-                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                                className="h-[1.5px] bg-black w-full"
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <SignatureLoader loading={loading} />
 
             {!loading && (
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="max-w-md mx-auto px-5 pt-12"
+                    className="max-w-md mx-auto px-5 pt-12 pb-20"
                 >
+                    <Breadcrumbs items={[{ label: 'Profile', href: '/profile' }]} />
                     {/* COMPACT COMPACT HEADER */}
                     <header className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm mb-6">
                         <div className="flex items-center justify-between mb-6">

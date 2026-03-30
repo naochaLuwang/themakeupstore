@@ -68,6 +68,7 @@ import { createClient } from "@/utils/supabase/server";
 import { NotificationSettings } from "@/components/profile/NotificationSettings";
 import { Bell, ShieldCheck, Mail, ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export default async function NotificationsPage() {
     const supabase = await createClient();
@@ -116,6 +117,12 @@ export default async function NotificationsPage() {
             </header>
 
             <main className="relative z-10 px-6 py-10 max-w-xl mx-auto space-y-10">
+                <Breadcrumbs
+                    items={[
+                        { label: 'Profile', href: '/profile' },
+                        { label: 'Notifications', href: '/profile/notifications' }
+                    ]}
+                />
                 {/* Real-time Push Section */}
                 <section className="bg-[#fffafa] rounded-[2rem] p-8 border border-pink-100/50 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">

@@ -70,6 +70,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Sparkles } from "lucide-react"
 import { AddressList } from "./address-list"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 export default async function AddressesPage() {
     const supabase = await createClient()
@@ -118,6 +119,12 @@ export default async function AddressesPage() {
             </header>
 
             <main className="relative z-10 px-5 py-6">
+                <Breadcrumbs
+                    items={[
+                        { label: 'Profile', href: '/profile' },
+                        { label: 'My Addresses', href: '/profile/addresses' }
+                    ]}
+                />
                 {/* The compact AddressList should use:
                    - Gap of 4 instead of 6
                    - Cards with rounded-2xl

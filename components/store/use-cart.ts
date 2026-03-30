@@ -339,6 +339,7 @@ interface CartStore {
     getSubtotal: () => number;
     getDiscountAmount: () => number;
     getFinalTotal: () => number;
+    mergeItems: (newItems: CartItem[]) => void;
     clearShipping: () => void;
 }
 
@@ -432,6 +433,26 @@ export const useCart = create<CartStore>()(
 
             setItems: (newItems) => {
                 set({ items: newItems });
+                get().autoCalculateShipping();
+            },
+
+            mergeItems: (newItems) => {
+                const currentItems = get().items;
+                const merged = [...currentItems];
+
+                newItems.forEach(newItem => {
+                    const existingIndex = merged.findIndex(item => item.variantId === newItem.variantId);
+                    if (existingIndex > -1) {
+                        merged[existingIndex] = {
+                            ...merged[existingIndex],
+                            quantity: Math.min(merged[existingIndex].quantity + newItem.quantity, merged[existingIndex].stock)
+                        };
+                    } else {
+                        merged.push(newItem);
+                    }
+                });
+
+                set({ items: merged });
                 get().autoCalculateShipping();
             },
 

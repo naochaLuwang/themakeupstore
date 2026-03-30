@@ -6,6 +6,7 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { Sparkles } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 interface Props {
     initialSubcategories: any[];
@@ -54,6 +55,7 @@ export default function EssentialsClient({
             />
 
             <main className="max-w-6xl mx-auto px-6 pt-10">
+                <Breadcrumbs items={[{ label: 'Essentials', href: '/essentials' }]} />
                 {/* BRANDED HERO */}
                 <header className="mb-16 space-y-4">
                     <div className="flex items-center gap-2 text-[#fc2779]">

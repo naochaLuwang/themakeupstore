@@ -4,6 +4,7 @@ import * as React from "react"
 import { createClient } from "@/utils/supabase/client"
 import EssentialsClient from "./essentials-client"
 import { motion } from "framer-motion"
+import { SignatureLoader } from "@/components/store/signature-loader"
 
 const PAGE_SIZE = 20;
 
@@ -114,28 +115,18 @@ export default function EssentialPage() {
         setLoadingMore(false)
     }
 
-    if (loading) return (
-        <div className="min-h-screen bg-white flex flex-col items-center justify-center">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-[#fc2779] mb-4">
-                The Makeup Store <br/> Loading Essentials...
-            </h2>
-            <div className="w-24 overflow-hidden h-[1.5px] bg-pink-50">
-                <motion.div
-                    animate={{ x: ["-100%", "100%"] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                    className="h-full bg-[#fc2779] w-full"
-                />
-            </div>
-        </div>
-    )
-
     return (
-        <EssentialsClient
-            initialSubcategories={subcategories}
-            initialProducts={allProducts}
-            hasMore={hasMore}
-            loadingMore={loadingMore}
-            onLoadMore={loadMore}
-        />
+        <>
+            <SignatureLoader loading={loading} text="The Makeup Store / Loading Essentials" />
+            {!loading && (
+                <EssentialsClient
+                    initialSubcategories={subcategories}
+                    initialProducts={allProducts}
+                    hasMore={hasMore}
+                    loadingMore={loadingMore}
+                    onLoadMore={loadMore}
+                />
+            )}
+        </>
     )
 }

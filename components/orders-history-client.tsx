@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Search, Calendar, ChevronRight, Clock, CheckCircle2, XCircle, ShoppingBag } from "lucide-react"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 // Ensure the prop name matches what you pass from the page
 export default function OrdersHistoryClient({ initialOrders }: { initialOrders: any[] }) {
@@ -23,6 +24,7 @@ export default function OrdersHistoryClient({ initialOrders }: { initialOrders: 
 
 
             <div className="max-w-5xl mx-auto px-6 py-10">
+                <Breadcrumbs items={[{ label: 'Profile', href: '/profile' }, { label: 'My Orders', href: '/profile/orders' }]} />
 
                 {/* FILTERS */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">

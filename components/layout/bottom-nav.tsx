@@ -38,7 +38,7 @@ export function BottomNav() {
                 <nav className="flex items-center justify-between h-14 max-w-md mx-auto">
 
                     {/* 1. THE PROMO SLOT: "OFFERS" */}
-                    {/* <Link
+                    <Link
                         href="/offers"
                         onClick={triggerHaptic}
                         className="flex flex-col items-center justify-center pr-4 group relative"
@@ -48,7 +48,7 @@ export function BottomNav() {
                                 className={`w-5 h-5 transition-colors ${pathname === '/offers' ? 'text-white' : 'text-[#fc2779]'}`}
                                 strokeWidth={3}
                             />
-                          
+
                             <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#fc2779] border-2 border-white"></span>
@@ -57,10 +57,10 @@ export function BottomNav() {
                         <span className="text-[7px] mt-1.5 font-black uppercase text-[#fc2779] tracking-tighter">
                             Upto 50% Off
                         </span>
-                    </Link> */}
+                    </Link>
 
                     {/* 2. MODERN HAIRLINE DIVIDER */}
-                    {/* <div className="h-10 w-[1.5px] bg-gradient-to-b from-transparent via-slate-100 to-transparent" /> */}
+                    <div className="h-10 w-[1.5px] bg-gradient-to-b from-transparent via-slate-100 to-transparent" />
 
                     {/* 3. PRIMARY NAV ITEMS */}
                     <div className="flex flex-1 items-center justify-around">

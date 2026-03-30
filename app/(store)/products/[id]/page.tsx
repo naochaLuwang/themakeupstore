@@ -25,7 +25,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     ),
             reviews:product_reviews(*),
             product_categories(
-                categories(id, name, slug)
+                categories(id, name, slug, parent:parent_id(id, name, slug))
             )
         `)
         .eq("id", id)
@@ -41,10 +41,27 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
 
 
+    // 4. Build Breadcrumbs
+    const firstCat = product.product_categories?.[0]?.categories
+    const breadcrumbItems = []
+    if (firstCat) {
+        if (firstCat.parent) {
+            const parentSlug = firstCat.parent.slug;
+            const pathSegment = (parentSlug === 'exclusive' || parentSlug === 'essentials') ? parentSlug : `categories/${parentSlug}`;
+            breadcrumbItems.push({ label: firstCat.parent.name, href: `/${pathSegment}` })
+        }
+        const catSlug = firstCat.slug;
+        const pathSegment = (catSlug === 'exclusive' || catSlug === 'essentials' || (firstCat.parent && (firstCat.parent.slug === 'exclusive' || firstCat.parent.slug === 'essentials'))) 
+            ? (firstCat.parent?.slug || catSlug) + '/' + catSlug 
+            : `categories/${catSlug}`;
+        
+        breadcrumbItems.push({ label: firstCat.name, href: `/${pathSegment}` })
+    }
+    breadcrumbItems.push({ label: product.name, href: `/products/${product.id}` })
+
     return (
-        <div className="container mx-auto px-4 py-8 md:py-12">
-            {/* Breadcrumb Section
-            <Breadcrumbs parent={breadcrumbParent} current={product.name} /> */}
+        <div className="container mx-auto px-4 py-8 md:py-12 min-h-screen">
+            <Breadcrumbs items={breadcrumbItems} />
 
             {/* Main Product Section */}
             <ProductViewSection product={product} promos={promos} />

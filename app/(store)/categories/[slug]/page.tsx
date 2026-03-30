@@ -18,6 +18,8 @@ import {
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
+import { SignatureLoader } from "@/components/store/signature-loader"
 
 export default function CategoryPage() {
     const { slug } = useParams()
@@ -68,7 +70,10 @@ export default function CategoryPage() {
         async function fetchBaseData() {
             if (!slug) return
             setInitialLoading(true)
-            const { data: catData } = await supabase.from('categories').select('*').eq('slug', slug).single()
+            const { data: catData } = await supabase.from('categories')
+                .select('*, parent:parent_id(id, name, slug)')
+                .eq('slug', slug)
+                .single()
             if (catData) {
                 setCategory(catData)
                 if (catData.parent_id) {
@@ -139,12 +144,14 @@ export default function CategoryPage() {
     const StickyNav = ({ isDataLoaded }: { isDataLoaded: boolean }) => (
         <nav className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-pink-50">
             <div className="max-w-7xl mx-auto px-4 py-4">
-                <div className="flex items-center gap-2 mb-4">
-                    <Link href="/categories" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hub</Link>
-                    <ChevronRight className="w-3 h-3 text-slate-300" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#fc2779]">
-                        {isDataLoaded ? category?.name : '...'}
-                    </span>
+                <div className="mb-4">
+                    <Breadcrumbs
+                        items={[
+                            { label: 'Categories', href: '/categories' },
+                            ...(category?.parent ? [{ label: category.parent.name, href: `/categories/${category.parent.slug}` }] : []),
+                            { label: category?.name || '...', href: `/categories/${slug}` }
+                        ]}
+                    />
                 </div>
 
                 <div className="flex items-center gap-6 overflow-x-auto no-scrollbar touch-pan-x pb-2">
@@ -191,27 +198,7 @@ export default function CategoryPage() {
         <div className="min-h-screen bg-[#FDFDFD] text-slate-900 pb-20 antialiased">
 
             {/* SIGNATURE LOADER */}
-            <AnimatePresence>
-                {initialLoading && (
-                    <motion.div
-                        key="loader"
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center"
-                    >
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-[#fc2779] mb-3">
-                            The Makeup Store
-                        </h2>
-                        <div className="w-24 h-[1.5px] bg-pink-50 relative overflow-hidden">
-                            <motion.div
-                                animate={{ x: ["-100%", "100%"] }}
-                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                                className="absolute inset-0 bg-[#fc2779] w-full h-full"
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <SignatureLoader loading={initialLoading} text={`The Makeup Store / ${category?.name || 'Discovery'}`} />
 
             {!initialLoading && (
                 <div className={`transition-all duration-700 ${isFilterOpen ? 'blur-2xl scale-[0.98] opacity-40 pointer-events-none' : ''}`}>

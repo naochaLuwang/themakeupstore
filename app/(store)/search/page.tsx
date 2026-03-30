@@ -5,6 +5,8 @@ import { useEffect, useState, Suspense } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
 import { Loader2, SearchX, ArrowUpRight } from "lucide-react"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
+import { SignatureLoader } from "@/components/store/signature-loader"
 import Link from "next/link"
 
 function SearchResultsContent() {
@@ -34,16 +36,12 @@ function SearchResultsContent() {
         fetchAll()
     }, [query, supabase])
 
-    if (loading) return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-            <Loader2 className="w-5 h-5 animate-spin text-slate-900" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Scanning Database</p>
-        </div>
-    )
+    if (loading) return <SignatureLoader loading={loading} text={`Searching for: ${query}`} />
 
     return (
         <div className="min-h-screen bg-white">
             <main className="max-w-7xl mx-auto px-6 py-12">
+                <Breadcrumbs items={[{ label: 'Search', href: '/search' }]} />
                 {/* MINIMALIST HEADER */}
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
                     <div className="space-y-2">

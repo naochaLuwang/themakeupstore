@@ -5,6 +5,8 @@ import { createClient } from "@/utils/supabase/client"
 import { Loader2, SlidersHorizontal, X, Check, ChevronDown } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { motion, AnimatePresence } from "framer-motion"
+import { SignatureLoader } from "@/components/store/signature-loader"
+import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 export default function NewArrivalsPage() {
     const [products, setProducts] = React.useState<any[]>([])
@@ -156,7 +158,8 @@ export default function NewArrivalsPage() {
             </AnimatePresence>
 
             {/* MAIN CONTENT */}
-            <main className="max-w-7xl mx-auto px-6">
+            <main className="max-w-7xl mx-auto px-6 pb-20">
+                <Breadcrumbs items={[{ label: 'New Arrivals', href: '/new-arrivals' }]} />
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                     <div>
                         <h1 className="text-4xl font-black uppercase tracking-tighter italic">New Arrivals</h1>
@@ -173,9 +176,9 @@ export default function NewArrivalsPage() {
                     </div>
                 </div>
 
-                {loading ? (
-                    <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div>
-                ) : (
+                <SignatureLoader loading={loading} text="The Makeup Store / New Arrivals" />
+
+                {!loading && (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
                         {filteredProducts.map((product) => (
                             <ProductCard key={product.id} product={product} />

@@ -60,6 +60,12 @@ export async function updateSession(request: NextRequest) {
         path.startsWith('/signup') ||
         path.startsWith('/auth') ||
         path.startsWith('/product') ||
+        path.startsWith('/offers') ||
+        path.startsWith('/shop') ||
+        path.startsWith('/categories') ||
+        path.startsWith('/exclusive') ||
+        path.startsWith('/essentials') ||
+        path.startsWith('/brands') ||
         path.startsWith('/wholesale/register');
 
     if (!user && !isPublicRoute) {
