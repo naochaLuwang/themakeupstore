@@ -29,17 +29,23 @@ export default function NewArrivalsPage() {
 
                 const { data: junctionData } = await supabase.from('product_categories').select('product_id').eq('category_id', category.id)
                 const productIds = junctionData?.map(j => j.product_id) || []
+                
+                // Fetch products from BOTH the direct category_id column AND the junction table
+                let query = supabase
+                    .from('products')
+                    .select('*, product_variants(*)')
+                    .eq('status', 'active')
 
                 if (productIds.length > 0) {
-                    const { data: finalProducts } = await supabase
-                        .from('products')
-                        .select('*, product_variants(*)')
-                        .in('id', productIds)
-                        .eq('status', 'active')
-
-                    setProducts(finalProducts || [])
-                    setFilteredProducts(finalProducts || [])
+                    query = query.or(`category_id.eq.${category.id},id.in.(${productIds.join(',')})`)
+                } else {
+                    query = query.eq('category_id', category.id)
                 }
+
+                const { data: finalProducts } = await query
+                
+                setProducts(finalProducts || [])
+                setFilteredProducts(finalProducts || [])
             } finally {
                 setLoading(false)
             }

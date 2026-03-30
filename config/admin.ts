@@ -12,7 +12,15 @@ import {
     Radio,      // New for Broadcast
     BarChart3,  // New for Reports
     DollarSign, // For Revenue Report
-    TrendingUp  // For Sales Report
+    TrendingUp, // For Sales Report
+    BookOpen,
+    ShoppingCart,
+    Activity,
+    Tag,
+    Receipt,
+    Archive,
+    History,
+    Store
 } from "lucide-react"
 
 export const adminConfig = {
@@ -32,6 +40,15 @@ export const adminConfig = {
         { title: "Messages", href: "/admin/messages", icon: Mail },
         { title: "Reviews", href: "/admin/reviews", icon: Star },
         { title: "Back in Stock Request", href: "/admin/inventory/demand", icon: TrendingUp },
+
+        // --- Additional Admin Links ---
+        { title: "Live Carts", href: "/admin/live-carts", icon: ShoppingCart },
+        { title: "Promos", href: "/admin/promos", icon: Tag },
+        { title: "Purchase", href: "/admin/purchase", icon: Receipt },
+        { title: "Purchase History", href: "/admin/purchase/list", icon: History },
+        { title: "Stock", href: "/admin/stock", icon: Archive },
+        { title: "Visitor History", href: "/admin/visitor-history", icon: History },
+        { title: "Wholesale", href: "/admin/wholesale", icon: Store },
 
         // --- Added Reports Section ---
         {

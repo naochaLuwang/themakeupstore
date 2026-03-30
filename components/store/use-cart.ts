@@ -337,6 +337,8 @@ interface CartStore {
     clearCart: () => void;
     totalItems: () => number;
     getSubtotal: () => number;
+    getDiscountAmount: () => number;
+    getFinalTotal: () => number;
     clearShipping: () => void;
 }
 
@@ -450,6 +452,52 @@ export const useCart = create<CartStore>()(
                 baseShippingPrice: 0,
                 shippingLabel: ''
             }),
+
+            getDiscountAmount: () => {
+                const { items, appliedPromo } = get();
+                if (!appliedPromo) return 0;
+
+                // 1. Filter eligible items
+                const eligibleItems = items.filter(item => {
+                    if (appliedPromo.apply_to === 'all') return true;
+                    if (appliedPromo.apply_to === 'specific_products') {
+                        return appliedPromo.allowedProductIds?.includes(String(item.productId));
+                    }
+                    if (appliedPromo.apply_to === 'specific_categories') {
+                        return appliedPromo.allowedCategoryIds?.includes(String(item.categoryId));
+                    }
+                    return false;
+                });
+
+                if (eligibleItems.length === 0) return 0;
+
+                const eligibleSubtotal = eligibleItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+                // 2. Minimum order amount check
+                if (eligibleSubtotal < (appliedPromo.min_order_amount || 0)) return 0;
+
+                // 3. Calculate discount
+                let discount = 0;
+                if (appliedPromo.discount_type === 'percentage') {
+                    discount = (eligibleSubtotal * appliedPromo.discount_value) / 100;
+                    if (appliedPromo.max_discount_amount) {
+                        discount = Math.min(discount, appliedPromo.max_discount_amount);
+                    }
+                } else {
+                    discount = appliedPromo.discount_value;
+                    // For fixed discounts, ensure it doesn't exceed eligible subtotal
+                    discount = Math.min(discount, eligibleSubtotal);
+                }
+
+                return Math.round(discount);
+            },
+
+            getFinalTotal: () => {
+                const subtotal = get().getSubtotal();
+                const discount = get().getDiscountAmount();
+                const shipping = get().shippingPrice;
+                return Math.max(0, subtotal - discount + shipping);
+            },
 
             totalItems: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
         }),

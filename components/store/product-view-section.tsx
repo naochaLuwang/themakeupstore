@@ -184,8 +184,9 @@ import { BellRing, Mail, Phone, User, Star, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
 import { motion } from "framer-motion"
+import { PromoDisplay } from "./promo-display"
 
-export function ProductViewSection({ product }: { product: any }) {
+export function ProductViewSection({ product, promos = [] }: { product: any, promos?: any[] }) {
     const defaultVariant = product.variants?.find((v: any) => v.is_default) || product.variants?.[0];
 
     const getVariantImages = (variant: any) => {
@@ -302,6 +303,8 @@ export function ProductViewSection({ product }: { product: any }) {
                         </form>
                     </motion.div>
                 )}
+
+                <PromoDisplay promos={promos} />
 
                 {/* THE NARRATION */}
                 <div className="space-y-8 pt-0 border-t border-slate-50 mt-5">

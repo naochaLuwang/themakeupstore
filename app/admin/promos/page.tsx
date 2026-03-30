@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
-import { Target, Plus, Calendar, Hash, Edit3, Ticket } from "lucide-react"
+import { Target, Plus, Calendar, Hash, Edit3, Ticket, Clock } from "lucide-react"
 import { PromoStatusToggle, DeletePromoButton } from "@/components/admin/PromoControls"
 import Link from "next/link"
 
@@ -53,6 +53,9 @@ export default async function AdminPromosPage() {
                                     <td className="p-6 space-y-1 font-bold">
                                         <div className="flex items-center gap-2 text-slate-600">
                                             <Hash className="w-2.5 h-2.5" /> {promo.used_count} / {promo.usage_limit || '∞'}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-slate-600">
+                                            <Clock className="w-2.5 h-2.5" /> {promo.starts_at ? new Date(promo.starts_at).toLocaleDateString() : 'ACTIVE NOW'}
                                         </div>
                                         <div className="flex items-center gap-2 text-slate-600">
                                             <Calendar className="w-2.5 h-2.5" /> {promo.expires_at ? new Date(promo.expires_at).toLocaleDateString() : 'LIFETIME'}

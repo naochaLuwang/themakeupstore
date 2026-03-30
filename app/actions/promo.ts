@@ -19,6 +19,10 @@ export async function createPromoCode(formData: FormData) {
 
     const expiresInput = formData.get('expires_at') as string
     const expires_at = expiresInput ? new Date(expiresInput).toISOString() : null
+    
+    const startsInput = formData.get('starts_at') as string
+    const starts_at = startsInput ? new Date(startsInput).toISOString() : new Date().toISOString()
+    
     const selected_ids = formData.get('selected_ids') as string
 
     // 1. Insert Main Promo
@@ -27,7 +31,7 @@ export async function createPromoCode(formData: FormData) {
         .insert([{
             code, description, discount_type, discount_value,
             apply_to, min_order_amount, max_discount_amount,
-            usage_limit, expires_at, is_active: true,
+            usage_limit, expires_at, starts_at, is_active: true,
             once_per_user // Save the new flag
         }])
         .select()
@@ -80,8 +84,12 @@ export async function validatePromoCode(code: string, cartItems: any[]) {
 
     if (error || !promo) return { success: false, message: "Invalid promo code" }
 
-    // 2. Check Expiry
-    if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+    // 2. Check Expiry and Starts At
+    const now = new Date()
+    if (promo.starts_at && new Date(promo.starts_at) > now) {
+        return { success: false, message: "This promo code is not active yet" }
+    }
+    if (promo.expires_at && new Date(promo.expires_at) < now) {
         return { success: false, message: "This promo code has expired" }
     }
 
@@ -171,12 +179,18 @@ export async function togglePromoStatus(id: string, currentStatus: boolean) {
 
 export async function getActivePromos() {
     const supabase = await createClient()
+    const now = new Date().toISOString()
 
     const { data, error } = await supabase
         .from('promo_codes')
-        .select('code, description, discount_type, discount_value')
+        .select(`
+            *,
+            promo_code_products(product_id),
+            promo_code_categories(category_id)
+        `)
         .eq('is_active', true)
-        .or(`expires_at.gt.${new Date().toISOString()},expires_at.is.null`)
+        .or(`expires_at.gt.${now},expires_at.is.null`)
+        .lte('starts_at', now)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -200,6 +214,7 @@ export async function updatePromoCode(id: string, formData: FormData) {
         max_discount_amount: formData.get('max_discount_amount') ? parseFloat(formData.get('max_discount_amount') as string) : null,
         usage_limit: formData.get('usage_limit') ? parseInt(formData.get('usage_limit') as string) : null,
         expires_at: formData.get('expires_at') ? new Date(formData.get('expires_at') as string).toISOString() : null,
+        starts_at: formData.get('starts_at') ? new Date(formData.get('starts_at') as string).toISOString() : null,
         once_per_user: formData.get('once_per_user') === 'on'
     }
 
@@ -238,4 +253,46 @@ export async function getPromoUsageHistory(promoId: string) {
     return data
 }
 
-// ... existing createPromoCode, validatePromoCode, updatePromoCode ...
+export async function getPromosForProduct(productId: string, categoryIds: string[]) {
+    const supabase = await createClient()
+    const now = new Date().toISOString()
+
+    // Fetch all active promos with their targeting
+    const { data: promos, error } = await supabase
+        .from('promo_codes')
+        .select(`
+            *,
+            promo_code_products(product_id),
+            promo_code_categories(category_id)
+        `)
+        .eq('is_active', true)
+        .or(`expires_at.gt.${now},expires_at.is.null`)
+        .lte('starts_at', now)
+
+    if (error || !promos) return []
+
+    // Map through promos to add 'is_eligible' flag
+    return promos.map(promo => {
+        let isEligible = false
+
+        if (promo.apply_to === 'all') {
+            isEligible = true
+        } else if (promo.apply_to === 'specific_products') {
+            const allowedIds = promo.promo_code_products?.map((p: any) => String(p.product_id)) || []
+            isEligible = allowedIds.includes(String(productId))
+        } else if (promo.apply_to === 'specific_categories') {
+            const allowedIds = promo.promo_code_categories?.map((c: any) => String(c.category_id)) || []
+            isEligible = categoryIds.some(cid => allowedIds.includes(String(cid)))
+        }
+
+        return {
+            id: promo.id,
+            code: promo.code,
+            description: promo.description,
+            discount_type: promo.discount_type,
+            discount_value: promo.discount_value,
+            min_order_amount: promo.min_order_amount,
+            is_eligible: isEligible
+        }
+    })
+}

@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client"
 import { updateOrderPOS } from "@/app/actions/orders"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Trash2, Save, ArrowLeft, Plus, Search, Tag, Calculator } from "lucide-react"
+import { Trash2, Save, ArrowLeft, Plus, Search, Tag, Calculator, Truck } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -13,6 +13,8 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
     const { id: orderId } = use(params)
     const [items, setItems] = useState<any[]>([])
     const [globalDiscount, setGlobalDiscount] = useState(0)
+    const [additionalCharges, setAdditionalCharges] = useState(0)
+    const [additionalChargesLabel, setAdditionalChargesLabel] = useState("Extra Charges")
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
@@ -26,7 +28,11 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
             const { data: orderItems } = await supabase.from('order_items').select('*').eq('order_id', orderId)
 
             if (orderItems) setItems(orderItems)
-            if (order) setGlobalDiscount(Number(order.promo_discount_amount || 0))
+            if (order) {
+                setGlobalDiscount(Number(order.promo_discount_amount || 0))
+                setAdditionalCharges(Number(order.additional_charges || 0))
+                setAdditionalChargesLabel(order.additional_charges_label || "Extra Charges")
+            }
             setLoading(false)
         }
         initPOS()
@@ -69,7 +75,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
             sku: variant.sku,
             quantity: 1,
             unit_price: variant.price,
-            mrp: variant.price 
+            mrp: variant.mrp || variant.price 
         };
         return [...prev, newItem];
     });
@@ -86,7 +92,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
 
     const handleSave = async () => {
         setLoading(true)
-        const res = await updateOrderPOS(orderId, items, globalDiscount)
+        const res = await updateOrderPOS(orderId, items, globalDiscount, additionalCharges, additionalChargesLabel)
         if (res.success) {
             toast.success("Order Synced Successfully")
             router.push('/admin/orders')
@@ -98,7 +104,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
 
     // --- TOTALS ---
     const subtotal = items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
-    const finalTotal = subtotal - globalDiscount
+    const finalTotal = subtotal - globalDiscount + additionalCharges;
 
     if (loading) return <div className="p-20 text-center font-black animate-pulse">BOOTING POS...</div>
 
@@ -150,6 +156,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
                                 <tr>
                                     <th className="p-6">Description</th>
                                     <th className="p-6">Qty</th>
+                                    <th className="p-6">MRP (Edit)</th>
                                     <th className="p-6">Unit Price (Edit)</th>
                                     <th className="p-6 text-right">Total</th>
                                 </tr>
@@ -172,6 +179,21 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
                                                     setItems(updated);
                                                 }}
                                             />
+                                        </td>
+                                        <td className="p-6">
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+                                                <Input
+                                                    type="number"
+                                                    value={item.mrp}
+                                                    className="w-24 h-10 pl-7 rounded-xl font-bold bg-slate-50 border-none"
+                                                    onChange={(e) => {
+                                                        const updated = [...items];
+                                                        updated[idx].mrp = parseFloat(e.target.value) || 0;
+                                                        setItems(updated);
+                                                    }}
+                                                />
+                                            </div>
                                         </td>
                                         <td className="p-6">
                                             <div className="relative">
@@ -217,15 +239,40 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
                                 <span className="font-bold">₹{subtotal.toLocaleString()}</span>
                             </div>
 
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                    <label className="text-slate-400 font-bold uppercase text-[10px] flex items-center gap-2">
+                                        <Tag className="w-3 h-3" /> Discount (₹)
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        value={globalDiscount}
+                                        className="bg-white/10 border-white/20 text-white font-black h-12 rounded-xl"
+                                        onChange={(e) => setGlobalDiscount(parseFloat(e.target.value) || 0)}
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-slate-400 font-bold uppercase text-[10px] flex items-center gap-2">
+                                        <Truck className="w-3 h-3" /> Extra (₹)
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        value={additionalCharges}
+                                        className="bg-white/10 border-white/20 text-white font-black h-12 rounded-xl"
+                                        onChange={(e) => setAdditionalCharges(parseFloat(e.target.value) || 0)}
+                                    />
+                                </div>
+                            </div>
+
                             <div className="space-y-3">
-                                <label className="text-slate-400 font-bold uppercase text-[10px] flex items-center gap-2">
-                                    <Tag className="w-3 h-3" /> Extra Discount (₹)
+                                <label className="text-slate-400 font-bold uppercase text-[10px]">
+                                    Surcharge Label
                                 </label>
                                 <Input
-                                    type="number"
-                                    value={globalDiscount}
-                                    className="bg-white/10 border-white/20 text-white font-black h-12 rounded-xl"
-                                    onChange={(e) => setGlobalDiscount(parseFloat(e.target.value) || 0)}
+                                    value={additionalChargesLabel}
+                                    placeholder="e.g. Weight Surcharge"
+                                    className="bg-white/10 border-white/20 text-white font-bold h-12 rounded-xl text-xs"
+                                    onChange={(e) => setAdditionalChargesLabel(e.target.value)}
                                 />
                             </div>
 

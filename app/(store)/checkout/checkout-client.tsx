@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useCart } from "@/components/store/use-cart"
 import { placeOrder } from "@/app/actions/orders"
+import { validatePromoCode } from "@/app/actions/promo"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import {
@@ -15,6 +16,8 @@ import {
     ChevronRight,
     MapPin,
     Sparkles,
+    Ticket,
+    Copy,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
@@ -31,7 +34,7 @@ import { AddressForm } from "@/components/store/address-form"
 import { Button } from "@/components/ui/button"
 import { AddressCard } from "./address-card"
 
-export default function CheckoutClient({ profile, initialAddresses }: { profile: any, initialAddresses: any[] }) {
+export default function CheckoutClient({ profile, initialAddresses, allPromos = [] }: { profile: any, initialAddresses: any[], allPromos?: any[] }) {
     const supabase = createClient()
     const router = useRouter()
     const {
@@ -41,7 +44,11 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
         shippingLabel,
         clearCart,
         setShippingMethod,
-        getSubtotal
+        getSubtotal,
+        appliedPromo,
+        setAppliedPromo,
+        getDiscountAmount,
+        getFinalTotal,
     } = useCart()
 
     const [mounted, setMounted] = useState(false)
@@ -56,6 +63,10 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const [addressToEdit, setAddressToEdit] = useState<any | null>(null)
 
+    const [promoInput, setPromoInput] = useState("")
+    const [isValidating, setIsValidating] = useState(false)
+    const [isPromoDrawerOpen, setIsPromoDrawerOpen] = useState(false)
+
     useEffect(() => { setMounted(true) }, [])
 
     // Sync shipping method whenever selected address changes
@@ -69,7 +80,8 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
     const subtotal = getSubtotal()
     const currentSubtotal = mounted ? subtotal : 0
     const threshold = 3000
-    const total = currentSubtotal + shippingPrice
+    const discountAmount = mounted ? getDiscountAmount() : 0
+    const total = mounted ? getFinalTotal() : 0
     const isFreeShipping = currentSubtotal >= threshold && selectedShippingId
 
     const handleAddressAdded = (newAddr: any) => {
@@ -108,13 +120,43 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
         setIsEditModalOpen(true)
     }
 
+    const handleApplyPromo = async () => {
+        if (!promoInput) return
+        setIsValidating(true)
+        try {
+            const res = await validatePromoCode(promoInput, items)
+            if (res.success) {
+                setAppliedPromo(res)
+                toast.success("Promo code applied!")
+                setPromoInput("")
+            } else {
+                toast.error(res.message || "Invalid code")
+            }
+        } catch (err) {
+            toast.error("Validation failed")
+        } finally {
+            setIsValidating(false)
+        }
+    }
+
+    const handleRemovePromo = () => {
+        setAppliedPromo(null)
+        toast.info("Promo code removed")
+    }
+
     const handlePlaceOrder = async () => {
         if (!selectedAddress || !selectedShippingId) {
             return toast.error("Logistics Missing", { description: "Ensure an address and method are selected." })
         }
         setLoading(true)
         try {
-            const res = await placeOrder(selectedAddress, items, { total, price: shippingPrice, methodName: shippingLabel })
+            const promoDetails = appliedPromo ? {
+                code: appliedPromo.code,
+                discount: discountAmount,
+                id: appliedPromo.id
+            } : undefined
+
+            const res = await placeOrder(selectedAddress, items, { total, price: shippingPrice, methodName: shippingLabel }, promoDetails)
             if (res.success) {
                 clearCart()
                 router.push(`/checkout/success?orderId=${res.orderId}`)
@@ -316,7 +358,59 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
 
                             <div className="pt-6 border-t border-slate-100 space-y-3">
                                 <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400"><span>Subtotal</span><span className="text-slate-900">₹{currentSubtotal.toLocaleString()}</span></div>
+                                
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between text-[10px] font-bold uppercase text-emerald-600">
+                                        <span className="flex items-center gap-1.5"><Ticket className="w-3 h-3" /> {appliedPromo?.code}</span>
+                                        <span>-₹{discountAmount.toLocaleString()}</span>
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400"><span>Shipping</span><span className={isFreeShipping ? "text-[#D4AF37] font-black" : "text-slate-900"}>{isFreeShipping ? "FREE" : `₹${shippingPrice}`}</span></div>
+                                
+                                {/* PROMO INPUT */}
+                                <div className="pt-4 mt-2 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Promotions</p>
+                                        <button 
+                                            onClick={() => setIsPromoDrawerOpen(true)}
+                                            className="text-[9px] font-black uppercase tracking-widest text-[#fc2779] hover:underline decoration-2 underline-offset-4"
+                                        >
+                                            View Coupons
+                                        </button>
+                                    </div>
+
+                                    {!appliedPromo ? (
+                                        <div className="flex gap-2">
+                                            <div className="flex-1 relative group">
+                                                <input
+                                                    value={promoInput}
+                                                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                                                    placeholder="PROMO CODE"
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-[10px] font-black tracking-widest outline-none focus:border-slate-900 transition-all placeholder:text-slate-300"
+                                                />
+                                            </div>
+                                            <Button 
+                                                onClick={handleApplyPromo}
+                                                disabled={isValidating || !promoInput}
+                                                className="h-10 px-4 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                                            >
+                                                {isValidating ? <Loader2 className="w-3 h-3 animate-spin" /> : "Apply"}
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 bg-emerald-600 rounded-lg flex items-center justify-center">
+                                                    <Ticket className="w-3 h-3 text-white" />
+                                                </div>
+                                                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tight">{appliedPromo.code}</span>
+                                            </div>
+                                            <button onClick={handleRemovePromo} className="text-[8px] font-black text-emerald-800 uppercase tracking-widest hover:underline decoration-2 underline-offset-4">Remove</button>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="pt-6 border-t border-slate-100">
                                     <p className="text-[7px] font-black uppercase tracking-[0.4em] text-slate-400 mb-1">Grand Total</p>
                                     <p className="text-4xl font-black italic tracking-tighter">₹{total.toLocaleString()}</p>
@@ -403,6 +497,105 @@ export default function CheckoutClient({ profile, initialAddresses }: { profile:
                     )}
                 </DialogContent>
             </Dialog>
+            {/* PROMO SELECTION DRAWER */}
+            <Sheet open={isPromoDrawerOpen} onOpenChange={setIsPromoDrawerOpen}>
+                <SheetContent side="right" className="w-full sm:max-w-md p-0 border-l-0">
+                    <SheetHeader className="p-8 bg-slate-900 text-white">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-[#fc2779] rounded-2xl flex items-center justify-center shadow-lg shadow-pink-500/20">
+                                <Ticket className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <SheetTitle className="text-xl font-black italic tracking-tighter text-white">AVAILABLE OFFERS</SheetTitle>
+                                <SheetDescription className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Select a coupon to apply</SheetDescription>
+                            </div>
+                        </div>
+                    </SheetHeader>
+
+                    <div className="p-6 space-y-4 max-h-[calc(100vh-140px)] overflow-y-auto no-scrollbar">
+                        {allPromos.map((promo: any) => {
+                            // Check eligibility for the whole cart
+                            const eligibleItems = items.filter(item => {
+                                if (promo.apply_to === 'all') return true;
+                                if (promo.apply_to === 'specific_products') {
+                                    return promo.promo_code_products?.some((p: any) => String(p.product_id) === String(item.productId));
+                                }
+                                if (promo.apply_to === 'specific_categories') {
+                                    return promo.promo_code_categories?.some((c: any) => String(c.category_id) === String(item.categoryId));
+                                }
+                                return false;
+                            });
+
+                            const eligibleSubtotal = eligibleItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                            const isMinAmountMet = eligibleSubtotal >= (promo.min_order_amount || 0);
+                            const hasEligibleItems = eligibleItems.length > 0;
+                            const isEligible = hasEligibleItems && isMinAmountMet;
+
+                            return (
+                                <div 
+                                    key={promo.id}
+                                    className={`relative group border-2 rounded-3xl p-6 transition-all duration-500 overflow-hidden
+                                        ${isEligible 
+                                            ? 'border-slate-100 bg-white hover:border-[#fc2779] cursor-pointer' 
+                                            : 'border-slate-50 bg-slate-50/50 opacity-60'}`}
+                                    onClick={() => {
+                                        if (isEligible) {
+                                            setAppliedPromo({
+                                                ...promo,
+                                                allowedProductIds: promo.promo_code_products?.map((p: any) => String(p.product_id)),
+                                                allowedCategoryIds: promo.promo_code_categories?.map((c: any) => String(c.category_id))
+                                            });
+                                            setIsPromoDrawerOpen(false);
+                                            toast.success(`Coupon ${promo.code} Applied!`);
+                                        }
+                                    }}
+                                >
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[10px] font-black uppercase tracking-[0.2em] 
+                                                    ${isEligible ? 'text-[#fc2779]' : 'text-slate-400'}`}>
+                                                    {promo.discount_type === 'percentage' ? `${promo.discount_value}% OFF` : `₹${promo.discount_value} OFF`}
+                                                </span>
+                                            </div>
+                                            <h4 className="text-xl font-black italic tracking-tighter text-slate-900">{promo.code}</h4>
+                                        </div>
+                                        {isEligible && (
+                                            <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center scale-0 group-hover:scale-100 transition-transform duration-500">
+                                                <Plus className="w-4 h-4 text-[#fc2779]" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight line-clamp-2 mb-4 leading-relaxed">
+                                        {promo.description || `Get ${promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₹${promo.discount_value}`} off on your order.`}
+                                    </p>
+
+                                    {!isEligible && (
+                                        <div className="flex items-center gap-2 pt-4 border-t border-slate-100/50">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-amber-600">
+                                                {!hasEligibleItems ? "Restricted Items" : `Add ₹${((promo.min_order_amount || 0) - eligibleSubtotal).toLocaleString()} more`}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Glassmorphism decoration for eligible cards */}
+                                    {isEligible && (
+                                        <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-pink-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {allPromos.length === 0 && (
+                            <div className="py-20 text-center">
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">No active offers available</p>
+                            </div>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
         </div>
     )
 }

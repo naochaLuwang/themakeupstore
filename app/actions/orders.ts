@@ -359,7 +359,13 @@ export async function createWholesaleOrder(data: {
 
 
 // app/actions/orders.ts
-export async function updateOrderPOS(orderId: string, items: any[], globalDiscount: number = 0) {
+export async function updateOrderPOS(
+    orderId: string, 
+    items: any[], 
+    globalDiscount: number = 0,
+    additionalCharges: number = 0,
+    additionalChargesLabel: string = 'Extra Charges'
+) {
     const supabase = await createClient()
 
     // 1. DELETE ALL existing items for this order first
@@ -393,13 +399,15 @@ export async function updateOrderPOS(orderId: string, items: any[], globalDiscou
 
     // 4. UPDATE ORDER TOTALS
     const itemsTotal = items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0);
-    const finalTotal = itemsTotal - globalDiscount;
+    const finalTotal = itemsTotal - globalDiscount + additionalCharges;
 
     const { error: orderUpdateError } = await supabase
         .from('orders')
         .update({
             total: finalTotal,
             promo_discount_amount: globalDiscount,
+            additional_charges: additionalCharges,
+            additional_charges_label: additionalChargesLabel,
             updated_at: new Date().toISOString()
         })
         .eq('id', orderId);

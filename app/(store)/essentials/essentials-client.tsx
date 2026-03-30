@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
@@ -9,9 +10,40 @@ import { ProductCard } from "@/components/store/product-card"
 interface Props {
     initialSubcategories: any[];
     initialProducts: any[];
+    hasMore: boolean;
+    loadingMore: boolean;
+    onLoadMore: () => void;
 }
 
-export default function EssentialsClient({ initialSubcategories, initialProducts }: Props) {
+export default function EssentialsClient({ 
+    initialSubcategories, 
+    initialProducts,
+    hasMore,
+    loadingMore,
+    onLoadMore
+}: Props) {
+    const sentinelRef = React.useRef<HTMLDivElement>(null);
+
+    // AUTO-LOAD ON SCROLL ENGINE
+    React.useEffect(() => {
+        if (!hasMore || loadingMore) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    onLoadMore();
+                }
+            },
+            { threshold: 0.1, rootMargin: '400px' } // Load early (400px before reaching bottom)
+        );
+
+        if (sentinelRef.current) {
+            observer.observe(sentinelRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [hasMore, loadingMore, onLoadMore]);
+
     return (
         <div className="min-h-screen bg-[#FDFDFD] text-slate-900 pb-20">
             {/* TOP PROGRESS LINE */}
@@ -70,21 +102,41 @@ export default function EssentialsClient({ initialSubcategories, initialProducts
                             <div className="w-1.5 h-6 bg-[#fc2779]" />
                             <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-900">Hand Picked Selection</h2>
                         </div>
-                        <span className="text-[10px] font-black text-[#fc2779] uppercase">{initialProducts.length} Results</span>
+                        <span className="text-[10px] font-black text-[#fc2779] uppercase">{initialProducts.length} Showing</span>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 border-t border-l border-pink-50 bg-white">
-                        {initialProducts.map((product, idx) => (
+                        {initialProducts.map((product) => (
                             <motion.div
                                 key={product.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.05 }} // Staggered entry
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
                                 className="relative bg-white"
                             >
                                 <ProductCard product={product} />
                             </motion.div>
                         ))}
+                    </div>
+
+                    {/* INFINITE SCROLL SENTINEL & STATUS */}
+                    <div 
+                        ref={sentinelRef}
+                        className="mt-12 py-10 flex flex-col items-center justify-center border-t border-pink-50 bg-white/50"
+                    >
+                        {hasMore ? (
+                            <div className="flex flex-col items-center gap-4 animate-pulse">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#fc2779] animate-bounce" />
+                                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400">
+                                    {loadingMore ? "Restocking the Collection..." : "Keep Scrolling for More"}
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="text-center py-4">
+                                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">
+                                    End of the Ritual
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </section>
             </main>

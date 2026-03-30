@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { notFound } from "next/navigation"
 import { ProductViewSection } from "@/components/store/product-view-section"
+import { getPromosForProduct } from "@/app/actions/promo"
 import { ProductCard } from "@/components/store/product-card"
 import { ReviewsSection } from "@/components/store/reviews-section"
 import { Breadcrumbs } from "@/components/store/breadcrumbs"
@@ -33,6 +34,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         .single()
 
     if (!product) notFound()
+    
+    // 3. Fetch Promos for this product
+    const categoryIds = product.product_categories?.map((pc: any) => pc.categories.id) || []
+    const promos = await getPromosForProduct(product.id, categoryIds)
 
 
 
@@ -42,7 +47,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <Breadcrumbs parent={breadcrumbParent} current={product.name} /> */}
 
             {/* Main Product Section */}
-            <ProductViewSection product={product} />
+            <ProductViewSection product={product} promos={promos} />
 
             {/* Related Products Section */}
             {/* {relatedProducts.length > 0 && (
