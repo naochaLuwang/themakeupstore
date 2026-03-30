@@ -36,13 +36,20 @@ export const viewport = {
 };
 
 // --- UPDATED METADATA ---
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://themakeupstorewangkhei.com';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(baseUrl),
   title: {
-    default: "THE MAKEUP STORE WANGKHEI",
+    default: "THE MAKEUP STORE WANGKHEI | Authentic Makeup & Beauty Imphal",
     template: "%s | THE MAKEUP STORE WANGKHEI",
   },
-  description: "One Stop Destination For All Your Makeup Needs.",
+  description: "Your ultimate destination for authentic international and luxury makeup brands in Imphal. Shop original products from Nars, Rare Beauty, Dior, and more at THE MAKEUP STORE WANGKHEI.",
+  keywords: ["makeup store imphal", "authentic makeup manipur", "luxury beauty wangkhei", "international makeup brands imphal", "the makeup store wangkhei"],
   manifest: "/manifest.webmanifest",
+  alternates: {
+    canonical: "/",
+  },
 
   // This is where your Google Verification goes:
   verification: {
@@ -63,19 +70,21 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "THE MAKEUP STORE WANGKHEI",
-    title: "THE MAKEUP STORE WANGKHEI",
-    description: "One Stop Destination For All Your Makeup Needs.",
+    title: "THE MAKEUP STORE WANGKHEI | Luxury Beauty Destination",
+    description: "Authentic International Makeup & Beauty Brands at Wangkhei, Imphal.",
+    url: baseUrl,
+    locale: "en_IN",
   },
   twitter: {
     card: "summary_large_image",
     title: "THE MAKEUP STORE WANGKHEI",
-    description: "One Stop Destination For All Your Makeup Needs.",
+    description: "One Stop Destination For All Your Makeup Needs in Imphal.",
   },
   icons: {
     icon: [
-      { url: '/favicon.ico' }, // Main favicon
+      { url: '/favicon.ico' },
       { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-    ], // Standard favicon path
+    ],
     apple: [
       { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
     ],

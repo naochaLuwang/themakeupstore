@@ -5,6 +5,36 @@ import { getPromosForProduct } from "@/app/actions/promo"
 import { ProductCard } from "@/components/store/product-card"
 import { ReviewsSection } from "@/components/store/reviews-section"
 import { Breadcrumbs } from "@/components/store/breadcrumbs"
+import type { Metadata, ResolvingMetadata } from "next"
+
+export async function generateMetadata(
+    { params }: { params: Promise<{ id: string }> },
+    parent: ResolvingMetadata
+): Promise<Metadata> {
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: product } = await supabase.from("products").select("name, description, thumbnail_url, brand").eq("id", id).single()
+
+    if (!product) return {}
+
+    const previousImages = (await parent).openGraph?.images || []
+
+    return {
+        title: product.name,
+        description: product.description || `Buy ${product.name} by ${product.brand} at The Makeup Store Wangkhei.`,
+        openGraph: {
+            title: product.name,
+            description: product.description,
+            images: [product.thumbnail_url, ...previousImages],
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: product.name,
+            description: product.description,
+            images: [product.thumbnail_url],
+        },
+    }
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
