@@ -98,6 +98,21 @@ export async function validatePromoCode(code: string, cartItems: any[]) {
         return { success: false, message: "This promo code has reached its usage limit" }
     }
 
+    // 4. NEW: Check Once Per User Restriction
+    const { data: { user } } = await supabase.auth.getUser()
+    if (promo.once_per_user && user) {
+        const { data: previousRedemption } = await supabase
+            .from('promo_redemptions')
+            .select('id')
+            .eq('promo_id', promo.id)
+            .eq('user_id', user.id)
+            .single()
+
+        if (previousRedemption) {
+            return { success: false, message: "This coupon can only be used once per customer" }
+        }
+    }
+
     // 4. Map the IDs from junction tables (UUID strings)
     const allowedProductIds = promo.promo_code_products?.map((p: any) => String(p.product_id)) || []
     const allowedCategoryIds = promo.promo_code_categories?.map((c: any) => String(c.category_id)) || []
@@ -197,6 +212,21 @@ export async function getActivePromos() {
         console.error("Supabase Error:", error.message)
         return []
     }
+
+    // NEW: Filter out "Once Per User" promos that the user has already used
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user && data) {
+        const { data: redemptions } = await supabase
+            .from('promo_redemptions')
+            .select('promo_id')
+            .eq('user_id', user.id)
+
+        if (redemptions) {
+            const usedPromoIds = new Set(redemptions.map(r => r.promo_id))
+            return data.filter(promo => !promo.once_per_user || !usedPromoIds.has(promo.id))
+        }
+    }
+
     return data || []
 }
 
@@ -273,9 +303,28 @@ export async function getPromosForProduct(productId: string, categoryIds: string
 
     if (error || !promos) return []
 
+    // NEW: Get user redemptions for usage check
+    const { data: { user } } = await supabase.auth.getUser()
+    const usedPromoIds = new Set()
+    if (user) {
+        const { data: redemptions } = await supabase
+            .from('promo_redemptions')
+            .select('promo_id')
+            .eq('user_id', user.id)
+        if (redemptions) redemptions.forEach(r => usedPromoIds.add(r.promo_id))
+    }
+
     // Map through promos to add 'is_eligible' flag and reasons
     return promos.map(promo => {
         const { isEligible, reasons } = checkProductPromoEligibility(promo, { id: productId, categoryIds })
+        
+        let finalEligible = isEligible
+        const finalReasons = [...reasons]
+
+        if (promo.once_per_user && user && usedPromoIds.has(promo.id)) {
+            finalEligible = false
+            finalReasons.push("Already redeemed by you")
+        }
 
         return {
             id: promo.id,
@@ -284,8 +333,8 @@ export async function getPromosForProduct(productId: string, categoryIds: string
             discount_type: promo.discount_type,
             discount_value: promo.discount_value,
             min_order_amount: promo.min_order_amount,
-            is_eligible: isEligible,
-            reasons: reasons,
+            is_eligible: finalEligible,
+            reasons: finalReasons,
             // Include these for re-validation on client side
             apply_to: promo.apply_to,
             promo_code_products: promo.promo_code_products,
