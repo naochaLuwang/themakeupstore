@@ -5,7 +5,7 @@ import { useCart } from "./use-cart"
 import { createClient } from "@/utils/supabase/client"
 
 export function CartSync({ userId }: { userId: string | null }) {
-    const { items, mergeItems, clearCart } = useCart()
+    const { items, setItems, clearCart } = useCart()
     const supabase = createClient()
 
     // Track if we have successfully merged the DB state into our Local state
@@ -27,6 +27,7 @@ export function CartSync({ userId }: { userId: string | null }) {
         if (!userId || initialPullDone.current) return
 
         async function pullAndMergeCart() {
+            initialPullDone.current = true
             // Get user's cart
             const { data: cart } = await supabase
                 .from('carts')
@@ -68,15 +69,30 @@ export function CartSync({ userId }: { userId: string | null }) {
                     stock: ci.product_variants.stock
                 }))
 
-                mergeItems(formatted)
+                // --- IDEMPOTENT RECONCILE ---
+                // We combine local bag with DB bag, but avoid doubling up
+                const localItems = items;
+                const merged = [...formatted]; // Start with DB items
+
+                localItems.forEach(localItem => {
+                    const existingIndex = merged.findIndex(i => i.variantId === localItem.variantId);
+                    if (existingIndex > -1) {
+                        // RECONCILE: Use max to avoid duplication but respect updates
+                        merged[existingIndex].quantity = Math.max(localItem.quantity, merged[existingIndex].quantity);
+                    } else {
+                        // ADD: New items added while guest
+                        merged.push(localItem);
+                    }
+                });
+
+                setItems(merged)
             }
 
-            initialPullDone.current = true
             setIsSynced(true)
         }
 
         pullAndMergeCart()
-    }, [userId, supabase, mergeItems])
+    }, [userId, supabase, items, setItems])
 
     // 3. PUSH CHANGES TO DB (Debounced)
     useEffect(() => {

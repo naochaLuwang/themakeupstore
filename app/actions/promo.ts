@@ -189,8 +189,8 @@ export async function getActivePromos() {
             promo_code_categories(category_id)
         `)
         .eq('is_active', true)
-        .or(`expires_at.gt.${now},expires_at.is.null`)
-        .lte('starts_at', now)
+        // .or(`expires_at.gt.${now},expires_at.is.null`)
+        // .lte('starts_at', now)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -253,6 +253,8 @@ export async function getPromoUsageHistory(promoId: string) {
     return data
 }
 
+import { checkProductPromoEligibility } from "@/lib/promo-helper"
+
 export async function getPromosForProduct(productId: string, categoryIds: string[]) {
     const supabase = await createClient()
     const now = new Date().toISOString()
@@ -266,24 +268,14 @@ export async function getPromosForProduct(productId: string, categoryIds: string
             promo_code_categories(category_id)
         `)
         .eq('is_active', true)
-        .or(`expires_at.gt.${now},expires_at.is.null`)
-        .lte('starts_at', now)
+        // .or(`expires_at.gt.${now},expires_at.is.null`)
+        // .lte('starts_at', now)
 
     if (error || !promos) return []
 
-    // Map through promos to add 'is_eligible' flag
+    // Map through promos to add 'is_eligible' flag and reasons
     return promos.map(promo => {
-        let isEligible = false
-
-        if (promo.apply_to === 'all') {
-            isEligible = true
-        } else if (promo.apply_to === 'specific_products') {
-            const allowedIds = promo.promo_code_products?.map((p: any) => String(p.product_id)) || []
-            isEligible = allowedIds.includes(String(productId))
-        } else if (promo.apply_to === 'specific_categories') {
-            const allowedIds = promo.promo_code_categories?.map((c: any) => String(c.category_id)) || []
-            isEligible = categoryIds.some(cid => allowedIds.includes(String(cid)))
-        }
+        const { isEligible, reasons } = checkProductPromoEligibility(promo, { id: productId, categoryIds })
 
         return {
             id: promo.id,
@@ -292,7 +284,12 @@ export async function getPromosForProduct(productId: string, categoryIds: string
             discount_type: promo.discount_type,
             discount_value: promo.discount_value,
             min_order_amount: promo.min_order_amount,
-            is_eligible: isEligible
+            is_eligible: isEligible,
+            reasons: reasons,
+            // Include these for re-validation on client side
+            apply_to: promo.apply_to,
+            promo_code_products: promo.promo_code_products,
+            promo_code_categories: promo.promo_code_categories
         }
     })
 }
