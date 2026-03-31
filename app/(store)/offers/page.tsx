@@ -15,12 +15,12 @@ import Link from 'next/link'
 
 const TIER_CONFIG = {
     '10% OFF': {
-        brands: ['Charlotte Tilbury', 'Fenty Beauty', 'Huda Beauty', 'Kryolan', 'Nars', 'PAC', 'Rare Beauty', 'Too Faced'],
+        brands: ['Charlotte Tilbury', 'Fenty Beauty', 'Nars', 'PAC', 'Too Faced'],
         title: 'Luxury Access',
         description: 'Elite houses at exceptional value'
     },
     '20% OFF': {
-        brands: ['COSRX', 'Forever52', 'Kylie', 'MAC', 'Maybelline', 'Minimalist', 'Nykaa', 'TirTir'],
+        brands: ['COSRX', 'Forever52', 'Rare Beauty', 'Kylie Cosmetics', 'Huda Beauty', 'MAC', 'Maybelline', 'Minimalist', 'Nykaa', 'TirTir'],
         title: 'Prime Selection',
         description: 'Everyday icons and cult favorites'
     },
