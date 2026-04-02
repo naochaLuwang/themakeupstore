@@ -331,7 +331,18 @@ export default function PricingTable({
 
             setProducts(currentProducts => currentProducts.map(p => {
                 if (type === 'product' && p.id === id) {
-                    return { ...p, base_price: rowData.price, discount_type: rowData.discount_type, discount_value: rowData.discount_value }
+                    return {
+                        ...p,
+                        base_price: rowData.price,
+                        discount_type: rowData.discount_type,
+                        discount_value: rowData.discount_value,
+                        product_variants: (p.product_variants || []).map((v: any) => ({
+                            ...v,
+                            price: rowData.price,
+                            discount_type: rowData.discount_type,
+                            discount_value: rowData.discount_value
+                        }))
+                    }
                 }
                 if (type === 'variant') {
                     const hasTargetVariant = p.product_variants?.some((v: any) => v.id === id)
@@ -339,7 +350,12 @@ export default function PricingTable({
                         return {
                             ...p,
                             product_variants: p.product_variants.map((v: any) =>
-                                v.id === id ? { ...v, price: rowData.price, discount_type: rowData.discount_type, discount_value: rowData.discount_value } : v
+                                v.id === id ? {
+                                    ...v,
+                                    price: rowData.price,
+                                    discount_type: rowData.discount_type,
+                                    discount_value: rowData.discount_value
+                                } : v
                             )
                         }
                     }

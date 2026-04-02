@@ -1,39 +1,35 @@
-"use server"
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
+import { PromoSchema } from "@/lib/schemas"
 
 export async function createPromoCode(formData: FormData) {
+    await requireAdmin()
     const supabase = await createClient()
 
-    const code = (formData.get('code') as string).toUpperCase()
-    const description = formData.get('description') as string
-    const discount_type = formData.get('discount_type') as string
-    const discount_value = parseFloat(formData.get('discount_value') as string)
-    const apply_to = formData.get('apply_to') as string
-    const min_order_amount = parseFloat(formData.get('min_order_amount') as string) || 0
-    const max_discount_amount = formData.get('max_discount_amount') ? parseFloat(formData.get('max_discount_amount') as string) : null
-    const usage_limit = formData.get('usage_limit') ? parseInt(formData.get('usage_limit') as string) : null
+    const rawData = {
+        code: (formData.get('code') as string).toUpperCase(),
+        description: formData.get('description') as string,
+        discount_type: formData.get('discount_type') as string,
+        discount_value: parseFloat(formData.get('discount_value') as string),
+        apply_to: formData.get('apply_to') as string,
+        min_order_amount: parseFloat(formData.get('min_order_amount') as string) || 0,
+        max_discount_amount: formData.get('max_discount_amount') ? parseFloat(formData.get('max_discount_amount') as string) : null,
+        usage_limit: formData.get('usage_limit') ? parseInt(formData.get('usage_limit') as string) : null,
+        once_per_user: formData.get('once_per_user') === 'on',
+        expires_at: formData.get('expires_at') ? new Date(formData.get('expires_at') as string).toISOString() : null,
+        starts_at: formData.get('starts_at') ? new Date(formData.get('starts_at') as string).toISOString() : new Date().toISOString(),
+    }
 
-    // NEW: Capture the once_per_user boolean
-    const once_per_user = formData.get('once_per_user') === 'on'
+    const { success, data, error: validationError } = PromoSchema.safeParse(rawData)
+    if (!success) return { success: false, message: validationError.message }
 
-    const expiresInput = formData.get('expires_at') as string
-    const expires_at = expiresInput ? new Date(expiresInput).toISOString() : null
-    
-    const startsInput = formData.get('starts_at') as string
-    const starts_at = startsInput ? new Date(startsInput).toISOString() : new Date().toISOString()
-    
     const selected_ids = formData.get('selected_ids') as string
 
     // 1. Insert Main Promo
     const { data: promo, error: promoError } = await supabase
         .from('promo_codes')
-        .insert([{
-            code, description, discount_type, discount_value,
-            apply_to, min_order_amount, max_discount_amount,
-            usage_limit, expires_at, starts_at, is_active: true,
-            once_per_user // Save the new flag
-        }])
+        .insert([data])
         .select()
         .single()
 
@@ -46,11 +42,11 @@ export async function createPromoCode(formData: FormData) {
     if (selected_ids && promo) {
         const ids = selected_ids.split(',').filter(id => id.length > 0)
 
-        if (apply_to === 'specific_products') {
+        if (data.apply_to === 'specific_products') {
             const inserts = ids.map(id => ({ promo_id: promo.id, product_id: id }))
             await supabase.from('promo_code_products').insert(inserts)
         }
-        else if (apply_to === 'specific_categories') {
+        else if (data.apply_to === 'specific_categories') {
             const inserts = ids.map(id => ({ promo_id: promo.id, category_id: id }))
             await supabase.from('promo_code_categories').insert(inserts)
         }
@@ -168,6 +164,7 @@ export async function validatePromoCode(code: string, cartItems: any[]) {
 }
 
 export async function deletePromoCode(id: string) {
+    await requireAdmin()
     const supabase = await createClient();
 
     // We try to select to confirm actual deletion (RLS might prevent it otherwise)
@@ -185,6 +182,7 @@ export async function deletePromoCode(id: string) {
 }
 
 export async function togglePromoStatus(id: string, currentStatus: boolean) {
+    await requireAdmin()
     const supabase = await createClient()
     const { error } = await supabase.from('promo_codes').update({ is_active: !currentStatus }).eq('id', id)
     if (error) return { success: false, message: error.message }
@@ -232,9 +230,10 @@ export async function getActivePromos() {
 
 
 export async function updatePromoCode(id: string, formData: FormData) {
+    await requireAdmin()
     const supabase = await createClient()
 
-    const updates = {
+    const rawData = {
         code: (formData.get('code') as string).toUpperCase(),
         description: formData.get('description') as string,
         discount_type: formData.get('discount_type') as string,
@@ -247,6 +246,9 @@ export async function updatePromoCode(id: string, formData: FormData) {
         starts_at: formData.get('starts_at') ? new Date(formData.get('starts_at') as string).toISOString() : null,
         once_per_user: formData.get('once_per_user') === 'on'
     }
+
+    const { success, data: updates, error: validationError } = PromoSchema.safeParse(rawData)
+    if (!success) return { success: false, message: validationError.message }
 
     const { error } = await supabase.from('promo_codes').update(updates).eq('id', id)
     if (error) return { success: false, message: error.message }
@@ -272,6 +274,7 @@ export async function updatePromoCode(id: string, formData: FormData) {
 }
 
 export async function getPromoUsageHistory(promoId: string) {
+    await requireAdmin()
     const supabase = await createClient()
     const { data, error } = await supabase
         .from('promo_usage_details')

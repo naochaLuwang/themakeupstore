@@ -1,19 +1,21 @@
-"use server"
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
+import { OrderPOSSchema } from "@/lib/schemas"
+import { checkPromoEligibility } from "@/lib/promo-helper"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 
 
 export async function placeOrder(
-    formData: any, // Now includes area_name from our updated AddressForm
+    formData: any,
     cartItems: any[],
     shippingDetails: {
         total: number;
         price: number;
         methodName: string;
-        shipping_method_id?: string | null // Added to link to your shipping_methods table
+        shipping_method_id?: string | null
     },
     promoDetails?: { code: string; discount: number; id?: string }
 ) {
@@ -22,21 +24,65 @@ export async function placeOrder(
     if (!user) throw new Error("User not authenticated")
 
     try {
-        // 1. Check stock availability (Keep your existing loop)
+        // 1. RE-VALIDATE PRICES AND STOCK
+        let calculatedSubtotal = 0;
+        const verifiedItems = [];
+
         for (const item of cartItems) {
-            const { data: variant } = await supabase
+            const { data: variant, error: varError } = await supabase
                 .from("product_variants")
-                .select("stock")
+                .select("price, stock, product_id, title, products(name, category_id)")
                 .eq("id", item.variantId)
                 .single()
 
-            if (!variant || variant.stock < item.quantity) {
-                throw new Error(`Insufficient stock for ${item.name}`)
+            if (varError || !variant) throw new Error(`Product not found: ${item.name}`)
+            if (variant.stock < item.quantity) throw new Error(`Insufficient stock for ${item.name}`)
+
+            const price = Number(variant.price)
+            calculatedSubtotal += price * item.quantity
+            
+            verifiedItems.push({
+                ...item,
+                price: price, // Use DB price
+                categoryId: (variant.products as any)?.category_id
+            })
+        }
+
+        // 2. RE-VALIDATE PROMO
+        let verifiedDiscount = 0;
+        if (promoDetails?.code) {
+            const { data: promo, error: promoError } = await supabase
+                .from('promo_codes')
+                .select(`
+                    *,
+                    promo_code_products(product_id),
+                    promo_code_categories(category_id)
+                `)
+                .eq('code', promoDetails.code.toUpperCase())
+                .eq('is_active', true)
+                .single()
+
+            if (promoError || !promo) throw new Error("Invalid promo code")
+
+            const { isEligible, eligibleSubtotal } = checkPromoEligibility(promo, verifiedItems)
+            if (!isEligible) throw new Error("Promo code is no longer applicable")
+
+            // Calculate discount on server
+            if (promo.discount_type === 'percentage') {
+                verifiedDiscount = (eligibleSubtotal * Number(promo.discount_value)) / 100
+                if (promo.max_discount_amount) {
+                    verifiedDiscount = Math.min(verifiedDiscount, Number(promo.max_discount_amount))
+                }
+            } else {
+                verifiedDiscount = Math.min(Number(promo.discount_value), eligibleSubtotal)
             }
         }
 
+        // 3. FINAL TOTAL CALCULATION
+        // We re-calculate the total to prevent frontend manipulation
+        const finalTotal = calculatedSubtotal - verifiedDiscount + (shippingDetails.price || 0)
+
         // 2. Insert the main Order
-        // Note: We added shipping_method_id to link back to your schema
         const { data: order, error: orderError } = await supabase
             .from('orders')
             .insert([{
@@ -44,28 +90,28 @@ export async function placeOrder(
                 status: 'pending',
                 payment_status: 'unpaid',
                 payment_method: 'COD',
-                total: shippingDetails.total,
+                total: finalTotal,
                 shipping_price: shippingDetails.price,
                 shipping_label: shippingDetails.methodName,
-                shipping_method_id: shippingDetails.shipping_method_id || null, // Link to schema
-                shipping_address: formData, // Contains full_name, street, area_name, pincode, etc.
+                shipping_method_id: shippingDetails.shipping_method_id || null,
+                shipping_address: formData,
                 promo_code: promoDetails?.code || null,
-                promo_discount_amount: promoDetails?.discount || 0,
+                promo_discount_amount: verifiedDiscount,
             }])
             .select()
             .single()
 
         if (orderError) throw orderError
 
-        // 3. Insert Order Items (Your existing logic is perfect)
-        const itemsToInsert = cartItems.map(item => ({
+        // 3. Insert Order Items (Using database verified prices)
+        const itemsToInsert = verifiedItems.map(item => ({
             order_id: order.id,
             product_id: item.productId,
             product_variant_id: item.variantId,
             product_name: item.name,
             variant_title: item.variantTitle,
             quantity: item.quantity,
-            unit_price: item.price,
+            unit_price: item.price, // VERIFIED PRICE
             mrp: item.mrp || item.price,
         }))
 
@@ -75,7 +121,7 @@ export async function placeOrder(
 
         if (itemsError) throw itemsError
 
-        // 4. Promo Usage Logic (Keep your existing redemption logic)
+        // 4. Promo Usage Logic (Update count and record redemption)
         if (promoDetails?.code) {
             const { data: promoRecord } = await supabase
                 .from('promo_codes')
@@ -305,6 +351,7 @@ export async function createWholesaleOrder(data: {
     total: number,
     items: any[]
 }) {
+    await requireAdmin()
     const supabase = await createClient()
 
     try {
@@ -366,7 +413,13 @@ export async function updateOrderPOS(
     additionalCharges: number = 0,
     additionalChargesLabel: string = 'Extra Charges'
 ) {
+    await requireAdmin()
     const supabase = await createClient()
+
+    const { success, data, error: validationError } = OrderPOSSchema.safeParse({
+        orderId, items, globalDiscount, additionalCharges, additionalChargesLabel
+    })
+    if (!success) return { success: false, message: validationError.message }
 
     // 1. DELETE ALL existing items for this order first
     const { error: deleteError } = await supabase
@@ -377,8 +430,7 @@ export async function updateOrderPOS(
     if (deleteError) return { success: false, message: "Clean up failed: " + deleteError.message };
 
     // 2. PREPARE data for insertion
-    // Remove the temporary 'id' from the frontend so Supabase generates fresh DB UUIDs
-    const cleanItems = items.map(item => ({
+    const cleanItems = data.items.map(item => ({
         order_id: orderId,
         product_id: item.product_id,
         product_variant_id: item.product_variant_id,
@@ -398,16 +450,16 @@ export async function updateOrderPOS(
     if (insertError) return { success: false, message: "Insertion failed: " + insertError.message };
 
     // 4. UPDATE ORDER TOTALS
-    const itemsTotal = items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0);
-    const finalTotal = itemsTotal - globalDiscount + additionalCharges;
+    const itemsTotal = data.items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0);
+    const finalTotal = itemsTotal - data.globalDiscount + data.additionalCharges;
 
     const { error: orderUpdateError } = await supabase
         .from('orders')
         .update({
             total: finalTotal,
-            promo_discount_amount: globalDiscount,
-            additional_charges: additionalCharges,
-            additional_charges_label: additionalChargesLabel,
+            promo_discount_amount: data.globalDiscount,
+            additional_charges: data.additionalCharges,
+            additional_charges_label: data.additionalChargesLabel,
             updated_at: new Date().toISOString()
         })
         .eq('id', orderId);

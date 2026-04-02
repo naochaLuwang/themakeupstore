@@ -43,7 +43,7 @@ export async function updatePricing(updates: {
     const supabase = await createClient()
 
     if (updates.type === 'product') {
-        // 1. Update the Product itself
+        // 1. UPDATE Master Product
         const { error: prodError } = await supabase
             .from('products')
             .update({
@@ -54,20 +54,20 @@ export async function updatePricing(updates: {
             })
             .eq('id', updates.id)
 
-        if (prodError) throw new Error(prodError.message)
+        if (prodError) throw prodError
 
         // 2. CASCADE: Update all variants belonging to this product
-        // This ensures variants inherit the new discount settings
         const { error: varError } = await supabase
             .from('product_variants')
             .update({
+                price: updates.price, // Sync price to all variants
                 discount_type: updates.discount_type,
                 discount_value: updates.discount_value,
                 updated_at: new Date().toISOString()
             })
             .eq('product_id', updates.id)
 
-        if (varError) console.error("Variant sync warning:", varError.message)
+        if (varError) throw varError
 
     } else {
         // 3. Update only the specific Variant
@@ -81,9 +81,10 @@ export async function updatePricing(updates: {
             })
             .eq('id', updates.id)
 
-        if (error) throw new Error(error.message)
+        if (error) throw error
     }
 
     revalidatePath('/admin/pricing')
+    revalidatePath('/', 'layout')
     return { success: true }
 }
