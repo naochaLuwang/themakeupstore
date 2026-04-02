@@ -1,6 +1,6 @@
 "use client"
 
-import { cancelOrderAndRestoreStock } from "@/app/actions/orders"
+import { cancelOrderAndRestoreStock, updateOrderStatus } from "@/app/actions/orders"
 import { useState, useEffect, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import {
@@ -126,29 +126,40 @@ export default function AdminOrdersPage() {
             return
         }
 
-        const { error } = await supabase.from('orders').update({ [field]: val }).eq('id', orderId)
+        if (field === 'payment_status') {
+            const { error } = await supabase.from('orders').update({ payment_status: val }).eq('id', orderId)
+            if (error) toast.error("Payment status update failed")
+            else toast.success("Payment status updated")
+            fetchOrders()
+            return
+        }
 
-        if (error) {
-            toast.error("Update failed")
+        // --- HANDLE STATUS UPDATES THROUGH SERVER ACTION (For Stock Logic) ---
+        setLoading(true)
+        const res = await updateOrderStatus(orderId, val)
+
+        if (!res.success) {
+            toast.error(res.message || "Status update failed")
         } else {
-            toast.success("Updated successfully")
-            if (field === 'status') {
-                const statusMessages: Record<string, string> = {
-                    processing: "We are now preparing your order! ✨",
-                    shipped: "Great news! Your order has been shipped. 🚚",
-                    delivered: "Your package has been delivered! Enjoy. 💖",
-                }
-                const bodyText = statusMessages[val.toLowerCase()]
-                if (bodyText && currentOrder) {
-                    await triggerPushNotification(currentOrder.user_id, {
-                        title: `Order Update: ${val.toUpperCase()}`,
-                        body: bodyText,
-                        url: `/profile/orders/${orderId}`
-                    })
-                }
+            toast.success("Order status updated")
+            
+            // Push Notification
+            const statusMessages: Record<string, string> = {
+                processing: "We are now preparing your order! ✨",
+                shipped: "Great news! Your order has been shipped. 🚚",
+                delivered: "Your package has been delivered! Enjoy. 💖",
+            }
+            const bodyText = statusMessages[val.toLowerCase()]
+            if (bodyText && currentOrder) {
+                await triggerPushNotification(currentOrder.user_id, {
+                    title: `Order Update: ${val.toUpperCase()}`,
+                    body: bodyText,
+                    url: `/profile/orders/${orderId}`
+                })
             }
             fetchOrders()
         }
+        setLoading(false)
     }
 
     return (

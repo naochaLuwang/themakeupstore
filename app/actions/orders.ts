@@ -145,12 +145,28 @@ export async function placeOrder(
             }
         }
 
-        // 5. Stock Update (Using your existing RPC)
+        // 5. Stock Update (With Robust Fallback)
         for (const item of cartItems) {
-            await supabase.rpc('decrement_stock', {
+            const { error: rpcErr } = await supabase.rpc('decrement_stock', {
                 row_id: item.variantId,
                 amount: item.quantity
             })
+
+            if (rpcErr) {
+                console.warn("RPC decrement_stock failed, falling back to manual update")
+                const { data: variant } = await supabase
+                    .from('product_variants')
+                    .select('stock')
+                    .eq('id', item.variantId)
+                    .single()
+
+                if (variant) {
+                    await supabase
+                        .from("product_variants")
+                        .update({ stock: Math.max(0, variant.stock - item.quantity) })
+                        .eq("id", item.variantId)
+                }
+            }
         }
 
         // 6. Push Notifications (Your existing logic)
@@ -393,6 +409,31 @@ export async function createWholesaleOrder(data: {
             throw new Error(`Order Items Error: ${itemErr.message}`)
         }
 
+        // 4. DECREMENT STOCK
+        for (const item of data.items) {
+            const { error: rpcErr } = await supabase.rpc('decrement_stock', {
+                row_id: item.variant_id,
+                amount: item.qty
+            })
+
+            // Fallback for stock decrement
+            if (rpcErr) {
+                console.warn(`RPC decrement_stock failed for ${item.variant_id}, falling back to manual update`)
+                const { data: variant } = await supabase
+                    .from('product_variants')
+                    .select('stock')
+                    .eq('id', item.variant_id)
+                    .single()
+
+                if (variant) {
+                    await supabase
+                        .from("product_variants")
+                        .update({ stock: Math.max(0, variant.stock - item.qty) })
+                        .eq("id", item.variant_id)
+                }
+            }
+        }
+
         revalidatePath('/admin/orders')
         revalidatePath('/b2b/orders')
 
@@ -421,7 +462,24 @@ export async function updateOrderPOS(
     })
     if (!success) return { success: false, message: validationError.message }
 
-    // 1. DELETE ALL existing items for this order first
+    // 1. Fetch current items to RESTORE stock before deletion
+    const { data: currentItems } = await supabase
+        .from('order_items')
+        .select('product_variant_id, quantity')
+        .eq('order_id', orderId);
+
+    if (currentItems) {
+        for (const item of currentItems) {
+            if (item.product_variant_id) {
+                await supabase.rpc('increment_stock', {
+                    row_id: item.product_variant_id,
+                    amount: item.quantity
+                })
+            }
+        }
+    }
+
+    // 2. DELETE ALL existing items
     const { error: deleteError } = await supabase
         .from('order_items')
         .delete()
@@ -429,7 +487,7 @@ export async function updateOrderPOS(
 
     if (deleteError) return { success: false, message: "Clean up failed: " + deleteError.message };
 
-    // 2. PREPARE data for insertion
+    // 3. PREPARE data for insertion
     const cleanItems = data.items.map(item => ({
         order_id: orderId,
         product_id: item.product_id,
@@ -442,12 +500,22 @@ export async function updateOrderPOS(
         sku: item.sku
     }));
 
-    // 3. INSERT the fresh set
+    // 4. INSERT the fresh set
     const { error: insertError } = await supabase
         .from('order_items')
         .insert(cleanItems);
 
     if (insertError) return { success: false, message: "Insertion failed: " + insertError.message };
+
+    // 5. DECREMENT STOCK for the new set
+    for (const item of cleanItems) {
+        if (item.product_variant_id) {
+            await supabase.rpc('decrement_stock', {
+                row_id: item.product_variant_id,
+                amount: item.quantity
+            })
+        }
+    }
 
     // 4. UPDATE ORDER TOTALS
     const itemsTotal = data.items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0);
@@ -468,4 +536,71 @@ export async function updateOrderPOS(
 
     revalidatePath('/admin/orders');
     return { success: true };
+}
+
+export async function updateOrderStatus(orderId: string, status: string) {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    try {
+        const { data: order, error: fetchErr } = await supabase
+            .from('orders')
+            .select('*, order_items(*)')
+            .eq('id', orderId)
+            .single()
+
+        if (fetchErr || !order) throw new Error("Order not found")
+
+        const oldStatus = (order.status || "").toLowerCase()
+        const newStatus = status.toLowerCase()
+
+        const { error: updateErr } = await supabase
+            .from('orders')
+            .update({ 
+                status: newStatus,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', orderId)
+
+        if (updateErr) throw updateErr
+
+        // Check if transition to delivered should trigger stock decrement
+        // Only do this if it's NOT a website order (which decrements on placement)
+        // We identify wholesale/POS by payment methods or other fields.
+        const isB2B = order.payment_method === 'B2B_INVOICE'
+        const isDeliveredFirstTime = newStatus === 'delivered' && oldStatus !== 'delivered'
+        
+        if (isDeliveredFirstTime && isB2B) {
+            for (const item of order.order_items) {
+                if (!item.product_variant_id) continue;
+                
+                const { error: rpcErr } = await supabase.rpc('decrement_stock', {
+                    row_id: item.product_variant_id,
+                    amount: item.quantity
+                })
+
+                if (rpcErr) {
+                    const { data: variant } = await supabase
+                        .from('product_variants')
+                        .select('stock')
+                        .eq('id', item.product_variant_id)
+                        .single()
+
+                    if (variant) {
+                        await supabase
+                            .from("product_variants")
+                            .update({ stock: Math.max(0, variant.stock - item.quantity) })
+                            .eq("id", item.product_variant_id)
+                    }
+                }
+            }
+        }
+
+        revalidatePath('/admin/orders')
+        revalidatePath(`/admin/orders/${orderId}`)
+        return { success: true, oldStatus, newStatus, userId: order.user_id }
+    } catch (error: any) {
+        console.error("UPDATE_STATUS_ERROR:", error)
+        return { success: false, message: error.message }
+    }
 }
