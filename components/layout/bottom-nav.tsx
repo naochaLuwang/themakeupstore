@@ -38,7 +38,7 @@ export function BottomNav() {
                 <nav className="flex items-center justify-between h-14 max-w-md mx-auto">
 
                     {/* 1. THE PROMO SLOT: "OFFERS" */}
-                    <Link
+                    {/* <Link
                         href="/offers"
                         onClick={triggerHaptic}
                         className="flex flex-col items-center justify-center pr-4 group relative"
@@ -57,7 +57,7 @@ export function BottomNav() {
                         <span className="text-[7px] mt-1.5 font-black uppercase text-[#fc2779] tracking-tighter">
                             Upto 50% Off
                         </span>
-                    </Link>
+                    </Link> */}
 
                     {/* 2. MODERN HAIRLINE DIVIDER */}
                     <div className="h-10 w-[1.5px] bg-gradient-to-b from-transparent via-slate-100 to-transparent" />
