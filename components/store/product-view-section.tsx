@@ -180,7 +180,7 @@ import { useState, useMemo } from "react"
 import { ProductImages } from "./product-images"
 import VariantSelector from "./variant-selector"
 import { Button } from "@/components/ui/button"
-import { BellRing, Mail, Phone, User, Star, ShieldCheck, Sparkles } from "lucide-react"
+import { BellRing, Mail, Phone, User, Star, ShieldCheck, Sparkles, ScanLine } from "lucide-react"
 import { toast } from "sonner"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
 import { motion } from "framer-motion"
@@ -261,11 +261,22 @@ export function ProductViewSection({ product, promos = [], enableTryOn = false }
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start max-w-7xl mx-auto px-2 py-0 md:py-16 bg-white">
             {/* LEFT: MINIMAL GALLERY */}
-            <div className="w-full">
+            <div className="w-full relative">
                 <ProductImages
                     key={selectedVariant?.id || 'gallery'}
                     images={displayImages}
                 />
+
+                {/* VIRTUAL TRY-ON BUTTON — overlaid on product image */}
+                {enableTryOn && hasHexCode && selectedVariant && (
+                    <button
+                        onClick={() => setTryOnOpen(true)}
+                        className="absolute top-4 right-4 z-10 w-14 h-14 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/30 text-[10px] font-black uppercase tracking-wider flex flex-col items-center justify-center gap-0.5 shadow-lg hover:bg-black/60 hover:scale-105 active:scale-95 transition-all group"
+                    >
+                        <ScanLine className="w-5 h-5 text-white" />
+                        <span className="text-[7px] text-white/90">Try On</span>
+                    </button>
+                )}
             </div>
 
             {/* RIGHT: CLEAN CONTENT */}
@@ -299,19 +310,6 @@ export function ProductViewSection({ product, promos = [], enableTryOn = false }
                         onVariantChange={handleVariantChange}
                     />
                 </div>
-
-                {/* VIRTUAL TRY-ON BUTTON */}
-                {enableTryOn && hasHexCode && selectedVariant && (
-                    <div className="mb-4">
-                        <button
-                            onClick={() => setTryOnOpen(true)}
-                            className="w-full h-12 rounded-2xl border border-stone-200 text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 hover:border-stone-900 transition-all group"
-                        >
-                            <Sparkles className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-900" />
-                            <span>Try On — <span style={{ color: selectedVariant.hex_code }}>{selectedVariant.hex_code ? selectedVariant.title : "Live Preview"}</span></span>
-                        </button>
-                    </div>
-                )}
 
                 <VirtualTryOn
                     open={tryOnOpen}

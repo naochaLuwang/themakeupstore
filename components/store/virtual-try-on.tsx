@@ -42,6 +42,7 @@ export default function VirtualTryOn({ open, onClose, variants, initialHexCode }
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const overlayRef = useRef<HTMLCanvasElement>(null)
+    const smoothRef = useRef<HTMLCanvasElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
     const animRef = useRef<number>(0)
     const landmarksRef = useRef<any>(null)
@@ -120,28 +121,44 @@ export default function VirtualTryOn({ open, onClose, variants, initialHexCode }
 
             const video = videoRef.current
             const canvas = overlayRef.current
-            if (!video || !canvas || video.readyState < 2 || video.videoWidth === 0) {
+            const smoothCanvas = smoothRef.current
+            if (!video || !canvas || !smoothCanvas || video.readyState < 2 || video.videoWidth === 0) {
                 animRef.current = requestAnimationFrame(detect)
                 return
             }
 
-            if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            // Sync canvases size with video
+            if (smoothCanvas.width !== video.videoWidth || smoothCanvas.height !== video.videoHeight) {
+                smoothCanvas.width = video.videoWidth
+                smoothCanvas.height = video.videoHeight
                 canvas.width = video.videoWidth
                 canvas.height = video.videoHeight
             }
 
+            // 1. Draw smoothed video frame
+            const smoothCtx = smoothCanvas.getContext("2d")
+            if (smoothCtx) {
+                smoothCtx.clearRect(0, 0, smoothCanvas.width, smoothCanvas.height)
+                // Subtle skin smooth filter
+                smoothCtx.filter = 'brightness(1.02) contrast(0.98) saturate(0.95)'
+                smoothCtx.drawImage(video, 0, 0, smoothCanvas.width, smoothCanvas.height)
+                smoothCtx.filter = 'none'
+            }
+
+            // 2. Detect face
+            if (window.__faceLandmarker) {
+                try {
+                    const result = window.__faceLandmarker.detectForVideo(video, performance.now())
+                    if (result.faceLandmarks && result.faceLandmarks.length > 0) {
+                        landmarksRef.current = result.faceLandmarks[0]
+                    }
+                } catch { }
+            }
+
+            // 3. Draw lip overlay on the lip canvas
             const ctx = canvas.getContext("2d")
             if (ctx) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-                if (window.__faceLandmarker) {
-                    try {
-                        const result = window.__faceLandmarker.detectForVideo(video, performance.now())
-                        if (result.faceLandmarks && result.faceLandmarks.length > 0) {
-                            landmarksRef.current = result.faceLandmarks[0]
-                        }
-                    } catch { }
-                }
 
                 const lm = landmarksRef.current
                 if (lm) {
@@ -157,11 +174,13 @@ export default function VirtualTryOn({ open, onClose, variants, initialHexCode }
                     }
                     ctx.closePath()
 
+                    ctx.filter = 'blur(0.5px)'
                     ctx.fillStyle = hexToRgba(selectedHex, 0.45)
                     ctx.fill()
                     ctx.strokeStyle = hexToRgba(selectedHex, 0.2)
                     ctx.lineWidth = 0.5
                     ctx.stroke()
+                    ctx.filter = 'none'
                 }
             }
 
@@ -239,6 +258,10 @@ export default function VirtualTryOn({ open, onClose, variants, initialHexCode }
                                             playsInline
                                             autoPlay
                                             muted
+                                            className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+                                        />
+                                        <canvas
+                                            ref={smoothRef}
                                             className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
                                         />
                                         <canvas
