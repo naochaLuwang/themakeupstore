@@ -43,58 +43,95 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     // 1. Fetch User Session
     const { data: { user } } = await supabase.auth.getUser()
 
-    // 2. Fetch main product with category names for breadcrumbs
-    const { data: product } = await supabase
-        .from("products")
-        .select(`
-            *,
-            images:product_images(url, alt),
-            variants:product_variants(
+// 2. Fetch main product with all relationships (matching admin page approach)
+const { data: product, error: productError } = await supabase
+  .from("products")
+  .select(`
+    *,
+    product_images(*),
+    variants:product_variants (
       *,
-      variant_images(url, position) 
+      variant_images(*)
     ),
-            reviews:product_reviews(*),
-            product_categories(
-                categories(id, name, slug, parent:parent_id(id, name, slug))
-            )
-        `)
-        .eq("id", id)
-        .eq("product_reviews.is_approved", true)
-        .order('created_at', { foreignTable: 'product_reviews', ascending: false })
-        .single()
+    product_categories (
+      categories (
+        id,
+        name,
+        slug,
+        parent:parent_id (
+          id,
+          name,
+          slug
+        )
+      )
+    )
+  `)
+  .eq("id", id)
+  .single()
 
-    if (!product) notFound()
+if (!product) notFound()
+
+// Use product_images from the join
+if (product.product_images && product.product_images.length > 0) {
+  product.images = product.product_images;
+} else if (product.thumbnail_url) {
+  product.images = [{ url: product.thumbnail_url, alt: product.name || 'Product image', position: 0 }];
+} else {
+  product.images = [];
+}
+
+// Fetch approved reviews separately (don't filter product by reviews)
+const { data: reviews } = await supabase
+.from("product_reviews")
+.select("*")
+.eq("product_id", id)
+.eq("is_approved", true)
+.order('created_at', { ascending: false })
+
+// Attach reviews to product for ReviewsSection
+product.reviews = reviews || []
     
+    // Check if product is lip-related (for virtual try-on)
+    const lipSlugs = ['lip', 'lips', 'lipstick', 'lip-gloss', 'lip-liner', 'liquid-lipstick', 'lip-balm', 'lip-tint', 'lipgloss']
+    const productCategories = product.product_categories?.map((pc: any) => pc.categories) || []
+    const enableTryOn = productCategories.some((cat: any) =>
+        lipSlugs.includes(cat.slug?.toLowerCase()) ||
+        lipSlugs.some((slug) => cat.name?.toLowerCase().includes(slug.replace('-', '')))
+    )
+
     // 3. Fetch Promos for this product
     const categoryIds = product.product_categories?.map((pc: any) => pc.categories.id) || []
     const promos = await getPromosForProduct(product.id, categoryIds)
 
 
 
-    // 4. Build Breadcrumbs
-    const firstCat = product.product_categories?.[0]?.categories
-    const breadcrumbItems = []
-    if (firstCat) {
-        if (firstCat.parent) {
-            const parentSlug = firstCat.parent.slug;
-            const pathSegment = (parentSlug === 'exclusive' || parentSlug === 'essentials') ? parentSlug : `categories/${parentSlug}`;
-            breadcrumbItems.push({ label: firstCat.parent.name, href: `/${pathSegment}` })
-        }
-        const catSlug = firstCat.slug;
-        const pathSegment = (catSlug === 'exclusive' || catSlug === 'essentials' || (firstCat.parent && (firstCat.parent.slug === 'exclusive' || firstCat.parent.slug === 'essentials'))) 
-            ? (firstCat.parent?.slug || catSlug) + '/' + catSlug 
-            : `categories/${catSlug}`;
-        
-        breadcrumbItems.push({ label: firstCat.name, href: `/${pathSegment}` })
-    }
-    breadcrumbItems.push({ label: product.name, href: `/products/${product.id}` })
+// 4. Build Breadcrumbs
+const firstCat = product.product_categories?.[0]?.categories
+const breadcrumbItems = []
+if (firstCat) {
+  if (firstCat.parent) {
+    const parentSlug = firstCat.parent.slug;
+    const parentPathSegment = parentSlug === 'exclusive' || parentSlug === 'essentials' ? parentSlug : 'categories/' + parentSlug;
+    breadcrumbItems.push({ label: firstCat.parent.name, href: '/' + parentPathSegment })
+  }
+  const catSlug = firstCat.slug;
+  let catPathSegment = '';
+  if (catSlug === 'exclusive' || catSlug === 'essentials' || (firstCat.parent && (firstCat.parent.slug === 'exclusive' || firstCat.parent.slug === 'essentials'))) {
+    catPathSegment = (firstCat.parent?.slug || catSlug) + '/' + catSlug
+  } else {
+    catPathSegment = 'categories/' + catSlug
+  }
+
+  breadcrumbItems.push({ label: firstCat.name, href: '/' + catPathSegment })
+}
+breadcrumbItems.push({ label: product.name, href: '/products/' + product.id })
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 min-h-screen">
             <Breadcrumbs items={breadcrumbItems} />
 
             {/* Main Product Section */}
-            <ProductViewSection product={product} promos={promos} />
+            <ProductViewSection product={product} promos={promos} enableTryOn={enableTryOn} />
 
             {/* Related Products Section */}
             {/* {relatedProducts.length > 0 && (

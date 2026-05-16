@@ -1,3 +1,5 @@
+"use server"
+
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
@@ -78,11 +80,21 @@ export async function placeOrder(
             }
         }
 
-        // 3. FINAL TOTAL CALCULATION
-        // We re-calculate the total to prevent frontend manipulation
-        const finalTotal = calculatedSubtotal - verifiedDiscount + (shippingDetails.price || 0)
+        // 3. RE-VERIFY SHIPPING PRICE
+        let verifiedShippingPrice = 0;
+        if (shippingDetails.shipping_method_id) {
+            const { data: method } = await supabase
+                .from('shipping_methods')
+                .select('price')
+                .eq('id', shippingDetails.shipping_method_id)
+                .single()
+            if (method) verifiedShippingPrice = Number(method.price)
+        }
 
-        // 2. Insert the main Order
+        // 4. FINAL TOTAL CALCULATION
+        const finalTotal = calculatedSubtotal - verifiedDiscount + verifiedShippingPrice
+
+        // 5. Insert the main Order
         const { data: order, error: orderError } = await supabase
             .from('orders')
             .insert([{
@@ -91,7 +103,7 @@ export async function placeOrder(
                 payment_status: 'unpaid',
                 payment_method: 'COD',
                 total: finalTotal,
-                shipping_price: shippingDetails.price,
+                shipping_price: verifiedShippingPrice,
                 shipping_label: shippingDetails.methodName,
                 shipping_method_id: shippingDetails.shipping_method_id || null,
                 shipping_address: formData,
@@ -145,7 +157,7 @@ export async function placeOrder(
             }
         }
 
-        // 5. Stock Update (With Robust Fallback)
+        // 6. Stock Update (With Robust Fallback)
         for (const item of cartItems) {
             const { error: rpcErr } = await supabase.rpc('decrement_stock', {
                 row_id: item.variantId,
@@ -371,12 +383,59 @@ export async function createWholesaleOrder(data: {
     const supabase = await createClient()
 
     try {
-        // 1. Create the Master Order
+        // 1. Re-verify variant prices and wholesale discounts server-side
+        const verifiedItems: any[] = [];
+        let calculatedTotal = 0;
+
+        for (const item of data.items) {
+            const { data: variant } = await supabase
+                .from('product_variants')
+                .select('price, stock, product_id, title')
+                .eq('id', item.variant_id)
+                .single()
+
+            if (!variant) throw new Error(`Variant not found: ${item.variant_id}`)
+            if (variant.stock < item.qty) throw new Error(`Insufficient stock for ${item.name}`)
+
+            const { data: product } = await supabase
+                .from('products')
+                .select('category_id')
+                .eq('id', variant.product_id)
+                .single()
+
+            let unitPrice = Number(variant.price)
+            if (product?.category_id) {
+                const { data: rule } = await supabase
+                    .from('category_wholesale_rules')
+                    .select('discount_percentage, is_active')
+                    .eq('category_id', product.category_id)
+                    .single()
+
+                if (rule?.is_active && rule.discount_percentage > 0) {
+                    unitPrice = Math.floor(unitPrice * (1 - Number(rule.discount_percentage) / 100))
+                }
+            }
+
+            const lineTotal = unitPrice * item.qty
+            calculatedTotal += lineTotal
+
+            verifiedItems.push({
+                product_id: variant.product_id,
+                product_variant_id: item.variant_id,
+                product_name: item.name,
+                variant_title: variant.title,
+                quantity: item.qty,
+                unit_price: unitPrice,
+                currency: 'INR'
+            })
+        }
+
+        // 2. Create the Master Order with server-calculated total
         const { data: order, error: orderErr } = await supabase
             .from('orders')
             .insert({
                 user_id: data.userId,
-                total: data.total,
+                total: calculatedTotal,
                 status: 'pending',
                 payment_status: 'unpaid',
                 payment_method: 'B2B_INVOICE',
@@ -387,19 +446,12 @@ export async function createWholesaleOrder(data: {
 
         if (orderErr) throw new Error(`Order Header Error: ${orderErr.message}`)
 
-        // 2. Prepare Line Items
-        // We use the prices calculated by the Category Logic on the frontend
-        const itemsToInsert = data.items.map(item => ({
+        // 3. Insert verified line items
+        const itemsToInsert = verifiedItems.map(item => ({
+            ...item,
             order_id: order.id,
-            product_id: item.product_id, // Passed from the variant join
-            product_variant_id: item.variant_id,
-            product_name: item.name,
-            quantity: item.qty,
-            unit_price: item.price,
-            currency: 'INR'
         }))
 
-        // 3. Batch Insert Order Items
         const { error: itemErr } = await supabase
             .from('order_items')
             .insert(itemsToInsert)
@@ -410,26 +462,25 @@ export async function createWholesaleOrder(data: {
         }
 
         // 4. DECREMENT STOCK
-        for (const item of data.items) {
+        for (const item of verifiedItems) {
             const { error: rpcErr } = await supabase.rpc('decrement_stock', {
-                row_id: item.variant_id,
-                amount: item.qty
+                row_id: item.product_variant_id,
+                amount: item.quantity
             })
 
-            // Fallback for stock decrement
             if (rpcErr) {
-                console.warn(`RPC decrement_stock failed for ${item.variant_id}, falling back to manual update`)
+                console.warn(`RPC decrement_stock failed for ${item.product_variant_id}, falling back to manual update`)
                 const { data: variant } = await supabase
                     .from('product_variants')
                     .select('stock')
-                    .eq('id', item.variant_id)
+                    .eq('id', item.product_variant_id)
                     .single()
 
                 if (variant) {
                     await supabase
                         .from("product_variants")
-                        .update({ stock: Math.max(0, variant.stock - item.qty) })
-                        .eq("id", item.variant_id)
+                        .update({ stock: Math.max(0, variant.stock - item.quantity) })
+                        .eq("id", item.product_variant_id)
                 }
             }
         }

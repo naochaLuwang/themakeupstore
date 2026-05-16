@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
+import { createClient } from "@/utils/supabase/server"
 
-// Configuration
 webpush.setVapidDetails(
     'mailto:admin@themakeupstore.com',
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
@@ -9,6 +9,22 @@ webpush.setVapidDetails(
 );
 
 export async function POST(request: Request) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile?.is_admin) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
     try {
         const { subscription, payload } = await request.json();
 

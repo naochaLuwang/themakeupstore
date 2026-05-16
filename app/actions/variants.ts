@@ -2,9 +2,11 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
 import { variantOptionSchema, type VariantFormValues } from "@/lib/validations/variants"
 
 export async function createVariantWithValues(data: VariantFormValues) {
+    await requireAdmin()
     const supabase = await createClient()
 
     // 1. Insert the Parent Option

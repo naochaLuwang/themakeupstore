@@ -23,6 +23,7 @@ export default function InventoryRegistryWrapper({ initialInventory, categories 
             let matchesStatus = true
             if (stockStatus === "out") matchesStatus = item.stock === 0
             if (stockStatus === "low") matchesStatus = item.stock > 0 && item.stock <= 10
+            if (stockStatus === "in") matchesStatus = item.stock > 10
 
             return matchesSearch && matchesCategory && matchesStatus
         })

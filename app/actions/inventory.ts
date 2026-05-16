@@ -2,8 +2,10 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
 
 export async function bulkUpdateStock(updates: Record<string, string | number>) {
+    await requireAdmin()
     const supabase = await createClient()
 
     const promiseArray = Object.entries(updates).map(async ([id, value]) => {

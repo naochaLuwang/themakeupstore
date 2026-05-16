@@ -15,6 +15,7 @@ type tParams = Promise<{ id: string }>;
 export default async function OrderDetailsPage(props: { params: tParams }) {
     const { id } = await props.params;
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
     const { data: order, error } = await supabase
         .from("orders")
@@ -23,6 +24,16 @@ export default async function OrderDetailsPage(props: { params: tParams }) {
         .single()
 
     if (error || !order) return notFound()
+
+    const isOwner = order.user_id === user?.id
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user?.id)
+        .single()
+    const isAdmin = profile?.is_admin || false
+
+    if (!isOwner && !isAdmin) return notFound()
 
     const address = order.shipping_address as any
     const whatsappUrl = `https://wa.me/8794833630?text=${encodeURIComponent(`Query regarding Order: ${id}`)}`

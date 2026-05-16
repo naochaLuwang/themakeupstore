@@ -9,9 +9,23 @@ webpush.setVapidDetails('mailto:admin@yourstore.com', publicKey, privateKey);
 
 export async function POST(req: Request) {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile?.is_admin) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
     const { title, body, url } = await req.json()
 
-    // 1. Fetch all subscriptions
     const { data: subs, error: subError } = await supabase
         .from('push_subscriptions')
         .select('id, user_id, subscription_json');
@@ -20,23 +34,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: "Database unreachable" }, { status: 500 });
     }
 
-    // 2. Fetch profile names
-    const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name');
-
-    const nameMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
-
     const payload = JSON.stringify({
         title: title || "Broadcast",
         body: body || "New Message",
         url: url || "/"
     });
 
-    const successfulNames = new Set<string>();
     let totalDevicesReached = 0;
 
-    // 3. Execute Broadcast
     const results = await Promise.allSettled(
         subs.map(async (row) => {
             try {
@@ -47,12 +52,7 @@ export async function POST(req: Request) {
                 await webpush.sendNotification(subObj, payload);
 
                 totalDevicesReached++;
-
-                // FALLBACK: If profile name is missing, use user_id prefix
-                const name = nameMap.get(row.user_id) || `User_${row.user_id?.slice(0, 5) || 'Guest'}`;
-                successfulNames.add(name);
             } catch (err: any) {
-                // Cleanup 410 (Gone) or 404 (Not Found)
                 if (err.statusCode === 410 || err.statusCode === 404) {
                     await supabase.from('push_subscriptions').delete().eq('id', row.id);
                 }
@@ -62,9 +62,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
         success: true,
-        recipients: Array.from(successfulNames),
         totalDevices: totalDevicesReached,
-        uniqueUsers: successfulNames.size,
-        details: `SUCCESS: ${totalDevicesReached} DEVICES / ${successfulNames.size} USERS`
+        details: `SUCCESS: ${totalDevicesReached} DEVICES`
     });
 }

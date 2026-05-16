@@ -3,17 +3,21 @@ import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
     const supabase = await createClient()
-    const { subscription, userId } = await req.json()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
+    const { subscription } = await req.json()
 
     if (!subscription || !subscription.endpoint) {
         return NextResponse.json({ error: "Invalid subscription" }, { status: 400 })
     }
 
-    // UPSERT: Updates the row if the 'endpoint' already exists
     const { error } = await supabase
         .from('push_subscriptions')
         .upsert({
-            user_id: userId,
+            user_id: user.id,
             endpoint: subscription.endpoint,
             subscription_json: subscription,
             last_notified_at: new Date().toISOString()

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
 
 export async function updateWholesaleRule(data: {
     categoryId: string,
@@ -9,6 +10,7 @@ export async function updateWholesaleRule(data: {
     moq: number,
     active: boolean
 }) {
+    await requireAdmin()
     const supabase = await createClient()
 
     const { error } = await supabase

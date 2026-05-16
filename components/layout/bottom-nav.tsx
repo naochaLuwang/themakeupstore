@@ -8,7 +8,6 @@ import {
     User,
     Award,
     LayoutGrid,
-    Percent
 } from "lucide-react"
 import { motion } from "framer-motion"
 
@@ -37,32 +36,7 @@ export function BottomNav() {
             <div className="bg-white/95 backdrop-blur-2xl border-t border-pink-50 pt-2 pb-safe px-4 shadow-[0_-15px_40px_rgba(252,39,121,0.08)]">
                 <nav className="flex items-center justify-between h-14 max-w-md mx-auto">
 
-                    {/* 1. THE PROMO SLOT: "OFFERS" */}
-                    {/* <Link
-                        href="/offers"
-                        onClick={triggerHaptic}
-                        className="flex flex-col items-center justify-center pr-4 group relative"
-                    >
-                        <div className={`relative p-2 rounded-2xl transition-all duration-300 ${pathname === '/offers' ? 'bg-[#fc2779] shadow-lg shadow-pink-200' : 'bg-pink-50'}`}>
-                            <Percent
-                                className={`w-5 h-5 transition-colors ${pathname === '/offers' ? 'text-white' : 'text-[#fc2779]'}`}
-                                strokeWidth={3}
-                            />
-
-                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#fc2779] border-2 border-white"></span>
-                            </span>
-                        </div>
-                        <span className="text-[7px] mt-1.5 font-black uppercase text-[#fc2779] tracking-tighter">
-                            Upto 50% Off
-                        </span>
-                    </Link> */}
-
-                    {/* 2. MODERN HAIRLINE DIVIDER */}
-                    <div className="h-10 w-[1.5px] bg-gradient-to-b from-transparent via-slate-100 to-transparent" />
-
-                    {/* 3. PRIMARY NAV ITEMS */}
+                    {/* PRIMARY NAV ITEMS */}
                     <div className="flex flex-1 items-center justify-around">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href

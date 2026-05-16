@@ -357,7 +357,7 @@ export function AddressForm({
             // Perform the operation and immediately join shipping_methods
             // This ensures the CheckoutClient receives the object it expects
             const query = initialData?.id
-                ? supabase.from("user_addresses").update(payload).eq("id", initialData.id)
+                ? supabase.from("user_addresses").update(payload).eq("id", initialData.id).eq("user_id", userId)
                 : supabase.from("user_addresses").insert([payload])
 
             const { data, error } = await query

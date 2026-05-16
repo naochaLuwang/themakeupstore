@@ -33,15 +33,16 @@ export default async function CustomersPage({
         query = query.ilike("full_name", `%${q}%`)
     }
 
-    const { data: customers, count } = await query.order("created_at", { ascending: false })
+    const { data: customers, count } = await query
+        .order("created_at", { ascending: false })
+        .range(fromRange, toRange)
 
-    // Calculate quick stats
-    const totalCustomers = customers?.length || 0
+    const totalCustomers = count || 0
     const activeThisMonth = customers?.filter(c =>
         c.orders.some((o: any) => new Date(o.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
     ).length || 0
 
-    const totalPages = Math.ceil((count || 0))
+    const totalPages = Math.ceil((count || 0) / itemsPerPage)
 
     return (
         <div className="p-8 space-y-8">

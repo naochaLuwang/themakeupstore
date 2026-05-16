@@ -1,7 +1,6 @@
 import webpush from 'web-push';
 import { createClient } from '@/utils/supabase/server';
 
-// Generate these once and put them in your .env
 webpush.setVapidDetails(
     'mailto:admin@themakeupstore.com',
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
@@ -9,21 +8,33 @@ webpush.setVapidDetails(
 );
 
 export async function POST(req: Request) {
-    const { title, message } = await req.json();
-    const supabase = await createClient();
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        return new Response(JSON.stringify({ error: "Authentication required" }), { status: 401 })
+    }
 
-    // 1. Get all subscribers
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile?.is_admin) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403 })
+    }
+
+    const { title, message } = await req.json();
+
     const { data: subs } = await supabase.from('push_subscriptions').select('*');
 
-    // 2. Send to everyone
     const notifications = subs?.map((s) =>
         webpush.sendNotification(s.subscription, JSON.stringify({
             title,
             body: message,
-            icon: '/logo.png', // Path to your store logo
+            icon: '/logo.png',
         })).catch(err => {
             if (err.statusCode === 410) {
-                // Remove expired/invalid subscriptions
                 return supabase.from('push_subscriptions').delete().eq('id', s.id);
             }
         })

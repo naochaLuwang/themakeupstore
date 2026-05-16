@@ -7,22 +7,27 @@ import { motion } from "framer-motion"
 import { Sparkles } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { Breadcrumbs } from "@/components/store/breadcrumbs"
+import { fetchEssentialsProducts } from "./_actions/essentials-actions"
 
 interface Props {
     initialSubcategories: any[];
     initialProducts: any[];
-    hasMore: boolean;
-    loadingMore: boolean;
-    onLoadMore: () => void;
+    initialHasMore: boolean;
+    categoryIds: string[];
+    parentId: string;
 }
 
-export default function EssentialsClient({ 
-    initialSubcategories, 
+export default function EssentialsClient({
+    initialSubcategories,
     initialProducts,
-    hasMore,
-    loadingMore,
-    onLoadMore
+    initialHasMore,
+    categoryIds,
+    parentId,
 }: Props) {
+    const [allProducts, setAllProducts] = React.useState<any[]>(initialProducts)
+    const [hasMore, setHasMore] = React.useState(initialHasMore)
+    const [loadingMore, setLoadingMore] = React.useState(false)
+    const [page, setPage] = React.useState(0)
     const sentinelRef = React.useRef<HTMLDivElement>(null);
 
     // AUTO-LOAD ON SCROLL ENGINE
@@ -43,7 +48,29 @@ export default function EssentialsClient({
         }
 
         return () => observer.disconnect();
-    }, [hasMore, loadingMore, onLoadMore]);
+    }, [hasMore, loadingMore]);
+
+    const onLoadMore = async () => {
+        if (loadingMore || !hasMore) return
+        setLoadingMore(true)
+        const nextPage = page + 1
+
+        try {
+            const result = await fetchEssentialsProducts({
+                page: nextPage,
+                categoryIds,
+                parentId,
+            })
+
+            setAllProducts(prev => [...prev, ...result.products])
+            setHasMore(result.hasMore)
+            setPage(nextPage)
+        } catch (e) {
+            console.error("Failed to load more products:", e)
+        } finally {
+            setLoadingMore(false)
+        }
+    }
 
     return (
         <div className="min-h-screen bg-[#FDFDFD] text-slate-900 pb-20">
@@ -104,11 +131,11 @@ export default function EssentialsClient({
                             <div className="w-1.5 h-6 bg-[#fc2779]" />
                             <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-900">Hand Picked Selection</h2>
                         </div>
-                        <span className="text-[10px] font-black text-[#fc2779] uppercase">{initialProducts.length} Showing</span>
+                        <span className="text-[10px] font-black text-[#fc2779] uppercase">{allProducts.length} Showing</span>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 border-t border-l border-pink-50 bg-white">
-                        {initialProducts.map((product) => (
+                        {allProducts.map((product) => (
                             <motion.div
                                 key={product.id}
                                 initial={{ opacity: 0 }}
@@ -121,7 +148,7 @@ export default function EssentialsClient({
                     </div>
 
                     {/* INFINITE SCROLL SENTINEL & STATUS */}
-                    <div 
+                    <div
                         ref={sentinelRef}
                         className="mt-12 py-10 flex flex-col items-center justify-center border-t border-pink-50 bg-white/50"
                     >

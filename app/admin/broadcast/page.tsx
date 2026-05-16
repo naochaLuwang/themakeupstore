@@ -66,10 +66,11 @@ export default function AdminBroadcastForm() {
             });
             const data = await res.json();
             if (data.success) {
-                setRecipients(data.recipients);
-                setStats({ devices: data.totalDevices, users: data.uniqueUsers });
+                setStats({ devices: data.totalDevices, users: data.totalDevices });
                 setStatus("Broadcast dispatched successfully.");
                 setForm({ title: "", body: "", url: "" });
+            } else {
+                setStatus(data.error || "Broadcast failed.");
             }
         } catch (e) { setStatus("Dispatch failed."); }
         finally { setLoading(false); }

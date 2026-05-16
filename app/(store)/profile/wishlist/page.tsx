@@ -37,10 +37,13 @@ export default function WishlistPage() {
 
     const handleRemove = async (wishlistId: string) => {
         setItems(prev => prev.filter(item => item.wishlist_id !== wishlistId))
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
         const { error } = await supabase
             .from('wishlist')
             .delete()
             .eq('id', wishlistId)
+            .eq('user_id', user.id)
 
         if (!error) {
             window.dispatchEvent(new CustomEvent("wishlist-sync", {

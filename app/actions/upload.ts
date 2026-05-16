@@ -1,6 +1,7 @@
 "use server"
 
 import { v2 as cloudinary } from 'cloudinary'
+import { requireAdmin } from "@/lib/admin"
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -9,6 +10,7 @@ cloudinary.config({
 })
 
 export async function uploadEditorImage(formData: FormData) {
+    await requireAdmin()
     const file = formData.get('file') as File
     if (!file) throw new Error("No file provided")
 

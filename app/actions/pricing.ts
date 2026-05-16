@@ -3,6 +3,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
 
 // export async function updatePricing(updates: {
 //     id: string;
@@ -40,6 +41,7 @@ export async function updatePricing(updates: {
     discount_type: 'none' | 'percentage' | 'amount';
     discount_value: number;
 }) {
+    await requireAdmin()
     const supabase = await createClient()
 
     if (updates.type === 'product') {

@@ -3,6 +3,7 @@
 import { v2 as cloudinary } from 'cloudinary'
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -14,6 +15,7 @@ cloudinary.config({
  * CREATE PRODUCT
  */
 export async function createProduct(formData: FormData) {
+    await requireAdmin()
     const supabase = await createClient()
     const payload = JSON.parse(formData.get("payload") as string)
     const files = formData.getAll("files") as File[]
@@ -119,6 +121,7 @@ export async function createProduct(formData: FormData) {
  * UPDATE PRODUCT
  */
 export async function updateProduct(productId: string, formData: FormData) {
+    await requireAdmin()
     const supabase = await createClient()
     const payload = JSON.parse(formData.get("payload") as string)
     const files = formData.getAll("files") as File[]
@@ -176,7 +179,7 @@ export async function updateProduct(productId: string, formData: FormData) {
 
         // 5. Sync Variants
         if (payload.has_variants) {
-            const idsToKeep = payload.variants.map((v: any) => v.id).filter(Boolean)
+            const idsToKeep = payload.variants.map((v: any) => v.id).filter((id: string) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
             await supabase.from("product_variants").delete().eq("product_id", productId).eq('is_default', false).not("id", "in", `(${idsToKeep.length > 0 ? idsToKeep.join(',') : '0'})`)
 
             for (const v of payload.variants) {

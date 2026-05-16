@@ -14,7 +14,7 @@ export function AddressList({ initialAddresses, userId }: { initialAddresses: an
     const supabase = createClient()
 
     const deleteAddress = async (id: string) => {
-        const { error } = await supabase.from("user_addresses").delete().eq("id", id)
+        const { error } = await supabase.from("user_addresses").delete().eq("id", id).eq("user_id", userId)
         if (error) return toast.error("Could not remove destination")
         setAddresses(addresses.filter(a => a.id !== id))
         toast.success("Removed from registry")

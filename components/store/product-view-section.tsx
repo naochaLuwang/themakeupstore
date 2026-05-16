@@ -180,17 +180,40 @@ import { useState, useMemo } from "react"
 import { ProductImages } from "./product-images"
 import VariantSelector from "./variant-selector"
 import { Button } from "@/components/ui/button"
-import { BellRing, Mail, Phone, User, Star, ShieldCheck } from "lucide-react"
+import { BellRing, Mail, Phone, User, Star, ShieldCheck, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
 import { motion } from "framer-motion"
 import { PromoDisplay } from "./promo-display"
+import VirtualTryOn from "./virtual-try-on"
 
-export function ProductViewSection({ product, promos = [] }: { product: any, promos?: any[] }) {
+export function ProductViewSection({ product, promos = [], enableTryOn = false }: { product: any, promos?: any[], enableTryOn?: boolean }) {
     const defaultVariant = product.variants?.find((v: any) => v.is_default) || product.variants?.[0];
+    
+    console.log('ProductViewSection - Product data:', {
+        hasVariants: !!product.variants,
+        variantsCount: product.variants?.length || 0,
+        hasImages: !!product.images,
+        imagesCount: product.images?.length || 0,
+        images: product.images,
+        thumbnail: product.thumbnail_url,
+        defaultVariant: !!defaultVariant
+    });
 
     const getVariantImages = (variant: any) => {
-        if (!variant) return [];
+        // If no variant (product without variants), use product-level images directly
+        if (!variant) {
+            console.log('No variant selected, using product images');
+            const images = product.images || [];
+            const productImages = images.length > 0
+                ? images.map((img: any) => ({ url: img.url, alt: img.alt || 'Product image' }))
+                : product.thumbnail_url
+                ? [{ url: product.thumbnail_url, alt: product.name || 'Product' }]
+                : [];
+            console.log('Product images to display:', productImages);
+            return productImages;
+        }
+
         let images: { url: string }[] = [];
         if (variant.variant_images && variant.variant_images.length > 0) {
             images = [...variant.variant_images]
@@ -209,6 +232,9 @@ export function ProductViewSection({ product, promos = [] }: { product: any, pro
     const [selectedVariant, setSelectedVariant] = useState(defaultVariant);
     const isOutOfStock = useMemo(() => (selectedVariant?.stock || 0) <= 0, [selectedVariant]);
     const displayImages = useMemo(() => getVariantImages(selectedVariant), [selectedVariant, product]);
+
+    const [tryOnOpen, setTryOnOpen] = useState(false);
+    const hasHexCode = selectedVariant?.hex_code && selectedVariant.hex_code !== '#cbd5e1';
 
     const handleVariantChange = (variant: any) => setSelectedVariant(variant);
 
@@ -273,6 +299,26 @@ export function ProductViewSection({ product, promos = [] }: { product: any, pro
                         onVariantChange={handleVariantChange}
                     />
                 </div>
+
+                {/* VIRTUAL TRY-ON BUTTON */}
+                {enableTryOn && hasHexCode && selectedVariant && (
+                    <div className="mb-4">
+                        <button
+                            onClick={() => setTryOnOpen(true)}
+                            className="w-full h-12 rounded-2xl border border-stone-200 text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 hover:border-stone-900 transition-all group"
+                        >
+                            <Sparkles className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-900" />
+                            <span>Try On — <span style={{ color: selectedVariant.hex_code }}>{selectedVariant.hex_code ? selectedVariant.title : "Live Preview"}</span></span>
+                        </button>
+                    </div>
+                )}
+
+                <VirtualTryOn
+                    open={tryOnOpen}
+                    onClose={() => setTryOnOpen(false)}
+                    variants={(product.variants || []).filter((v: any) => v.hex_code && v.hex_code !== '#cbd5e1').map((v: any) => ({ id: v.id, title: v.title, hex_code: v.hex_code }))}
+                    initialHexCode={selectedVariant?.hex_code || "#fc2779"}
+                />
 
                 {/* NOTIFY ME (MINIMALIST CARD) */}
                 {isOutOfStock && (

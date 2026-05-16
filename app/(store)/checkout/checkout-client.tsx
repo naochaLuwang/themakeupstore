@@ -162,7 +162,10 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
         const confirmDelete = window.confirm("Permanently remove this destination?")
         if (!confirmDelete) return
 
-        const { error } = await supabase.from("user_addresses").delete().eq("id", id)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return toast.error("Authentication required")
+
+        const { error } = await supabase.from("user_addresses").delete().eq("id", id).eq("user_id", user.id)
 
         if (error) {
             toast.error("Delete failed")

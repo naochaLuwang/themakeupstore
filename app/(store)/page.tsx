@@ -15,7 +15,7 @@ export default async function GatewayPage() {
       <main className="flex flex-col md:flex-row w-full h-screen shrink-0">
         <Panel href="/exclusive" label="Premium Curation" title="Exclusive Selection" bgImage="/hero-sub.png" />
         <Panel href="/essentials" label="Daily Rituals" title="Everyday Essentials" bgImage="/hero-essential.png" />
-        <Panel href="/wholesale" label="Professional Kits" title="The Makeup Store Wholesale" bgImage="/hero-wholesale.png" />
+        <Panel href="/skincare-accessories" label="Self Care Edit" title="Skin Care & Accessories" bgImage="/hero-skincare.png" />
       </main>
 
       {/* 2. REDESIGNED CURATED SELECTION: EDITORIAL GRID */}
@@ -48,88 +48,3 @@ function Panel({ href, label, title, bgImage }: { href: string; label: string; t
   );
 }
 
-
-// import Link from "next/link";
-// import { createClient } from "@/utils/supabase/server";
-
-// export default async function GatewayPage() {
-//   const supabase = await createClient();
-
-//   return (
-//     <div className="relative min-h-screen w-full flex flex-col font-display antialiased overflow-x-hidden bg-white">
-//       {/* - flex-col: Stacked on mobile
-//           - md:flex-row: Horizontal for 7", 10" Tablets, and Laptops
-//           - h-screen: Full viewport height
-//       */}
-//       <main className="flex flex-col md:flex-row w-full h-screen shrink-0 overflow-hidden">
-//         <Panel
-//           href="/exclusive"
-//           label="Premium Curation"
-//           title="Exclusive Selection"
-//           bgImage="/hero-sub.png"
-//         />
-//         <Panel
-//           href="/essentials"
-//           label="Daily Rituals"
-//           title="Everyday Essentials"
-//           bgImage="/hero-essential.png"
-//         />
-//         <Panel
-//           href="/wholesale"
-//           label="Professional Kits"
-//           title="The Makeup Store Wholesale"
-//           bgImage="/hero-wholesale.png"
-//         />
-//       </main>
-//     </div>
-//   );
-// }
-
-// function Panel({ href, label, title, bgImage }: { href: string; label: string; title: string; bgImage: string }) {
-//   return (
-//     <Link
-//       href={href}
-//       className="group relative flex-1 overflow-hidden 
-//                  h-1/3 md:h-full 
-//                  border-b md:border-b-0 md:border-r border-white/10 last:border-0"
-//     >
-//       {/* Background Image with dewy boutique gradient */}
-//       <div
-//         className="absolute inset-0 bg-cover bg-center transition-transform duration-[3s] ease-out group-hover:scale-110"
-//         style={{
-//           backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%), url('${bgImage}')`
-//         }}
-//       />
-
-//       {/* Content Container: Adjusted padding for Desktop/Laptop vs Mobile */}
-//       <div className="absolute inset-0 flex flex-col items-center justify-end pb-12 md:pb-24 lg:pb-32 px-6 md:px-8 lg:px-12 text-center z-10">
-
-//         {/* Label: Hidden by default on Laptop/Desktop, fades in on hover */}
-//         <span className="text-white/80 text-[8px] md:text-[9px] font-black uppercase tracking-[0.5em] mb-4 
-//                          md:translate-y-4 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 transition-all duration-700">
-//           {label}
-//         </span>
-
-//         {/* Fluid Serif Title
-//             - text-2xl for mobile
-//             - text-3xl for 7-10 inch tablets
-//             - text-5xl for Laptops
-//         */}
-//         <h2 className="text-white text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-serif italic mb-8 md:mb-12 tracking-tight leading-[1.1] max-w-[280px] md:max-w-none">
-//           {title}
-//         </h2>
-
-//         {/* Nykaa Signature Button */}
-//         <div className="h-10 md:h-14 px-8 md:px-10 lg:px-14 border border-white/40 text-white flex items-center justify-center 
-//                         text-[9px] md:text-[10px] lg:text-[11px] font-black uppercase tracking-[0.3em] backdrop-blur-md 
-//                         group-hover:bg-[#fc2779] group-hover:border-[#fc2779] group-hover:text-white 
-//                         active:scale-95 transition-all duration-500 shadow-xl shadow-black/20">
-//           Explore Collection
-//         </div>
-//       </div>
-
-//       {/* Decorative Nykaa Glow Overlay */}
-//       <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-t from-[#fc2779] to-transparent transition-opacity duration-1000 pointer-events-none" />
-//     </Link>
-//   );
-// }
