@@ -4,9 +4,10 @@ import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { Sparkles } from "lucide-react"
+import { Sparkles, ChevronRight } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { Breadcrumbs } from "@/components/store/breadcrumbs"
+import SkincareRoutineFinder from "@/components/store/skincare-routine-finder"
 
 interface Props {
     initialSubcategories: any[];
@@ -23,6 +24,7 @@ export default function SkincareAccessoriesClient({
     loadingMore,
     onLoadMore
 }: Props) {
+    const [routineOpen, setRoutineOpen] = React.useState(false)
     const sentinelRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
@@ -162,6 +164,26 @@ export default function SkincareAccessoriesClient({
                                 Our Philosophy
                             </p>
                         </motion.div>
+
+                        {/* Build Your Routine CTA */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            className="mt-12"
+                        >
+                            <button
+                                onClick={() => setRoutineOpen(true)}
+                                className="inline-flex items-center gap-3 px-8 h-14 rounded-full bg-stone-900 text-white text-[10px] font-black uppercase tracking-wider hover:bg-stone-800 active:scale-[0.97] transition-all shadow-xl"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Build Your Skincare Routine
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                            <p className="text-[9px] text-stone-400 mt-3 tracking-wide">
+                                Answer a few questions and we&apos;ll curate a routine tailored to your skin.
+                            </p>
+                        </motion.div>
                     </div>
                 </section>
 
@@ -225,6 +247,11 @@ export default function SkincareAccessoriesClient({
                     </div>
                 </section>
             </main>
+
+            <SkincareRoutineFinder
+                open={routineOpen}
+                onClose={() => setRoutineOpen(false)}
+            />
         </div>
     );
 }

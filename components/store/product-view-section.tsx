@@ -180,14 +180,15 @@ import { useState, useMemo } from "react"
 import { ProductImages } from "./product-images"
 import VariantSelector from "./variant-selector"
 import { Button } from "@/components/ui/button"
-import { BellRing, Mail, Phone, User, Star, ShieldCheck, Sparkles, ScanLine } from "lucide-react"
+import { BellRing, Mail, Phone, User, Star, ShieldCheck, Sparkles, ScanLine, Palette } from "lucide-react"
 import { toast } from "sonner"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
 import { motion } from "framer-motion"
 import { PromoDisplay } from "./promo-display"
 import VirtualTryOn from "./virtual-try-on"
+import FoundationShadeFinder from "./foundation-shade-finder"
 
-export function ProductViewSection({ product, promos = [], enableTryOn = false }: { product: any, promos?: any[], enableTryOn?: boolean }) {
+export function ProductViewSection({ product, promos = [], enableTryOn = false, enableShadeFinder = false }: { product: any, promos?: any[], enableTryOn?: boolean, enableShadeFinder?: boolean }) {
     const defaultVariant = product.variants?.find((v: any) => v.is_default) || product.variants?.[0];
     
     console.log('ProductViewSection - Product data:', {
@@ -234,6 +235,7 @@ export function ProductViewSection({ product, promos = [], enableTryOn = false }
     const displayImages = useMemo(() => getVariantImages(selectedVariant), [selectedVariant, product]);
 
     const [tryOnOpen, setTryOnOpen] = useState(false);
+    const [shadeFinderOpen, setShadeFinderOpen] = useState(false);
     const hasHexCode = selectedVariant?.hex_code && selectedVariant.hex_code !== '#cbd5e1';
 
     const handleVariantChange = (variant: any) => setSelectedVariant(variant);
@@ -277,6 +279,24 @@ export function ProductViewSection({ product, promos = [], enableTryOn = false }
                         <span className="text-[7px] text-white/90">Try On</span>
                     </button>
                 )}
+
+                {/* SHADE FINDER BUTTON — overlaid on product image */}
+                {enableShadeFinder && (
+                    <button
+                        onClick={() => setShadeFinderOpen(true)}
+                        className="absolute top-4 right-4 z-10 w-14 h-14 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/30 text-[10px] font-black uppercase tracking-wider flex flex-col items-center justify-center gap-0.5 shadow-lg hover:bg-black/60 hover:scale-105 active:scale-95 transition-all group"
+                        style={{ right: enableTryOn ? 'calc(4rem + 8px)' : '1rem' }}
+                    >
+                        <Palette className="w-5 h-5 text-white" />
+                        <span className="text-[7px] text-white/90">Match</span>
+                    </button>
+                )}
+
+                <FoundationShadeFinder
+                    open={shadeFinderOpen}
+                    onClose={() => setShadeFinderOpen(false)}
+                    variants={(product.variants || []).filter((v: any) => v.hex_code && v.hex_code !== '#cbd5e1').map((v: any) => ({ id: v.id, title: v.title, hex_code: v.hex_code }))}
+                />
             </div>
 
             {/* RIGHT: CLEAN CONTENT */}

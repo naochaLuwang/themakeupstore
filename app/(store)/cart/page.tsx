@@ -513,7 +513,7 @@ export default function CartPage() {
                                 )}
                                 <div className="flex justify-between border-b border-slate-50 pb-6">
                                     <span className="text-slate-400 uppercase tracking-wider">Delivery</span>
-                                    <span className="text-emerald-600 text-[10px] uppercase font-black tracking-[0.1em]">Free</span>
+                                    <span className="text-slate-400 text-[10px] uppercase font-black tracking-[0.1em]">Calculated at checkout</span>
                                 </div>
                                 <div className="pt-4 flex justify-between items-center">
                                     <span className="text-base font-black uppercase tracking-tight text-slate-900">Payable</span>

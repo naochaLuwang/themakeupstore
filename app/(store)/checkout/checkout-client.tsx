@@ -220,7 +220,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 id: appliedPromo.id
             } : undefined
 
-            const res = await placeOrder(selectedAddress, items, { total, price: shippingPrice, methodName: shippingLabel }, promoDetails)
+            const res = await placeOrder(selectedAddress, items, { total, price: shippingPrice, methodName: shippingLabel, shipping_method_id: selectedAddress.shipping_methods?.id }, promoDetails)
             if (res.success) {
                 clearCart()
                 router.push(`/checkout/success?orderId=${res.orderId}`)

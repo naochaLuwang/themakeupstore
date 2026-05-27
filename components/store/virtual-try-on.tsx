@@ -174,12 +174,27 @@ export default function VirtualTryOn({ open, onClose, variants, initialHexCode }
                     }
                     ctx.closePath()
 
-                    ctx.filter = 'blur(0.5px)'
-                    ctx.fillStyle = hexToRgba(selectedHex, 0.45)
+                    ctx.filter = 'blur(0.8px)'
+
+                    // Pass 1: multiply blend for natural lipstick look
+                    ctx.save()
+                    ctx.globalCompositeOperation = 'multiply'
+                    ctx.fillStyle = hexToRgba(selectedHex, 0.7)
                     ctx.fill()
-                    ctx.strokeStyle = hexToRgba(selectedHex, 0.2)
+                    ctx.restore()
+
+                    // Pass 2: subtle satin sheen on top
+                    ctx.save()
+                    ctx.globalCompositeOperation = 'source-over'
+                    ctx.fillStyle = hexToRgba(selectedHex, 0.15)
+                    ctx.fill()
+                    ctx.restore()
+
+                    // Soft outline
+                    ctx.strokeStyle = hexToRgba(selectedHex, 0.15)
                     ctx.lineWidth = 0.5
                     ctx.stroke()
+
                     ctx.filter = 'none'
                 }
             }

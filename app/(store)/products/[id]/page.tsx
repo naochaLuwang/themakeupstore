@@ -99,6 +99,13 @@ product.reviews = reviews || []
         lipSlugs.some((slug) => cat.name?.toLowerCase().includes(slug.replace('-', '')))
     )
 
+    // Check if product is foundation-related (for shade finder)
+    const shadeSlugs = ['foundation', 'concealer', 'compact', 'face-primer', 'loose-powder', 'powder']
+    const enableShadeFinder = productCategories.some((cat: any) =>
+        shadeSlugs.includes(cat.slug?.toLowerCase()) ||
+        shadeSlugs.some((slug) => cat.name?.toLowerCase().includes(slug.replace('-', '')))
+    )
+
     // 3. Fetch Promos for this product
     const categoryIds = product.product_categories?.map((pc: any) => pc.categories.id) || []
     const promos = await getPromosForProduct(product.id, categoryIds)
@@ -131,7 +138,7 @@ breadcrumbItems.push({ label: product.name, href: '/products/' + product.id })
             <Breadcrumbs items={breadcrumbItems} />
 
             {/* Main Product Section */}
-            <ProductViewSection product={product} promos={promos} enableTryOn={enableTryOn} />
+            <ProductViewSection product={product} promos={promos} enableTryOn={enableTryOn} enableShadeFinder={enableShadeFinder} />
 
             {/* Related Products Section */}
             {/* {relatedProducts.length > 0 && (
