@@ -321,11 +321,12 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
             throw new Error("Order is already cancelled")
         }
 
-        // 5. UPDATE: Set status to cancelled in the database
+        // 5. UPDATE: Set status to cancelled + record who cancelled
         const { error: updateErr } = await supabase
             .from('orders')
             .update({
                 status: 'cancelled',
+                cancelled_by: isAdmin ? 'admin' : 'user',
                 updated_at: new Date().toISOString()
             })
             .eq('id', orderId)

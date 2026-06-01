@@ -119,6 +119,7 @@ CREATE TABLE public.orders (
   promo_discount_amount numeric DEFAULT 0,
   additional_charges numeric DEFAULT 0,
   additional_charges_label text DEFAULT 'Extra Charges'::text,
+  cancelled_by text CHECK (cancelled_by = ANY (ARRAY['user'::text, 'admin'::text])),
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_shipping_method_id_fkey FOREIGN KEY (shipping_method_id) REFERENCES public.shipping_methods(id),
   CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)

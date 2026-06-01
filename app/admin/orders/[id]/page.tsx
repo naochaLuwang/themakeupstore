@@ -216,6 +216,12 @@ export default function OrderInvoicePage() {
                     )}
                 </div>
 
+                {order.status === 'cancelled' && order.cancelled_by && (
+                    <div className={`mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-100 bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest`}>
+                        <AlertCircle className="w-3 h-3" /> Cancelled by {order.cancelled_by === 'admin' ? 'Store' : 'Customer'}
+                    </div>
+                )}
+
                 {/* ITEMS LIST */}
                 <div className="space-y-4 mb-6">
                     {!isThermal && (

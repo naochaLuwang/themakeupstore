@@ -76,6 +76,12 @@ export default async function OrderDetailsPage(props: { params: tParams }) {
                                 }`}>
                                 {order.status}
                             </span>
+                            {isCancelled && order.cancelled_by && (
+                                <span className={`text-[8px] px-2 py-0.5 font-bold uppercase tracking-[0.2em] rounded-full ${order.cancelled_by === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                    {order.cancelled_by === 'admin' ? 'By Store' : 'By You'}
+                                </span>
+                            )}
                         </div>
                         <div className="flex items-center gap-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                             <span className="flex items-center gap-1.5 underline decoration-slate-200 underline-offset-4">#{id.slice(0, 8)}</span>
