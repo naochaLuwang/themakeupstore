@@ -332,6 +332,10 @@ export function AddressForm({
                 if (!selectedMethodId && zones[0].shipping_methods?.length > 0) {
                     setSelectedMethodId(zones[0].shipping_methods[0].id)
                 }
+            } else {
+                setAreaName('')
+                setShippingMethods([])
+                setSelectedMethodId(null)
             }
             setPincodeLoading(false)
         }
@@ -445,7 +449,7 @@ export function AddressForm({
 
                     <div className="flex gap-2">
                         <Button variant="ghost" onClick={() => setStep(1)} className="h-14 w-14 rounded-2xl"><ArrowLeft className="w-4 h-4" /></Button>
-                        <Button disabled={!selectedMethodId || pincode.length !== 6} onClick={() => setStep(3)} className="flex-1 h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest">
+                        <Button disabled={!selectedMethodId || pincode.length !== 6 || shippingMethods.length === 0} onClick={() => setStep(3)} className="flex-1 h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest">
                             Continue
                         </Button>
                     </div>

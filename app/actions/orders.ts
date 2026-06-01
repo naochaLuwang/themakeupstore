@@ -80,7 +80,7 @@ export async function placeOrder(
             }
         }
 
-        // 3. RE-VERIFY SHIPPING PRICE
+        // 3. RE-VERIFY SHIPPING PRICE (with free shipping threshold)
         let verifiedShippingPrice = 0;
         if (shippingDetails.shipping_method_id) {
             const { data: method } = await supabase
@@ -88,7 +88,10 @@ export async function placeOrder(
                 .select('price')
                 .eq('id', shippingDetails.shipping_method_id)
                 .single()
-            if (method) verifiedShippingPrice = Number(method.price)
+            if (method) {
+                const FREE_SHIPPING_THRESHOLD = 3000;
+                verifiedShippingPrice = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : Number(method.price);
+            }
         }
 
         // 4. FINAL TOTAL CALCULATION
