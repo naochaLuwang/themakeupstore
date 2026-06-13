@@ -100,7 +100,7 @@ export default async function RootLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <html lang="en" className="no-scrollbar">
+    <html lang="en" className="no-scrollbar" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${myBrandFont.variable} antialiased`}
       >

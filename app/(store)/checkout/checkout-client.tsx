@@ -126,7 +126,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const ineligiblePromos = allPromos.filter((p: any) => !checkPromoEligibility(p, items).isEligible)
 
     return (
-        <div className="min-h-screen bg-gray-50/80">
+        <div className="min-h-screen bg-gray-50/80 pb-24">
             {/* Spacer */}
             <div className="h-0" />
 
@@ -309,7 +309,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
             </div>
 
             {/* Bottom Action Bar */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-3 flex items-center gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex items-center gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-50">
                 <div>
                     <p className="text-[10px] font-black tracking-wider text-gray-400 uppercase">Total</p>
                     <p className="text-xl font-extrabold text-gray-900">₹{Math.round(total)}</p>

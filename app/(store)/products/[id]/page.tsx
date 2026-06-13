@@ -9,13 +9,15 @@ import { ProductCard } from "@/components/store/product-card"
 import Link from "next/link"
 import {
     ArrowLeft, Heart, ShoppingBag, Star, Share2, Store, MapPin,
-    ShieldCheck, RotateCcw, ChevronDown, ChevronUp, Check, X, Plus, Minus, Bell,
+    ShieldCheck, RotateCcw, ChevronDown, ChevronUp, ChevronRight, Check, X, Plus, Minus, Bell,
     ScanLine, Palette
 } from "lucide-react"
 import { toast } from "sonner"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
 import VirtualTryOn from "@/components/store/virtual-try-on"
 import FoundationShadeFinder from "@/components/store/foundation-shade-finder"
+import { ReviewModal } from "@/components/store/review-modal"
+import { ReviewCard } from "@/components/store/review-card"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
 
@@ -410,6 +412,44 @@ export default function ProductDetailPage() {
         setDeliveryChecking(false)
     }
 
+    const getDeliveryLine = () => {
+        if (!deliveryLabel || !pincode) return ""
+        const opts: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" }
+        if (/FRI\/SAT/i.test(deliveryLabel)) {
+            const d = new Date()
+            const currentDay = d.getDay()
+            let diff = 6 - currentDay
+            if (diff <= 0) diff += 7
+            d.setDate(d.getDate() + diff)
+            return `Delivery by ${d.toLocaleDateString("en-IN", opts)}`
+        }
+        const match = deliveryLabel.match(/(\d+)\s*-\s*\d+/)
+        if (match) {
+            const days = parseInt(match[1], 10)
+            const date = new Date()
+            date.setDate(date.getDate() + days)
+            return `Delivery by ${date.toLocaleDateString("en-IN", opts)}`
+        }
+        return `Delivery by ${deliveryLabel}`
+    }
+
+    useEffect(() => {
+        if (!user?.id) return
+        ;(async () => {
+            const { data: addr } = await supabase
+                .from("user_addresses")
+                .select("pincode")
+                .eq("user_id", user.id)
+                .order("is_default", { ascending: false })
+                .limit(1)
+                .maybeSingle()
+            if (addr?.pincode) {
+                setPincode(addr.pincode)
+                checkDelivery(addr.pincode)
+            }
+        })()
+    }, [user?.id])
+
     if (loading) {
         return (
             <div className="min-h-screen bg-white animate-pulse">
@@ -656,9 +696,9 @@ export default function ProductDetailPage() {
                 ) : deliveryStatus === "available" ? (
                     <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-green-500 shrink-0" />
-                        <span className="flex-1 text-xs text-green-600 font-semibold">
-                            Delivery by {deliveryLabel}
-                        </span>
+<span className="flex-1 text-xs text-green-600 font-semibold">
+    {getDeliveryLine()}
+</span>
                         <button onClick={() => setShowPincodeInput(true)} className="text-[#fc2779] text-xs font-bold">Change</button>
                     </div>
                 ) : (
@@ -701,65 +741,56 @@ export default function ProductDetailPage() {
                 </div>
             )}
 
-            {/* Reviews Section - simplified for mobile */}
+            {/* Reviews Section */}
             <div className="mx-4 my-4 border border-gray-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-900">Customer Reviews</h3>
                     <button onClick={() => setReviewsModalVisible(true)} className="text-[#fc2779] text-xs font-semibold">View All</button>
                 </div>
-                {totalReviews > 0 ? (
-                    <>
-                        <div className="flex items-center gap-3">
-                            <div className="text-center min-w-[60px]">
-                                <span className="text-2xl font-black text-gray-900">{averageRating.toFixed(1)}</span>
-                                <p className="text-[10px] text-gray-400">{totalReviews} {totalReviews === 1 ? "Review" : "Reviews"}</p>
-                            </div>
-                            <div className="flex-1">
-                                <div className="flex items-center gap-1">
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                        <Star
-                                            key={s}
-                                            className={`w-4 h-4 ${s <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setReviewsModalVisible(true)}
-                                className="border border-[#fc2779] rounded-lg px-3 py-2 flex items-center gap-1"
-                            >
-                                <Star className="w-3.5 h-3.5 text-[#fc2779]" />
-                                <span className="text-[11px] font-bold text-[#fc2779]">Write</span>
-                            </button>
+
+                <div className="flex items-center gap-3">
+                    <div className="text-center min-w-[60px]">
+                        <span className="text-2xl font-black text-gray-900">{averageRating > 0 ? averageRating.toFixed(1) : "-"}</span>
+                        <p className="text-[10px] text-gray-400">{totalReviews} {totalReviews === 1 ? "Review" : "Reviews"}</p>
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                    key={s}
+                                    className={`w-4 h-4 ${s <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
+                                />
+                            ))}
                         </div>
-                        {product.product_reviews?.slice(0, 2).map((r: any) => (
-                            <div key={r.id} className="mt-4 pt-4 border-t border-gray-50">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="flex items-center gap-0.5">
-                                        {[1, 2, 3, 4, 5].map((s) => (
-                                            <Star
-                                                key={s}
-                                                className={`w-3 h-3 ${s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
-                                            />
-                                        ))}
-                                    </div>
-                                    <span className="text-[11px] font-bold text-gray-700">{r.user_name}</span>
-                                </div>
-                                {r.title && <p className="text-xs font-semibold text-gray-800 mb-0.5">{r.title}</p>}
-                                {r.comment && <p className="text-xs text-gray-500 leading-relaxed">{r.comment}</p>}
-                            </div>
+                    </div>
+                    <button
+                        onClick={() => setReviewsModalVisible(true)}
+                        className="border border-[#fc2779] rounded-lg px-3 py-2 flex items-center gap-1 shrink-0"
+                    >
+                        <Star className="w-3.5 h-3.5 text-[#fc2779]" />
+                        <span className="text-[11px] font-bold text-[#fc2779]">Write</span>
+                    </button>
+                </div>
+
+                {product.product_reviews && product.product_reviews.length > 0 && (
+                    <div className="mt-4">
+                        {product.product_reviews.slice(0, 2).map((r: any) => (
+                            <ReviewCard key={r.id} review={r} />
                         ))}
-                        {product.product_reviews?.length > 2 && (
+                        {product.product_reviews.length > 2 && (
                             <button
                                 onClick={() => setReviewsModalVisible(true)}
-                                className="w-full text-center py-3 text-[#fc2779] text-xs font-semibold mt-2"
+                                className="w-full text-center py-3 text-[#fc2779] text-xs font-semibold flex items-center justify-center gap-1"
                             >
                                 View All {totalReviews} Reviews
+                                <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                         )}
-                    </>
-                ) : (
-                    <button onClick={() => setReviewsModalVisible(true)} className="w-full text-center py-4 text-xs text-gray-400">
+                    </div>
+                )}
+
+                {(!product.product_reviews || product.product_reviews.length === 0) && (
+                    <button onClick={() => setReviewsModalVisible(true)} className="w-full text-center py-4 text-xs text-gray-400 mt-2">
                         Be the first to review this product
                     </button>
                 )}
@@ -1010,9 +1041,9 @@ export default function ProductDetailPage() {
                                 ) : deliveryStatus === "available" ? (
                                     <div className="flex items-center gap-2">
                                         <MapPin className="w-4 h-4 text-green-500 shrink-0" />
-                                        <span className="flex-1 text-xs text-green-600 font-semibold">
-                                            Delivery by {deliveryLabel}
-                                        </span>
+<span className="flex-1 text-xs text-green-600 font-semibold">
+    {getDeliveryLine()}
+</span>
                                         <button onClick={() => setShowPincodeInput(true)} className="text-[#fc2779] text-xs font-bold">Change</button>
                                     </div>
                                 ) : (
@@ -1088,55 +1119,45 @@ export default function ProductDetailPage() {
                 {product?.product_reviews && (
                     <div className="max-w-7xl mx-auto px-8 py-10 border-t border-gray-100 mt-10">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Reviews</h3>
-                        {totalReviews > 0 ? (
-                            <>
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="text-center">
-                                        <span className="text-3xl font-black text-gray-900">{averageRating.toFixed(1)}</span>
-                                        <p className="text-sm text-gray-400">{totalReviews} {totalReviews === 1 ? "Review" : "Reviews"}</p>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        {[1, 2, 3, 4, 5].map((s) => (
-                                            <Star
-                                                key={s}
-                                                className={`w-5 h-5 ${s <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
-                                            />
-                                        ))}
-                                    </div>
-                                    <button
-                                        onClick={() => setReviewsModalVisible(true)}
-                                        className="ml-auto border border-[#fc2779] rounded-lg px-4 py-2 flex items-center gap-1.5 hover:bg-[#fc2779]/5 transition-colors"
-                                    >
-                                        <Star className="w-4 h-4 text-[#fc2779]" />
-                                        <span className="text-sm font-bold text-[#fc2779]">Write a Review</span>
-                                    </button>
-                                </div>
-                                {product.product_reviews.slice(0, 3).map((r: any) => (
-                                    <div key={r.id} className="py-4 border-t border-gray-50">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className="flex items-center gap-0.5">
-                                                {[1, 2, 3, 4, 5].map((s) => (
-                                                    <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
-                                                ))}
-                                            </div>
-                                            <span className="text-sm font-bold text-gray-700">{r.user_name}</span>
-                                        </div>
-                                        {r.title && <p className="text-sm font-semibold text-gray-800 mb-0.5">{r.title}</p>}
-                                        {r.comment && <p className="text-sm text-gray-500 leading-relaxed">{r.comment}</p>}
-                                    </div>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="text-center">
+                                <span className="text-3xl font-black text-gray-900">{averageRating > 0 ? averageRating.toFixed(1) : "-"}</span>
+                                <p className="text-sm text-gray-400">{totalReviews} {totalReviews === 1 ? "Review" : "Reviews"}</p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                        key={s}
+                                        className={`w-5 h-5 ${s <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
+                                    />
                                 ))}
-                                {product.product_reviews.length > 3 && (
-                                    <button
-                                        onClick={() => setReviewsModalVisible(true)}
-                                        className="text-[#fc2779] text-sm font-semibold mt-2 hover:underline"
-                                    >
-                                        View All {totalReviews} Reviews
-                                    </button>
-                                )}
-                            </>
+                            </div>
+                            <button
+                                onClick={() => setReviewsModalVisible(true)}
+                                className="ml-auto border border-[#fc2779] rounded-lg px-4 py-2 flex items-center gap-1.5 hover:bg-[#fc2779]/5 transition-colors"
+                            >
+                                <Star className="w-4 h-4 text-[#fc2779]" />
+                                <span className="text-sm font-bold text-[#fc2779]">Write a Review</span>
+                            </button>
+                        </div>
+                        {product.product_reviews.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-4">
+                                {product.product_reviews.slice(0, 4).map((r: any) => (
+                                    <ReviewCard key={r.id} review={r} />
+                                ))}
+                            </div>
                         ) : (
                             <button onClick={() => setReviewsModalVisible(true)} className="text-sm text-gray-400 hover:text-gray-600">
                                 Be the first to review this product
+                            </button>
+                        )}
+                        {product.product_reviews.length > 4 && (
+                            <button
+                                onClick={() => setReviewsModalVisible(true)}
+                                className="text-[#fc2779] text-sm font-semibold mt-4 hover:underline flex items-center gap-1"
+                            >
+                                View All {totalReviews} Reviews
+                                <ChevronRight className="w-4 h-4" />
                             </button>
                         )}
                     </div>
@@ -1248,6 +1269,13 @@ export default function ProductDetailPage() {
                 open={shadeFinderOpen}
                 onClose={() => setShadeFinderOpen(false)}
                 variants={(product?.product_variants || []).filter((v: any) => v.hex_code && v.hex_code !== "#cbd5e1").map((v: any) => ({ id: v.id, title: v.title, hex_code: v.hex_code }))}
+            />
+
+            {/* Review Modal */}
+            <ReviewModal
+                visible={reviewsModalVisible}
+                productId={product.id}
+                onClose={() => setReviewsModalVisible(false)}
             />
 
             {/* Notify Me Modal */}

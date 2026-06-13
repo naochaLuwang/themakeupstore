@@ -93,10 +93,10 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-1">
-                        <h1 className="text-3xl font-daciana text-slate-950 tracking-tighter leading-none">
+                        <h1 className="text-4xl sm:text-3xl font-daciana text-slate-950 tracking-tighter leading-none">
                             THE MAKEUP STORE
                         </h1>
-                        <p className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-400">
+                        <p className="text-[15px] sm:text-[12px] font-black uppercase tracking-[0.4em] text-slate-400">
                             WANGKHEI
                         </p>
                     </div>
