@@ -593,6 +593,107 @@ export async function updateOrderPOS(
     return { success: true };
 }
 
+export async function removeOrderItem(itemId: string, orderId: string) {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    try {
+        const { data: item, error: fetchErr } = await supabase
+            .from('order_items')
+            .select('product_variant_id, quantity')
+            .eq('id', itemId)
+            .single()
+
+        if (fetchErr || !item) throw new Error("Order item not found")
+
+        if (item.product_variant_id) {
+            const { error: stockErr } = await supabase.rpc('increment_stock', {
+                row_id: item.product_variant_id,
+                amount: item.quantity
+            })
+            if (stockErr) console.warn("Stock restore failed:", stockErr)
+        }
+
+        const { error: deleteErr, data: deleted } = await supabase
+            .from('order_items')
+            .delete()
+            .eq('id', itemId)
+            .select()
+
+        if (deleteErr) throw new Error("Failed to remove item: " + deleteErr.message)
+        if (!deleted || deleted.length === 0) throw new Error("Item not deleted — RLS policy may be blocking the operation")
+
+        const { data: remaining } = await supabase
+            .from('order_items')
+            .select('*')
+            .eq('order_id', orderId)
+
+        const { data: order } = await supabase
+            .from('orders')
+            .select('shipping_price, promo_discount_amount, additional_charges')
+            .eq('id', orderId)
+            .single()
+
+        const itemsTotal = (remaining || []).reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
+        const finalTotal = itemsTotal - Number(order?.promo_discount_amount || 0) + Number(order?.additional_charges || 0) + Number(order?.shipping_price || 0)
+
+        const { error: updateErr } = await supabase
+            .from('orders')
+            .update({ total: finalTotal, updated_at: new Date().toISOString() })
+            .eq('id', orderId)
+
+        if (updateErr) throw new Error("Failed to update total")
+
+        revalidatePath('/admin/orders')
+        revalidatePath(`/admin/orders/${orderId}`)
+
+        return {
+            success: true,
+            order_items: remaining || [],
+            total: finalTotal
+        }
+    } catch (error: any) {
+        return { success: false, message: error.message }
+    }
+}
+
+export async function updateOrderDiscount(orderId: string, discountAmount: number, discountRemark: string) {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    try {
+        const { data: order } = await supabase
+            .from('orders')
+            .select('shipping_price, additional_charges')
+            .eq('id', orderId)
+            .single()
+
+        const { data: items } = await supabase
+            .from('order_items')
+            .select('unit_price, quantity')
+            .eq('order_id', orderId)
+
+        const itemsTotal = (items || []).reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
+        const finalTotal = itemsTotal - discountAmount + Number(order?.additional_charges || 0) + Number(order?.shipping_price || 0)
+
+        await supabase
+            .from('orders')
+            .update({
+                promo_discount_amount: discountAmount,
+                discount_remark: discountRemark || null,
+                total: finalTotal,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', orderId)
+
+        revalidatePath('/admin/orders')
+        revalidatePath(`/admin/orders/${orderId}`)
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, message: error.message }
+    }
+}
+
 export async function updateOrderStatus(orderId: string, status: string) {
     await requireAdmin()
     const supabase = await createClient()
@@ -609,12 +710,18 @@ export async function updateOrderStatus(orderId: string, status: string) {
         const oldStatus = (order.status || "").toLowerCase()
         const newStatus = status.toLowerCase()
 
+        const updatePayload: any = {
+            status: newStatus,
+            updated_at: new Date().toISOString()
+        }
+
+        if (newStatus === 'delivered' && oldStatus !== 'delivered') {
+            updatePayload.delivered_at = new Date().toISOString()
+        }
+
         const { error: updateErr } = await supabase
             .from('orders')
-            .update({ 
-                status: newStatus,
-                updated_at: new Date().toISOString()
-            })
+            .update(updatePayload)
             .eq('id', orderId)
 
         if (updateErr) throw updateErr

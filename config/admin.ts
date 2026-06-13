@@ -13,6 +13,7 @@ import {
     BarChart3,  // New for Reports
     DollarSign, // For Revenue Report
     TrendingUp, // For Sales Report
+    RotateCcw,
     BookOpen,
     ShoppingCart,
     Activity,
@@ -20,7 +21,8 @@ import {
     Receipt,
     Archive,
     History,
-    Store
+    Store,
+    Image
 } from "lucide-react"
 
 export const adminConfig = {
@@ -36,9 +38,11 @@ export const adminConfig = {
 
         // --- Added Broadcast Section ---
         { title: "Broadcast", href: "/admin/broadcast", icon: Radio },
+        { title: "Hero Banners", href: "/admin/hero-banners", icon: Image },
 
         { title: "Messages", href: "/admin/messages", icon: Mail },
         { title: "Reviews", href: "/admin/reviews", icon: Star },
+        { title: "Return Requests", href: "/admin/return-requests", icon: RotateCcw },
         { title: "Back in Stock Request", href: "/admin/inventory/demand", icon: TrendingUp },
 
         // --- Additional Admin Links ---

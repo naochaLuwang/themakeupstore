@@ -297,8 +297,8 @@ export default function AdminOrdersPage() {
                                                 asChild
                                                 className="rounded-lg h-9 px-3 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white"
                                             >
-                                                <Link href={`/admin/orders/${order.id}/edit`}>
-                                                    Edit Items
+                                                <Link href={`/admin/orders/${order.id}`}>
+                                                    Edit
                                                 </Link>
                                             </Button>
                                         )}

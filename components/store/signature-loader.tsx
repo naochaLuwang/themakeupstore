@@ -8,7 +8,7 @@ interface Props {
     text?: string;
 }
 
-export function SignatureLoader({ loading, text = "The Makeup Store" }: Props) {
+export function SignatureLoader({ loading }: Props) {
     return (
         <AnimatePresence mode="wait">
             {loading && (
@@ -19,18 +19,24 @@ export function SignatureLoader({ loading, text = "The Makeup Store" }: Props) {
                     transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
                     className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center"
                 >
-                    <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-black mb-4">
-                        {text}
-                    </h2>
-                    <div className="w-24 overflow-hidden">
-                        <motion.div
-                            animate={{ x: ["-100%", "100%"] }}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                            className="h-[1.5px] bg-black w-full"
-                        />
-                    </div>
+                    <span
+                        className="text-[80px] font-daciana leading-none select-none bg-clip-text text-transparent"
+                        style={{
+                            backgroundImage: "linear-gradient(90deg, #000 0%, #000 30%, #888 50%, #000 70%, #000 100%)",
+                            backgroundSize: "200% 100%",
+                            animation: "shimmer 2s ease-in-out infinite",
+                        }}
+                    >
+                        M
+                    </span>
+                    <style>{`
+                        @keyframes shimmer {
+                            0% { background-position: 200% 0; }
+                            100% { background-position: -200% 0; }
+                        }
+                    `}</style>
                 </motion.div>
             )}
         </AnimatePresence>
-    );
+    )
 }

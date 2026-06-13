@@ -1,30 +1,53 @@
-
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
+import { HomeMobile } from "./home-mobile";
 
+const BRAND_BLACKLIST = [
+  "Foundation", "Concealer", "Face Primer", "Lipstick", "Lip Gloss", "Lip Liner",
+  "Liquid Lipstick", "Blush", "Contour", "Highlighter", "Loose Powder", "Compact",
+  "Eye Brow Enhancers", "Eyeliner", "Mascara", "Eye shadow", "Setting Spray",
+  "Makeup Remover", "Skincare", "Fragrance", "Tools & Brushes", "Kajal", "Lip Balm",
+  "Lip Tint", "Cleansers & Toners", "Moisturisers", "Serum", "Sunscreen",
+  "False Eyelashes", "Makeup Brushes", "Makeup remover & wipes", "Sheet Mask",
+  "Sponges & Applicators",
+]
 
 export default async function GatewayPage() {
   const supabase = await createClient();
 
+  const [{ data: bannerData }, { data: catData }, { data: prodData }] = await Promise.all([
+    supabase.from("hero_banners").select("*").eq("is_active", true).order("position").limit(1).maybeSingle(),
+    supabase.from("categories").select("id, name, slug, image_url, parent:parent_id(slug)").not("parent_id", "is", null).order("name"),
+    supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").order("created_at", { ascending: false }).limit(12),
+  ]);
 
+  const products = (prodData || []).map(p => ({
+    ...p,
+    outOfStock: p.has_variants && p.product_variants?.length > 0
+      ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
+      : false,
+  })).sort((a, b) => (a.outOfStock === b.outOfStock ? 0 : a.outOfStock ? 1 : -1));
+
+  const categories = (catData || []).filter((b: any) =>
+    !BRAND_BLACKLIST.some(name => b.name.toLowerCase() === name.toLowerCase())
+  )
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col font-display antialiased overflow-x-hidden bg-white">
-
-      {/* 1. MAIN SPLIT PANELS (Remains for high-impact entry) */}
-      <main className="flex flex-col md:flex-row w-full h-screen shrink-0">
+    <>
+      {/* DESKTOP: 3 split panels (md+) */}
+      <main className="hidden md:flex flex-row w-full h-screen shrink-0">
         <Panel href="/exclusive" label="Premium Curation" title="Exclusive Selection" bgImage="/hero-sub.png" />
         <Panel href="/essentials" label="Daily Rituals" title="Everyday Essentials" bgImage="/hero-essential.png" />
         <Panel href="/skincare-accessories" label="Self Care Edit" title="Skin Care & Accessories" bgImage="/hero-skincare.png" />
       </main>
 
-      {/* 2. REDESIGNED CURATED SELECTION: EDITORIAL GRID */}
-
-    </div>
+      {/* MOBILE: native-style scrollable feed */}
+      <div className="md:hidden">
+        <HomeMobile banner={bannerData} categories={categories} products={products} />
+      </div>
+    </>
   );
 }
-
-
 
 function Panel({ href, label, title, bgImage }: { href: string; label: string; title: string; bgImage: string }) {
   return (
@@ -47,4 +70,3 @@ function Panel({ href, label, title, bgImage }: { href: string; label: string; t
     </Link>
   );
 }
-

@@ -24,7 +24,7 @@ export const OrderPOSSchema = z.object({
         quantity: z.number().int().positive(),
         unit_price: z.number().nonnegative(),
         mrp: z.number().nonnegative(),
-        sku: z.string().optional(),
+        sku: z.string().optional().nullable(),
     })),
     globalDiscount: z.number().nonnegative().default(0),
     additionalCharges: z.number().nonnegative().default(0),

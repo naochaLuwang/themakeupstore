@@ -134,7 +134,7 @@ export default function EssentialsClient({
                         <span className="text-[10px] font-black text-[#fc2779] uppercase">{allProducts.length} Showing</span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 border-t border-l border-pink-50 bg-white">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 bg-white">
                         {allProducts.map((product) => (
                             <motion.div
                                 key={product.id}

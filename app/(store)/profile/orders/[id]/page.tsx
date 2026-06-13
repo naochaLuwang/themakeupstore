@@ -197,10 +197,20 @@ export default async function OrderDetailsPage(props: { params: tParams }) {
                                     <span>₹{subtotal.toLocaleString()}</span>
                                 </div>
 
-                                {order.promo_code && (
-                                    <div className="flex justify-between text-emerald-400">
-                                        <span className="flex items-center gap-2"><Ticket className="w-3.5 h-3.5" /> {order.promo_code}</span>
-                                        <span>- ₹{discount.toLocaleString()}</span>
+                                {discount > 0 && (
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between text-emerald-400">
+                                            <span className="flex items-center gap-2">
+                                                <Ticket className="w-3.5 h-3.5" />
+                                                {order.promo_code || (order.discount_remark ? 'Discount' : 'Discount')}
+                                            </span>
+                                            <span>- ₹{discount.toLocaleString()}</span>
+                                        </div>
+                                        {order.discount_remark && !order.promo_code && (
+                                            <p className="text-[9px] text-emerald-400/70 italic text-right font-medium tracking-normal">
+                                                {order.discount_remark}
+                                            </p>
+                                        )}
                                     </div>
                                 )}
 

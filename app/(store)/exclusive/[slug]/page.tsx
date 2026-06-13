@@ -1,378 +1,560 @@
-// "use client"
-
-// import * as React from "react"
-// import { useParams } from "next/navigation"
-// import Link from "next/link"
-// import { AlertCircle, ChevronRight } from "lucide-react"
-// import { createClient } from "@/utils/supabase/client"
-// import { ProductCard } from "@/components/store/product-card"
-
-// export default function ExclusiveCategoryPage() {
-//     const { slug } = useParams()
-//     const [category, setCategory] = React.useState<any>(null)
-//     const [siblingCategories, setSiblingCategories] = React.useState<any[]>([])
-//     const [products, setProducts] = React.useState<any[]>([])
-//     const [loading, setLoading] = React.useState(true)
-//     const [error, setError] = React.useState<string | null>(null)
-
-//     const supabase = createClient()
-
-//     React.useEffect(() => {
-//         async function fetchContent() {
-//             if (!slug) return
-//             setLoading(true)
-//             setError(null)
-
-//             try {
-//                 const { data: catData, error: catError } = await supabase
-//                     .from('categories')
-//                     .select('id, name, slug, parent_id')
-//                     .eq('slug', slug)
-//                     .single()
-
-//                 if (catError) throw catError
-//                 setCategory(catData)
-
-//                 if (catData.parent_id) {
-//                     const { data: siblings } = await supabase
-//                         .from('categories')
-//                         .select('name, slug')
-//                         .eq('parent_id', catData.parent_id)
-
-//                     if (siblings) setSiblingCategories(siblings)
-//                 }
-
-//                 const { data: junctionData } = await supabase
-//                     .from('product_categories')
-//                     .select('product_id')
-//                     .eq('category_id', catData.id)
-
-//                 const junctionProductIds = junctionData?.map(j => j.product_id) || []
-
-//                 let query = supabase
-//                     .from('products')
-//                     .select('*, product_variants(*)')
-//                     .eq('status', 'active')
-
-//                 if (junctionProductIds.length > 0) {
-//                     query = query.or(`category_id.eq.${catData.id},id.in.(${junctionProductIds.join(',')})`)
-//                 } else {
-//                     query = query.eq('category_id', catData.id)
-//                 }
-
-//                 const { data: prodData, error: prodError } = await query.order('created_at', { ascending: false })
-//                 if (prodError) throw prodError
-//                 setProducts(prodData || [])
-
-//             } catch (e: any) {
-//                 setError(e.message)
-//             } finally {
-//                 setLoading(false)
-//             }
-//         }
-
-//         fetchContent()
-//     }, [slug, supabase])
-
-//     // --- REUSABLE NAV COMPONENT TO PREVENT FLICKER ---
-//     const StickyNav = ({ isDataLoaded }: { isDataLoaded: boolean }) => (
-//         <nav className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-100">
-//             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center px-4 h-auto sm:h-14 py-3 sm:py-0">
-//                 <div className="flex items-center gap-2 mb-3 sm:mb-0 sm:mr-8 flex-shrink-0">
-//                     <Link href="/exclusive" className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-black transition-colors">
-//                         Hub
-//                     </Link>
-//                     <ChevronRight className="w-3 h-3 text-slate-200" />
-//                     {isDataLoaded ? (
-//                         <span className="text-[9px] font-black uppercase tracking-widest text-slate-900 truncate max-w-[150px]">
-//                             {category?.name}
-//                         </span>
-//                     ) : (
-//                         <div className="w-16 h-2 bg-slate-100 animate-pulse rounded" />
-//                     )}
-//                 </div>
-
-//                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0 touch-pan-x">
-//                     {siblingCategories.length > 0 ? (
-//                         siblingCategories.map((sib) => {
-//                             const isActive = sib.slug === slug;
-//                             return (
-//                                 <Link
-//                                     key={sib.slug}
-//                                     href={`/exclusive/${sib.slug}`}
-//                                     className={`text-[9px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 border
-//                                         ${isActive
-//                                             ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-200'
-//                                             : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-300'}`}
-//                                 >
-//                                     {sib.name}
-//                                 </Link>
-//                             )
-//                         })
-//                     ) : (
-//                         // Skeleton pills
-//                         [1, 2, 3, 4].map((i) => (
-//                             <div key={i} className="w-20 h-8 bg-slate-50 border border-slate-100 rounded-full animate-pulse flex-shrink-0" />
-//                         ))
-//                     )}
-//                 </div>
-//             </div>
-//         </nav>
-//     )
-
-//     if (loading) return (
-//         <div className="min-h-screen bg-white">
-//             <StickyNav isDataLoaded={false} />
-//             <main className="max-w-7xl mx-auto px-6 pt-12">
-//                 <header className="mb-20 animate-pulse">
-//                     <div className="w-full md:w-3/4 h-24 md:h-32 bg-slate-50 rounded-sm mb-4" />
-//                 </header>
-
-//                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12">
-//                     {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-//                         <div key={i} className="space-y-4 animate-pulse">
-//                             <div className="aspect-[3/4] bg-slate-50 rounded-sm border border-slate-50" />
-//                             <div className="space-y-3">
-//                                 <div className="w-full h-3 bg-slate-100 rounded" />
-//                                 <div className="w-2/3 h-3 bg-slate-50 rounded" />
-//                             </div>
-//                         </div>
-//                     ))}
-//                 </div>
-//             </main>
-//         </div>
-//     )
-
-//     return (
-//         <div className="min-h-screen bg-white text-slate-900 pb-32">
-//             <StickyNav isDataLoaded={true} />
-
-//             <main className="max-w-7xl mx-auto px-6 pt-12">
-//                 {error ? (
-//                     <div className="p-8 bg-rose-50 rounded-[2rem] border border-rose-100 flex flex-col items-center text-center gap-3">
-//                         <AlertCircle className="w-8 h-8 text-rose-500 stroke-[1.5]" />
-//                         <h2 className="text-sm font-black uppercase tracking-tighter text-rose-900">System Error</h2>
-//                         <p className="text-xs text-rose-600/80 font-medium uppercase tracking-widest leading-relaxed">{error}</p>
-//                     </div>
-//                 ) : (
-//                     <>
-//                         <header className="mb-20">
-//                             <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none mb-6">
-//                                 {category?.name}<span className="text-slate-100">_</span>
-//                             </h1>
-//                         </header>
-
-//                         {products.length > 0 ? (
-//                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12 animate-in fade-in duration-700">
-//                                 {products.map((product) => (
-//                                     <ProductCard key={product.id} product={product} />
-//                                 ))}
-//                             </div>
-//                         ) : (
-//                             <div className="py-40 text-center border-2 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/30">
-//                                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">
-//                                     Archive Empty for "{category?.name}"
-//                                 </p>
-//                             </div>
-//                         )}
-//                     </>
-//                 )}
-//             </main>
-//         </div>
-//     )
-// }
-
-
 "use client"
 
 import * as React from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { AlertCircle, ChevronRight, Sparkles, LayoutGrid } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+    SlidersHorizontal,
+    X,
+    Check,
+    ArrowUpDown,
+    Package,
+} from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
-import { motion } from "framer-motion"
+
+type SortOption = "newest" | "price_asc" | "price_desc" | "name"
+
+const PRICE_RANGES = [
+    { label: "Under ₹500", min: 0, max: 500 },
+    { label: "₹500 – ₹1,000", min: 500, max: 1000 },
+    { label: "₹1,000 – ₹2,000", min: 1000, max: 2000 },
+    { label: "Above ₹2,000", min: 2000, max: Infinity },
+] as const
+
+const sortOptions: { key: SortOption; label: string }[] = [
+    { key: "newest", label: "Newest First" },
+    { key: "price_asc", label: "Price: Low to High" },
+    { key: "price_desc", label: "Price: High to Low" },
+    { key: "name", label: "Name: A-Z" },
+]
+
+function computeEffectivePrice(product: any): number {
+    if (product.has_variants && product.product_variants?.length > 0) {
+        const prices = product.product_variants.map((v: any) => {
+            const base = v.price || 0
+            const dType = v.discount_type || product.discount_type || "none"
+            const dVal = v.discount_value || product.discount_value || 0
+            if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
+            if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
+            return base
+        })
+        return Math.min(...prices)
+    }
+    const base = product.base_price || 0
+    const dType = product.discount_type || "none"
+    const dVal = product.discount_value || 0
+    if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
+    if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
+    return base
+}
 
 export default function ExclusiveCategoryPage() {
     const { slug } = useParams()
+    const supabase = createClient()
+
     const [category, setCategory] = React.useState<any>(null)
     const [siblingCategories, setSiblingCategories] = React.useState<any[]>([])
     const [products, setProducts] = React.useState<any[]>([])
     const [loading, setLoading] = React.useState(true)
-    const [error, setError] = React.useState<string | null>(null)
+    const [availableBrands, setAvailableBrands] = React.useState<string[]>([])
 
-    const supabase = createClient()
+    const [sort, setSort] = React.useState<SortOption>("newest")
+    const [selectedBrands, setSelectedBrands] = React.useState<string[]>([])
+    const [selectedPriceRange, setSelectedPriceRange] = React.useState<number | null>(null)
+    const [showSort, setShowSort] = React.useState(false)
+    const [showFilter, setShowFilter] = React.useState(false)
+
+    const [tempBrands, setTempBrands] = React.useState<string[]>([])
+    const [tempPriceRange, setTempPriceRange] = React.useState<number | null>(null)
+
+    const sortRef = React.useRef<HTMLDivElement>(null)
 
     React.useEffect(() => {
-        async function fetchContent() {
-            if (!slug) return
-            setLoading(true)
-            setError(null)
-
-            try {
-                const { data: catData, error: catError } = await supabase
-                    .from('categories')
-                    .select('id, name, slug, parent_id')
-                    .eq('slug', slug)
-                    .single()
-
-                if (catError) throw catError
-                setCategory(catData)
-
-                if (catData.parent_id) {
-                    const { data: siblings } = await supabase
-                        .from('categories')
-                        .select('name, slug, image_url')
-                        .eq('parent_id', catData.parent_id)
-
-                    if (siblings) setSiblingCategories(siblings)
-                }
-
-                const { data: junctionData } = await supabase
-                    .from('product_categories')
-                    .select('product_id')
-                    .eq('category_id', catData.id)
-
-                const junctionProductIds = junctionData?.map(j => j.product_id) || []
-
-                let query = supabase
-                    .from('products')
-                    .select('*, product_variants(*)')
-                    .eq('status', 'active')
-
-                if (junctionProductIds.length > 0) {
-                    query = query.or(`category_id.eq.${catData.id},id.in.(${junctionProductIds.join(',')})`)
-                } else {
-                    query = query.eq('category_id', catData.id)
-                }
-
-                const { data: prodData, error: prodError } = await query.order('created_at', { ascending: false })
-                if (prodError) throw prodError
-                setProducts(prodData || [])
-
-            } catch (e: any) {
-                setError(e.message)
-            } finally {
-                setLoading(false)
+        function handleClickOutside(e: MouseEvent) {
+            if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+                setShowSort(false)
             }
         }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
 
+    const fetchContent = React.useCallback(async () => {
+        if (!slug) return
+        setLoading(true)
+
+        try {
+            const { data: catData } = await supabase
+                .from("categories")
+                .select("id, name, slug, parent_id")
+                .eq("slug", slug)
+                .single()
+
+            if (!catData) return
+            setCategory(catData)
+
+            if (catData.parent_id) {
+                const { data: siblings } = await supabase
+                    .from("categories")
+                    .select("name, slug, image_url")
+                    .eq("parent_id", catData.parent_id)
+                if (siblings) setSiblingCategories(siblings)
+            }
+
+            const { data: junctionData } = await supabase
+                .from("product_categories")
+                .select("product_id")
+                .eq("category_id", catData.id)
+
+            const junctionProductIds = junctionData?.map((j: any) => j.product_id) || []
+
+            let query = supabase
+                .from("products")
+                .select("*, product_variants(*)")
+                .eq("status", "active")
+
+            if (junctionProductIds.length > 0) {
+                query = query.or(`category_id.eq.${catData.id},id.in.(${junctionProductIds.join(",")})`)
+            } else {
+                query = query.eq("category_id", catData.id)
+            }
+
+            if (selectedBrands.length > 0) {
+                query = query.in("brand", selectedBrands)
+            }
+
+            if (sort === "name") {
+                query = query.order("name", { ascending: true })
+            } else if (sort === "newest") {
+                query = query.order("created_at", { ascending: false })
+            }
+
+            const { data: prodData } = await query
+            let processed = [...(prodData || [])].map((p) => ({
+                ...p,
+                _effectivePrice: computeEffectivePrice(p),
+            }))
+
+            if (selectedPriceRange !== null) {
+                const range = PRICE_RANGES[selectedPriceRange]
+                processed = processed.filter(
+                    (p) => p._effectivePrice >= range.min && (range.max === Infinity || p._effectivePrice < range.max)
+                )
+            }
+
+            if (sort === "price_asc") {
+                processed.sort((a, b) => a._effectivePrice - b._effectivePrice)
+            } else if (sort === "price_desc") {
+                processed.sort((a, b) => b._effectivePrice - a._effectivePrice)
+            }
+
+            setProducts(processed)
+
+            if (availableBrands.length === 0) {
+                const brands = Array.from(
+                    new Set(prodData?.map((p: any) => p.brand).filter(Boolean) as string[])
+                ).sort()
+                setAvailableBrands(brands)
+            }
+        } catch (e) {
+            console.error("Fetch Error:", e)
+        } finally {
+            setLoading(false)
+        }
+    }, [slug, sort, selectedBrands, selectedPriceRange, supabase])
+
+    React.useEffect(() => {
         fetchContent()
-    }, [slug, supabase])
+    }, [fetchContent])
 
-    // --- NYKAA STYLE STORY NAV ---
-    const StickyNav = ({ isDataLoaded }: { isDataLoaded: boolean }) => (
-        <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-pink-50">
-            <div className="max-w-7xl mx-auto px-4 py-4">
-                <div className="flex items-center gap-2 mb-4">
-                    <Link href="/exclusive" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-[#fc2779]">
-                        Exclusive
-                    </Link>
-                    <ChevronRight className="w-3 h-3 text-slate-300" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#fc2779]">
-                        {isDataLoaded ? category?.name : '...'}
-                    </span>
-                </div>
+    const activeFilterCount = selectedBrands.length + (selectedPriceRange !== null ? 1 : 0)
 
-                <div className="flex items-center gap-6 overflow-x-auto no-scrollbar touch-pan-x pb-2">
-                    {isDataLoaded ? (
-                        siblingCategories.map((sib) => {
-                            const isActive = sib.slug === slug;
-                            return (
-                                <Link
-                                    key={sib.slug}
-                                    href={`/exclusive/${sib.slug}`}
-                                    className="flex flex-col items-center gap-2 shrink-0 group"
-                                >
-                                    <div className={`w-14 h-14 rounded-full p-[2px] transition-all duration-500 ${isActive ? 'bg-[#fc2779]' : 'bg-slate-200 group-hover:bg-pink-200'}`}>
-                                        <div className="w-full h-full rounded-full border-2 border-white bg-slate-100 overflow-hidden flex items-center justify-center">
-                                            {sib.image_url ? (
-                                                <img src={sib.image_url} className="w-full h-full object-cover" alt="" />
-                                            ) : (
-                                                <span className="text-[10px] font-black text-slate-400">{sib.name[0]}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <span className={`text-[9px] font-bold uppercase tracking-tighter ${isActive ? 'text-[#fc2779]' : 'text-slate-500'}`}>
-                                        {sib.name}
-                                    </span>
-                                </Link>
-                            )
-                        })
-                    ) : (
-                        [1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className="flex flex-col items-center gap-2 animate-pulse">
-                                <div className="w-14 h-14 rounded-full bg-slate-100" />
-                                <div className="w-10 h-2 bg-slate-50 rounded" />
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
-        </nav>
-    )
+    const openFilter = () => {
+        setTempBrands([...selectedBrands])
+        setTempPriceRange(selectedPriceRange)
+        setShowFilter(true)
+    }
 
-    if (loading) return (
-        <div className="min-h-screen bg-white">
-            <StickyNav isDataLoaded={false} />
-            <main className="max-w-7xl mx-auto px-6 py-12 flex flex-col items-center justify-center min-h-[50vh]">
-                <div className="w-12 h-12 border-4 border-pink-100 border-t-[#fc2779] rounded-full animate-spin mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Curating Boutique</p>
-            </main>
-        </div>
-    )
+    const applyFilters = () => {
+        setSelectedBrands([...tempBrands])
+        setSelectedPriceRange(tempPriceRange)
+        setShowFilter(false)
+    }
+
+    const clearAllFilters = () => {
+        setSelectedBrands([])
+        setSelectedPriceRange(null)
+        setShowFilter(false)
+    }
+
+    const toggleTempBrand = (brand: string) => {
+        setTempBrands((prev) =>
+            prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
+        )
+    }
+
+    const removeBrand = (brand: string) => {
+        const next = selectedBrands.filter((b) => b !== brand)
+        setSelectedBrands(next)
+    }
+
+    const removePriceRange = () => {
+        setSelectedPriceRange(null)
+    }
 
     return (
-        <div className="min-h-screen bg-[#FDFDFD] text-slate-900 pb-32">
-            <StickyNav isDataLoaded={true} />
+        <div className="min-h-screen bg-white pb-24">
+            {/* HEADER */}
+            <div className="bg-white border-b border-slate-100">
+                <div className="max-w-7xl mx-auto px-6 pt-4 pb-2">
+                    <div className="mb-3">
+                        <h1 className="text-xl font-black tracking-tight text-slate-900">
+                            {category?.name || "..."}
+                        </h1>
+                        <p className="text-[10px] font-semibold text-slate-400">
+                            {loading ? "..." : `${products.length} products`}
+                        </p>
+                    </div>
 
-            <main className="max-w-7xl mx-auto px-6 pt-12">
-                {error ? (
-                    <div className="p-10 bg-pink-50 rounded-[3rem] border border-pink-100 flex flex-col items-center text-center gap-4">
-                        <AlertCircle className="w-10 h-10 text-[#fc2779]" />
-                        <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Boutique Unavailable</h2>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">{error}</p>
+                    {/* SUBCATEGORY NAV */}
+                    <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-2 -mx-6 px-6">
+                        {siblingCategories.length > 0 ? (
+                            siblingCategories.map((sib) => {
+                                const isActive = sib.slug === slug
+                                return (
+                                    <Link
+                                        key={sib.slug}
+                                        href={`/exclusive/${sib.slug}`}
+                                        className="flex flex-col items-center gap-1.5 shrink-0 group"
+                                    >
+                                        <div
+                                            className={`w-12 h-12 rounded-full p-[2px] transition-all duration-500 ${
+                                                isActive ? "bg-[#fc2779]" : "bg-slate-200 group-hover:bg-pink-200"
+                                            }`}
+                                        >
+                                            <div className="w-full h-full rounded-full border-2 border-white bg-slate-100 overflow-hidden flex items-center justify-center">
+                                                {sib.image_url ? (
+                                                    <img
+                                                        src={sib.image_url}
+                                                        className="w-full h-full object-cover"
+                                                        alt=""
+                                                    />
+                                                ) : (
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase">
+                                                        {sib.name?.[0] || "?"}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <span
+                                            className={`text-[8px] font-bold uppercase tracking-tighter whitespace-nowrap ${
+                                                isActive ? "text-[#fc2779]" : "text-slate-500"
+                                            }`}
+                                        >
+                                            {sib.name}
+                                        </span>
+                                    </Link>
+                                )
+                            })
+                        ) : loading ? (
+                            [1, 2, 3, 4].map((i) => (
+                                <div key={i} className="flex flex-col items-center gap-1.5 animate-pulse shrink-0">
+                                    <div className="w-12 h-12 rounded-full bg-slate-100" />
+                                    <div className="w-10 h-2 bg-slate-50 rounded" />
+                                </div>
+                            ))
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+
+            {/* ACTIVE FILTER CHIPS */}
+            {activeFilterCount > 0 && (
+                <div className="max-w-7xl mx-auto px-6 pt-4 pb-2 flex flex-wrap gap-2">
+                    {selectedBrands.map((brand) => (
+                        <button
+                            key={brand}
+                            onClick={() => removeBrand(brand)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#fc2779]/25 bg-[#fc2779]/8 text-[10px] font-semibold text-[#fc2779] hover:bg-[#fc2779]/15 transition-all"
+                        >
+                            {brand}
+                            <X className="w-3 h-3" />
+                        </button>
+                    ))}
+                    {selectedPriceRange !== null && (
+                        <button
+                            onClick={removePriceRange}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#fc2779]/25 bg-[#fc2779]/8 text-[10px] font-semibold text-[#fc2779] hover:bg-[#fc2779]/15 transition-all"
+                        >
+                            {PRICE_RANGES[selectedPriceRange].label}
+                            <X className="w-3 h-3" />
+                        </button>
+                    )}
+                    <button
+                        onClick={() => {
+                            setSelectedBrands([])
+                            setSelectedPriceRange(null)
+                        }}
+                        className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-all"
+                    >
+                        Clear all
+                    </button>
+                </div>
+            )}
+
+            {/* PRODUCT GRID */}
+            <div className="pt-6">
+                {loading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="border-r border-b border-slate-100 bg-white animate-pulse">
+                                <div className="aspect-square bg-slate-50" />
+                                <div className="p-4 space-y-3">
+                                    <div className="h-3 bg-slate-50 rounded w-1/3" />
+                                    <div className="h-4 bg-slate-50 rounded w-3/4" />
+                                    <div className="h-3 bg-slate-50 rounded w-1/2" />
+                                    <div className="pt-3 border-t border-slate-50 flex items-center gap-3">
+                                        <div className="h-5 bg-slate-50 rounded w-1/4" />
+                                        <div className="h-3 bg-slate-50 rounded w-1/5" />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <div className="w-10 h-10 bg-slate-50 rounded-lg" />
+                                        <div className="flex-1 h-10 bg-slate-50 rounded-lg" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : products.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-white overflow-hidden">
+                        {products.map((p) => (
+                            <ProductCard key={p.id} product={p} />
+                        ))}
                     </div>
                 ) : (
-                    <>
-                        <header className="mb-16">
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                                className="flex flex-col md:flex-row md:items-end justify-between gap-6"
-                            >
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-[#fc2779]">
-                                        <Sparkles className="w-4 h-4 fill-[#fc2779]" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">The Premium Edit</span>
-                                    </div>
-                                    <h1 className="text-5xl md:text-8xl font-serif italic text-slate-950 leading-none tracking-tighter">
-                                        {category?.name}
-                                    </h1>
-                                </div>
-                                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
-                                    <LayoutGrid className="w-4 h-4 text-slate-300" />
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{products.length} Products</span>
-                                </div>
-                            </motion.div>
-                            <div className="h-1 w-20 bg-[#fc2779] rounded-full mt-8" />
-                        </header>
+                    <div className="flex flex-col items-center justify-center py-32">
+                        <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-8 shadow-sm border border-slate-100">
+                            <Package className="w-9 h-9 text-slate-200" />
+                        </div>
+                        <p className="text-base font-semibold text-slate-400">Coming Soon to {category?.name}</p>
+                    </div>
+                )}
+            </div>
 
-                        {products.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12">
-                                {products.map((product) => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="py-40 text-center border-2 border-dashed border-pink-100 rounded-[3rem] bg-white shadow-inner">
-                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">
-                                    Coming Soon to {category?.name}
-                                </p>
-                            </div>
-                        )}
+            {/* BOTTOM BAR */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-50">
+                <div className="max-w-7xl mx-auto flex">
+                    <button
+                        onClick={openFilter}
+                        className="flex-1 flex items-center justify-center gap-2 py-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-all"
+                    >
+                        <SlidersHorizontal className="w-4 h-4" />
+                        <span>
+                            Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                        </span>
+                    </button>
+                    <div className="w-px bg-slate-100" />
+                    <button
+                        onClick={() => setShowSort(!showSort)}
+                        className="flex-1 flex items-center justify-center gap-2 py-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-all relative"
+                    >
+                        <ArrowUpDown className="w-4 h-4" />
+                        <span>{sortOptions.find((o) => o.key === sort)?.label || "Sort"}</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* SORT POPOVER */}
+            <AnimatePresence>
+                {showSort && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[60]"
+                            onClick={() => setShowSort(false)}
+                        />
+                        <motion.div
+                            ref={sortRef}
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="fixed bottom-20 right-6 z-[70] bg-white rounded-2xl shadow-2xl border border-slate-100 min-w-[220px] overflow-hidden"
+                        >
+                            {sortOptions.map((opt) => (
+                                <button
+                                    key={opt.key}
+                                    onClick={() => {
+                                        setSort(opt.key)
+                                        setShowSort(false)
+                                    }}
+                                    className={`w-full flex items-center justify-between px-5 py-4 text-sm transition-all hover:bg-slate-50 ${
+                                        sort === opt.key
+                                            ? "text-[#fc2779] font-semibold bg-[#fc2779]/5"
+                                            : "text-slate-600 font-medium"
+                                    }`}
+                                >
+                                    {opt.label}
+                                    {sort === opt.key && (
+                                        <div className="w-5 h-5 rounded-full bg-[#fc2779] flex items-center justify-center">
+                                            <Check className="w-3 h-3 text-white" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </motion.div>
                     </>
                 )}
-            </main>
+            </AnimatePresence>
+
+            {/* FILTER BOTTOM SHEET */}
+            <AnimatePresence>
+                {showFilter && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowFilter(false)}
+                            className="fixed inset-0 bg-black/30 z-[60]"
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 220 }}
+                            className="fixed bottom-0 left-0 right-0 bg-white z-[70] rounded-t-[2rem] shadow-2xl max-h-[75vh] flex flex-col"
+                        >
+                            {/* HANDLE */}
+                            <div className="flex justify-center pt-3 pb-1">
+                                <div className="w-10 h-1 rounded-full bg-slate-300" />
+                            </div>
+
+                            {/* HEADER */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                                <button
+                                    onClick={() => setShowFilter(false)}
+                                    className="text-sm text-slate-400 font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-lg font-bold text-slate-900">Filters</h2>
+                                    {activeFilterCount > 0 && (
+                                        <span className="w-5 h-5 rounded-full bg-[#fc2779] text-white text-[10px] font-bold flex items-center justify-center">
+                                            {activeFilterCount}
+                                        </span>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setTempBrands([])
+                                        setTempPriceRange(null)
+                                    }}
+                                    className="text-sm font-semibold text-[#fc2779]"
+                                >
+                                    Reset
+                                </button>
+                            </div>
+
+                            {/* BODY */}
+                            <div className="flex-1 overflow-y-auto px-6 py-4">
+                                {/* BRANDS */}
+                                <div className="mb-8">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <h3 className="text-sm font-semibold text-slate-800">Brand</h3>
+                                        {tempBrands.length > 0 && (
+                                            <span className="text-xs text-[#fc2779] font-medium ml-auto">
+                                                {tempBrands.length} selected
+                                            </span>
+                                        )}
+                                    </div>
+                                    {availableBrands.length === 0 ? (
+                                        <p className="text-sm italic text-slate-400">No brands available</p>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-2">
+                                            {availableBrands.map((brand) => {
+                                                const selected = tempBrands.includes(brand)
+                                                return (
+                                                    <button
+                                                        key={brand}
+                                                        onClick={() => toggleTempBrand(brand)}
+                                                        className={`px-4 py-2.5 rounded-full border text-xs font-medium transition-all ${
+                                                            selected
+                                                                ? "border-[#fc2779] bg-[#fc2779]/8 text-[#fc2779] font-semibold"
+                                                                : "border-slate-200 text-slate-500 hover:border-slate-300"
+                                                        }`}
+                                                    >
+                                                        {brand}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="h-px bg-slate-100 -mx-6 mb-8" />
+
+                                {/* PRICE RANGE */}
+                                <div className="mb-6">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <h3 className="text-sm font-semibold text-slate-800">Price Range</h3>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {PRICE_RANGES.map((range, idx) => {
+                                            const selected = tempPriceRange === idx
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setTempPriceRange(selected ? null : idx)}
+                                                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border transition-all ${
+                                                        selected
+                                                            ? "border-[#fc2779]/30 bg-[#fc2779]/5"
+                                                            : "border-slate-100 bg-white hover:border-slate-200"
+                                                    }`}
+                                                >
+                                                    <div
+                                                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                                            selected ? "border-[#fc2779]" : "border-slate-300"
+                                                        }`}
+                                                    >
+                                                        {selected && (
+                                                            <div className="w-2.5 h-2.5 rounded-full bg-[#fc2779]" />
+                                                        )}
+                                                    </div>
+                                                    <span
+                                                        className={`text-sm ${
+                                                            selected ? "font-semibold text-[#fc2779]" : "text-slate-700"
+                                                        }`}
+                                                    >
+                                                        {range.label}
+                                                    </span>
+                                                    {selected && (
+                                                        <Check className="w-4 h-4 text-[#fc2779] ml-auto" />
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* FOOTER */}
+                            <div className="px-6 py-4 border-t border-slate-100 pb-8">
+                                <button
+                                    onClick={applyFilters}
+                                    className="w-full py-4 rounded-2xl bg-slate-900 text-white text-sm font-bold tracking-wider hover:bg-slate-800 transition-all active:scale-[0.98]"
+                                >
+                                    Apply Filters
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

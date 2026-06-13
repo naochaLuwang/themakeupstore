@@ -20,14 +20,13 @@ export function WishlistCounter({ initialCount, userId }: { initialCount: number
     }, [userId, supabase])
 
     useEffect(() => {
-        // Listen for the signal from WishlistPage
         window.addEventListener("wishlist-updated", updateCount)
         return () => window.removeEventListener("wishlist-updated", updateCount)
     }, [updateCount])
 
     return (
         <Link href="/profile/wishlist" className="relative p-2 flex items-center">
-            <Heart className={`w-6 h-6 ${count > 0 ? 'text-red-500 fill-red-500' : 'text-charcoal'}`} />
+            <Heart className="w-5 h-5 text-red-500 fill-red-500" />
             {count > 0 && (
                 <span className="absolute top-0 right-0 bg-primary text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
                     {count}

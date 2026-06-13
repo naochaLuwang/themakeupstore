@@ -29,12 +29,10 @@ export default async function CheckoutPage() {
     const allPromos = promos || []
 
     return (
-        <main className="min-h-screen bg-slate-50/50">
-            <CheckoutClient
-                profile={initialProfile}
-                initialAddresses={initialAddresses}
-                allPromos={allPromos}
-            />
-        </main>
+        <CheckoutClient
+            profile={initialProfile}
+            initialAddresses={initialAddresses}
+            allPromos={allPromos}
+        />
     )
 }

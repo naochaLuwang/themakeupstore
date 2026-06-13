@@ -176,7 +176,7 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { ProductImages } from "./product-images"
 import VariantSelector from "./variant-selector"
 import { Button } from "@/components/ui/button"
@@ -187,9 +187,29 @@ import { motion } from "framer-motion"
 import { PromoDisplay } from "./promo-display"
 import VirtualTryOn from "./virtual-try-on"
 import FoundationShadeFinder from "./foundation-shade-finder"
+import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 
 export function ProductViewSection({ product, promos = [], enableTryOn = false, enableShadeFinder = false }: { product: any, promos?: any[], enableTryOn?: boolean, enableShadeFinder?: boolean }) {
     const defaultVariant = product.variants?.find((v: any) => v.is_default) || product.variants?.[0];
+
+    const addToRecentlyViewed = useRecentlyViewed(s => s.addItem)
+    useEffect(() => {
+        if (product?.id) {
+            addToRecentlyViewed({
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                base_price: product.base_price,
+                thumbnail_url: product.thumbnail_url,
+                brand: product.brand,
+                discount_type: product.discount_type,
+                discount_value: product.discount_value,
+                has_variants: product.has_variants,
+                status: product.status,
+                product_variants: product.variants || [],
+            })
+        }
+    }, [product?.id])
     
     console.log('ProductViewSection - Product data:', {
         hasVariants: !!product.variants,

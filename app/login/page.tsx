@@ -59,13 +59,15 @@ export default function AuthPage() {
                 })
                 if (error) throw error
                 toast.success("Check your email!")
+                setLoading(false)
             } else {
                 const { error } = await supabase.auth.signInWithPassword({ email, password })
                 if (error) throw error
-                router.push("/")
-                router.refresh()
             }
-        } catch (error: any) { toast.error(error.message) } finally { setLoading(false) }
+        } catch (error: any) {
+            toast.error(error.message)
+            setLoading(false)
+        }
     }
 
     if (!mounted) return null
@@ -107,7 +109,8 @@ export default function AuthPage() {
                             <button
                                 key={m}
                                 onClick={() => setMode(m as any)}
-                                className={`flex-1 pb-3 text-[10px] font-black uppercase tracking-widest transition-all ${mode === m ? 'text-[#fc2779] border-b-2 border-[#fc2779]' : 'text-slate-300 hover:text-slate-500'}`}
+                                disabled={loading}
+                                className={`flex-1 pb-3 text-[10px] font-black uppercase tracking-widest transition-all ${mode === m ? 'text-[#fc2779] border-b-2 border-[#fc2779]' : 'text-slate-300 hover:text-slate-500'} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {m === 'login' ? 'Log In' : 'Join Us'}
                             </button>
@@ -165,7 +168,8 @@ export default function AuthPage() {
                     <button
                         type="button"
                         onClick={handleGoogleLogin}
-                        className="w-full h-14 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 transition-all font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 shadow-sm"
+                        disabled={loading}
+                        className={`w-full h-14 rounded-2xl border border-slate-200 ${loading ? 'bg-slate-50 cursor-not-allowed' : 'bg-white hover:bg-slate-50'} text-slate-900 transition-all font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 shadow-sm`}
                     >
                         <svg className="w-4 h-4" viewBox="0 0 24 24">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
