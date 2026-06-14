@@ -268,6 +268,12 @@ export default function ProductDetailPage() {
         return product.product_categories.some((pc: any) => lipSlugs.has(pc.category?.slug))
     }, [product])
 
+    const foundationSlugs = new Set(["foundation"])
+    const isFoundationProduct = useMemo(() => {
+        if (!product?.product_categories) return false
+        return product.product_categories.some((pc: any) => foundationSlugs.has(pc.category?.slug))
+    }, [product])
+
     const sellingPrice = useMemo(() => {
         if (!product) return 0
         let price = product.base_price || 0
@@ -453,7 +459,9 @@ export default function ProductDetailPage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-white animate-pulse">
-                <div className="w-full aspect-[1/0.85] bg-slate-200" />
+                <div className="w-full aspect-[1/0.85] bg-[#F1F5F9] flex items-center justify-center">
+                    <span className="font-daciana text-[80px] text-[#CBD5E1]" style={{ lineHeight: 1 }}>M</span>
+                </div>
                 <div className="px-5 pt-6 space-y-5">
                     <div className="h-4 bg-slate-200 rounded w-1/4" />
                     <div className="space-y-2">
@@ -534,13 +542,15 @@ export default function ProductDetailPage() {
                 >
                     <ArrowLeft className="w-5 h-5 text-gray-800" />
                 </button>
-                <button
-                    onClick={() => isLipProduct ? setTryOnOpen(true) : setShadeFinderOpen(true)}
-                    className="absolute top-4 right-4 w-14 h-14 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/30 flex flex-col items-center justify-center gap-0.5 shadow-lg hover:bg-black/60 active:scale-95 transition-all"
-                >
-                    {isLipProduct ? <ScanLine className="w-5 h-5 text-white" /> : <Palette className="w-5 h-5 text-white" />}
-                    <span className="text-[7px] text-white/90 font-black uppercase tracking-wider">{isLipProduct ? "Try On" : "Match"}</span>
-                </button>
+                {(isLipProduct || isFoundationProduct) && (
+                    <button
+                        onClick={() => isLipProduct ? setTryOnOpen(true) : setShadeFinderOpen(true)}
+                        className="absolute top-4 right-4 w-14 h-14 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/30 flex flex-col items-center justify-center gap-0.5 shadow-lg hover:bg-black/60 active:scale-95 transition-all"
+                    >
+                        {isLipProduct ? <ScanLine className="w-5 h-5 text-white" /> : <Palette className="w-5 h-5 text-white" />}
+                        <span className="text-[7px] text-white/90 font-black uppercase tracking-wider">{isLipProduct ? "Try On" : "Match"}</span>
+                    </button>
+                )}
             </div>
             {imageList.length > 1 && (
                 <div className="flex justify-center gap-1.5 mt-2">
@@ -884,13 +894,15 @@ export default function ProductDetailPage() {
                                         {discountPct}% OFF
                                     </div>
                                 )}
-                                <button
-                                    onClick={() => isLipProduct ? setTryOnOpen(true) : setShadeFinderOpen(true)}
-                                    className="absolute top-4 right-4 w-14 h-14 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/30 flex flex-col items-center justify-center gap-0.5 shadow-lg hover:bg-black/60 active:scale-95 transition-all"
-                                >
-                                    {isLipProduct ? <ScanLine className="w-5 h-5 text-white" /> : <Palette className="w-5 h-5 text-white" />}
-                                    <span className="text-[7px] text-white/90 font-black uppercase tracking-wider">{isLipProduct ? "Try On" : "Match"}</span>
-                                </button>
+                                {(isLipProduct || isFoundationProduct) && (
+                                    <button
+                                        onClick={() => isLipProduct ? setTryOnOpen(true) : setShadeFinderOpen(true)}
+                                        className="absolute top-4 right-4 w-14 h-14 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/30 flex flex-col items-center justify-center gap-0.5 shadow-lg hover:bg-black/60 active:scale-95 transition-all"
+                                    >
+                                        {isLipProduct ? <ScanLine className="w-5 h-5 text-white" /> : <Palette className="w-5 h-5 text-white" />}
+                                        <span className="text-[7px] text-white/90 font-black uppercase tracking-wider">{isLipProduct ? "Try On" : "Match"}</span>
+                                    </button>
+                                )}
                             </div>
                             {imageList.length > 1 && (
                                 <div className="flex gap-2 mt-4">
