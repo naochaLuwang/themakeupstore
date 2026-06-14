@@ -296,7 +296,7 @@ export default function ProductDetailPage() {
 
     const hasVariants = product?.has_variants && product?.product_variants?.length > 0
     const selectedVariantOOS = selectedVariantData?.stock != null && Number(selectedVariantData.stock) <= 0
-    const productIsOutOfStock = product.product_variants && product.product_variants.length > 0
+    const productIsOutOfStock = product?.product_variants && product.product_variants.length > 0
         ? product.product_variants!.every((v: any) => v.stock != null && Number(v.stock) <= 0)
         : (product?.stock != null && Number(product.stock) <= 0)
     const showOOSButton = productIsOutOfStock || (hasVariants && selectedVariant && selectedVariantOOS)
