@@ -23,9 +23,10 @@ interface Props {
   banner: any
   categories: any[]
   products: any[]
+  forever52Products: any[]
 }
 
-export function HomeMobile({ banner, categories, products }: Props) {
+export function HomeMobile({ banner, categories, products, forever52Products }: Props) {
   const [mounted, setMounted] = useState(false)
   const recentlyViewed = useRecentlyViewed(s => s.items)
   useEffect(() => { setMounted(true) }, [])
@@ -144,6 +145,24 @@ export function HomeMobile({ banner, categories, products }: Props) {
           ))}
         </div>
       </Section>
+
+      {/* FOREVER52 BANNER */}
+      <div className="mb-8 px-4">
+        <img src="/forever.png" alt="FOREVER52" className="w-full rounded-xl" />
+      </div>
+
+      {/* FOREVER52 PRODUCTS */}
+      {forever52Products.length > 0 && (
+        <Section label="FEATURED BRAND" title="FOREVER52">
+          <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar">
+            {forever52Products.map((item: any) => (
+              <div key={item.id} className="w-40 shrink-0">
+                <ProductCard product={item} />
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* FOOTER */}
       <div className="pt-6 pb-20 px-4 flex flex-col items-center">
