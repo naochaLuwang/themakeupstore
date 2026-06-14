@@ -199,7 +199,7 @@ export default function ProductDetailPage() {
                     const ids = [...new Set(catProducts.map((c: any) => c.product_id))]
                     const { data: similar } = await supabase
                         .from("products")
-                        .select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, stock, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
+                        .select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
                         .in("id", ids)
                         .limit(10)
                     if (similar) setSimilarProducts(similar.filter((p: any) => p.thumbnail_url))
@@ -210,7 +210,7 @@ export default function ProductDetailPage() {
             if (data.brand) {
                 const { data: brandData } = await supabase
                     .from("products")
-                    .select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, stock, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
+                    .select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
                     .eq("brand", data.brand)
                     .neq("id", data.id)
                     .limit(10)
@@ -296,7 +296,7 @@ export default function ProductDetailPage() {
 
     const hasVariants = product?.has_variants && product?.product_variants?.length > 0
     const selectedVariantOOS = selectedVariantData?.stock != null && Number(selectedVariantData.stock) <= 0
-    const productIsOutOfStock = hasVariants
+    const productIsOutOfStock = product.product_variants && product.product_variants.length > 0
         ? product.product_variants!.every((v: any) => v.stock != null && Number(v.stock) <= 0)
         : (product?.stock != null && Number(product.stock) <= 0)
     const showOOSButton = productIsOutOfStock || (hasVariants && selectedVariant && selectedVariantOOS)

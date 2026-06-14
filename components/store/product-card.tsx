@@ -376,7 +376,7 @@ export function ProductCard({ product }: { product: any }) {
     const pricing = getCheapestVariantPrice(product)
     const { salePrice, mrp, discountPercentage, discountAmount, hasDiscount } = pricing
 
-    const productIsOutOfStock = hasVariants
+    const productIsOutOfStock = variants.length > 0
         ? variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
         : (product.stock != null && Number(product.stock) <= 0)
 

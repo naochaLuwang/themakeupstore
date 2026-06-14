@@ -18,13 +18,13 @@ export default async function GatewayPage() {
   const [{ data: bannerData }, { data: catData }, { data: prodData }, { data: forever52ProdData }] = await Promise.all([
     supabase.from("hero_banners").select("*").eq("is_active", true).order("position").limit(1).maybeSingle(),
     supabase.from("categories").select("id, name, slug, image_url, parent:parent_id(slug)").not("parent_id", "is", null).order("name"),
-    supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, stock, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").order("created_at", { ascending: false }).limit(12),
-    supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, stock, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("brand", "FOREVER52").limit(20),
+    supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").order("created_at", { ascending: false }).limit(12),
+    supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("brand", "FOREVER52").limit(20),
   ]);
 
   const products = (prodData || []).map(p => ({
     ...p,
-    outOfStock: p.has_variants && p.product_variants?.length > 0
+    outOfStock: p.product_variants?.length > 0
       ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
       : false,
   })).sort((a, b) => (a.outOfStock === b.outOfStock ? 0 : a.outOfStock ? 1 : -1));
@@ -35,7 +35,7 @@ export default async function GatewayPage() {
 
   const forever52Products = (forever52ProdData || []).map((p: any) => ({
     ...p,
-    outOfStock: p.has_variants && p.product_variants?.length > 0
+    outOfStock: p.product_variants?.length > 0
       ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
       : false,
   }))
