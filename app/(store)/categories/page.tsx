@@ -86,10 +86,10 @@ export default function CategoriesPage() {
             <SignatureLoader loading={loading} text="The Makeup Store / Categories" />
             {!loading && (
                 <div className="min-h-screen bg-white">
-                    <div className="max-w-2xl mx-auto px-5 pt-8 pb-10">
+                    <div className="max-w-2xl mx-auto px-5 pt-2 pb-24">
                         {/* Header */}
                         <div className="mb-6">
-                            <h1 className="text-[42px] font-bold text-gray-900 tracking-tight leading-[46px]">
+                            <h1 className="text-[32px] font-bold text-gray-900 tracking-tight leading-[46px]">
                                 Categories
                             </h1>
                             <p className="text-base text-gray-500 mt-1">

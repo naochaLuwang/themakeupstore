@@ -10,10 +10,10 @@ import {
     ChevronDown,
     ArrowUpDown,
     Package,
-    ChevronLeft,
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useRouter } from "next/navigation"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
@@ -189,27 +189,19 @@ export default function CategoryClient({ initialCategory, slug }: { initialCateg
         <div className="min-h-screen bg-white pb-24">
             {/* HEADER */}
             <div className="bg-white border-b border-slate-100">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-4">
-                    <button
-                        onClick={() => router.push("/categories")}
-                        className="w-10 h-10 rounded-full bg-[#F8F8F8] flex items-center justify-center hover:bg-slate-200 transition-all"
-                    >
-                        <ChevronLeft className="w-5 h-5 text-slate-700" />
-                    </button>
-                    <div>
-                        <h1 className="text-xl font-black tracking-tight text-slate-900">
-                            {category?.name || "Category"}
-                        </h1>
-                        <p className="text-[10px] font-semibold text-slate-400">
-                            {loading ? "..." : `${products.length} products`}
-                        </p>
-                    </div>
+                <div className="max-w-7xl mx-auto px-4 h-14 flex items-center">
+                    <h1 className="text-lg font-black tracking-tight text-slate-900">
+                        {category?.name || "Category"}
+                    </h1>
+                    <p className="ml-auto text-[10px] font-semibold text-slate-400">
+                        {loading ? "..." : `${products.length} products`}
+                    </p>
                 </div>
             </div>
 
             {/* ACTIVE FILTER CHIPS */}
             {activeFilterCount > 0 && (
-                <div className="max-w-7xl mx-auto px-6 pt-4 pb-2 flex flex-wrap gap-2">
+                <div className="max-w-7xl mx-auto px-4 pt-3 pb-2 flex flex-wrap gap-2">
                     {selectedBrands.map((brand) => (
                         <button
                             key={brand}
@@ -242,23 +234,27 @@ export default function CategoryClient({ initialCategory, slug }: { initialCateg
             )}
 
             {/* PRODUCT GRID */}
-            <div className="max-w-7xl mx-auto px-6 pt-6">
+            <div className="max-w-7xl mx-auto">
                 {loading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div key={i} className="border-r border-b border-slate-100 bg-white animate-pulse">
-                                <div className="aspect-square bg-slate-50" />
+                            <div key={i} className="border-r border-b border-slate-100">
+                                <div className="aspect-square bg-[#F1F5F9] flex items-center justify-center">
+                                    <span className="font-daciana text-[80px] text-[#CBD5E1]" style={{ lineHeight: 1 }}>
+                                        M
+                                    </span>
+                                </div>
                                 <div className="p-4 space-y-3">
-                                    <div className="h-3 bg-slate-50 rounded w-1/3" />
-                                    <div className="h-4 bg-slate-50 rounded w-3/4" />
-                                    <div className="h-3 bg-slate-50 rounded w-1/2" />
+                                    <Skeleton className="h-3 w-1/3 rounded" />
+                                    <Skeleton className="h-4 w-3/4 rounded" />
+                                    <Skeleton className="h-3 w-1/2 rounded" />
                                     <div className="pt-3 border-t border-slate-50 flex items-center gap-3">
-                                        <div className="h-5 bg-slate-50 rounded w-1/4" />
-                                        <div className="h-3 bg-slate-50 rounded w-1/5" />
+                                        <Skeleton className="h-5 w-1/4 rounded" />
+                                        <Skeleton className="h-3 w-1/5 rounded" />
                                     </div>
                                     <div className="flex gap-2">
-                                        <div className="w-10 h-10 bg-slate-50 rounded-lg" />
-                                        <div className="flex-1 h-10 bg-slate-50 rounded-lg" />
+                                        <Skeleton className="w-10 h-10 rounded-lg" />
+                                        <Skeleton className="flex-1 h-10 rounded-lg" />
                                     </div>
                                 </div>
                             </div>

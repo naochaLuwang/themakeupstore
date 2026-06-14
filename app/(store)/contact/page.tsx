@@ -1,91 +1,92 @@
-import { Mail, Phone, MapPin, Clock } from "lucide-react"
-import { ContactForm } from "./contact-form"
+"use client"
 
-export const metadata = {
-    title: "Contact Us | DACIANA",
-    description: "Get in touch with the Daciana team for inquiries and support.",
+import { Phone, Mail, MapPin, Clock, MessageCircle, ChevronRight } from "lucide-react"
+import Link from "next/link"
+
+const CONTACT = {
+    address: "Michael Plaza 1st Floor, Wangkhei Angom Leikai, Imphal",
+    phone: "+91-6009098096",
+    email: "themakeupstorewangkhei@gmail.com",
+    hours: "Mon – Sat, 10:00 AM – 8:00 PM",
 }
+
+const contactItems = [
+    {
+        icon: Phone,
+        label: "Phone",
+        value: CONTACT.phone,
+        href: `tel:${CONTACT.phone}`,
+    },
+    {
+        icon: Mail,
+        label: "Email",
+        value: CONTACT.email,
+        href: `mailto:${CONTACT.email}`,
+    },
+    {
+        icon: MapPin,
+        label: "Visit Us",
+        value: CONTACT.address,
+        href: null,
+    },
+    {
+        icon: Clock,
+        label: "Store Hours",
+        value: CONTACT.hours,
+        href: null,
+    },
+]
 
 export default function ContactPage() {
     return (
-        <main className="min-h-screen bg-white">
-            {/* Elegant Header */}
-            <header className="py-20 px-4 border-b border-slate-50">
-                <div className="container mx-auto text-center max-w-2xl">
-                    <span className="font-daciana text-primary tracking-[0.4em] uppercase text-[10px] mb-4 block">
-                        Get In Touch
-                    </span>
-                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 mb-6 uppercase">
-                        Contact Us
+        <div className="min-h-screen bg-white">
+            <div className="max-w-lg mx-auto px-5 pt-6 pb-20">
+                {/* Hero */}
+                <div className="flex flex-col items-center pt-4 pb-8">
+                    <div className="w-14 h-14 rounded-full bg-[#FCE4EC] flex items-center justify-center mb-4">
+                        <MessageCircle className="w-7 h-7 text-[#FC2779]" />
+                    </div>
+                    <h1 className="text-[26px] font-extrabold tracking-tight text-gray-900 mb-2">
+                        Get in Touch
                     </h1>
-                    <p className="text-slate-500 text-sm md:text-base leading-relaxed font-medium">
-                        Whether you have a question about our collections, an order, or just want to say hello, our team is here to assist you.
+                    <p className="text-sm text-gray-400 text-center leading-relaxed">
+                        We&apos;d love to hear from you. Reach out anytime.
                     </p>
                 </div>
-            </header>
 
-            <section className="container mx-auto px-4 py-8 md:py-0">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-
-                    {/* Contact Information */}
-                    <div className="lg:col-span-5 space-y-12">
-                        <div>
-                            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 mb-8">
-                                Contact Details
-                            </h2>
-                            <div className="space-y-8">
-                                <div className="flex gap-6">
-                                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center">
-                                        <Mail className="w-5 h-5 text-slate-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email Us</p>
-                                        <p className="text-slate-900 font-bold">support@themakeupstorewangkhei.com</p>
-                                    </div>
+                {/* Contact Cards */}
+                <div className="space-y-3">
+                    {contactItems.map((item, i) => {
+                        const Icon = item.icon
+                        const content = (
+                            <div className="flex items-center gap-3.5 p-4 border border-gray-100 rounded-2xl bg-white">
+                                <div className="w-11 h-11 rounded-full bg-[#FCE4EC] flex items-center justify-center shrink-0">
+                                    <Icon className="w-5 h-5 text-[#FC2779]" />
                                 </div>
-
-                                <div className="flex gap-6">
-                                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center">
-                                        <Phone className="w-5 h-5 text-slate-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Call Us</p>
-                                        <p className="text-slate-900 font-bold">+91 XXXXX XXXXX</p>
-                                    </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+                                        {item.label}
+                                    </p>
+                                    <p className="text-sm font-semibold text-gray-900 leading-tight mt-0.5">
+                                        {item.value}
+                                    </p>
                                 </div>
-
-                                <div className="flex gap-6">
-                                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center">
-                                        <Clock className="w-5 h-5 text-slate-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Business Hours</p>
-                                        <p className="text-slate-900 font-bold">10AM - 7:30 PM</p>
-                                    </div>
-                                </div>
+                                {item.href && (
+                                    <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                                )}
                             </div>
-                        </div>
-
-                        <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900 mb-3">Our Atelier</h3>
-                            <p className="text-sm text-slate-500 leading-relaxed">
-                                The Makeup Store, Michael Plaza 1st Floor.Wangkhei Angom Leikai Opposite Thangal Temple , 795005, Imphal East , Manipur
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Form Section */}
-                    <div className="lg:col-span-7">
-                        <div className="bg-white rounded-3xl border border-slate-100 p-8 md:p-12 shadow-sm">
-                            <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-8">
-                                Send a Message
-                            </h2>
-                            <ContactForm />
-                        </div>
-                    </div>
-
+                        )
+                        if (item.href) {
+                            return (
+                                <a key={i} href={item.href} className="block">
+                                    {content}
+                                </a>
+                            )
+                        }
+                        return <div key={i}>{content}</div>
+                    })}
                 </div>
-            </section>
-        </main>
+            </div>
+        </div>
     )
 }

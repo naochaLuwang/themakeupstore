@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/utils/supabase/client"
 import { ChevronLeft, ShoppingBag, Package, ImageIcon } from "lucide-react"
 import { motion } from "framer-motion"
 
@@ -14,17 +15,25 @@ const statusVariant: Record<string, { label: string; color: string }> = {
     cancelled:  { label: "CANCELLED",  color: "bg-red-50 text-red-500 border-red-200" },
 }
 
-function getDeliveryLine(order: any): string | null {
+function getDeliveryLine(order: any, fallbackMap: Record<string, string>): string | null {
     const addr = order.shipping_address as any
     if (!addr) return null
-    const deliveryLabel = (addr as any)?.delivery_label
+    const deliveryLabel = addr.delivery_label || fallbackMap[order.id] || ""
     if (!deliveryLabel) return null
-    const created = new Date(order.created_at)
+    const baseDate = order.shipped_at ? new Date(order.shipped_at) : new Date(order.created_at)
     const prefix = order.status === 'delivered' ? 'Delivered on' : 'Arriving by'
+    if (/FRI\/SAT/i.test(deliveryLabel)) {
+        const d = new Date(baseDate)
+        const currentDay = d.getDay()
+        let diff = 6 - currentDay
+        if (diff <= 0) diff += 7
+        d.setDate(d.getDate() + diff)
+        return `${prefix} ${d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`
+    }
     const match = deliveryLabel.match(/(\d+)\s*-\s*\d+/)
     if (match) {
         const days = parseInt(match[1], 10)
-        const d = new Date(created)
+        const d = new Date(baseDate)
         d.setDate(d.getDate() + days)
         return `${prefix} ${d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`
     }
@@ -37,8 +46,41 @@ function formatDate(dateStr: string) {
 }
 
 export default function OrdersHistoryClient({ initialOrders }: { initialOrders: any[] }) {
-    const [orders] = useState(initialOrders)
+    const [orders, setOrders] = useState(initialOrders)
+    const [fallbackLabels, setFallbackLabels] = useState<Record<string, string>>({})
     const router = useRouter()
+    const supabase = createClient()
+
+    useEffect(() => {
+        const missing = orders.filter(o => {
+            const addr = o.shipping_address as any
+            return addr?.pincode && !addr?.delivery_label
+        })
+        if (missing.length === 0) return
+        ;(async () => {
+            const map: Record<string, string> = {}
+            for (const o of missing) {
+                const pincode = (o.shipping_address as any).pincode
+                if (!pincode) continue
+                const { data: zone } = await supabase
+                    .from("shipping_zones")
+                    .select("id")
+                    .eq("pincode", pincode)
+                    .maybeSingle()
+                if (zone) {
+                    const { data: methods } = await supabase
+                        .from("shipping_methods")
+                        .select("delivery_time_label")
+                        .eq("zone_id", zone.id)
+                        .eq("is_active", true)
+                        .order("price", { ascending: true })
+                        .limit(1)
+                    if (methods?.length) map[o.id] = methods[0].delivery_time_label
+                }
+            }
+            setFallbackLabels(map)
+        })()
+    }, [])
 
     return (
         <div className="min-h-screen bg-[#F8F8F8] pb-12">
@@ -63,7 +105,7 @@ export default function OrdersHistoryClient({ initialOrders }: { initialOrders: 
                     <div className="space-y-4">
                         {orders.map((order, idx) => {
                             const config = statusVariant[order.status] || statusVariant.pending
-                            const deliveryLine = order.status !== 'cancelled' ? getDeliveryLine(order) : null
+                            const deliveryLine = order.status !== 'cancelled' ? getDeliveryLine(order, fallbackLabels) : null
                             const items = order.order_items || []
                             const previewItems = items.slice(0, 3)
                             const remainder = items.length - 3

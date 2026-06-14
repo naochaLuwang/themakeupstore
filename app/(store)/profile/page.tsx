@@ -73,7 +73,7 @@ export default function ProfilePage() {
             title: "Support",
             items: [
                 { label: "Contact Us", href: "/contact", icon: MessageCircle },
-                { label: "About Us", href: "/shop", icon: Info },
+                { label: "About Us", href: "/about-us", icon: Info },
             ],
         },
         {

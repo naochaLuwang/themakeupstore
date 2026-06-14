@@ -78,7 +78,7 @@ export default function BrandsPage() {
             <SignatureLoader loading={loading} text="The Makeup Store / Brands" />
             {!loading && (
                 <div className="min-h-screen bg-white">
-                    <div className="max-w-6xl mx-auto px-5 pt-8 pb-20">
+                    <div className="max-w-6xl mx-auto px-5 pt-2 pb-20">
                         {/* Title */}
                         <div className="mb-7">
                             <h1 className="text-[28px] font-bold text-gray-900 tracking-tight">

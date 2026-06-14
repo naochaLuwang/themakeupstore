@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import { BottomNav } from "./bottom-nav"
 
-const HIDE_BOTTOM_NAV_PATHS = ["/products/", "/cart"]
+const HIDE_BOTTOM_NAV_PATHS = ["/products/", "/cart", "/categories/", "/exclusive/", "/essentials/", "/shop"]
 
 export function BottomNavWrapper() {
     const pathname = usePathname()
