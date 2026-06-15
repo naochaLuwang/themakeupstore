@@ -34,8 +34,8 @@ export function MessageItem({ msg }: { msg: any }) {
     const mailtoLink = `mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)} | DACIANA Inquiry&body=${encodeURIComponent(`\n\n--- Original Message ---\nFrom: ${msg.name}\nMessage: ${msg.message}`)}`;
 
     return (
-        <div className={`group bg-white border ${status === 'unread' ? 'border-primary/20 shadow-md' : 'border-slate-100 shadow-sm'} p-6 rounded-2xl transition-all relative overflow-hidden`}>
-            {status === 'unread' && <div className="absolute top-0 left-0 w-1 h-full bg-primary" />}
+        <div className={`group bg-white border ${status === 'unread' ? 'border-rose-400/20 shadow-md' : 'border-slate-100 shadow-sm'} p-6 rounded-2xl transition-all relative overflow-hidden`}>
+            {status === 'unread' && <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />}
 
             <div className="flex flex-col md:flex-row justify-between gap-4 mb-4">
                 <div className="flex items-center gap-4">
@@ -45,7 +45,7 @@ export function MessageItem({ msg }: { msg: any }) {
                     <div>
                         <div className="flex items-center gap-2">
                             <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">{msg.name}</h3>
-                            {status === 'unread' && <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />}
+                            {status === 'unread' && <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />}
                         </div>
                         <p className="text-[11px] text-slate-400 font-medium">{msg.email}</p>
                     </div>
@@ -60,7 +60,7 @@ export function MessageItem({ msg }: { msg: any }) {
                     {/* NEW QUICK REPLY BUTTON */}
                     <a
                         href={mailtoLink}
-                        className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
+                        className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
                         title="Reply to Message"
                     >
                         <Reply className="w-5 h-5" />
@@ -70,7 +70,7 @@ export function MessageItem({ msg }: { msg: any }) {
                     <button
                         onClick={toggleStatus}
                         disabled={loading}
-                        className={`p-2 rounded-lg transition-colors ${status === 'read' ? 'text-green-500 bg-green-50' : 'text-slate-300 hover:text-primary hover:bg-slate-50'}`}
+                        className={`p-2 rounded-lg transition-colors ${status === 'read' ? 'text-green-500 bg-green-50' : 'text-slate-300 hover:text-rose-500 hover:bg-slate-50'}`}
                         title={status === 'unread' ? "Mark as Read" : "Mark as Unread"}
                     >
                         {status === 'read' ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
@@ -79,7 +79,7 @@ export function MessageItem({ msg }: { msg: any }) {
             </div>
 
             <div className="space-y-2">
-                <p className="text-xs font-black uppercase tracking-widest text-primary">{msg.subject}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-rose-500">{msg.subject}</p>
                 <div className="group/msg relative">
                     <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">
                         {msg.message}

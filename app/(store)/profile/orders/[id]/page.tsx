@@ -1,10 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { ArrowLeft, Package, Clock, Truck, CheckCircle2, RefreshCw, XCircle } from "lucide-react"
 import { toast } from "sonner"
+import { useCart } from "@/components/store/use-cart"
 
 const steps = [
     { status: "pending", label: "Placed", icon: Clock },
@@ -25,6 +27,7 @@ export default function OrderDetailPage() {
     const [fallbackLabel, setFallbackLabel] = useState("")
     const [returnRequests, setReturnRequests] = useState<any[]>([])
     const [rewardPoints, setRewardPoints] = useState<any>(null)
+    const { addItem } = useCart()
 
     useEffect(() => {
         if (id) fetchOrder()
@@ -58,7 +61,7 @@ export default function OrderDetailPage() {
             .select(`
                 *,
                 order_items (
-                    id, product_id, product_name, variant_title, sku,
+                    id, product_id, product_variant_id, product_name, variant_title, sku,
                     quantity, unit_price, mrp,
                     products:product_id (thumbnail_url, slug)
                 )
@@ -110,18 +113,39 @@ export default function OrderDetailPage() {
     const handleReorder = async () => {
         setReordering(true)
         try {
+            const variantIds = order.order_items
+                .map((i: any) => i.product_variant_id)
+                .filter(Boolean)
+
+            const { data: variants } = await supabase
+                .from("product_variants")
+                .select("id, stock, product_id, products!inner(category_id)")
+                .in("id", variantIds)
+
+            const stockMap: Record<string, number> = {}
+            const catMap: Record<string, string> = {}
+            if (variants) {
+                for (const v of variants) {
+                    stockMap[v.id] = v.stock
+                    catMap[v.product_id] = (v.products as any).category_id
+                }
+            }
+
             for (const item of order.order_items) {
-                await supabase.from("cart_items").upsert({
-                    user_id: (await supabase.auth.getUser()).data.user?.id,
-                    product_id: item.product_id,
-                    product_variant_id: item.product_variant_id,
-                    product_name: item.product_name,
-                    variant_title: item.variant_title,
-                    thumbnail_url: item.products?.thumbnail_url || null,
+                if (!item.product_variant_id) continue
+                addItem({
+                    id: item.product_variant_id,
+                    productId: item.product_id,
+                    categoryId: catMap[item.product_id] || "",
+                    variantId: item.product_variant_id,
+                    name: item.product_name,
+                    variantTitle: item.variant_title || "",
+                    price: Number(item.unit_price),
+                    mrp: Number(item.mrp || item.unit_price),
+                    image: item.products?.thumbnail_url || "",
                     quantity: item.quantity,
-                    unit_price: item.unit_price,
-                    mrp: item.mrp,
-                }, { onConflict: "user_id,product_variant_id" })
+                    stock: stockMap[item.product_variant_id] ?? 999,
+                })
             }
             router.push("/cart")
             toast.success("Items added to cart")
@@ -141,10 +165,18 @@ export default function OrderDetailPage() {
     }
 
     const getDeliveryLine = () => {
+        if (order.status === "shipped") return "Out for delivery"
+        if (order.status === "delivered") {
+            if (order.delivered_at) {
+                const d = new Date(order.delivered_at)
+                return `Delivered on ${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}`
+            }
+            return "Delivered"
+        }
         const label = order?.shipping_address?.delivery_label || fallbackLabel
         if (!label || !order?.shipping_address?.pincode) return null
         const baseDate = order.shipped_at ? new Date(order.shipped_at) : new Date(order.created_at)
-        const prefix = order.status === "delivered" ? "Delivered on" : "Arriving by"
+        const prefix = "Arriving by"
         if (/FRI\/SAT/i.test(label)) {
             const d = new Date(baseDate)
             const currentDay = d.getDay()
@@ -306,10 +338,13 @@ export default function OrderDetailPage() {
                                         </div>
                                     </div>
                                     {order.status === "delivered" && !hasReturn && (
-                                        <button className="w-full flex items-center justify-center gap-1.5 py-2 my-1 rounded-lg border border-gray-200 text-[#FC2779] text-xs font-bold">
+                                        <Link
+                                            href={`/profile/orders/${order.id}/return?item=${item.id}`}
+                                            className="w-full flex items-center justify-center gap-1.5 py-2 my-1 rounded-lg border border-gray-200 text-[#FC2779] text-xs font-bold"
+                                        >
                                             <RefreshCw className="w-3.5 h-3.5" />
                                             Request Return
-                                        </button>
+                                        </Link>
                                     )}
                                     {order.status === "delivered" && returnReq && (
                                         <div className="flex items-center gap-1.5 py-1.5 mb-1">

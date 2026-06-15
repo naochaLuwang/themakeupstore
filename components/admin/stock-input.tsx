@@ -34,7 +34,7 @@ export function StockInput({ variantId, initialStock }: { variantId: string, ini
                 disabled={loading}
             />
             {loading && (
-                <Loader2 className="absolute right-2 top-2 h-4 w-4 animate-spin text-muted-foreground" />
+                <Loader2 className="absolute right-2 top-2 h-4 w-4 animate-spin text-slate-400" />
             )}
         </div>
     )

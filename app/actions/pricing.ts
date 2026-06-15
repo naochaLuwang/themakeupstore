@@ -1,38 +1,8 @@
-// app/actions/pricing.ts
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
-
-// export async function updatePricing(updates: {
-//     id: string;
-//     type: 'product' | 'variant';
-//     price: number;
-//     discount_type: 'none' | 'percentage' | 'amount';
-//     discount_value: number;
-// }) {
-//     const supabase = await createClient() // Await the client
-
-//     const table = updates.type === 'product' ? 'products' : 'product_variants'
-//     const priceColumn = updates.type === 'product' ? 'base_price' : 'price'
-
-//     const { error } = await supabase
-//         .from(table)
-//         .update({
-//             [priceColumn]: updates.price,
-//             discount_type: updates.discount_type,
-//             discount_value: updates.discount_value,
-//             updated_at: new Date().toISOString()
-//         })
-//         .eq('id', updates.id)
-
-//     if (error) throw new Error(error.message)
-
-//     revalidatePath('/admin/pricing')
-//     return { success: true }
-// }
-
 
 export async function updatePricing(updates: {
     id: string;
@@ -44,8 +14,10 @@ export async function updatePricing(updates: {
     await requireAdmin()
     const supabase = await createClient()
 
+    if (updates.price < 0) throw new Error("Price cannot be negative")
+    if (updates.discount_value < 0) throw new Error("Discount value cannot be negative")
+
     if (updates.type === 'product') {
-        // 1. UPDATE Master Product
         const { error: prodError } = await supabase
             .from('products')
             .update({
@@ -55,25 +27,20 @@ export async function updatePricing(updates: {
                 updated_at: new Date().toISOString()
             })
             .eq('id', updates.id)
-
         if (prodError) throw prodError
 
-        // 2. CASCADE: Update all variants belonging to this product
         const { error: varError } = await supabase
             .from('product_variants')
             .update({
-                price: updates.price, // Sync price to all variants
+                price: updates.price,
                 discount_type: updates.discount_type,
                 discount_value: updates.discount_value,
                 updated_at: new Date().toISOString()
             })
             .eq('product_id', updates.id)
-
         if (varError) throw varError
-
     } else {
-        // 3. Update only the specific Variant
-        const { error } = await supabase
+        const { error: varError } = await supabase
             .from('product_variants')
             .update({
                 price: updates.price,
@@ -82,8 +49,34 @@ export async function updatePricing(updates: {
                 updated_at: new Date().toISOString()
             })
             .eq('id', updates.id)
+        if (varError) throw varError
 
-        if (error) throw error
+        // Sync variant price to parent product only if product has exactly 1 variant
+        const { data: variant } = await supabase
+            .from('product_variants')
+            .select('product_id')
+            .eq('id', updates.id)
+            .single()
+
+        if (variant?.product_id) {
+            const { count } = await supabase
+                .from('product_variants')
+                .select('id', { count: 'exact', head: true })
+                .eq('product_id', variant.product_id)
+
+            if (count === 1) {
+                const { error: prodError } = await supabase
+                    .from('products')
+                    .update({
+                        base_price: updates.price,
+                        discount_type: updates.discount_type,
+                        discount_value: updates.discount_value,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', variant.product_id)
+                if (prodError) throw prodError
+            }
+        }
     }
 
     revalidatePath('/admin/pricing')

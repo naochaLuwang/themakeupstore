@@ -1,47 +1,30 @@
-
-
 import { createClient } from "@/utils/supabase/server"
 import InventoryRegistryWrapper from "./inventory-registry-wrapper"
 
 export default async function InventoryPage() {
     const supabase = await createClient()
 
-    const { data: categories } = await supabase
-        .from("categories")
-        .select("id, name")
-        .order("name")
-
-    const { data: inventory, error } = await supabase
-        .from("product_variants")
-        .select(`
-            id, 
-            sku, 
-            title, 
-            stock, 
-            price,
-            product_id,
-            products ( 
-                name,
-                product_categories (category_id)
-            )
-        `)
-        .order("stock", { ascending: true })
-
-    if (error) console.error("Fetch Error:", error.message)
+    const [{ data: categories }, { data: products }] = await Promise.all([
+        supabase.from("categories").select("id, name").order("name"),
+        supabase
+            .from("products")
+            .select(`
+                id, name, brand, thumbnail_url,
+                product_categories(category_id),
+                product_variants(id, sku, title, stock, price, discount_type, discount_value)
+            `)
+            .order("name"),
+    ])
 
     return (
-        <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 lg:pb-12 bg-slate-50/30 min-h-screen">
-            <header className="mb-10">
-                <h2 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase italic text-slate-900">
-                    Inventory Registry
-                </h2>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    Global Stock Sync & SKU Management
-                </p>
-            </header>
+        <div className="space-y-6">
+            <div className="space-y-1">
+                <h1 className="text-2xl font-black tracking-tight text-slate-900">Inventory</h1>
+                <p className="text-sm text-slate-500">Global stock and SKU management</p>
+            </div>
 
             <InventoryRegistryWrapper
-                initialInventory={inventory || []}
+                initialProducts={products || []}
                 categories={categories || []}
             />
         </div>

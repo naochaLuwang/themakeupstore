@@ -1,14 +1,18 @@
-
-
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Search, Plus, Trash2, MapPin, Clock, Pencil, Check, X, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
+
+const DeliveryRadiusConfig = dynamic(
+    () => import("@/components/admin/delivery-radius-config"),
+    { ssr: false }
+)
 
 export default function ShippingAdmin() {
     const supabase = createClient()
@@ -59,32 +63,33 @@ export default function ShippingAdmin() {
     }
 
     return (
-        <div className="container mx-auto py-8 max-w-6xl px-4 space-y-8 bg-[#FAFAFA] min-h-screen">
+        <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-                        Logistics <ChevronRight className="w-5 h-5 text-slate-300" /> <span className="text-slate-500">Master Data</span>
-                    </h1>
+                <div className="space-y-1">
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Shipping Zones</h1>
+                    <p className="text-sm text-slate-500">Manage shipping areas, pincodes, and delivery methods</p>
                 </div>
                 <div className="relative w-full md:w-80">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input
                         placeholder="Filter by Pincode or Area..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-12 rounded-xl border-slate-200 bg-white shadow-sm text-base"
+                        className="pl-10 h-11 rounded-xl border-slate-200 bg-white shadow-sm text-sm"
                     />
                 </div>
             </div>
 
-            <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-end shadow-sm">
+            <DeliveryRadiusConfig />
+
+            <div className="rounded-2xl border bg-white p-4 shadow-sm flex flex-col lg:flex-row gap-4 items-end">
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Area Name</label>
+                        <label className="text-xs font-medium text-slate-400 uppercase">Area Name</label>
                         <Input placeholder="e.g. Babupara" value={newZone.name} onChange={(e) => setNewZone({ ...newZone, name: e.target.value })} className="h-11 border-slate-200 bg-slate-50 rounded-xl text-sm font-medium" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Pincode</label>
+                        <label className="text-xs font-medium text-slate-400 uppercase">Pincode</label>
                         <Input placeholder="e.g. 795001" value={newZone.pincode} onChange={(e) => setNewZone({ ...newZone, pincode: e.target.value })} className="h-11 border-slate-200 bg-slate-50 rounded-xl text-sm font-medium" />
                     </div>
                     <div className="space-y-1">

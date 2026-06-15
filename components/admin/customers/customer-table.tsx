@@ -13,44 +13,43 @@ import {
 
 export function CustomerTable({ customers }: { customers: any[] }) {
     return (
-        <div className="rounded-md border">
+        <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
             <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b">
+                <thead className="bg-slate-50/50">
                     <tr>
-                        <th className="p-4 text-left font-bold uppercase text-[10px]">Customer</th>
-                        <th className="p-4 text-left font-bold uppercase text-[10px]">Status</th>
-                        <th className="p-4 text-left font-bold uppercase text-[10px]">Orders</th>
-                        <th className="p-4 text-left font-bold uppercase text-[10px]">Total Spend</th>
-                        <th className="p-4 text-right font-bold uppercase text-[10px]">Joined</th>
+                        <th className="py-4 px-6 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Customer</th>
+                        <th className="py-4 px-6 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                        <th className="py-4 px-6 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Orders</th>
+                        <th className="py-4 px-6 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Spend</th>
+                        <th className="py-4 px-6 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Joined</th>
                         <th className="w-[50px]"></th>
                     </tr>
                 </thead>
                 <tbody>
                     {customers.map((customer) => {
                         const totalSpend = customer.orders.reduce((acc: number, o: any) => acc + Number(o.total), 0)
-
                         return (
-                            <tr key={customer.id} className="border-b hover:bg-slate-50 transition-colors">
-                                <td className="p-4">
-                                    <div className="font-medium">{customer.full_name || "Anonymous"}</div>
-                                    <div className="text-xs text-muted-foreground">{customer.email}</div>
+                            <tr key={customer.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                <td className="py-4 px-6">
+                                    <div className="font-medium text-slate-900">{customer.full_name || "Anonymous"}</div>
+                                    <div className="text-xs text-slate-400">{customer.email}</div>
                                 </td>
-                                <td className="p-4">
-                                    <Badge variant={customer.orders.length > 0 ? "default" : "secondary"} className="text-[10px]">
+                                <td className="py-4 px-6">
+                                    <Badge variant={customer.orders.length > 0 ? "default" : "secondary"} className="text-[10px] font-medium">
                                         {customer.orders.length > 0 ? "RECURRING" : "LEAD"}
                                     </Badge>
                                 </td>
-                                <td className="p-4 font-mono">{customer.orders.length}</td>
-                                <td className="p-4 font-bold text-emerald-600">₹{totalSpend.toLocaleString()}</td>
-                                <td className="p-4 text-right text-muted-foreground">
+                                <td className="py-4 px-6 font-mono text-sm">{customer.orders.length}</td>
+                                <td className="py-4 px-6 font-semibold text-emerald-600">₹{totalSpend.toLocaleString()}</td>
+                                <td className="py-4 px-6 text-right text-slate-400 text-sm">
                                     {format(new Date(customer.created_at), "MMM dd, yyyy")}
                                 </td>
-                                <td className="p-4">
+                                <td className="py-4 px-6">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400"><MoreHorizontal className="h-4 w-4" /></Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
+                                        <DropdownMenuContent align="end" className="rounded-xl">
                                             <DropdownMenuItem onClick={() => window.location.href = `mailto:${customer.email}`}>
                                                 <Mail className="mr-2 h-4 w-4" /> Email Customer
                                             </DropdownMenuItem>

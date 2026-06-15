@@ -8,20 +8,32 @@ import { ChevronLeft, ShoppingBag, Package, ImageIcon } from "lucide-react"
 import { motion } from "framer-motion"
 
 const statusVariant: Record<string, { label: string; color: string }> = {
-    pending:    { label: "PENDING",    color: "bg-amber-50 text-amber-600 border-amber-200" },
-    processing: { label: "PROCESSING", color: "bg-blue-50 text-blue-600 border-blue-200" },
-    shipped:    { label: "SHIPPED",    color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
-    delivered:  { label: "DELIVERED",  color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
-    cancelled:  { label: "CANCELLED",  color: "bg-red-50 text-red-500 border-red-200" },
+    pending:          { label: "PENDING",           color: "bg-amber-50 text-amber-600 border-amber-200" },
+    processing:       { label: "PROCESSING",         color: "bg-blue-50 text-blue-600 border-blue-200" },
+    shipped:          { label: "SHIPPED",            color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
+    delivered:        { label: "DELIVERED",          color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
+    cancelled:        { label: "CANCELLED",          color: "bg-red-50 text-red-500 border-red-200" },
+    return_requested: { label: "RETURN REQUESTED",   color: "bg-purple-50 text-purple-600 border-purple-200" },
+    return_approved:  { label: "RETURN APPROVED",    color: "bg-sky-50 text-sky-600 border-sky-200" },
+    return_refunded:  { label: "REFUNDED",           color: "bg-blue-50 text-blue-600 border-blue-200" },
+    return_rejected:  { label: "RETURN REJECTED",    color: "bg-orange-50 text-orange-600 border-orange-200" },
 }
 
 function getDeliveryLine(order: any, fallbackMap: Record<string, string>): string | null {
+    if (order.status === 'shipped') return 'Out for delivery'
+    if (order.status === 'delivered') {
+        if (order.delivered_at) {
+            const d = new Date(order.delivered_at)
+            return `Delivered on ${d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`
+        }
+        return 'Delivered'
+    }
     const addr = order.shipping_address as any
     if (!addr) return null
     const deliveryLabel = addr.delivery_label || fallbackMap[order.id] || ""
     if (!deliveryLabel) return null
     const baseDate = order.shipped_at ? new Date(order.shipped_at) : new Date(order.created_at)
-    const prefix = order.status === 'delivered' ? 'Delivered on' : 'Arriving by'
+    const prefix = 'Arriving by'
     if (/FRI\/SAT/i.test(deliveryLabel)) {
         const d = new Date(baseDate)
         const currentDay = d.getDay()
@@ -46,7 +58,16 @@ function formatDate(dateStr: string) {
 }
 
 export default function OrdersHistoryClient({ initialOrders }: { initialOrders: any[] }) {
-    const [orders, setOrders] = useState(initialOrders)
+    const [orders, setOrders] = useState(() => {
+        const priority = ["pending", "approved", "refunded", "rejected"]
+        return initialOrders.map(o => {
+            const returns: any[] = (o as any).return_requests || []
+            const best = returns.filter(r => r.status).sort(
+                (a: any, b: any) => priority.indexOf(a.status) - priority.indexOf(b.status)
+            )[0]
+            return { ...o, return_status: best?.status || null }
+        })
+    })
     const [fallbackLabels, setFallbackLabels] = useState<Record<string, string>>({})
     const router = useRouter()
     const supabase = createClient()
@@ -82,6 +103,14 @@ export default function OrdersHistoryClient({ initialOrders }: { initialOrders: 
         })()
     }, [])
 
+    function getStatusConfig(order: any) {
+        if (order.status === "delivered" && order.return_status) {
+            const key = `return_${order.return_status}` as keyof typeof statusVariant
+            return statusVariant[key] || statusVariant.delivered
+        }
+        return statusVariant[order.status] || statusVariant.pending
+    }
+
     return (
         <div className="min-h-screen bg-[#F8F8F8] pb-12">
             {/* HEADER */}
@@ -104,7 +133,7 @@ export default function OrdersHistoryClient({ initialOrders }: { initialOrders: 
                 {orders.length > 0 ? (
                     <div className="space-y-4">
                         {orders.map((order, idx) => {
-                            const config = statusVariant[order.status] || statusVariant.pending
+                            const config = getStatusConfig(order)
                             const deliveryLine = order.status !== 'cancelled' ? getDeliveryLine(order, fallbackLabels) : null
                             const items = order.order_items || []
                             const previewItems = items.slice(0, 3)

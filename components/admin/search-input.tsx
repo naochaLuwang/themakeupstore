@@ -26,7 +26,7 @@ export function SearchInput({ placeholder }: { placeholder: string }) {
 
     return (
         <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
                 placeholder={placeholder}
                 defaultValue={searchParams.get("q")?.toString()}

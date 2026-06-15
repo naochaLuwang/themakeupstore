@@ -17,6 +17,7 @@ export async function placeOrder(
         total: number;
         price: number;
         methodName: string;
+        deliveryTimeLabel?: string;
         shipping_method_id?: string | null
     },
     promoDetails?: { code: string; discount: number; id?: string }
@@ -109,7 +110,7 @@ export async function placeOrder(
                 shipping_price: verifiedShippingPrice,
                 shipping_label: shippingDetails.methodName,
                 shipping_method_id: shippingDetails.shipping_method_id || null,
-                shipping_address: { ...formData, delivery_label: shippingDetails.methodName },
+                shipping_address: { ...formData, delivery_label: shippingDetails.deliveryTimeLabel || shippingDetails.methodName },
                 promo_code: promoDetails?.code || null,
                 promo_discount_amount: verifiedDiscount,
             }])

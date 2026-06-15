@@ -2,28 +2,52 @@ import { createClient } from "@/utils/supabase/server"
 import {
     CheckCircle,
     XCircle,
-    RotateCcw,
     AlertTriangle,
     Banknote,
     ExternalLink,
+    Search,
+    Filter,
 } from "lucide-react"
 import { updateReturnStatus, markRefunded } from "./actions"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
-const STATUS_COLORS: Record<string, string> = {
-    pending: "bg-amber-100 text-amber-800 border-amber-200",
-    approved: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    rejected: "bg-red-100 text-red-800 border-red-200",
-    refunded: "bg-blue-100 text-blue-800 border-blue-200",
+const STATUS_STYLES: Record<string, { label: string; icon: React.ReactNode; bg: string; dot: string }> = {
+    pending: {
+        label: "Pending",
+        icon: <AlertTriangle className="w-3 h-3" />,
+        bg: "bg-amber-50 text-amber-700",
+        dot: "bg-amber-400",
+    },
+    approved: {
+        label: "Approved",
+        icon: <CheckCircle className="w-3 h-3" />,
+        bg: "bg-emerald-50 text-emerald-700",
+        dot: "bg-emerald-400",
+    },
+    rejected: {
+        label: "Rejected",
+        icon: <XCircle className="w-3 h-3" />,
+        bg: "bg-red-50 text-red-700",
+        dot: "bg-red-400",
+    },
+    refunded: {
+        label: "Refunded",
+        icon: <Banknote className="w-3 h-3" />,
+        bg: "bg-blue-50 text-blue-700",
+        dot: "bg-blue-400",
+    },
 }
 
-const STATUS_ICONS: Record<string, React.ReactNode> = {
-    pending: <AlertTriangle className="w-3 h-3" />,
-    approved: <CheckCircle className="w-3 h-3" />,
-    rejected: <XCircle className="w-3 h-3" />,
-    refunded: <Banknote className="w-3 h-3" />,
+function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+        day: "numeric", month: "short", year: "numeric",
+    })
+}
+
+function formatTime(dateStr: string) {
+    return new Date(dateStr).toLocaleTimeString("en-IN", {
+        hour: "2-digit", minute: "2-digit",
+    })
 }
 
 export default async function ReturnRequestsPage() {
@@ -39,194 +63,192 @@ export default async function ReturnRequestsPage() {
         `)
         .order("created_at", { ascending: false })
 
-    const counts = {
-        total: requests?.length || 0,
-        pending: requests?.filter(r => r.status === "pending").length || 0,
-    }
+    const pendingCount = requests?.filter(r => r.status === "pending").length || 0
 
     return (
-        <div className="p-8 space-y-8 bg-slate-50/50 min-h-screen">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Return Requests</h1>
+            <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Return Requests</h1>
                     <p className="text-sm text-slate-500">Manage customer return requests and process refunds.</p>
                 </div>
-                <div className="flex gap-4">
-                    <div className="text-right">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total</p>
-                        <p className="text-xl font-bold">{counts.total}</p>
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2.5">
+                        <span className="text-xs font-medium text-slate-400">Total</span>
+                        <span className="text-lg font-bold text-slate-900 tabular-nums">{requests?.length || 0}</span>
                     </div>
-                    <div className="text-right">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Pending</p>
-                        <p className="text-xl font-bold">{counts.pending}</p>
+                    <div className="w-px h-8 bg-slate-200" />
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span className="text-xs font-medium text-slate-400">Pending</span>
+                        <span className="text-lg font-bold text-amber-600 tabular-nums">{pendingCount}</span>
                     </div>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                            <th className="p-4">Customer</th>
-                            <th className="p-4">Product</th>
-                            <th className="p-4">Reason</th>
-                            <th className="p-4">Status</th>
-                            <th className="p-4">Date</th>
-                            <th className="p-4 text-right">Actions</th>
+            <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+                <table className="w-full">
+                    <thead>
+                        <tr className="border-b border-slate-100">
+                            <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Customer</th>
+                            <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Product</th>
+                            <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Reason</th>
+                            <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Status</th>
+                            <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Transaction ID</th>
+                            <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Submitted</th>
+                            <th className="py-3.5 px-5 text-right text-[10px] font-semibold uppercase tracking-widest text-slate-400">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {requests?.length === 0 && (
+                    <tbody className="divide-y divide-slate-50">
+                        {(!requests || requests.length === 0) && (
                             <tr>
-                                <td colSpan={6} className="p-12 text-center text-slate-400 text-sm">
-                                    No return requests yet.
+                                <td colSpan={7} className="py-16 text-center">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <AlertTriangle className="w-8 h-8 text-slate-200" />
+                                        <p className="text-sm text-slate-400">No return requests yet.</p>
+                                    </div>
                                 </td>
                             </tr>
                         )}
                         {requests?.map((req) => {
                             const addr = (req.orders?.shipping_address as any) || {}
+                            const style = STATUS_STYLES[req.status] || STATUS_STYLES.pending
+                            const images: string[] = req.images || []
+
                             return (
-                                <tr
-                                    key={req.id}
-                                    className={`text-sm transition-colors ${req.status === 'pending' ? 'bg-amber-50/30' : 'hover:bg-slate-50'}`}
-                                >
-                                    {/* Customer */}
-                                    <td className="p-4 whitespace-nowrap">
-                                        <div className="font-bold text-slate-900 uppercase tracking-tight text-xs">
-                                            {addr.full_name || "Unknown"}
-                                        </div>
-                                        {addr.phone && (
-                                            <div className="text-[10px] text-slate-400 font-medium">{addr.phone}</div>
-                                        )}
-                                    </td>
-
-                                    {/* Product */}
-                                    <td className="p-4 max-w-[200px]">
+                                <tr key={req.id} className="group hover:bg-slate-50/50 transition-colors">
+                                    <td className="py-4 px-5">
                                         <div className="flex items-center gap-3">
-                                            {req.products?.thumbnail_url && (
-                                                <img
-                                                    src={req.products.thumbnail_url}
-                                                    alt=""
-                                                    className="w-8 h-8 rounded object-cover bg-slate-100"
-                                                />
-                                            )}
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+                                                {(addr.full_name || "?").charAt(0).toUpperCase()}
+                                            </div>
                                             <div>
-                                                <div className="font-bold text-slate-900 text-xs truncate">
-                                                    {req.products?.name || "Unknown"}
-                                                </div>
-                                                <div className="text-[9px] text-slate-400 font-mono uppercase">
-                                                    ID: {req.id.split("-")[0]}
-                                                </div>
+                                                <p className="text-sm font-medium text-slate-900">{addr.full_name || "Unknown"}</p>
+                                                {addr.phone && (
+                                                    <p className="text-xs text-slate-400">{addr.phone}</p>
+                                                )}
                                             </div>
                                         </div>
                                     </td>
 
-                                    {/* Reason */}
-                                    <td className="p-4 max-w-[280px]">
-                                        <p className="text-slate-700 text-xs leading-relaxed line-clamp-2">
-                                            {req.reason}
-                                        </p>
+                                    <td className="py-4 px-5">
+                                        <div className="flex items-center gap-3">
+                                            {req.products?.thumbnail_url ? (
+                                                <img src={req.products.thumbnail_url} alt="" className="w-9 h-9 rounded-lg object-cover bg-slate-100 shrink-0" />
+                                            ) : (
+                                                <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 shrink-0" />
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">
+                                                    {req.products?.name || "Unknown"}
+                                                </p>
+                                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                                    #{req.id.split("-")[0]}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </td>
 
-                                    {/* Status */}
-                                    <td className="p-4">
-                                        <Badge
-                                            variant="outline"
-                                            className={`gap-1.5 px-3 py-1 text-[10px] font-black uppercase tracking-wider ${STATUS_COLORS[req.status] || "bg-slate-100 text-slate-600"}`}
-                                        >
-                                            {STATUS_ICONS[req.status]}
-                                            {req.status}
-                                        </Badge>
-                                        {req.images?.length > 0 && (
-                                            <div className="flex gap-1.5 mt-2">
-                                                {req.images.map((url: string, i: number) => (
-                                                    <a
-                                                        key={i}
-                                                        href={url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="w-10 h-10 rounded-lg border border-slate-200 overflow-hidden block bg-slate-50 hover:ring-2 hover:ring-slate-300 transition-all"
-                                                    >
-                                                        <img src={url} alt="" className="w-full h-full object-cover" />
-                                                    </a>
-                                                ))}
+                                    <td className="py-4 px-5 max-w-[260px]">
+                                        <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{req.reason}</p>
+                                    </td>
+
+                                    <td className="py-4 px-5">
+                                        <div className="flex flex-col gap-2">
+                                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold w-fit ${style.bg}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                                                {style.label}
                                             </div>
+                                            {images.length > 0 && (
+                                                <div className="flex gap-1">
+                                                    {images.slice(0, 3).map((url: string, i: number) => (
+                                                        <a
+                                                            key={i}
+                                                            href={url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="w-7 h-7 rounded border border-slate-200 overflow-hidden block bg-slate-50 hover:ring-2 hover:ring-slate-300 transition-all"
+                                                        >
+                                                            <img src={url} alt="" className="w-full h-full object-cover" />
+                                                        </a>
+                                                    ))}
+                                                    {images.length > 3 && (
+                                                        <span className="text-[9px] text-slate-400 font-medium self-center">+{images.length - 3}</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
+
+                                    <td className="py-4 px-5 align-middle">
+                                        {req.status === "approved" ? (
+                                            <form action={markRefunded} className="flex items-center gap-2">
+                                                <input type="hidden" name="id" value={req.id} />
+                                                <input
+                                                    name="transaction_id"
+                                                    placeholder="Enter transaction ID..."
+                                                    required
+                                                    className="w-36 h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    className="w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-all shrink-0"
+                                                    title="Mark as Refunded"
+                                                >
+                                                    <Banknote className="w-3.5 h-3.5" />
+                                                </button>
+                                            </form>
+                                        ) : req.transaction_id ? (
+                                            <code className="text-xs font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                                                {req.transaction_id}
+                                            </code>
+                                        ) : (
+                                            <span className="text-xs text-slate-300">—</span>
                                         )}
                                     </td>
 
-                                    {/* Date */}
-                                    <td className="p-4 whitespace-nowrap">
-                                        <div className="text-xs text-slate-600">
-                                            {new Date(req.created_at).toLocaleDateString("en-IN", {
-                                                day: "numeric",
-                                                month: "short",
-                                                year: "numeric",
-                                            })}
-                                        </div>
-                                        <div className="text-[10px] text-slate-400">
-                                            {new Date(req.created_at).toLocaleTimeString("en-IN", {
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                            })}
-                                        </div>
+                                    <td className="py-4 px-5 whitespace-nowrap">
+                                        <p className="text-sm text-slate-600">{formatDate(req.created_at)}</p>
+                                        <p className="text-xs text-slate-400">{formatTime(req.created_at)}</p>
                                     </td>
 
-                                    {/* Actions */}
-                                    <td className="p-4">
-                                        <div className="flex flex-col gap-2 items-end">
+                                    <td className="py-4 px-5">
+                                        <div className="flex items-center justify-end gap-2">
                                             <Link
                                                 href={`/admin/return-requests/${req.id}`}
-                                                className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 transition-colors"
+                                                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-all"
                                             >
-                                                <ExternalLink className="w-3 h-3" />
-                                                View Details
+                                                <ExternalLink className="w-3.5 h-3.5" />
                                             </Link>
                                             {req.status === "pending" && (
-                                                <form className="flex gap-2">
-                                                    <input type="hidden" name="id" value={req.id} />
-                                                    <Button
-                                                        type="submit"
-                                                        variant="default"
-                                                        size="sm"
-                                                        name="status"
-                                                        value="approved"
-                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider h-8 px-3 gap-1.5"
-                                                        formAction={updateReturnStatus}
-                                                    >
-                                                        <CheckCircle className="w-3 h-3" />
-                                                        Approve
-                                                    </Button>
-                                                    <Button
-                                                        type="submit"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        name="status"
-                                                        value="rejected"
-                                                        className="text-red-600 border-red-200 hover:bg-red-50 text-[10px] font-black uppercase tracking-wider h-8 px-3 gap-1.5"
-                                                        formAction={updateReturnStatus}
-                                                    >
-                                                        <XCircle className="w-3 h-3" />
-                                                        Reject
-                                                    </Button>
-                                                </form>
+                                                <>
+                                                    <form action={updateReturnStatus}>
+                                                        <input type="hidden" name="id" value={req.id} />
+                                                        <input type="hidden" name="status" value="approved" />
+                                                        <button
+                                                            type="submit"
+                                                            className="w-8 h-8 rounded-lg border border-emerald-200 bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 transition-all"
+                                                            title="Approve"
+                                                        >
+                                                            <CheckCircle className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </form>
+                                                    <form action={updateReturnStatus}>
+                                                        <input type="hidden" name="id" value={req.id} />
+                                                        <input type="hidden" name="status" value="rejected" />
+                                                        <button
+                                                            type="submit"
+                                                            className="w-8 h-8 rounded-lg border border-red-200 bg-red-50 flex items-center justify-center text-red-500 hover:bg-red-100 transition-all"
+                                                            title="Reject"
+                                                        >
+                                                            <XCircle className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </form>
+                                                </>
                                             )}
-                                            {req.status === "approved" && (
-                                                <form>
-                                                    <input type="hidden" name="id" value={req.id} />
-                                                    <Button
-                                                        type="submit"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="text-blue-600 border-blue-200 hover:bg-blue-50 text-[10px] font-black uppercase tracking-wider h-8 px-3 gap-1.5"
-                                                        formAction={markRefunded}
-                                                    >
-                                                        <Banknote className="w-3 h-3" />
-                                                        Mark Refunded
-                                                    </Button>
-                                                </form>
-                                            )}
+
                                         </div>
                                     </td>
                                 </tr>
@@ -236,47 +258,7 @@ export default async function ReturnRequestsPage() {
                 </table>
             </div>
 
-            {/* Timeline */}
-            {requests && requests.some(r => r.return_status_logs?.length > 0) && (
-                <details className="border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden">
-                    <summary className="p-4 text-xs font-black uppercase tracking-widest text-slate-400 cursor-pointer hover:bg-slate-50">
-                        Activity Timeline ({requests.reduce((acc, r) => acc + (r.return_status_logs?.length || 0), 0)} entries)
-                    </summary>
-                    <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
-                        {requests
-                            ?.flatMap(r =>
-                                (r.return_status_logs || []).map((log: any) => ({
-                                    ...log,
-                                    productName: r.products?.name || "Unknown",
-                                }))
-                            )
-                            .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                            .slice(0, 50)
-                            .map((entry: any) => (
-                                <div key={entry.id} className="p-3 flex items-center gap-3 text-xs">
-                                    <Badge
-                                        variant="outline"
-                                        className={`gap-1 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${STATUS_COLORS[entry.status] || "bg-slate-100 text-slate-600"}`}
-                                    >
-                                        {entry.status}
-                                    </Badge>
-                                    <span className="text-slate-600 font-medium">{entry.productName}</span>
-                                    {entry.note && (
-                                        <span className="text-slate-400 italic">— {entry.note}</span>
-                                    )}
-                                    <span className="text-slate-400 ml-auto text-[10px]">
-                                        {new Date(entry.created_at).toLocaleString("en-IN", {
-                                            day: "numeric",
-                                            month: "short",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                        })}
-                                    </span>
-                                </div>
-                            ))}
-                    </div>
-                </details>
-            )}
+
         </div>
     )
 }

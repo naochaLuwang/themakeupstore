@@ -816,7 +816,7 @@ export default function ProductEditForm({ product, categories }: { product: any,
                         <Button type="button" variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full"><ArrowLeft className="w-5 h-5" /></Button>
                         <div>
                             <h1 className="text-3xl font-black tracking-tighter uppercase italic text-slate-900">Update Stock</h1>
-                            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] mt-1 text-slate-400">Inventory Management System</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 text-slate-400">Inventory Management System</p>
                         </div>
                     </div>
                     <div className="flex gap-3">

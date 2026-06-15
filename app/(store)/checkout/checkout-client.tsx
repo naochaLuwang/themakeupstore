@@ -28,7 +28,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const supabase = createClient()
     const router = useRouter()
     const {
-        items, shippingPrice, selectedShippingId, shippingLabel,
+        items, shippingPrice, selectedShippingId, shippingLabel, deliveryTimeLabel,
         clearCart, setShippingMethod, getSubtotal,
         appliedPromo, setAppliedPromo, getDiscountAmount, getFinalTotal,
     } = useCart()
@@ -48,7 +48,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     useEffect(() => {
         if (selectedAddress?.shipping_methods) {
             const method = selectedAddress.shipping_methods
-            setShippingMethod({ id: method.id, name: method.name, price: Number(method.price) })
+            setShippingMethod({ id: method.id, name: method.name, price: Number(method.price), delivery_time_label: method.delivery_time_label })
         }
     }, [selectedAddress, setShippingMethod])
 
@@ -104,7 +104,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
             const res = await placeOrder(
                 selectedAddress,
                 items,
-                { total, price: shippingPrice, methodName: shippingLabel, shipping_method_id: selectedAddress.shipping_methods?.id },
+                { total, price: shippingPrice, methodName: shippingLabel, deliveryTimeLabel, shipping_method_id: selectedAddress.shipping_methods?.id },
                 promoDetails
             )
             if (res.success) {

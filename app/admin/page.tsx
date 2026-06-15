@@ -1,340 +1,539 @@
 import { createClient } from "@/utils/supabase/server"
 import { DateRangePicker } from "@/components/admin/date-range-picker"
-import { StatsCards } from "@/components/admin/stats-cards"
 import { RecentOrdersTable } from "@/components/admin/recent-orders-table"
-import { LowStockList } from "@/components/admin/low-stock-list"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Suspense } from "react"
 import {
-    Loader2, TrendingUp, AlertCircle, CheckCircle2, Truck, Wallet,
+    Loader2, TrendingUp, AlertCircle, CheckCircle2,
     PackagePlus, Send, Tag, MessageSquare, UserPlus, BarChart3,
-    ShoppingBag, Clock, ArrowUpRight, Box
+    ShoppingBag, Clock, ArrowUpRight, Box, ShoppingCart,
+    Users, CircleDollarSign, Activity, Sparkles, Zap, Bell,
+    ArrowUp, ArrowDown, DollarSign, Hourglass, Layers, Globe,
+    Eye, CreditCard, RefreshCw, Target, Percent, Flame, CalendarDays,
+    Phone, Mail, User, Wallet, Banknote, BadgePercent
 } from "lucide-react"
 import { RevenueChart } from "@/components/admin/revenue-chart"
-import { BestSellersChart } from "@/components/admin/bestseller-chart"
-import { startOfDay, endOfDay, subDays, parseISO } from "date-fns"
+import { format, startOfDay, endOfDay, subDays, parseISO, differenceInDays, getDay } from "date-fns"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 
-interface QuickStatProps {
-    title: string;
-    value: string;
-    subtitle: string;
-    icon: React.ReactNode;
+// ─── Stat Card (compact) ───
+
+function StatCard({ label, value, subtitle, icon, change, className = "" }: {
+    label: string; value: string; subtitle?: string; icon: React.ReactNode; change?: number; className?: string
+}) {
+    return (
+        <div className={`rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${className}`}>
+            <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
+                <div className="w-6 h-6 flex items-center justify-center rounded-md bg-slate-50 border border-slate-100">
+                    <div className="w-3.5 h-3.5 text-slate-500">{icon}</div>
+                </div>
+            </div>
+            <div className="flex items-end justify-between">
+                <p className="text-lg font-bold text-slate-900 tracking-tight">{value}</p>
+                {change !== undefined && (
+                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1 py-0.5 rounded ${
+                        change >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'
+                    }`}>
+                        {change >= 0 ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
+                        {Math.abs(change).toFixed(0)}%
+                    </span>
+                )}
+            </div>
+            {subtitle && <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>}
+        </div>
+    )
 }
 
-export default async function AdminDashboard({
-    searchParams
-}: {
+function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+    return <div className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>
+}
+
+function SectionTitle({ icon, label, right }: { icon: React.ReactNode; label: string; right?: React.ReactNode }) {
+    return (
+        <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+                <span className="text-slate-400">{icon}</span>
+                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
+            </div>
+            {right}
+        </div>
+    )
+}
+
+// ─── Day of week chart (inline, compact) ───
+
+function DayOfWeekChart({ orders }: { orders: any[] }) {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    const buckets = days.map(() => ({ total: 0, count: 0 }))
+    orders.forEach((o: any) => {
+        const d = getDay(new Date(o.created_at))
+        buckets[d].total += Number(o.total || 0)
+        buckets[d].count++
+    })
+    const maxR = Math.max(...buckets.map(b => b.total), 1)
+    const maxC = Math.max(...buckets.map(b => b.count), 1)
+    return (
+        <div className="flex items-end gap-1.5 h-20 mt-1">
+            {buckets.map((b, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-medium text-slate-400">{b.count}</span>
+                    <div className="w-full rounded-t-sm bg-blue-500/20" style={{ height: `${(b.count / maxC) * 100}%` }} />
+                    <span className="text-[9px] text-slate-500 font-semibold">{days[i]}</span>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+// ─── Progress bar mini ───
+
+function MiniPct({ value, max, color }: { value: number; max: number; color: string }) {
+    const pct = max > 0 ? (value / max) * 100 : 0
+    return (
+        <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+        </div>
+    )
+}
+
+// ─── Page ───
+
+export default async function AdminDashboard({ searchParams }: {
     searchParams: Promise<{ from?: string; to?: string }>
 }) {
     const { from, to } = await searchParams
     const supabase = await createClient()
 
-    const startDate = from
-        ? startOfDay(parseISO(from)).toISOString()
-        : startOfDay(subDays(new Date(), 30)).toISOString()
-    const endDate = to
-        ? endOfDay(parseISO(to)).toISOString()
-        : endOfDay(new Date()).toISOString()
+    const now = new Date()
+    const end = to ? endOfDay(parseISO(to)) : endOfDay(now)
+    const start = from ? startOfDay(parseISO(from)) : startOfDay(subDays(now, 30))
+    const periodDays = differenceInDays(end, start) || 1
+    const priorStart = subDays(start, periodDays)
+    const priorEnd = subDays(start, 1)
 
-    const todayStart = startOfDay(new Date()).toISOString()
-    const todayEnd = endOfDay(new Date()).toISOString()
-    const lastWeekStart = startOfDay(subDays(new Date(), 7)).toISOString()
-    const lastWeekEnd = endOfDay(subDays(new Date(), 7)).toISOString()
+    const toIso = (d: Date) => d.toISOString()
+    const [startDate, endDate, pStart, pEnd, todayStart, todayEnd] = [
+        toIso(start), toIso(end), toIso(priorStart), toIso(priorEnd),
+        toIso(startOfDay(now)), toIso(endOfDay(now)),
+    ]
 
-    const [ordersResult, todayResult, lastWeekResult, messagesResult, waitlistResult, inventoryResult] = await Promise.all([
-        supabase.from("orders")
-            .select(`id, total, status, payment_status, created_at, user_id,
-                order_items (quantity, product_name, variant_title),
-                profiles!orders_user_id_fkey (full_name)`)
-            .gte("created_at", startDate).lte("created_at", endDate)
-            .order("created_at", { ascending: false }),
-        supabase.from("orders")
-            .select("id, total, status, created_at", { count: "exact" })
+    const [
+        ordersRes, priorRes, todayRes, msgsRes, wlRes, invRes, refundRes,
+        trafficRes, catRes, newCustRes
+    ] = await Promise.all([
+        supabase.from("orders").select(`id,total,status,payment_status,payment_method,promo_code,created_at,user_id,
+            order_items(quantity,product_name,product_id,unit_price),profiles!orders_user_id_fkey(full_name)`)
+            .gte("created_at", startDate).lte("created_at", endDate).order("created_at", { ascending: false }),
+        supabase.from("orders").select("id,total,status,payment_status,created_at")
+            .gte("created_at", pStart).lte("created_at", pEnd),
+        supabase.from("orders").select("id,total,status,created_at", { count: "exact" })
             .gte("created_at", todayStart).lte("created_at", todayEnd),
-        supabase.from("orders")
-            .select("total", { count: "exact" })
-            .gte("created_at", lastWeekStart).lte("created_at", lastWeekEnd),
-        supabase.from("contact_messages")
-            .select("id, name, subject, created_at, status")
-            .order("created_at", { ascending: false }).limit(5),
-        supabase.from("wholesale_applications")
-            .select("id, company_name, created_at, status", { count: "exact" })
-            .order("created_at", { ascending: false }).limit(5),
-        supabase.from("product_variants")
-            .select("id, stock"),
+        supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "unread"),
+        supabase.from("wholesale_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("product_variants").select("id,stock"),
+        supabase.from("orders").select("id", { count: "exact" }).eq("payment_status", "refunded")
+            .gte("created_at", startDate).lte("created_at", endDate),
+        supabase.from("traffic_log").select("id", { count: "exact", head: true }).gte("created_at", toIso(subDays(now, 1))),
+        supabase.from("product_categories").select("product_id,categories!inner(name)"),
+        supabase.from("orders").select("user_id")
+            .lt("created_at", startDate).not("user_id", "is", null),
     ])
 
-    const orderError = ordersResult.error
-    const allOrders = ordersResult.data || []
-    const netOrders = allOrders.filter(o => o.status !== 'cancelled')
+    // ── Derived ──
+    const orders = ordersRes.data || []
+    const net = orders.filter((o: any) => o.status !== 'cancelled')
+    const prior = (priorRes.data || []).filter((o: any) => o.status !== 'cancelled')
+    const todayNet = (todayRes.data || []).filter((o: any) => o.status !== 'cancelled')
+    const todayRev = todayNet.reduce((s: number, o: any) => s + Number(o.total || 0), 0)
+    const todayCnt = todayNet.length
 
-    const todayOrders = todayResult.data || []
-    const todayNet = todayOrders.filter(o => o.status !== 'cancelled')
-    const todayRevenue = todayNet.reduce((sum, o) => sum + Number(o.total || 0), 0)
-    const todayCount = todayNet.length
+    // Get contact messages and wholesale for activity (not just count)
+    const msgsData = await supabase.from("contact_messages")
+        .select("id,name,subject,created_at,status").order("created_at", { ascending: false }).limit(3)
+    const wlData = await supabase.from("wholesale_applications")
+        .select("id,company_name,created_at,status").order("created_at", { ascending: false }).limit(3)
 
-    const lastWeekData = lastWeekResult.data || []
-    const lastWeekNet = lastWeekData.filter(o => o.total)
-    const lastWeekRevenue = lastWeekNet.reduce((sum, o) => sum + Number(o.total || 0), 0)
+    const recentMsgs = msgsData.data || []
+    const recentWl = wlData.data || []
 
-    const paidRevenue = netOrders.filter(o => o.payment_status === 'paid')
-        .reduce((sum, o) => sum + Number(o.total || 0), 0)
-    const pendingRevenue = netOrders.filter(o => o.payment_status !== 'paid')
-        .reduce((sum, o) => sum + Number(o.total || 0), 0)
+    const sumR = (o: any[]) => o.reduce((s: number, x: any) => s + Number(x.total || 0), 0)
+    const calc = (o: any[]) => ({
+        rev: sumR(o), cnt: o.length,
+        del: o.filter((x: any) => x.status === 'delivered').length,
+        full: o.length > 0 ? (o.filter((x: any) => x.status === 'delivered').length / o.length) * 100 : 0,
+        cust: new Set(o.map((x: any) => x.user_id).filter(Boolean)).size,
+        pend: o.filter((x: any) => x.status === 'pending' || x.status === 'processing').length,
+        aov: o.length > 0 ? Math.round(sumR(o) / o.length) : 0,
+    })
+    const c = calc(net), p = calc(prior)
+    const pct = (c: number, p: number) => p > 0 ? ((c - p) / p) * 100 : c > 0 ? 100 : 0
 
-    const deliveredCount = netOrders.filter(o => o.status === 'delivered').length
-    const fulfillmentRate = netOrders.length > 0 ? (deliveredCount / netOrders.length) * 100 : 0
+    const totalVar = invRes.data?.length || 0
+    const inStock = (invRes.data || []).filter((v: any) => v.stock > 0).length
+    const refundCount = refundRes.count || 0
+    const returnRate = c.cnt > 0 ? (refundCount / c.cnt) * 100 : 0
+    const promoOrders = net.filter((o: any) => o.promo_code).length
+    const promoRate = c.cnt > 0 ? (promoOrders / c.cnt) * 100 : 0
+    const unreadMsg = msgsRes.count || 0
+    const pendingWl = wlRes.count || 0
+    const traffic24h = trafficRes.count || 0
+    const conversion = traffic24h > 0 ? ((todayCnt / traffic24h) * 100) : 0
 
-    const totalRevenue = netOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
-    const aov = netOrders.length > 0 ? Math.round(totalRevenue / netOrders.length) : 0
+    // New vs returning customers
+    const returningIds = new Set((newCustRes.data || []).map((r: any) => r.user_id).filter(Boolean))
+    const orderUserIds = net.map((o: any) => o.user_id).filter(Boolean)
+    const totalCustomers = new Set(orderUserIds).size
+    const returning = orderUserIds.filter(id => returningIds.has(id)).length
+    const isUnique = new Set()
+    const returningUnique = orderUserIds.filter(id => {
+        if (isUnique.has(id)) return false
+        isUnique.add(id)
+        return returningIds.has(id)
+    }).length
+    const returningCount = returningUnique
+    const newCount = totalCustomers - returningCount
 
-    const statusBreakdown = [
-        { label: "Pending", count: allOrders.filter(o => o.status === 'pending').length, color: "text-amber-600", bg: "bg-amber-50" },
-        { label: "Processing", count: allOrders.filter(o => o.status === 'processing').length, color: "text-blue-600", bg: "bg-blue-50" },
-        { label: "Shipped", count: allOrders.filter(o => o.status === 'shipped').length, color: "text-purple-600", bg: "bg-purple-50" },
-        { label: "Delivered", count: allOrders.filter(o => o.status === 'delivered').length, color: "text-emerald-600", bg: "bg-emerald-50" },
-        { label: "Cancelled", count: allOrders.filter(o => o.status === 'cancelled').length, color: "text-rose-600", bg: "bg-rose-50" },
+    // Payment methods
+    const pmBuckets = new Map<string, number>()
+    net.forEach((o: any) => {
+        const pm = o.payment_method || "COD"
+        pmBuckets.set(pm, (pmBuckets.get(pm) || 0) + 1)
+    })
+    const pmTotal = [...pmBuckets.values()].reduce((a, b) => a + b, 0)
+
+    // Categories
+    const prodCatMap = new Map<string, string>()
+    catRes.data?.forEach((pc: any) => {
+        if (!prodCatMap.has(pc.product_id)) prodCatMap.set(pc.product_id, pc.categories?.name || "Uncategorized")
+    })
+    const catItems = new Map<string, number>()
+    net.forEach((o: any) => {
+        o.order_items?.forEach((oi: any) => {
+            const cat = prodCatMap.get(oi.product_id) || "Uncategorized"
+            catItems.set(cat, (catItems.get(cat) || 0) + (oi.quantity || 1))
+        })
+    })
+    const topCats = [...catItems.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+
+    // Top products (from order_items)
+    const prodMap = new Map<string, { name: string; category: string; qty: number; rev: number }>()
+    net.forEach((o: any) => {
+        o.order_items?.forEach((oi: any) => {
+            const key = oi.product_name || "Unknown"
+            const cat = prodCatMap.get(oi.product_id) || "Uncategorized"
+            const e = prodMap.get(key) || { name: key, category: cat, qty: 0, rev: 0 }
+            e.qty += oi.quantity || 1
+            e.rev += (oi.quantity || 1) * Number(oi.unit_price || 0)
+            prodMap.set(key, e)
+        })
+    })
+    const topProds = [...prodMap.values()].sort((a, b) => b.qty - a.qty).slice(0, 5)
+
+    // Status breakdown
+    const statusBD = [
+        { label: "Pending", cnt: orders.filter((o: any) => o.status === 'pending').length, color: "text-amber-600", bg: "bg-amber-400" },
+        { label: "Processing", cnt: orders.filter((o: any) => o.status === 'processing').length, color: "text-blue-600", bg: "bg-blue-400" },
+        { label: "Shipped", cnt: orders.filter((o: any) => o.status === 'shipped').length, color: "text-purple-600", bg: "bg-purple-400" },
+        { label: "Delivered", cnt: orders.filter((o: any) => o.status === 'delivered').length, color: "text-emerald-600", bg: "bg-emerald-400" },
+        { label: "Cancelled", cnt: orders.filter((o: any) => o.status === 'cancelled').length, color: "text-red-600", bg: "bg-red-400" },
     ]
 
-    const uniqueCustomerIds = new Set(allOrders.map(o => o.user_id).filter(Boolean))
-    const activeCustomers = uniqueCustomerIds.size
-
-    const totalVariants = inventoryResult.data?.length || 0
-    const inStockVariants = (inventoryResult.data || []).filter((v: any) => v.stock > 0).length
-    const stockHealthPct = totalVariants > 0 ? Math.round((inStockVariants / totalVariants) * 100) : 0
-
-    const pendingFulfillment = allOrders.filter(o =>
-        o.status === 'pending' || o.status === 'processing'
-    ).length
-
-    const recentMessages = (messagesResult.data || []).slice(0, 3)
-    const recentWaitlist = (waitlistResult.data || []).slice(0, 3)
-
-    const quickActions = [
-        { label: "New Product", href: "/admin/products/add", icon: PackagePlus, color: "bg-blue-500" },
-        { label: "Broadcast", href: "/admin/broadcast", icon: Send, color: "bg-purple-500" },
-        { label: "Promo Codes", href: "/admin/promos", icon: Tag, color: "bg-emerald-500" },
-        { label: "Messages", href: "/admin/messages", icon: MessageSquare, color: "bg-amber-500" },
-    ]
+    // PM colors
+    const pmColors: Record<string, string> = {
+        "COD": "bg-amber-400",
+        "razorpay": "bg-blue-400",
+        "stripe": "bg-indigo-400",
+        "prepaid": "bg-emerald-400",
+        "card": "bg-violet-400",
+        "upi": "bg-cyan-400",
+        "paypal": "bg-sky-400",
+    }
 
     return (
-        <div className="flex-1 space-y-8 p-8 pt-6 bg-slate-50/40 min-h-screen">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-3">
+            {/* Header */}
+            <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-3xl font-black uppercase tracking-tighter italic text-slate-900 leading-none">
-                        Admin Dashboard
-                    </h2>
-                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-2">
-                        Reporting Period: {new Date(startDate).toLocaleDateString()} — {new Date(endDate).toLocaleDateString()}
-                    </p>
+                    <h1 className="text-base font-semibold text-slate-900 tracking-tight">Dashboard</h1>
+                    <p className="text-[11px] text-slate-400">{format(start, "MMM dd, yyyy")} — {format(end, "MMM dd, yyyy")}</p>
                 </div>
                 <DateRangePicker />
             </div>
 
-            {orderError && (
-                <div className="flex items-center gap-3 p-4 bg-rose-50 border border-rose-200 rounded-2xl">
-                    <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
-                    <p className="text-sm font-bold text-rose-700">Failed to load dashboard data. Some metrics may be incomplete.</p>
+            {ordersRes.error && (
+                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <p className="text-xs font-medium text-red-700">Failed to load dashboard data.</p>
                 </div>
             )}
 
-            {/* QUICK ACTIONS */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                {quickActions.map(action => (
-                    <Link key={action.label} href={action.href}
-                        className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all shrink-0"
-                    >
-                        <div className={`p-2 rounded-xl ${action.color} bg-opacity-10`}>
-                            <action.icon className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">{action.label}</span>
-                        <ArrowUpRight className="w-3 h-3 text-slate-300" />
-                    </Link>
-                ))}
-                <Link href="/admin/orders"
-                    className="flex items-center gap-3 px-5 py-3 bg-slate-900 text-white rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all shrink-0"
-                >
-                    <ShoppingBag className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">All Orders</span>
-                    <ArrowUpRight className="w-3 h-3 text-slate-400" />
-                </Link>
+            {/* Row 1: Real-time / Today metrics */}
+            <div className="grid grid-cols-6 gap-3">
+                <StatCard label="Today Revenue" value={`₹${todayRev.toLocaleString('en-IN')}`} icon={<TrendingUp />} />
+                <StatCard label="Today Orders" value={todayCnt.toString()} icon={<ShoppingCart />} />
+                <StatCard label="Fulfillment" value={`${c.full.toFixed(0)}%`} subtitle={`${c.del} delivered`} icon={<CheckCircle2 />}
+                    change={pct(c.full, p.full)} />
+                <StatCard label="Conversion" value={`${conversion.toFixed(1)}%`} subtitle="Last 24h" icon={<Target />} />
+                <StatCard label="Refund Rate" value={`${returnRate.toFixed(1)}%`} subtitle={`${refundCount} refunded`}
+                    icon={<RefreshCw />} change={returnRate > 5 ? -100 : 100} />
+                <StatCard label="Visitors 24h" value={traffic24h.toLocaleString()} icon={<Eye />} />
             </div>
 
-            {/* MAIN STATS */}
-            <StatsCards orders={netOrders} />
-
-            {/* TODAY'S SNAPSHOT + AOV + ACTIVE CUSTOMERS */}
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-                <QuickStat
-                    title="Today's Revenue"
-                    value={`₹${todayRevenue.toLocaleString('en-IN')}`}
-                    subtitle={`${todayCount} orders today`}
-                    icon={<TrendingUp className="w-4 h-4 text-emerald-500" />}
-                />
-                <QuickStat
-                    title="Average Order Value"
-                    value={`₹${aov.toLocaleString('en-IN')}`}
-                    subtitle="Per order in period"
-                    icon={<BarChart3 className="w-4 h-4 text-blue-500" />}
-                />
-                <QuickStat
-                    title="Active Customers"
-                    value={activeCustomers.toString()}
-                    subtitle="Placed orders in period"
-                    icon={<UserPlus className="w-4 h-4 text-violet-500" />}
-                />
-                <QuickStat
-                    title="Pending Fulfillment"
-                    value={pendingFulfillment.toString()}
-                    subtitle="Awaiting shipment"
-                    icon={<Clock className="w-4 h-4 text-orange-500" />}
-                />
+            {/* Row 2: Period stats with comparison */}
+            <div className="grid grid-cols-5 gap-3">
+                <StatCard label="Revenue" value={`₹${(c.rev / 1000).toFixed(1)}K`} subtitle={`${c.cnt} orders`}
+                    icon={<CircleDollarSign />} change={pct(c.rev, p.rev)} />
+                <StatCard label="Avg Order" value={`₹${c.aov.toLocaleString()}`} icon={<BarChart3 />} change={pct(c.aov, p.aov)} />
+                <StatCard label="Customers" value={c.cust.toString()} icon={<Users />} change={pct(c.cust, p.cust)} />
+                <StatCard label="Pending" value={c.pend.toString()} icon={<Hourglass />} change={pct(c.pend, p.pend)} />
+                <StatCard label="Stock Health"
+                    value={`${totalVar > 0 ? Math.round((inStock / totalVar) * 100) : 0}%`}
+                    subtitle={`${inStock}/${totalVar}`} icon={<Box />} />
             </div>
 
-            {/* OPERATIONAL STATS */}
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
-                <QuickStat
-                    title="Settled Cash"
-                    value={`₹${paidRevenue.toLocaleString('en-IN')}`}
-                    subtitle="Confirmed in bank"
-                    icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                />
-                <QuickStat
-                    title="Unpaid Balance"
-                    value={`₹${pendingRevenue.toLocaleString('en-IN')}`}
-                    subtitle="Pending/COD"
-                    icon={<Wallet className="w-4 h-4 text-orange-500" />}
-                />
-                <QuickStat
-                    title="Fulfillment Rate"
-                    value={`${fulfillmentRate.toFixed(0)}%`}
-                    subtitle={`${deliveredCount} Delivered`}
-                    icon={<Truck className="w-4 h-4 text-blue-500" />}
-                />
-                <QuickStat
-                    title="Stock Health"
-                    value={`${stockHealthPct}%`}
-                    subtitle={`${inStockVariants}/${totalVariants} variants in stock`}
-                    icon={<Box className="w-4 h-4 text-cyan-500" />}
-                />
-            </div>
+            {/* Quick Actions */}
+            <SectionCard className="p-2.5">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    {[
+                        { label: "New Product", href: "/admin/products/add", icon: PackagePlus },
+                        { label: "Broadcast", href: "/admin/broadcast", icon: Send },
+                        { label: "Promos", href: "/admin/promos", icon: Tag },
+                        { label: "Messages", href: "/admin/messages", icon: MessageSquare },
+                        { label: "Stock", href: "/admin/stock", icon: Box },
+                        { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
+                        { label: "Customers", href: "/admin/customers", icon: Users },
+                        { label: "Reports", href: "/admin/reports/sales", icon: BarChart3 },
+                    ].map(a => (
+                        <Link key={a.label} href={a.href}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:-translate-y-0.5 transition-all shrink-0"
+                        >
+                            <a.icon className="w-3 h-3 text-slate-500" />
+                            <span className="text-[11px] font-medium text-slate-600">{a.label}</span>
+                            <ArrowUpRight className="w-2.5 h-2.5 text-slate-300" />
+                        </Link>
+                    ))}
+                </div>
+            </SectionCard>
 
-            {/* ORDER STATUS BREAKDOWN */}
-            <Card className="border-slate-200 shadow-sm rounded-2xl">
-                <CardHeader>
-                    <CardTitle className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Order Status Breakdown
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-5 gap-4">
-                        {statusBreakdown.map(s => {
-                            const pct = allOrders.length > 0 ? Math.round((s.count / allOrders.length) * 100) : 0
-                            return (
-                                <div key={s.label} className="text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div className={`text-2xl font-black ${s.color}`}>{s.count}</div>
-                                    <div className={`text-[9px] font-black uppercase tracking-widest mt-1 ${s.color}`}>{s.label}</div>
-                                    <div className="text-[10px] text-slate-400 font-bold mt-0.5">{pct}%</div>
+            {/* Row 3: Charts area */}
+            <div className="grid grid-cols-6 gap-3">
+                <SectionCard className="p-4 col-span-3">
+                    <SectionTitle icon={<Activity />} label="Revenue Flow" />
+                    <RevenueChart orders={net} startDate={startDate} endDate={endDate} />
+                </SectionCard>
+                <SectionCard className="p-4 col-span-2">
+                    <SectionTitle icon={<Flame />} label="Top Products" />
+                    {topProds.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
+                    ) : (
+                        <div className="space-y-1.5">
+                            {topProds.map((p, i) => (
+                                <div key={p.name} className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-slate-300 w-4">{i + 1}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs text-slate-700 truncate font-medium">{p.name}</p>
+                                        <p className="text-[10px] text-slate-400 truncate">{p.category}</p>
+                                    </div>
+                                    <span className="text-xs font-semibold text-slate-500">{p.qty}</span>
+                                    <div className="hidden sm:block w-12"><MiniPct value={p.qty} max={topProds[0].qty} color="bg-blue-400" /></div>
                                 </div>
-                            )
-                        })}
+                            ))}
+                        </div>
+                    )}
+                </SectionCard>
+                <SectionCard className="p-4 col-span-1">
+                    <SectionTitle icon={<Layers />} label="Orders" />
+                    <div className="space-y-1.5">
+                        {statusBD.map(s => (
+                            <div key={s.label} className="flex items-center justify-between gap-1">
+                                <span className="text-[10px] text-slate-500">{s.label}</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-semibold text-slate-700">{s.cnt}</span>
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${s.bg}`} />
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                </CardContent>
-            </Card>
-
-            {/* CHARTS */}
-            <div className="grid gap-6 md:grid-cols-7">
-                <div className="md:col-span-4 bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
-                    <CardTitle className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Revenue Flow</CardTitle>
-                    <RevenueChart orders={netOrders} startDate={startDate} endDate={endDate} />
-                </div>
-                <div className="md:col-span-3 bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
-                    <CardTitle className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Top 5 Best Sellers</CardTitle>
-                    <BestSellersChart orders={netOrders} />
-                </div>
+                    <div className="flex items-center gap-1.5 mt-3 mb-2">
+                        <CalendarDays className="w-3 h-3 text-slate-400" />
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Day of Week</span>
+                    </div>
+                    <DayOfWeekChart orders={net} />
+                </SectionCard>
             </div>
 
-            {/* TABLES + ACTIVITY FEED */}
-            <div className="grid gap-6 md:grid-cols-7">
-                <Card className="col-span-4 border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
-                    <RecentOrdersTable orders={allOrders.slice(0, 10)} />
-                </Card>
+            {/* Row 4: Tables */}
+            <div className="grid grid-cols-6 gap-3">
+                <SectionCard className="col-span-3 overflow-hidden">
+                    <div className="p-3 pb-0">
+                        <SectionTitle icon={<ShoppingBag />} label="Recent Orders"
+                            right={<Link href="/admin/orders" className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">View All →</Link>} />
+                    </div>
+                    <RecentOrdersTable orders={orders.slice(0, 8)} />
+                </SectionCard>
+                <SectionCard className="col-span-2 p-4">
+                    <SectionTitle icon={<BarChart3 />} label="Top Categories" />
+                    {topCats.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {topCats.map(([cat, cnt]) => (
+                                <div key={cat} className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-600 flex-1 truncate">{cat}</span>
+                                    <span className="text-xs font-semibold text-slate-500">{cnt}</span>
+                                    <MiniPct value={cnt} max={topCats[0][1]} color="bg-violet-400" />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </SectionCard>
+                <SectionCard className="col-span-1 p-4">
+                    <SectionTitle icon={<CreditCard />} label="Payment" />
+                    {pmBuckets.size === 0 ? (
+                        <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
+                    ) : (
+                        <div className="space-y-1.5">
+                            {[...pmBuckets.entries()].sort((a, b) => b[1] - a[1]).map(([pm, cnt]) => (
+                                <div key={pm}>
+                                    <div className="flex items-center justify-between mb-0.5">
+                                        <span className="text-[10px] text-slate-500 font-medium">{pm}</span>
+                                        <span className="text-xs font-semibold text-slate-700">{pmTotal > 0 ? Math.round((cnt / pmTotal) * 100) : 0}%</span>
+                                    </div>
+                                    <MiniPct value={cnt} max={pmTotal} color={pmColors[pm] || "bg-slate-400"} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </SectionCard>
+            </div>
 
-                <div className="col-span-3 space-y-6">
-                    {/* RECENT ACTIVITY */}
-                    <Card className="border-slate-200 shadow-sm rounded-2xl">
-                        <CardHeader>
-                            <CardTitle className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                                <Activity className="w-3.5 h-3.5" />
-                                Recent Activity
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {recentMessages.length === 0 && recentWaitlist.length === 0 ? (
-                                <p className="text-[11px] text-slate-400 italic text-center py-4">No recent activity</p>
-                            ) : (
-                                <>
-                                    {recentMessages.map((msg: any) => (
-                                        <div key={msg.id} className="flex items-start gap-3">
-                                            <div className="p-1.5 bg-amber-50 rounded-lg mt-0.5">
-                                                <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-[10px] font-bold text-slate-700 truncate">{msg.name}</p>
-                                                <p className="text-[9px] text-slate-400 truncate">{msg.subject}</p>
-                                            </div>
-                                            <Badge variant="outline" className="text-[8px] uppercase shrink-0">
-                                                {msg.status}
-                                            </Badge>
-                                        </div>
-                                    ))}
-                                    {recentWaitlist.map((w: any) => (
-                                        <div key={w.id} className="flex items-start gap-3">
-                                            <div className="p-1.5 bg-violet-50 rounded-lg mt-0.5">
-                                                <UserPlus className="w-3.5 h-3.5 text-violet-600" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-[10px] font-bold text-slate-700 truncate">{w.company_name}</p>
-                                                <p className="text-[9px] text-slate-400">Wholesale Application</p>
-                                            </div>
-                                            <Badge variant="outline" className="text-[8px] uppercase shrink-0">
-                                                {w.status}
-                                            </Badge>
-                                        </div>
-                                    ))}
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-slate-300" /></div>}>
-                        <LowStockList />
-                    </Suspense>
-                </div>
+            {/* Row 5: Activity + Low Stock + Bottom Stats */}
+            <div className="grid grid-cols-3 gap-3">
+                <SectionCard className="p-4">
+                    <SectionTitle icon={<Bell />} label="Recent Activity"
+                        right={<Link href="/admin/messages" className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">View</Link>} />
+                    {recentMsgs.length === 0 && recentWl.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic text-center py-4">No recent activity</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {recentMsgs.map((msg: any) => (
+                                <div key={msg.id} className="flex items-start gap-2">
+                                    <div className="p-1 rounded-md bg-amber-50 mt-0.5">
+                                        <MessageSquare className="w-3 h-3 text-amber-600" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-medium text-slate-700 truncate">{msg.name}</p>
+                                        <p className="text-[10px] text-slate-400 truncate">{msg.subject}</p>
+                                    </div>
+                                    <Badge variant="outline" className="text-[9px] uppercase shrink-0 h-4 px-1 font-medium">{msg.status}</Badge>
+                                </div>
+                            ))}
+                            {recentWl.map((w: any) => (
+                                <div key={w.id} className="flex items-start gap-2">
+                                    <div className="p-1 rounded-md bg-violet-50 mt-0.5">
+                                        <UserPlus className="w-3 h-3 text-violet-600" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-medium text-slate-700 truncate">{w.company_name}</p>
+                                        <p className="text-[10px] text-slate-400">Wholesale Application</p>
+                                    </div>
+                                    <Badge variant="outline" className="text-[9px] uppercase shrink-0 h-4 px-1 font-medium">{w.status}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </SectionCard>
+                <Suspense fallback={
+                    <SectionCard className="p-4 flex items-center justify-center h-32">
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-300" />
+                    </SectionCard>
+                }>
+                    <LowStockPanel />
+                </Suspense>
+                <SectionCard className="p-4">
+                    <SectionTitle icon={<Sparkles />} label="Quick Metrics" />
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+                            <div className="flex items-center gap-1.5">
+                                <BadgePercent className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs text-slate-600">Promo Rate</span>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-800">{promoRate.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+                            <div className="flex items-center gap-1.5">
+                                <User className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs text-slate-600">New Customers</span>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-800">{newCount}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+                            <div className="flex items-center gap-1.5">
+                                <RefreshCw className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs text-slate-600">Returning</span>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-800">{returningCount}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+                            <div className="flex items-center gap-1.5">
+                                <Mail className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs text-slate-600">Unread Msgs</span>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-800">{unreadMsg}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5">
+                            <div className="flex items-center gap-1.5">
+                                <UserPlus className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs text-slate-600">Wholesale Pending</span>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-800">{pendingWl}</span>
+                        </div>
+                    </div>
+                </SectionCard>
             </div>
         </div>
     )
 }
 
-function QuickStat({ title, value, subtitle, icon }: QuickStatProps) {
+// ─── Low Stock Panel ───
+
+async function LowStockPanel() {
+    const supabase = await createClient()
+    const { data: items } = await supabase
+        .from("product_variants")
+        .select(`id, sku, title, stock, products(name)`)
+        .lte("stock", 10).order("stock", { ascending: true }).limit(6)
+
     return (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-start justify-between shadow-sm">
-            <div>
-                <p className="text-[9px] font-black uppercase text-slate-400 mb-1 tracking-widest leading-none">{title}</p>
-                <p className="text-2xl font-black text-slate-900 leading-none">{value}</p>
-                <p className="text-[9px] text-slate-400 font-bold mt-2 italic uppercase">{subtitle}</p>
+        <SectionCard className="p-4 h-full">
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                    <Zap className="w-3 h-3 text-amber-500" />
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Low Stock</span>
+                </div>
+                <Link href="/admin/stock" className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">View All →</Link>
             </div>
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">{icon}</div>
-        </div>
+            {!items?.length ? (
+                <p className="text-xs text-slate-400 italic text-center py-6">All stocked up!</p>
+            ) : (
+                <div className="space-y-1.5">
+                    {items.map((item: any) => (
+                        <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium text-slate-700 truncate">{item.products?.name}</p>
+                                <p className="text-[10px] text-slate-400 font-mono">{item.sku}</p>
+                            </div>
+                            <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                item.stock === 0 ? 'bg-red-50 text-red-600' :
+                                item.stock <= 3 ? 'bg-orange-50 text-orange-600' :
+                                'bg-amber-50 text-amber-600'
+                            }`}>{item.stock}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </SectionCard>
     )
 }
 
-function Activity(props: any) {
-    return (
-        <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-        </svg>
-    )
-}

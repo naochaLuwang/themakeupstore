@@ -202,9 +202,13 @@ CREATE TABLE public.products (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   discount_type text DEFAULT 'none'::text CHECK (discount_type = ANY (ARRAY['percentage'::text, 'amount'::text, 'none'::text])),
   discount_value numeric DEFAULT 0,
+  search_vector tsvector GENERATED ALWAYS AS (
+    to_tsvector('english', coalesce(name,'') || ' ' || coalesce(brand,'') || ' ' || coalesce(description,''))
+  ) STORED,
   CONSTRAINT products_pkey PRIMARY KEY (id),
   CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id)
 );
+CREATE INDEX products_search_idx ON products USING GIN (search_vector);
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
   full_name text,

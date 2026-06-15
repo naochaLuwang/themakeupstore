@@ -218,30 +218,18 @@ export default async function ReturnRequestDetailPage({
                         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                             <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Actions</h2>
                             <div className="space-y-3">
-                                <form>
+                                <form action={updateReturnStatus}>
                                     <input type="hidden" name="id" value={req.id} />
-                                    <Button
-                                        type="submit"
-                                        variant="default"
-                                        name="status"
-                                        value="approved"
-                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-                                        formAction={updateReturnStatus}
-                                    >
+                                    <input type="hidden" name="status" value="approved" />
+                                    <Button type="submit" variant="default" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
                                         <CheckCircle className="w-4 h-4" />
                                         Approve Return
                                     </Button>
                                 </form>
-                                <form>
+                                <form action={updateReturnStatus}>
                                     <input type="hidden" name="id" value={req.id} />
-                                    <Button
-                                        type="submit"
-                                        variant="outline"
-                                        name="status"
-                                        value="rejected"
-                                        className="w-full text-red-600 border-red-200 hover:bg-red-50 gap-2"
-                                        formAction={updateReturnStatus}
-                                    >
+                                    <input type="hidden" name="status" value="rejected" />
+                                    <Button type="submit" variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50 gap-2">
                                         <XCircle className="w-4 h-4" />
                                         Reject Return
                                     </Button>
@@ -252,15 +240,21 @@ export default async function ReturnRequestDetailPage({
 
                     {req.status === "approved" && (
                         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                            <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Actions</h2>
-                            <form>
+                            <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Initiate Refund</h2>
+                            <form action={markRefunded} className="space-y-4">
                                 <input type="hidden" name="id" value={req.id} />
-                                <Button
-                                    type="submit"
-                                    variant="default"
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2"
-                                    formAction={markRefunded}
-                                >
+                                <div>
+                                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                                        Transaction ID <span className="text-rose-400">*</span>
+                                    </label>
+                                    <input
+                                        name="transaction_id"
+                                        placeholder="e.g. TXN123456789"
+                                        required
+                                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all"
+                                    />
+                                </div>
+                                <Button type="submit" variant="default" className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2">
                                     <Banknote className="w-4 h-4" />
                                     Mark as Refunded
                                 </Button>
@@ -287,8 +281,16 @@ export default async function ReturnRequestDetailPage({
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-500">Items</span>
-                                        <span className="text-slate-900">—</span>
+                                    <span className="text-slate-900">—</span>
                                 </div>
+                                {req.transaction_id && (
+                                    <div className="flex justify-between pt-2 border-t border-slate-100">
+                                        <span className="text-slate-500">Transaction ID</span>
+                                        <code className="text-[11px] font-mono text-slate-800 bg-slate-50 px-1.5 py-0.5 rounded">
+                                            {req.transaction_id}
+                                        </code>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

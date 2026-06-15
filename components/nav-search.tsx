@@ -303,7 +303,7 @@ export function NavSearch() {
             const { data, error } = await supabase
                 .from('products')
                 .select('id, name, thumbnail_url, brand')
-                .ilike('name', `%${query}%`)
+                .textSearch("search_vector", query, { type: "websearch", config: "english" })
                 .limit(5)
 
             if (!error) setResults(data || [])

@@ -63,44 +63,43 @@ export default async function ProductsPage({
     }
 
     return (
-        <div className="flex-col pb-20 lg:pb-10">
-            <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+        <div className="space-y-6">
 
-                {/* Header Section */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
-                    <div className="space-y-1">
-                        <h2 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase italic text-slate-900">Products</h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Catalog & Visibility Management</p>
-                    </div>
-                    <Button asChild className="rounded-xl h-12 px-6 bg-slate-900 text-white hover:bg-black shadow-lg shadow-black/10">
-                        <Link href="/admin/products/add">
-                            <Plus className="mr-2 h-4 w-4" /> Add Product
-                        </Link>
-                    </Button>
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Products</h1>
+                    <p className="text-sm text-slate-500">Catalog & visibility management</p>
                 </div>
+                <Button asChild className="rounded-xl h-11 px-5 bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800">
+                    <Link href="/admin/products/add">
+                        <Plus className="mr-2 h-4 w-4" /> Add Product
+                    </Link>
+                </Button>
+            </div>
 
-                {/* Filters Section */}
-                <div className="grid grid-cols-1 md:flex items-center gap-3">
-                    <div className="w-full md:w-80">
-                        <ProductSearch />
-                    </div>
-                    <div className="w-full md:w-60">
-                        <CategoryFilter categories={categoriesList || []} />
-                    </div>
+            {/* Filters Section */}
+            <div className="grid grid-cols-1 md:flex items-center gap-3">
+                <div className="w-full md:w-80">
+                    <ProductSearch />
                 </div>
+                <div className="w-full md:w-60">
+                    <CategoryFilter categories={categoriesList || []} />
+                </div>
+            </div>
 
-                {/* DESKTOP DATA TABLE */}
-                <div className="hidden lg:block rounded-[2.5rem] border bg-white shadow-xl shadow-slate-200/40 overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-slate-50/50 border-b border-slate-100">
-                            <tr className="text-left font-bold text-slate-400 uppercase text-[10px] tracking-widest">
-                                <th className="p-6">Product Info</th>
-                                <th className="p-6">Brand</th>
-                                <th className="p-6">Status</th>
-                                <th className="p-6">Inventory</th>
-                                <th className="p-6 text-right">Actions</th>
-                            </tr>
-                        </thead>
+            {/* DESKTOP DATA TABLE */}
+            <div className="hidden lg:block rounded-2xl border bg-white overflow-hidden shadow-sm">
+                <table className="w-full">
+                    <thead className="bg-slate-50/50">
+                        <tr className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            <th className="py-4 px-6 text-left">Product Info</th>
+                            <th className="py-4 px-6 text-left">Brand</th>
+                            <th className="py-4 px-6 text-left">Status</th>
+                            <th className="py-4 px-6 text-left">Inventory</th>
+                            <th className="py-4 px-6 text-right">Actions</th>
+                        </tr>
+                    </thead>
                         <tbody className="divide-y divide-slate-50">
                             {products?.map((product) => {
                                 const totalStock = product.product_variants?.reduce((acc: number, curr: any) => acc + (curr.stock || 0), 0) || 0
@@ -108,9 +107,9 @@ export default async function ProductsPage({
 
                                 return (
                                     <tr key={product.id} className={`group hover:bg-slate-50/50 transition-colors ${!isActive ? 'opacity-60' : ''}`}>
-                                        <td className="p-6">
+                                        <td className="py-4 px-6">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-14 w-14 relative rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden flex-shrink-0 shadow-sm">
+                                                <div className="h-14 w-14 relative rounded-xl border border-slate-200 bg-slate-100 overflow-hidden flex-shrink-0">
                                                     {product.thumbnail_url ? (
                                                         <Image fill src={product.thumbnail_url} alt={product.name} className="object-cover" />
                                                     ) : (
@@ -118,35 +117,33 @@ export default async function ProductsPage({
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-900 text-base mb-0.5">{product.name}</span>
-                                                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter uppercase">{product.slug}</span>
+                                                    <span className="font-semibold text-slate-900 text-sm">{product.name}</span>
+                                                    <span className="text-[11px] text-slate-400 font-mono">{product.slug}</span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="p-6">
-                                            <span className="text-slate-500 font-bold uppercase text-[10px] tracking-widest bg-slate-100 px-2 py-1 rounded-md">
-                                                {product.brand || "Generic"}
-                                            </span>
+                                        <td className="py-4 px-6">
+                                            <span className="text-xs font-medium text-slate-500">{product.brand || "Generic"}</span>
                                         </td>
-                                        <td className="p-6">
-                                            <Badge className={`rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-wider border-none ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                        <td className="py-4 px-6">
+                                            <Badge className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border-none ${isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                                                 {product.status}
                                             </Badge>
                                         </td>
-                                        <td className="p-6">
+                                        <td className="py-4 px-6">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-black text-slate-900 text-sm">{totalStock}</span>
-                                                <div className={`h-1.5 w-1.5 rounded-full ${totalStock > 0 ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`} />
+                                                <span className="font-semibold text-slate-900">{totalStock}</span>
+                                                <div className={`h-1.5 w-1.5 rounded-full ${totalStock > 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
                                             </div>
                                         </td>
-                                        <td className="p-6 text-right">
+                                        <td className="py-4 px-6 text-right">
                                             <div className="flex justify-end items-center gap-2">
                                                 <form action={toggleStatus.bind(null, product.id, product.status)}>
-                                                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50">
-                                                        {isActive ? <EyeOff className="h-4 w-4 text-slate-400" /> : <Eye className="h-4 w-4 text-emerald-500" />}
+                                                    <Button variant="outline" size="icon" className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400">
+                                                        {isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4 text-emerald-500" />}
                                                     </Button>
                                                 </form>
-                                                <Button variant="secondary" size="sm" asChild className="h-10 px-4 rounded-xl font-black uppercase text-[10px] tracking-widest bg-slate-100 hover:bg-slate-200">
+                                                <Button variant="secondary" size="sm" asChild className="h-9 px-4 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200">
                                                     <Link href={`/admin/products/edit/${product.id}`}>Edit</Link>
                                                 </Button>
                                                 <DeleteProductButton productId={product.id} onDelete={deleteProduct} />
@@ -166,10 +163,10 @@ export default async function ProductsPage({
                         const isActive = product.status === "active"
 
                         return (
-                            <Card key={product.id} className={`rounded-[2rem] border-slate-100 shadow-sm overflow-hidden ${!isActive ? 'opacity-70 grayscale-[0.5]' : ''}`}>
+                            <Card key={product.id} className={`rounded-2xl border bg-white shadow-sm overflow-hidden ${!isActive ? 'opacity-70' : ''}`}>
                                 <CardContent className="p-0">
                                     <div className="p-4 flex items-center gap-4">
-                                        <div className="h-20 w-20 relative rounded-2xl border border-slate-100 bg-slate-50 overflow-hidden shrink-0 shadow-sm">
+                                        <div className="h-20 w-20 relative rounded-xl border border-slate-100 bg-slate-50 overflow-hidden shrink-0">
                                             {product.thumbnail_url ? (
                                                 <Image fill src={product.thumbnail_url} alt={product.name} className="object-cover" />
                                             ) : (
@@ -178,35 +175,27 @@ export default async function ProductsPage({
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <Badge className={`rounded-full px-2 py-0 text-[8px] font-black uppercase tracking-tight border-none ${isActive ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-white'}`}>
+                                                <Badge className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border-none ${isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                                                     {product.status}
                                                 </Badge>
-                                                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest truncate">
-                                                    {product.brand || "Generic"}
-                                                </span>
+                                                <span className="text-[10px] font-medium text-slate-400 truncate">{product.brand || "Generic"}</span>
                                             </div>
-                                            <h3 className="font-bold text-slate-900 text-sm truncate leading-tight">{product.name}</h3>
+                                            <h3 className="font-semibold text-slate-900 text-sm truncate">{product.name}</h3>
                                             <div className="flex items-center gap-3 mt-2">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Box className="w-3 h-3 text-slate-300" />
-                                                    <span className="text-[11px] font-black text-slate-700">{totalStock} Units</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Tag className="w-3 h-3 text-slate-300" />
-                                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">{product.product_variants?.length || 0} Vars</span>
-                                                </div>
+                                                <span className="text-xs text-slate-500">{totalStock} units</span>
+                                                <span className="text-xs text-slate-500">{product.product_variants?.length || 0} variants</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Action Bar */}
-                                    <div className="grid grid-cols-3 border-t border-slate-50 bg-slate-50/50">
+                                    <div className="grid grid-cols-3 border-t border-slate-100">
                                         <form action={toggleStatus.bind(null, product.id, product.status)} className="border-r border-slate-100">
-                                            <button className="w-full py-3.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600 active:bg-slate-100 transition-colors">
-                                                {isActive ? <><EyeOff className="w-3.5 h-3.5 text-slate-400" /> Hide</> : <><Eye className="w-3.5 h-3.5 text-emerald-500" /> Show</>}
+                                            <button className="w-full py-3 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-600 active:bg-slate-50 transition-colors">
+                                                {isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-emerald-500" />}
+                                                {isActive ? 'Hide' : 'Show'}
                                             </button>
                                         </form>
-                                        <Link href={`/admin/products/edit/${product.id}`} className="flex items-center justify-center py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-600 border-r border-slate-100 active:bg-slate-100 transition-colors">
+                                        <Link href={`/admin/products/edit/${product.id}`} className="flex items-center justify-center py-3 text-xs font-medium text-slate-600 border-r border-slate-100 active:bg-slate-50 transition-colors">
                                             Edit
                                         </Link>
                                         <div className="flex items-center justify-center py-1">
@@ -220,12 +209,11 @@ export default async function ProductsPage({
                 </div>
 
                 {(!products || products.length === 0) && (
-                    <div className="py-20 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200">
-                        <Package className="w-12 h-12 text-slate-100 mx-auto mb-4" />
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs italic">No items found in your catalog</p>
+                    <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
+                        <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                        <p className="text-slate-400 font-medium">No products found</p>
                     </div>
                 )}
-            </div>
         </div>
     )
 }

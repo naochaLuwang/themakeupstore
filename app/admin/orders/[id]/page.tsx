@@ -112,9 +112,11 @@ export default function OrderInvoicePage() {
                     </Button>
                     <div className="flex gap-3">
                         {order.status === 'pending' && !isEditing && (
-                            <Button variant="outline" onClick={() => setIsEditing(true)} className="rounded-full px-6 font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50">
-                                <Pencil className="w-4 h-4 mr-2" /> Edit Order
-                            </Button>
+                            <button onClick={() => setIsEditing(true)}
+                                className="h-10 px-5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-2 bg-white shadow-sm"
+                            >
+                                <Pencil className="w-3.5 h-3.5" /> Edit
+                            </button>
                         )}
                         <Button variant="outline" onClick={() => setIsThermal(!isThermal)} className={`rounded-full px-6 font-bold transition-all ${isThermal ? 'bg-slate-900 text-white hover:bg-black' : 'text-slate-500'}`}>
                             <Ticket className="w-4 h-4 mr-2" /> {isThermal ? 'A4 Format' : 'POS Mode'}
@@ -160,6 +162,9 @@ export default function OrderInvoicePage() {
                             <h3 className={isThermal ? 'font-bold uppercase' : 'text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1'}>{isThermal ? 'Order:' : 'Customer'}</h3>
                             <p className={isThermal ? 'font-mono' : 'font-black text-sm text-slate-900 uppercase'}>{isThermal ? `#${order.id.slice(0, 8).toUpperCase()}` : order.shipping_address?.full_name}</p>
                         </div>
+                        {!isThermal && order.shipping_address?.phone && (
+                            <p className="text-[11px] text-slate-500 font-medium mt-0.5">{order.shipping_address.phone}</p>
+                        )}
                         {isThermal && (
                             <>
                                 <div className="flex justify-between border-t border-dotted border-slate-100 pt-1 mt-1"><span className="font-bold uppercase">Customer:</span><span className="truncate ml-2">{order.shipping_address?.full_name}</span></div>
@@ -212,12 +217,12 @@ export default function OrderInvoicePage() {
                         const discPercent = mrp > rate ? Math.round(((mrp - rate) / mrp) * 100) : 0
 
                         return (
-                            <div key={item.id} className={`${isThermal ? 'pb-2 border-b border-dotted border-slate-100' : 'grid grid-cols-12 gap-2 items-center text-[11px]'}`}>
+                            <div key={item.id} className={`${isThermal ? 'pb-2 border-b border-dotted border-slate-100' : `grid grid-cols-12 gap-2 items-center text-[11px] ${isEditing ? 'rounded-lg px-2 py-1 -mx-2 bg-blue-50/30 border border-blue-100/50' : ''}`}`}>
                                 <div className={`${isThermal ? 'w-full mb-1' : 'col-span-5'} ${isEditing ? 'flex items-center gap-2' : ''}`}>
                                     {isEditing && !isThermal && (
-                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id, idx)} className="h-6 w-6 text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0">
+                                        <button onClick={() => handleRemoveItem(item.id, idx)} className="h-7 w-7 flex items-center justify-center rounded-lg bg-red-50 border border-red-200 text-red-400 hover:text-red-600 hover:bg-red-100 transition-colors flex-shrink-0" title="Remove item">
                                             <Trash2 className="w-3.5 h-3.5" />
-                                        </Button>
+                                        </button>
                                     )}
                                     <div>
                                         <p className={`font-black text-slate-900 uppercase leading-none ${isThermal ? 'text-[10px]' : ''}`}>{item.product_name}</p>
@@ -301,36 +306,63 @@ export default function OrderInvoicePage() {
                 )}
             </div>
 
-            {/* BOTTOM EDIT TOOLBAR */}
+            {/* EDIT PANEL */}
             {isEditing && !isThermal && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 no-print">
-                    <div className="max-w-4xl mx-auto px-4 pb-4">
-                        <div className="bg-white border-2 border-indigo-200 shadow-2xl shadow-indigo-500/10 rounded-2xl p-4 space-y-3">
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-2 text-indigo-600">
-                                    <Pencil className="w-4 h-4" />
-                                    <span className="text-xs font-black uppercase tracking-wider">Editing</span>
+                <div className="max-w-4xl mx-auto mb-6 no-print">
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/50 shadow-sm p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 rounded-lg bg-blue-100">
+                                    <Pencil className="w-4 h-4 text-blue-600" />
                                 </div>
-                                <div className="flex items-center gap-3 flex-1 max-w-md">
-                                    <div className="flex-1">
-                                        <label className="text-[9px] font-black text-indigo-700 uppercase block mb-1">Discount (₹)</label>
-                                        <Input type="number" value={editDiscount} onChange={(e) => setEditDiscount(parseFloat(e.target.value) || 0)} className="h-9 rounded-xl border-indigo-300 bg-indigo-50/50 font-bold text-sm" />
-                                    </div>
-                                    <div className="flex-[2]">
-                                        <label className="text-[9px] font-black text-indigo-700 uppercase block mb-1">Remark</label>
-                                        <Input value={editRemark} onChange={(e) => setEditRemark(e.target.value)} placeholder="Reason for discount..." className="h-9 rounded-xl border-indigo-300 bg-indigo-50/50 text-sm" />
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button onClick={handleSaveDiscount} disabled={saving} className="h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5">
-                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
-                                        Save
-                                    </Button>
-                                    <Button variant="outline" onClick={() => { setIsEditing(false); setEditDiscount(Number(order.promo_discount_amount || 0)); setEditRemark(order.discount_remark || "") }} className="h-10 rounded-xl border-slate-300 text-slate-500 hover:bg-slate-50 font-bold px-4">
-                                        <X className="w-4 h-4" />
-                                    </Button>
-                                </div>
+                                <span className="text-sm font-bold text-slate-900">Edit Order</span>
+                                <span className="text-[10px] text-slate-400 font-medium">#{order.id.slice(0, 8).toUpperCase()}</span>
                             </div>
+                            <button
+                                onClick={() => { setIsEditing(false); setEditDiscount(Number(order.promo_discount_amount || 0)); setEditRemark(order.discount_remark || "") }}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                            >
+                                <X className="w-3.5 h-3.5 text-slate-400" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-4">
+                            <div className="col-span-4 space-y-1">
+                                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Discount (₹)</label>
+                                <Input
+                                    type="number" min="0"
+                                    value={editDiscount}
+                                    onChange={(e) => setEditDiscount(parseFloat(e.target.value) || 0)}
+                                    className="h-10 text-sm font-bold border-blue-200 bg-white rounded-xl"
+                                />
+                            </div>
+                            <div className="col-span-5 space-y-1">
+                                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Remark (reason)</label>
+                                <Input
+                                    value={editRemark}
+                                    onChange={(e) => setEditRemark(e.target.value)}
+                                    placeholder="Optional note..."
+                                    className="h-10 text-sm border-blue-200 bg-white rounded-xl"
+                                />
+                            </div>
+                            <div className="col-span-3 flex items-end gap-2">
+                                <button
+                                    onClick={handleSaveDiscount} disabled={saving}
+                                    className="flex-1 h-10 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-xs text-slate-500 pt-1 border-t border-blue-100">
+                            <span>Click <strong className="text-red-500">×</strong> on any item below to remove it</span>
+                            <span className="text-slate-300">|</span>
+                            <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-amber-500" />
+                                Changes apply immediately after save
+                            </span>
                         </div>
                     </div>
                 </div>

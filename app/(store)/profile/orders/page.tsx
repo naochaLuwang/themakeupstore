@@ -15,6 +15,8 @@ export default async function OrdersHistoryPage() {
             payment_status,
             payment_method,
             shipping_address,
+            delivered_at,
+            return_requests (status),
             order_items (id, product_id, product_name, variant_title, quantity, unit_price)
         `)
         .eq("user_id", user?.id)
@@ -31,27 +33,22 @@ export default async function OrdersHistoryPage() {
             .filter(Boolean)
         const uniqueIds = [...new Set(productIds)]
 
-        if (uniqueIds.length > 0) {
-            const { data: products } = await supabase
-                .from('products')
-                .select('id, thumbnail_url')
-                .in('id', uniqueIds)
+        const { data: products } = uniqueIds.length > 0
+            ? await supabase.from('products').select('id, thumbnail_url').in('id', uniqueIds)
+            : { data: null }
 
-            const thumbMap: Record<string, string> = {}
-            if (products) {
-                for (const p of products) {
-                    thumbMap[p.id] = p.thumbnail_url
-                }
-            }
-
-            ordersWithThumbs = orders.map(o => ({
-                ...o,
-                order_items: o.order_items?.map((oi: any) => ({
-                    ...oi,
-                    image_url: oi.product_id ? thumbMap[oi.product_id] : null,
-                })),
-            }))
+        const thumbMap: Record<string, string> = {}
+        if (products) {
+            for (const p of products) thumbMap[p.id] = p.thumbnail_url
         }
+
+        ordersWithThumbs = orders.map(o => ({
+            ...o,
+            order_items: o.order_items?.map((oi: any) => ({
+                ...oi,
+                image_url: oi.product_id ? thumbMap[oi.product_id] : null,
+            })),
+        }))
     }
 
     return <OrdersHistoryClient initialOrders={ordersWithThumbs} />

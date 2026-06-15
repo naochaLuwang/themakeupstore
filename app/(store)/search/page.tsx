@@ -113,7 +113,7 @@ export default function SearchPage() {
                 // Step 1: text search — collect matching product IDs
                 if (text.length >= 2) {
                     const [nameBrandRes, variantRes] = await Promise.all([
-                        supabase.from("products").select("id").or(`name.ilike.%${text}%,brand.ilike.%${text}%`),
+                        supabase.from("products").select("id").textSearch("search_vector", text, { type: "websearch", config: "english" }),
                         supabase.from("product_variants").select("product_id").ilike("title", `%${text}%`),
                     ])
                     const nameIds = (nameBrandRes.data || []).map((p: any) => p.id)

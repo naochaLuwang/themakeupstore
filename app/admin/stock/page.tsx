@@ -10,19 +10,12 @@ export default async function InventoryPage() {
         .order('current_balance', { ascending: true })
 
     return (
-        <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-            <main className="flex-1 p-8">
-                <div className="max-w-7xl mx-auto space-y-8">
-                    <header className="flex justify-between items-end">
-                        <div className="space-y-1">
-                            <h1 className="text-2xl font-bold tracking-tight">Stock Intelligence</h1>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Global Inventory Overview</p>
-                        </div>
-                    </header>
-
-                    <InventoryClient initialData={stats || []} />
-                </div>
-            </main>
+        <div className="space-y-6">
+            <div className="space-y-1">
+                <h1 className="text-2xl font-black tracking-tight text-slate-900">Stock Intelligence</h1>
+                <p className="text-sm text-slate-500">Global inventory overview</p>
+            </div>
+            <InventoryClient initialData={stats || []} />
         </div>
     )
 }

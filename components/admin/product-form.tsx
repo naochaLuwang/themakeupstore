@@ -192,7 +192,7 @@ export default function ProductForm({ categories = [], initialData, isEdit = fal
                 <div className="flex items-center justify-between border-b pb-6">
                     <div>
                         <h1 className="text-3xl font-black tracking-tighter uppercase italic">{isEdit ? "Refine Item" : "New Entry"}</h1>
-                        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1 text-slate-400">Inventory Control Protocol</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest mt-1 text-slate-400">Inventory Control Protocol</p>
                     </div>
                     <div className="flex gap-3">
                         <Button type="button" variant="ghost" onClick={() => router.back()} className="rounded-xl font-bold uppercase text-[10px]">Discard</Button>

@@ -1,9 +1,16 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, Fragment } from "react"
 import { updatePricing } from "@/app/actions/pricing"
 import { toast } from "sonner"
-import { Loader2, Save, Search, Zap, CheckSquare, Square, Filter } from "lucide-react"
+import {
+    Loader2, Save, Search, Zap, CheckSquare, Square,
+    IndianRupee, Percent, Tag, Package
+} from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog"
 
 export default function PricingTable({
     initialProducts: serverProducts,
@@ -18,6 +25,9 @@ export default function PricingTable({
     const [selectedCategory, setSelectedCategory] = useState<string>("all")
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+    const [bulkOpen, setBulkOpen] = useState(false)
+    const [bulkType, setBulkType] = useState<"percentage" | "amount">("percentage")
+    const [bulkValue, setBulkValue] = useState("10")
 
     useEffect(() => {
         setProducts(serverProducts)
@@ -28,13 +38,13 @@ export default function PricingTable({
             const matchesSearch =
                 p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 p.product_variants?.some((v: any) => v.title?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                p.product_variants?.some((v: any) => v.sku?.toLowerCase().includes(searchQuery.toLowerCase()));
+                p.product_variants?.some((v: any) => v.sku?.toLowerCase().includes(searchQuery.toLowerCase()))
 
             const matchesCategory =
                 selectedCategory === "all" ||
-                p.product_categories?.some((pc: any) => pc.category_id === selectedCategory);
+                p.product_categories?.some((pc: any) => pc.category_id === selectedCategory)
 
-            return matchesSearch && matchesCategory;
+            return matchesSearch && matchesCategory
         })
     }, [searchQuery, selectedCategory, products])
 
@@ -67,7 +77,6 @@ export default function PricingTable({
                 discount_type: rowData.discount_type,
                 discount_value: parseFloat(rowData.discount_value) || 0
             })
-
             setProducts(currentProducts => currentProducts.map(p => {
                 if (type === 'product' && p.id === id) {
                     return {
@@ -76,8 +85,7 @@ export default function PricingTable({
                         discount_type: rowData.discount_type,
                         discount_value: rowData.discount_value,
                         product_variants: (p.product_variants || []).map((v: any) => ({
-                            ...v,
-                            price: rowData.price,
+                            ...v, price: rowData.price,
                             discount_type: rowData.discount_type,
                             discount_value: rowData.discount_value
                         }))
@@ -86,16 +94,21 @@ export default function PricingTable({
                 if (type === 'variant') {
                     const hasTargetVariant = p.product_variants?.some((v: any) => v.id === id)
                     if (hasTargetVariant) {
+                        const updatedVariants = p.product_variants.map((v: any) =>
+                            v.id === id ? {
+                                ...v, price: rowData.price,
+                                discount_type: rowData.discount_type,
+                                discount_value: rowData.discount_value
+                            } : v
+                        )
+                        // If product has only 1 variant, sync product row too
+                        const sync = p.product_variants.length === 1
                         return {
                             ...p,
-                            product_variants: p.product_variants.map((v: any) =>
-                                v.id === id ? {
-                                    ...v,
-                                    price: rowData.price,
-                                    discount_type: rowData.discount_type,
-                                    discount_value: rowData.discount_value
-                                } : v
-                            )
+                            base_price: sync ? rowData.price : p.base_price,
+                            discount_type: sync ? rowData.discount_type : p.discount_type,
+                            discount_value: sync ? rowData.discount_value : p.discount_value,
+                            product_variants: updatedVariants,
                         }
                     }
                 }
@@ -103,7 +116,7 @@ export default function PricingTable({
             }))
             return true
         } catch (err: any) {
-            toast.error(`Error updating ${id}`)
+            toast.error(err.message || "Error updating pricing")
             return false
         } finally {
             setLoadingId(null)
@@ -111,8 +124,8 @@ export default function PricingTable({
     }
 
     const handleBulkApply = async () => {
-        const percentage = window.prompt("Enter discount percentage (e.g. 10):", "10")
-        if (!percentage || isNaN(Number(percentage))) return
+        const val = parseFloat(bulkValue)
+        if (isNaN(val) || val <= 0) return toast.error("Enter a valid value")
 
         setIsBulkUpdating(true)
         let successCount = 0
@@ -122,44 +135,45 @@ export default function PricingTable({
             let type: 'product' | 'variant' = 'product'
 
             for (const p of products) {
-                if (p.id === id) { item = p; type = 'product'; break; }
+                if (p.id === id) { item = p; type = 'product'; break }
                 const v = p.product_variants?.find((v: any) => v.id === id)
-                if (v) { item = v; type = 'variant'; break; }
+                if (v) { item = v; type = 'variant'; break }
             }
 
             if (item) {
                 const ok = await handleSave(id, type, {
                     price: type === 'product' ? item.base_price : item.price,
-                    discount_type: 'percentage',
-                    discount_value: percentage
+                    discount_type: bulkType,
+                    discount_value: val
                 })
                 if (ok) successCount++
             }
         }
         setIsBulkUpdating(false)
         setSelectedIds(new Set())
+        setBulkOpen(false)
         toast.success(`Updated ${successCount} items`)
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-4 sticky top-4 z-20">
+        <div className="space-y-4">
+            {/* Toolbar */}
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                        className="w-full pl-11 pr-4 h-14 rounded-2xl border border-slate-200 bg-white shadow-sm focus:ring-4 ring-indigo-500/10 outline-none transition-all text-sm font-bold"
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <Input
                         placeholder="Search products..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 rounded-lg"
                     />
                 </div>
-
-                <div className="relative">
-                    <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <div className="relative shrink-0">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                     <select
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="pl-11 pr-8 h-14 rounded-2xl border border-slate-200 bg-white shadow-sm focus:ring-4 ring-indigo-500/10 outline-none transition-all text-[10px] font-black uppercase tracking-widest appearance-none min-w-[180px]"
+                        className="pl-9 pr-8 h-9 rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 appearance-none cursor-pointer outline-none min-w-[160px]"
                     >
                         <option value="all">All Categories</option>
                         {categories.map(cat => (
@@ -167,42 +181,43 @@ export default function PricingTable({
                         ))}
                     </select>
                 </div>
-
                 {selectedIds.size > 0 && (
                     <button
-                        onClick={handleBulkApply}
-                        disabled={isBulkUpdating}
-                        className="h-14 px-8 rounded-2xl bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all"
+                        onClick={() => setBulkOpen(true)}
+                        className="h-9 px-4 rounded-lg bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
                     >
-                        {isBulkUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-current" />}
-                        Apply to {selectedIds.size} Items
+                        <Zap className="w-3.5 h-3.5" />
+                        Apply to {selectedIds.size}
                     </button>
                 )}
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-sm">
-                <table className="w-full text-left border-collapse">
+            {/* Table */}
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                <table className="w-full text-sm">
                     <thead>
-                        <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                            <th className="p-6 w-10">
-                                <button onClick={toggleSelectAll} className="text-slate-300 hover:text-indigo-500">
-                                    {selectedIds.size > 0 ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                        <tr className="border-b border-slate-100 bg-slate-50/50">
+                            <th className="py-3 px-4 w-10">
+                                <button onClick={toggleSelectAll} className="text-slate-300 hover:text-slate-500 transition-colors">
+                                    {selectedIds.size > 0 ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                                 </button>
                             </th>
-                            <th className="p-6">Product Tree</th>
-                            <th className="p-6">MSRP (₹)</th>
-                            <th className="p-6">Type</th>
-                            <th className="p-6">Value</th>
-                            <th className="p-6 text-indigo-600 font-black italic">Sale Price (₹)</th>
-                            <th className="p-6 text-right">Action</th>
+                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Product</th>
+                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Category</th>
+                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">MSRP (₹)</th>
+                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Discount</th>
+                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Value</th>
+                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Sale Price (₹)</th>
+                            <th className="py-3 px-4 text-right"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                         {filteredProducts.map((product) => (
-                            <React.Fragment key={product.id}>
+                            <Fragment key={product.id}>
                                 <PriceRow
                                     item={product}
                                     type="product"
+                                    categoryName={product.product_categories?.[0]?.categories?.name || ""}
                                     onSave={handleSave}
                                     isLoading={loadingId === product.id}
                                     isSelected={selectedIds.has(product.id)}
@@ -213,6 +228,7 @@ export default function PricingTable({
                                         key={v.id}
                                         item={v}
                                         type="variant"
+                                        categoryName=""
                                         isVariant={true}
                                         onSave={handleSave}
                                         isLoading={loadingId === v.id}
@@ -220,127 +236,228 @@ export default function PricingTable({
                                         onSelect={() => toggleSelect(v.id)}
                                     />
                                 ))}
-                            </React.Fragment>
+                            </Fragment>
                         ))}
+                        {filteredProducts.length === 0 && (
+                            <tr>
+                                <td colSpan={8} className="h-24 text-center text-xs text-slate-400">
+                                    No products found matching your search.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
+
+            {/* Bulk Discount Dialog */}
+            <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+                <DialogContent className="sm:max-w-sm rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-sm font-bold text-slate-900">Bulk Discount</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setBulkType("percentage")}
+                                className={`flex-1 h-10 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                                    bulkType === "percentage"
+                                        ? "bg-slate-900 text-white shadow-sm"
+                                        : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
+                                }`}
+                            >
+                                <Percent className="w-3.5 h-3.5 inline mr-1" />
+                                % Off
+                            </button>
+                            <button
+                                onClick={() => setBulkType("amount")}
+                                className={`flex-1 h-10 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                                    bulkType === "amount"
+                                        ? "bg-slate-900 text-white shadow-sm"
+                                        : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
+                                }`}
+                            >
+                                <IndianRupee className="w-3.5 h-3.5 inline mr-1" />
+                                Flat
+                            </button>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                {bulkType === "percentage" ? "Discount Percentage" : "Flat Amount (₹)"}
+                            </label>
+                            <Input
+                                type="number"
+                                min="0"
+                                value={bulkValue}
+                                onChange={(e) => setBulkValue(e.target.value)}
+                                className="h-10 text-sm border-slate-200 bg-slate-50 rounded-xl"
+                                placeholder={bulkType === "percentage" ? "e.g. 10" : "e.g. 100"}
+                            />
+                        </div>
+                        <p className="text-xs text-slate-400">
+                            Apply to <strong className="text-slate-700">{selectedIds.size} items</strong>
+                        </p>
+                    </div>
+                    <DialogFooter className="sm:justify-end gap-2">
+                        <button
+                            onClick={() => setBulkOpen(false)}
+                            className="h-9 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleBulkApply}
+                            disabled={isBulkUpdating}
+                            className="h-9 px-5 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {isBulkUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                            Apply
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
 
-function PriceRow({ item, type, isVariant, onSave, isLoading, isSelected, onSelect }: any) {
+// ─── Filter icon (inline) ───
+
+function Filter({ className }: { className?: string }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+        </svg>
+    )
+}
+
+// ─── Price Row ───
+
+function PriceRow({ item, type, categoryName, isVariant, onSave, isLoading, isSelected, onSelect }: any) {
     const [data, setData] = useState({
         price: (type === 'product' ? item.base_price : item.price) ?? 0,
         discount_type: item.discount_type || 'none',
-        discount_value: item.discount_value ?? 0
+        discount_value: item.discount_value ?? 0,
     })
 
     useEffect(() => {
         setData({
             price: (type === 'product' ? item.base_price : item.price) ?? 0,
             discount_type: item.discount_type || 'none',
-            discount_value: item.discount_value ?? 0
+            discount_value: item.discount_value ?? 0,
         })
     }, [item, type])
 
-    // Helper: Calculate sale price based on current state
     const currentSalePrice = useMemo(() => {
-        const msrp = parseFloat(data.price as any) || 0;
-        const disc = parseFloat(data.discount_value as any) || 0;
+        const msrp = parseFloat(data.price as any) || 0
+        const disc = parseFloat(data.discount_value as any) || 0
+        if (data.discount_type === 'percentage') return Math.round(msrp - (msrp * (disc / 100)))
+        if (data.discount_type === 'amount') return Math.round(msrp - disc)
+        return Math.round(msrp)
+    }, [data.price, data.discount_type, data.discount_value])
 
-        if (data.discount_type === 'percentage') {
-            return Math.round(msrp - (msrp * (disc / 100)));
-        } else if (data.discount_type === 'amount') {
-            return Math.round(msrp - disc);
-        }
-        return Math.round(msrp);
-    }, [data.price, data.discount_type, data.discount_value]);
-
-    // NEW: Handle editing the Sale Price directly
     const handleSalePriceChange = (newSalePrice: string) => {
-        const target = parseFloat(newSalePrice) || 0;
-        const msrp = parseFloat(data.price as any) || 0;
-
-        // When user types a Sale Price, we force it to a 'Flat Amount' discount type
-        // to ensure the math stays exactly what they typed.
+        const target = parseFloat(newSalePrice) || 0
+        const msrp = parseFloat(data.price as any) || 0
+        const discount = Math.max(0, msrp - target)
         setData({
             ...data,
             discount_type: 'amount',
-            discount_value: Math.max(0, msrp - target)
-        });
+            discount_value: discount,
+        })
     }
 
+    const hasChanges =
+        parseFloat(data.price as any) !== (type === 'product' ? parseFloat(item.base_price) : parseFloat(item.price)) ||
+        data.discount_type !== (item.discount_type || 'none') ||
+        parseFloat(data.discount_value as any) !== parseFloat(item.discount_value || 0)
+
     return (
-        <tr className={`group transition-all hover:bg-slate-50/50 ${isSelected ? 'bg-indigo-50/40' : isVariant ? 'bg-slate-50/10' : 'bg-white'}`}>
-            <td className="p-6">
-                <button onClick={onSelect} className={`${isSelected ? 'text-indigo-600' : 'text-slate-200'} hover:text-indigo-400 transition-colors`}>
-                    {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+        <tr className={`group transition-colors ${isSelected ? 'bg-blue-50/30' : isVariant ? 'bg-slate-50/10' : 'bg-white hover:bg-slate-50/50'}`}>
+            <td className="py-3 px-4">
+                <button onClick={onSelect}
+                    className={`${isSelected ? 'text-blue-600' : 'text-slate-200'} hover:text-blue-400 transition-colors`}
+                >
+                    {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                 </button>
             </td>
-            <td className="p-6">
-                <div className="flex items-center gap-3">
-                    <span className={`font-black uppercase tracking-tight ${isVariant ? 'text-[11px] text-slate-400 ml-4' : 'text-sm text-slate-900'}`}>
-                        {isVariant ? `└ ${item.title}` : item.name}
+            <td className="py-3 px-4">
+                <div className="flex items-center gap-2">
+                    {isVariant ? (
+                        <Package className="w-3 h-3 text-slate-300 shrink-0 ml-4" />
+                    ) : (
+                        <Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    )}
+                    <span className={`${isVariant ? 'text-xs text-slate-500' : 'text-sm font-semibold text-slate-800'}`}>
+                        {isVariant ? item.title : item.name}
                     </span>
                 </div>
             </td>
-            <td className="p-6">
-                <input
+            <td className="py-3 px-4">
+                {!isVariant && categoryName ? (
+                    <span className="text-[11px] text-slate-400 font-medium">{categoryName}</span>
+                ) : (
+                    <span className="text-[11px] text-slate-200">—</span>
+                )}
+            </td>
+            <td className="py-3 px-4">
+                <Input
                     type="number"
+                    min="0"
                     value={data.price}
                     onChange={(e) => setData({ ...data, price: e.target.value })}
-                    className="w-24 bg-transparent border-b-2 border-transparent hover:border-indigo-200 focus:border-indigo-500 outline-none font-bold text-sm"
+                    className="w-20 h-8 text-xs font-mono border-slate-200 bg-slate-50 rounded-lg px-2 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
             </td>
-            <td className="p-6">
+            <td className="py-3 px-4">
                 <select
                     value={data.discount_type}
                     onChange={(e) => setData({ ...data, discount_type: e.target.value })}
-                    className="bg-transparent text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer"
+                    className="h-8 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2 outline-none cursor-pointer"
                 >
                     <option value="none">Fixed</option>
                     <option value="percentage">% Off</option>
-                    <option value="amount">Flat</option>
+                    <option value="amount">Flat ₹</option>
                 </select>
             </td>
-            <td className="p-6">
-                <input
+            <td className="py-3 px-4">
+                <Input
                     type="number"
+                    min="0"
                     value={data.discount_value}
                     disabled={data.discount_type === 'none'}
                     onChange={(e) => setData({ ...data, discount_value: e.target.value })}
-                    className="w-20 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-indigo-500 outline-none font-bold text-sm disabled:opacity-10"
+                    className={`w-16 h-8 text-xs font-mono border-slate-200 rounded-lg px-2 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
+                        data.discount_type === 'none'
+                            ? 'bg-slate-100 text-slate-300'
+                            : 'bg-slate-50'
+                    }`}
                 />
             </td>
-
-            {/* EDITABLE SALE PRICE COLUMN */}
-            <td className="p-6">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-1 text-indigo-600">
-                        <span className="text-xs font-black italic">₹</span>
-                        <input
-                            type="number"
-                            value={currentSalePrice}
-                            onChange={(e) => handleSalePriceChange(e.target.value)}
-                            className="w-20 bg-transparent border-b border-indigo-100 hover:border-indigo-500 focus:border-indigo-600 outline-none font-black text-sm transition-all"
-                        />
-                    </div>
-                    {data.discount_type !== 'none' && (
-                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">
-                            Saving ₹{Math.round(parseFloat(data.price as any) - currentSalePrice).toLocaleString()}
-                        </span>
-                    )}
+            <td className="py-3 px-4">
+                <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-blue-600">₹</span>
+                    <Input
+                        type="number"
+                        min="0"
+                        value={currentSalePrice}
+                        onChange={(e) => handleSalePriceChange(e.target.value)}
+                        className={`w-20 h-8 text-xs font-bold font-mono rounded-lg px-2 border-blue-200 bg-blue-50/50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
+                            data.discount_type !== 'none' ? 'text-blue-700' : 'text-slate-700'
+                        }`}
+                    />
                 </div>
+                {data.discount_type !== 'none' && (
+                    <p className="text-[9px] font-semibold text-emerald-500 mt-0.5">
+                        Save ₹{(Math.round(parseFloat(data.price as any) || 0) - currentSalePrice).toLocaleString('en-IN')}
+                    </p>
+                )}
             </td>
-
-            <td className="p-6 text-right">
+            <td className="py-3 px-4 text-right">
                 <button
                     onClick={() => onSave(item.id, type, data)}
-                    disabled={isLoading}
-                    className="w-10 h-10 inline-flex items-center justify-center bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all disabled:opacity-50 shadow-sm"
+                    disabled={isLoading || !hasChanges}
+                    className="w-9 h-9 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all disabled:opacity-30 disabled:pointer-events-none"
                 >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 </button>
             </td>
         </tr>

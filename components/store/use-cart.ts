@@ -319,6 +319,7 @@ interface CartStore {
     shippingPrice: number;
     baseShippingPrice: number;
     shippingLabel: string;
+    deliveryTimeLabel: string;
     selectedShippingId: string | null;
 
     // Actions
@@ -330,7 +331,7 @@ interface CartStore {
 
     // Logistics Engine
     // ADDED BACK/RENAMED to match your component calls
-    setShippingMethod: (method: { id: string, name: string, price: number }) => void;
+    setShippingMethod: (method: { id: string, name: string, price: number, delivery_time_label?: string }) => void;
     setSelectedShipping: (id: string | null, price: number, label?: string) => void;
 
     autoCalculateShipping: () => void;
@@ -350,6 +351,7 @@ export const useCart = create<CartStore>()(
             shippingPrice: 0,
             baseShippingPrice: 0,
             shippingLabel: '',
+            deliveryTimeLabel: '',
             selectedShippingId: null,
 
             getSubtotal: () => {
@@ -365,7 +367,8 @@ export const useCart = create<CartStore>()(
                     selectedShippingId: method.id,
                     shippingLabel: method.name,
                     baseShippingPrice: method.price,
-                    shippingPrice: isFree ? 0 : method.price
+                    shippingPrice: isFree ? 0 : method.price,
+                    deliveryTimeLabel: method.delivery_time_label || ''
                 });
             },
 
@@ -450,7 +453,8 @@ export const useCart = create<CartStore>()(
                 selectedShippingId: null,
                 shippingPrice: 0,
                 baseShippingPrice: 0,
-                shippingLabel: ''
+                shippingLabel: '',
+                deliveryTimeLabel: ''
             }),
 
             getDiscountAmount: () => {

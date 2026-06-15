@@ -36,25 +36,24 @@ export default async function AdminWholesalePanel() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50/50 p-6 md:p-10 font-sans">
-            <div className="max-w-6xl mx-auto space-y-8">
+        <div className="space-y-6">
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Wholesale Manager</h1>
-                        <p className="text-slate-500">Review, verify, and manage B2B partnerships.</p>
+                    <div className="space-y-1">
+                        <h1 className="text-2xl font-black tracking-tight text-slate-900">Wholesale Manager</h1>
+                        <p className="text-sm text-slate-500">Review, verify, and manage B2B partnerships.</p>
                     </div>
                 </header>
 
                 <Tabs defaultValue="pending" className="w-full">
-                    <TabsList className="bg-white border border-slate-200 p-1 rounded-2xl h-14 mb-8 shadow-sm">
-                        <TabsTrigger value="pending" className="rounded-xl px-6 data-[state=active]:bg-slate-900 data-[state=active]:text-white flex gap-2 items-center">
-                            <Clock className="w-4 h-4" /> Pending <span className="ml-1 opacity-50">{pending.length}</span>
+                    <TabsList className="bg-slate-100 p-1 rounded-xl w-full h-auto flex justify-start lg:justify-center overflow-x-auto no-scrollbar gap-1">
+                        <TabsTrigger value="pending" className="rounded-lg px-4 py-2 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm flex gap-1.5 items-center">
+                            <Clock className="w-4 h-4" /> Pending <span className="text-slate-400">{pending.length}</span>
                         </TabsTrigger>
-                        <TabsTrigger value="approved" className="rounded-xl px-6 data-[state=active]:bg-slate-900 data-[state=active]:text-white flex gap-2 items-center">
-                            <Users className="w-4 h-4" /> Partners <span className="ml-1 opacity-50">{approved.length}</span>
+                        <TabsTrigger value="approved" className="rounded-lg px-4 py-2 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm flex gap-1.5 items-center">
+                            <Users className="w-4 h-4" /> Partners <span className="text-slate-400">{approved.length}</span>
                         </TabsTrigger>
-                        <TabsTrigger value="rejected" className="rounded-xl px-6 data-[state=active]:bg-slate-900 data-[state=active]:text-white flex gap-2 items-center">
-                            <History className="w-4 h-4" /> Archived <span className="ml-1 opacity-50">{rejected.length}</span>
+                        <TabsTrigger value="rejected" className="rounded-lg px-4 py-2 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm flex gap-1.5 items-center">
+                            <History className="w-4 h-4" /> Archived <span className="text-slate-400">{rejected.length}</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -79,7 +78,6 @@ export default async function AdminWholesalePanel() {
                         }
                     </TabsContent>
                 </Tabs>
-            </div>
         </div>
     )
 }
@@ -88,7 +86,7 @@ export default async function AdminWholesalePanel() {
 
 function ApplicationCard({ app, action, showActions, statusLabel }: any) {
     return (
-        <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col lg:flex-row items-center justify-between gap-6 hover:border-slate-300 transition-all shadow-sm group">
+        <div className="rounded-2xl border bg-white p-5 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6 hover:border-slate-300 transition-all">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-1 w-full">
                 <InfoBlock icon={<Building2 />} label="Business" title={app.business_name} sub={app.business_type} />
                 <InfoBlock icon={<FileText />} label="Tax ID" title={app.gst_number} isMono />
@@ -97,21 +95,21 @@ function ApplicationCard({ app, action, showActions, statusLabel }: any) {
 
             <div className="flex items-center gap-2 w-full lg:w-auto">
                 {statusLabel && (
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest mr-2 ${statusLabel === 'Approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold mr-2 ${statusLabel === 'Approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                         {statusLabel}
                     </span>
                 )}
 
                 <Dialog>
                     <DialogTrigger asChild>
-                        <button className="flex-1 lg:flex-none h-10 px-4 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                        <button className="flex-1 lg:flex-none h-10 px-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-600 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
                             <Eye className="w-4 h-4" /> Details
                         </button>
                     </DialogTrigger>
-                    <DialogContent className="rounded-3xl">
+                    <DialogContent className="rounded-2xl">
                         <DialogHeader><DialogTitle>Partner Insight</DialogTitle></DialogHeader>
                         <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl">
+                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl">
                                 <DetailItem label="Full Name" value={app.profiles?.full_name} />
                                 <DetailItem label="Contact" value={app.profiles?.phone} />
                             </div>
@@ -128,14 +126,14 @@ function ApplicationCard({ app, action, showActions, statusLabel }: any) {
                         <form action={action}>
                             <input type="hidden" name="id" value={app.id} />
                             <input type="hidden" name="status" value="approved" />
-                            <button type="submit" className="h-10 px-6 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-lg shadow-slate-200">
+                            <button type="submit" className="h-10 px-5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-sm">
                                 <Check className="w-4 h-4" /> Approve
                             </button>
                         </form>
                         <form action={action}>
                             <input type="hidden" name="id" value={app.id} />
                             <input type="hidden" name="status" value="rejected" />
-                            <button type="submit" className="h-10 px-3 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all">
+                            <button type="submit" className="rounded-lg h-10 w-10 border border-slate-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all text-slate-400 flex items-center justify-center">
                                 <Ban className="w-4 h-4" />
                             </button>
                         </form>
@@ -148,7 +146,7 @@ function ApplicationCard({ app, action, showActions, statusLabel }: any) {
 
 function EmptyState({ msg }: { msg: string }) {
     return (
-        <div className="bg-white border border-dashed border-slate-200 p-20 rounded-3xl text-center">
+        <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
             <p className="text-slate-400 text-sm font-medium">{msg}</p>
         </div>
     )
@@ -157,13 +155,13 @@ function EmptyState({ msg }: { msg: string }) {
 function InfoBlock({ icon, label, title, sub, isMono }: any) {
     return (
         <div className="flex gap-4 items-center">
-            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100 group-hover:border-blue-100 group-hover:text-blue-500 transition-all shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100 shrink-0">
                 {icon}
             </div>
             <div className="min-w-0">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-                <p className={`text-sm font-bold text-slate-900 truncate ${isMono ? 'font-mono' : ''}`}>{title || 'N/A'}</p>
-                {sub && <p className="text-[10px] font-medium text-slate-500 uppercase truncate">{sub}</p>}
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+                <p className={`text-sm font-semibold text-slate-900 truncate ${isMono ? 'font-mono' : ''}`}>{title || 'N/A'}</p>
+                {sub && <p className="text-xs font-medium text-slate-500 truncate">{sub}</p>}
             </div>
         </div>
     )
@@ -172,8 +170,8 @@ function InfoBlock({ icon, label, title, sub, isMono }: any) {
 function DetailItem({ label, value }: any) {
     return (
         <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
-            <p className="text-sm font-bold text-slate-900">{value || 'N/A'}</p>
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</p>
+            <p className="text-sm font-semibold text-slate-900">{value || 'N/A'}</p>
         </div>
     )
 }

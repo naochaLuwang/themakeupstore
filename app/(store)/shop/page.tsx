@@ -22,7 +22,7 @@ export default async function ShopPage({
         .eq('status', 'active')
 
     if (query) {
-        supabaseQuery = supabaseQuery.or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
+        supabaseQuery = supabaseQuery.textSearch("search_vector", query, { type: "websearch", config: "english" })
     }
 
     const { data: products } = await supabaseQuery.order('created_at', { ascending: false })

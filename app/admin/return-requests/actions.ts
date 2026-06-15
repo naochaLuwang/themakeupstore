@@ -27,11 +27,15 @@ export async function updateReturnStatus(formData: FormData) {
 
 export async function markRefunded(formData: FormData) {
     const id = formData.get("id") as string
+    const transactionId = formData.get("transaction_id") as string
     const supabase = await createClient()
 
     const { error } = await supabase
         .from("return_requests")
-        .update({ status: "refunded" })
+        .update({
+            status: "refunded",
+            transaction_id: transactionId || null,
+        })
         .eq("id", id)
 
     if (error) {

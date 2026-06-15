@@ -2,10 +2,8 @@ import {
     CircleDollarSign,
     ShoppingCart,
     TrendingUp,
-    Users,
     CreditCard
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface Order {
     total: number
@@ -14,13 +12,8 @@ interface Order {
 }
 
 export function StatsCards({ orders }: { orders: Order[] }) {
-    // 1. Calculate Revenue (only from successful/delivered orders if preferred)
     const totalRevenue = orders.reduce((acc, order) => acc + Number(order.total), 0)
-
-    // 2. Calculate Average Order Value (AOV)
     const aov = orders.length > 0 ? totalRevenue / orders.length : 0
-
-    // 3. Count Pending vs Total
     const pendingOrders = orders.filter(o => o.status === 'pending').length
 
     const stats = [
@@ -61,22 +54,16 @@ export function StatsCards({ orders }: { orders: Order[] }) {
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat) => (
-                <Card key={stat.label} className="overflow-hidden">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                            {stat.label}
-                        </CardTitle>
+                <div key={stat.label} className="rounded-2xl border bg-white p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{stat.label}</p>
                         <div className={`p-2 rounded-lg ${stat.bg}`}>
                             <stat.icon className={`h-4 w-4 ${stat.color}`} />
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stat.value}</div>
-                        <p className="text-[10px] text-muted-foreground mt-1 font-medium">
-                            {stat.description}
-                        </p>
-                    </CardContent>
-                </Card>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
+                    <p className="text-xs text-slate-400 mt-1">{stat.description}</p>
+                </div>
             ))}
         </div>
     )
