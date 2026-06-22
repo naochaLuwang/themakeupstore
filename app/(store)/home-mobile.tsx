@@ -6,8 +6,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import {
   Search, Heart, ShoppingBag, Rocket, ShieldCheck,
-  RotateCcw, MessageCircle, ArrowRight, ChevronRight,
-  Sparkles
+  RotateCcw, MessageCircle, ArrowRight,
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
@@ -15,18 +14,70 @@ import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 const VALUES = [
   { icon: Rocket, label: "Free Shipping", sub: "Above ₹2,999" },
   { icon: ShieldCheck, label: "100% Authentic", sub: "Guaranteed" },
-  { icon: RotateCcw, label: "Easy Returns", sub: "Within 7 days" },
+  { icon: RotateCcw, label: "Easy Returns", sub: "Within 3 days" },
   { icon: MessageCircle, label: "24/7 Support", sub: "We're here" },
 ]
 
-interface Props {
-  banner: any
-  categories: any[]
-  products: any[]
-  forever52Products: any[]
+interface CategoryItem {
+  id: string
+  name: string
+  slug: string
+  image_url: string | null
+  parent?: { slug: string } | { slug: string }[] | null
 }
 
-export function HomeMobile({ banner, categories, products, forever52Products }: Props) {
+interface ProductVariant {
+  id: string
+  price: number
+  stock: number
+  hex_code: string | null
+  discount_type: string
+  discount_value: number
+  title: string
+  image_url: string | null
+}
+
+interface ProductItem {
+  id: string
+  name: string
+  slug: string
+  base_price: number | null
+  thumbnail_url: string | null
+  brand: string
+  discount_type: string
+  discount_value: number
+  has_variants: boolean
+  status: string
+  outOfStock?: boolean
+  product_variants: ProductVariant[]
+}
+
+interface ConcernItem {
+  id: string
+  name: string
+  slug: string
+  image_url: string | null
+}
+
+interface BannerItem {
+  id: string
+  title: string | null
+  subtitle: string | null
+  description: string | null
+  image_url: string | null
+  route: string | null
+}
+
+interface Props {
+  banner: BannerItem | null
+  categories: CategoryItem[]
+  products: ProductItem[]
+  forever52Products: ProductItem[]
+  parentCategories: CategoryItem[]
+  shelfProducts: Record<string, string[]>
+}
+
+export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts }: Props) {
   const [mounted, setMounted] = useState(false)
   const recentlyViewed = useRecentlyViewed(s => s.items)
   useEffect(() => { setMounted(true) }, [])
@@ -81,7 +132,7 @@ export function HomeMobile({ banner, categories, products, forever52Products }: 
       </motion.div>
 
       {/* VALUE PROPS */}
-      <div className="flex py-4 px-2 mb-7">
+      <div className="flex py-4 px-2 mb-4">
         {VALUES.map((v) => (
           <div key={v.label} className="flex-1 flex flex-col items-center gap-0.5">
             <v.icon className="w-[18px] h-[18px] text-[#fc2779]" />
@@ -91,25 +142,25 @@ export function HomeMobile({ banner, categories, products, forever52Products }: 
         ))}
       </div>
 
-      {/* FEATURED BRANDS — single row, /brands style */}
+      {/* OUR BRANDS */}
       {categories.length > 0 && (
         <Section label="FEATURED" title="Our Brands" href="/brands" linkLabel="View All">
-          <div className="flex gap-5 overflow-x-auto px-4 no-scrollbar">
-            {categories.slice(0, 14).map((cat: any) => {
-              const parentSlug = cat.parent?.slug
+          <div className="flex gap-4 overflow-x-auto pl-6 pr-4 no-scrollbar">
+            {categories.slice(0, 14).map((cat) => {
+              const parentSlug = Array.isArray(cat.parent) ? cat.parent[0]?.slug : cat.parent?.slug
               const pathSegment = parentSlug === 'exclusive' || parentSlug === 'essentials' ? parentSlug : 'categories'
               return (
-                <Link key={cat.id} href={`/${pathSegment}/${cat.slug}`} className="flex flex-col items-center gap-2 w-[90px] shrink-0 group">
-                  <div className="w-[90px] h-[90px] rounded-full p-0.5 bg-gradient-to-br from-[#fc2779] via-pink-300 to-orange-100 group-hover:rotate-6 transition-all duration-700">
-                    <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-slate-50 flex items-center justify-center">
-                      {cat.image_url ? (
-                        <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                      ) : (
-                        <span className="text-[10px] font-black text-slate-300">{cat.name[0]}</span>
-                      )}
-                    </div>
+                <Link key={cat.id} href={`/${pathSegment}/${cat.slug}`} className="flex flex-col items-center gap-2 w-[76px] shrink-0 group">
+                  <div className="w-[76px] h-[76px] rounded-full overflow-hidden shadow-sm ring-1 ring-slate-100 group-hover:shadow-md group-hover:ring-slate-200 transition-all duration-300">
+                    {cat.image_url ? (
+                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-50 flex items-center justify-center">
+                        <span className="text-base font-bold text-slate-300">{cat.name[0]}</span>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500 group-hover:text-[#fc2779] transition-colors text-center leading-tight">{cat.name}</span>
+                  <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-slate-400 group-hover:text-rose-500 transition-colors text-center leading-tight">{cat.name}</span>
                 </Link>
               )
             })}
@@ -121,13 +172,62 @@ export function HomeMobile({ banner, categories, products, forever52Products }: 
       {recentlyViewed.length > 0 && (
         <Section label="CONTINUE SHOPPING" title="Recently Viewed">
           <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar">
-            {recentlyViewed.slice(0, 10).map((item: any) => (
+            {recentlyViewed.slice(0, 10).map((item) => (
               <div key={item.id} className="w-40 shrink-0">
                 <ProductCard product={item} />
               </div>
             ))}
           </div>
         </Section>
+      )}
+
+      {/* SHOP BY CATEGORY — 3-column grid */}
+      {parentCategories.filter((cat) => cat.slug !== "essentials" && cat.slug !== "exclusive").length > 0 && (
+        <div className="px-4 mb-10">
+          <p className="text-[26px] font-light text-slate-900 tracking-tight leading-none mb-4">Let's find whats right for you</p>
+          <div className="grid grid-cols-3 gap-3">
+            {parentCategories.filter((cat) => cat.slug !== "essentials" && cat.slug !== "exclusive").map((cat) => {
+              const thumbs = shelfProducts[cat.id] || []
+              const zigzag = `polygon(
+                0% 0%, 100% 0%,
+                100% 68%, 94% 69%, 88% 66%, 82% 70%,
+                76% 65%, 70% 69%, 64% 64%, 58% 68%,
+                52% 63%, 46% 67%, 40% 62%, 34% 66%,
+                28% 61%, 22% 65%, 16% 60%, 10% 64%,
+                4% 59%, 0% 62%
+              )`
+              return (
+                <Link
+                  key={cat.id}
+                  href={`/category/${cat.slug}`}
+                  className="relative rounded-2xl overflow-hidden bg-rose-500 aspect-[4/5] group active:scale-[0.97] transition-all duration-200 shadow-sm"
+                >
+                  {/* Torn image section */}
+                  <div className="absolute inset-0" style={{ clipPath: zigzag }}>
+                    {thumbs[0] || cat.image_url ? (
+                      <img src={thumbs[0] || cat.image_url || ""} alt="" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-slate-400">{cat.name[0]}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Torn edge shadow */}
+                  <div className="absolute inset-0" style={{ clipPath: zigzag }}>
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-black/20 to-transparent" />
+                  </div>
+
+                  {/* Color block content */}
+                  <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 pt-6">
+                    <p className="text-white text-[11px] font-black tracking-tight leading-tight">{cat.name}</p>
+                    <p className="text-[7px] text-white/50 font-semibold uppercase tracking-[0.15em] mt-0.5">Explore</p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {/* NEW ARRIVALS */}
@@ -155,7 +255,7 @@ export function HomeMobile({ banner, categories, products, forever52Products }: 
       {forever52Products.length > 0 && (
         <Section label="FEATURED BRAND" title="FOREVER52">
           <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar">
-            {forever52Products.map((item: any) => (
+            {forever52Products.map((item) => (
               <div key={item.id} className="w-40 shrink-0">
                 <ProductCard product={item} />
               </div>
@@ -198,7 +298,7 @@ function Section({ label, title, href, linkLabel, children }: {
       <div className="flex items-end justify-between px-4 mb-5">
         <div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">{label}</p>
-          <h3 className="text-[26px] font-black text-slate-900 tracking-tight leading-none mt-0.5">{title}</h3>
+          <h3 className="text-[26px] font-light text-slate-900 tracking-tight leading-none mt-0.5">{title}</h3>
         </div>
         {href && linkLabel && (
           <Link href={href} className="text-[13px] font-bold text-[#fc2779] shrink-0">{linkLabel}</Link>

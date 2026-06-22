@@ -7,15 +7,16 @@ import { Button } from "@/components/ui/button"
 export default async function NewProductPage() {
     const supabase = await createClient()
 
-    // Fetch categories ordered by name
-    const { data: categories, error } = await supabase
+    const { data: categories } = await supabase
         .from("categories")
         .select("id, name")
         .order("name", { ascending: true })
 
-    if (error) {
-        console.error("Error loading categories:", error.message)
-    }
+    let concerns: { id: string; name: string }[] = []
+    try {
+        const { data } = await supabase.from("concerns").select("id, name").order("name", { ascending: true })
+        concerns = data || []
+    } catch { /* table not available */ }
 
     return (
         <div className="space-y-6">
@@ -33,7 +34,7 @@ export default async function NewProductPage() {
             </div>
 
             <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm">
-                <ProductForm categories={categories || []} />
+                <ProductForm categories={categories || []} concerns={concerns} />
             </div>
         </div>
     )

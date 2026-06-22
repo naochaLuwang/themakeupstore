@@ -696,7 +696,7 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
 }
 
 // --- MAIN FORM COMPONENT ---
-export default function ProductEditForm({ product, categories }: { product: any, categories: any[] }) {
+export default function ProductEditForm({ product, categories, concerns = [] }: { product: any, categories: any[], concerns?: { id: string, name: string }[] }) {
     const [mounted, setMounted] = React.useState(false)
     const [previews, setPreviews] = React.useState<string[]>([])
     const [isPending, setIsPending] = React.useState(false)
@@ -708,7 +708,7 @@ export default function ProductEditForm({ product, categories }: { product: any,
 
     const form = useForm<ProductFormValues>({
         resolver: zodResolver(productSchema) as any,
-        defaultValues: { name: "", slug: "", description: "", brand: "", has_variants: false, category_ids: [], base_price: 0, stock: 0, discount_type: "none", discount_value: 0, image_files: [], variants: [] }
+        defaultValues: { name: "", slug: "", description: "", brand: "", has_variants: false, category_ids: [], concern_ids: [], base_price: 0, stock: 0, discount_type: "none", discount_value: 0, image_files: [], variants: [] }
     })
 
     const { fields: vFields, append: addV, remove: remV } = useFieldArray({ control: form.control, name: "variants" })
@@ -733,6 +733,7 @@ export default function ProductEditForm({ product, categories }: { product: any,
                 base_price: Number(product.base_price) || Number(defaultV?.price) || 0,
                 stock: !product.has_variants ? (Number(defaultV?.stock) || 0) : 0,
                 category_ids: product.product_categories?.map((c: any) => c.category_id) || [],
+                concern_ids: product.product_concerns?.map((c: any) => c.concern_id) || [],
                 variants: normalizedVariants
             });
 
@@ -897,6 +898,43 @@ export default function ProductEditForm({ product, categories }: { product: any,
                                     </div>
                                 </SortableContext>
                             </DndContext>
+                        </Card>
+
+                        {/* CONCERNS */}
+                        <Card className="rounded-[2rem] overflow-hidden border-slate-200 shadow-sm">
+                            <CardHeader className="bg-slate-50 border-b p-6">
+                                <CardTitle className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Concerns</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-1 max-h-[300px] overflow-y-auto">
+                                {concerns.length === 0 ? (
+                                    <p className="text-[10px] text-slate-400 text-center py-4 font-medium">No concerns available</p>
+                                ) : (
+                                    concerns.map((c) => {
+                                        const checked = (form.watch("concern_ids") || []).includes(c.id)
+                                        return (
+                                            <label
+                                                key={c.id}
+                                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${checked ? "bg-rose-50/40" : "hover:bg-slate-50"}`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={() => {
+                                                        const current = form.getValues("concern_ids") || []
+                                                        if (current.includes(c.id)) {
+                                                            form.setValue("concern_ids", current.filter(id => id !== c.id), { shouldDirty: true })
+                                                        } else {
+                                                            form.setValue("concern_ids", [...current, c.id], { shouldDirty: true })
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 rounded border-slate-300 text-rose-500 focus:ring-rose-500/20"
+                                                />
+                                                <span className="text-xs font-semibold text-slate-700">{c.name}</span>
+                                            </label>
+                                        )
+                                    })
+                                )}
+                            </CardContent>
                         </Card>
                     </div>
                 </div>

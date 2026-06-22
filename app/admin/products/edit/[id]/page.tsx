@@ -8,23 +8,39 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     const { id } = await params;
     const supabase = await createClient();
 
-    const { data: product, error } = await supabase
-        .from("products")
-        .select(`
-            *,
-            product_categories(category_id),
-            product_images(*),
-            product_variants(
+    const [productResult, categoriesResult] = await Promise.all([
+        supabase
+            .from("products")
+            .select(`
                 *,
-                variant_images(*)
-            )
-        `)
-        .eq("id", id)
-        .single();
+                product_categories(category_id),
+                product_images(*),
+                product_variants(
+                    *,
+                    variant_images(*)
+                )
+            `)
+            .eq("id", id)
+            .single(),
+        supabase.from("categories").select("id, name").order("name", { ascending: true }),
+    ]);
 
-    const { data: categories } = await supabase.from("categories").select("id, name");
+    if (productResult.error || !productResult.data) return notFound();
 
-    if (error || !product) return notFound();
+    // product_concerns and concerns tables may not exist yet — handle gracefully
+    let concernIds: string[] = []
+    try {
+        const { data: pc } = await supabase.from("product_concerns").select("concern_id").eq("product_id", id)
+        concernIds = pc?.map(p => p.concern_id) || []
+    } catch { /* table not available */ }
+
+    let concerns: { id: string; name: string }[] = []
+    try {
+        const { data } = await supabase.from("concerns").select("id, name").order("name", { ascending: true })
+        concerns = data || []
+    } catch { /* table not available */ }
+
+    const productData = { ...productResult.data, product_concerns: concernIds.map(cid => ({ concern_id: cid })) }
 
     return (
         <div className="space-y-6">
@@ -41,7 +57,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
                 </div>
             </div>
             <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm">
-                <ProductEditForm product={product} categories={categories || []} />
+                <ProductEditForm product={productData} categories={categoriesResult.data || []} concerns={concerns} />
             </div>
         </div>
     );

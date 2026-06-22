@@ -2,19 +2,17 @@
 
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Trash2, ShoppingBag, Heart, Share2, ChevronLeft } from "lucide-react"
+import { Trash2, ShoppingBag, Heart, Share2 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
 import { useCart } from "@/components/store/use-cart"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 
 export default function WishlistPage() {
     const [items, setItems] = React.useState<any[]>([])
     const [loading, setLoading] = React.useState(true)
     const [user, setUser] = React.useState<any>(null)
     const supabase = createClient()
-    const router = useRouter()
     const cartItems = useCart((s) => s.items)
 
     React.useEffect(() => {
@@ -40,7 +38,7 @@ export default function WishlistPage() {
             })))
         }
 
-        setTimeout(() => setLoading(false), 600)
+        setLoading(false)
     }, [supabase])
 
     React.useEffect(() => { fetchWishlist() }, [fetchWishlist])
@@ -49,19 +47,14 @@ export default function WishlistPage() {
         setItems(prev => prev.filter(item => item.wishlist_id !== wishlistId))
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
-        const { error } = await supabase
+        await supabase
             .from('wishlist')
             .delete()
             .eq('id', wishlistId)
             .eq('user_id', user.id)
-
-        if (!error) {
-            window.dispatchEvent(new CustomEvent("wishlist-sync", {
-                detail: { count: items.length - 1 }
-            }))
-        } else {
-            fetchWishlist()
-        }
+        window.dispatchEvent(new CustomEvent("wishlist-sync", {
+            detail: { count: items.length - 1 }
+        }))
     }
 
     const isInCart = (productId: string) => cartItems.some(i => i.productId === productId)
@@ -78,156 +71,119 @@ export default function WishlistPage() {
         }
     }
 
-    return (
-        <div className="min-h-screen bg-[#F8F8F8] pb-12">
-            {/* LOADER */}
-            <AnimatePresence mode="wait">
-                {loading && (
-                    <motion.div
-                        key="loader"
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
-                        className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center"
-                    >
-                        <span
-                            className="text-[80px] font-daciana leading-none select-none bg-clip-text text-transparent"
-                            style={{
-                                backgroundImage: "linear-gradient(90deg, #000 0%, #000 30%, #888 50%, #000 70%, #000 100%)",
-                                backgroundSize: "200% 100%",
-                                animation: "shimmer 2s ease-in-out infinite",
-                            }}
-                        >
-                            M
-                        </span>
-                        <style>{`
-                            @keyframes shimmer {
-                                0% { background-position: 200% 0; }
-                                100% { background-position: -200% 0; }
-                            }
-                        `}</style>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-white">
+                <div className="max-w-7xl mx-auto px-4 pt-6 pb-8">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-10 h-10 rounded-full bg-gray-100 animate-pulse" />
+                        <div className="h-6 w-28 bg-gray-100 rounded animate-pulse" />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="aspect-[3/4] bg-gray-50 rounded-xl animate-pulse" />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
-            {!loading && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8 pb-24">
+                <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mb-6">
+                    <Heart className="w-7 h-7 text-rose-400" />
+                </div>
+                <h1 className="text-xl font-bold text-gray-900 mb-2">Your Wishlist is Private</h1>
+                <p className="text-sm text-gray-400 text-center max-w-[260px] mb-8 leading-relaxed">
+                    Sign in to view and share your saved items.
+                </p>
+                <Link
+                    href="/login"
+                    className="bg-gray-900 text-white px-10 py-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest hover:bg-gray-800 transition-all"
                 >
-                    {/* UNAUTHENTICATED */}
-                    {!user && (
-                        <div className="flex flex-col items-center justify-center min-h-screen px-8 pb-24">
-                            <div className="w-20 h-20 rounded-full bg-[#fc2779]/10 flex items-center justify-center mb-8">
-                                <Heart className="w-9 h-9 text-[#fc2779]" />
-                            </div>
-                            <h1 className="text-2xl font-black tracking-tight text-slate-900 text-center mb-2">
-                                Your Wishlist is Private
-                            </h1>
-                            <p className="text-sm text-slate-400 text-center max-w-[280px] leading-relaxed mb-10">
-                                Sign in to view and share your saved beauty items.
-                            </p>
-                            <Link
-                                href="/login"
-                                className="bg-slate-900 text-white px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
-                            >
-                                SIGN IN
-                            </Link>
-                        </div>
-                    )}
+                    SIGN IN
+                </Link>
+            </div>
+        )
+    }
 
-                    {/* AUTHENTICATED — EMPTY */}
-                    {user && items.length === 0 && (
-                        <div className="flex flex-col items-center justify-center min-h-screen px-8 pb-24">
-                            <div className="w-20 h-20 rounded-full bg-[#fc2779]/10 flex items-center justify-center mb-8">
-                                <Heart className="w-9 h-9 text-[#fc2779]" />
-                            </div>
-                            <h1 className="text-2xl font-black tracking-tight text-slate-900 text-center mb-2">
-                                Nothing saved yet
-                            </h1>
-                            <p className="text-sm text-slate-400 text-center max-w-[280px] leading-relaxed mb-10">
-                                Tap the heart on any product to add it to your wishlist.
-                            </p>
-                            <Link
-                                href="/shop"
-                                className="bg-slate-900 text-white px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
-                            >
-                                DISCOVER BEAUTY
-                            </Link>
-                        </div>
-                    )}
+    if (items.length === 0) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8 pb-24">
+                <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mb-6">
+                    <Heart className="w-7 h-7 text-rose-400" />
+                </div>
+                <h1 className="text-xl font-bold text-gray-900 mb-2">Nothing saved yet</h1>
+                <p className="text-sm text-gray-400 text-center max-w-[260px] mb-8 leading-relaxed">
+                    Tap the heart on any product to save it here.
+                </p>
+                <Link
+                    href="/shop"
+                    className="bg-gray-900 text-white px-10 py-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest hover:bg-gray-800 transition-all"
+                >
+                    DISCOVER BEAUTY
+                </Link>
+            </div>
+        )
+    }
 
-                    {/* AUTHENTICATED — POPULATED */}
-                    {user && items.length > 0 && (
-                        <div className="max-w-7xl mx-auto px-6 pt-10 pb-8">
-                            {/* HEADER */}
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
+    return (
+        <div className="min-h-screen bg-white pb-12">
+            <div className="max-w-7xl mx-auto px-4 pt-4 pb-8">
+                {/* HEADER */}
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-lg font-bold text-gray-900">Wishlist</h1>
+                        <p className="text-xs text-gray-400">{items.length} item{items.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <button
+                        onClick={handleShare}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+                    >
+                        <Share2 className="w-3.5 h-3.5 text-gray-500" />
+                        <span className="text-xs font-medium text-gray-600">Share</span>
+                    </button>
+                </div>
+
+                {/* GRID */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <AnimatePresence mode="popLayout">
+                        {items.map((product) => {
+                            const inBag = isInCart(product.id)
+                            return (
+                                <motion.div
+                                    key={product.wishlist_id}
+                                    layout
+                                    initial={{ opacity: 0, y: 16 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="relative group"
+                                >
+                                    <ProductCard product={product} />
                                     <button
-                                        onClick={() => router.push('/profile')}
-                                        className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 hover:bg-slate-50 transition-all"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            handleRemove(product.wishlist_id)
+                                        }}
+                                        className="absolute top-2 right-2 z-30 w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-white shadow-sm border border-gray-200"
                                     >
-                                        <ChevronLeft className="w-5 h-5 text-slate-700" />
+                                        <Trash2 className="w-3.5 h-3.5 text-gray-500" />
                                     </button>
-                                    <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                                        Saved for later
-                                    </h1>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={handleShare}
-                                        className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 hover:bg-[#fc2779]/5 hover:border-[#fc2779]/20 transition-all"
-                                    >
-                                        <Share2 className="w-4 h-4 text-slate-500" />
-                                    </button>
-                                    <span className="text-sm font-semibold text-slate-400">
-                                        {items.length} item{items.length !== 1 ? 's' : ''}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* GRID */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-0 gap-y-0">
-                                <AnimatePresence mode="popLayout">
-                                    {items.map((product) => {
-                                        const inBag = isInCart(product.id)
-                                        return (
-                                            <motion.div
-                                                key={product.wishlist_id}
-                                                layout
-                                                initial={{ opacity: 0, y: 20 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
-                                                className="relative group"
-                                            >
-                                                <ProductCard product={product} />
-                                                {/* X REMOVE BUTTON */}
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.preventDefault()
-                                                        e.stopPropagation()
-                                                        handleRemove(product.wishlist_id)
-                                                    }}
-                                                    className="absolute top-2 right-2 z-30 w-6 h-6 rounded-full bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60"
-                                                >
-                                                    <Trash2 className="w-3 h-3 text-white" />
-                                                </button>
-                                                {/* IN BAG BADGE */}
-                                                {inBag && (
-                                                    <div className="absolute top-2 right-2 z-20 flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#fc2779]">
-                                                        <ShoppingBag className="w-2.5 h-2.5 text-white" />
-                                                        <span className="text-[7px] font-black text-white uppercase tracking-wider">IN BAG</span>
-                                                    </div>
-                                                )}
-                                            </motion.div>
-                                        )
-                                    })}
-                                </AnimatePresence>
-                            </div>
-                        </div>
-                    )}
-                </motion.div>
-            )}
+                                    {inBag && (
+                                        <div className="absolute top-2 left-2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500">
+                                            <ShoppingBag className="w-2.5 h-2.5 text-white" />
+                                            <span className="text-[7px] font-bold text-white uppercase tracking-wider">IN BAG</span>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )
+                        })}
+                    </AnimatePresence>
+                </div>
+            </div>
         </div>
     )
 }

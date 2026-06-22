@@ -2,11 +2,14 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
+import Image from "next/image"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
+import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import {
-    Search, ArrowLeft, SlidersHorizontal, X,
-    ChevronDown, ChevronUp, ArrowUpDown, Check
+    Search, X,
+    ChevronDown, ChevronUp, ArrowUpDown, Check, Clock, Trash2
 } from "lucide-react"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
@@ -47,10 +50,45 @@ export default function SearchPage() {
     const [tempPriceRange, setTempPriceRange] = useState<number | null>(null)
 
     const categoryMap = useRef<Map<string, string>>(new Map())
+    const [recentSearches, setRecentSearches] = useState<string[]>([])
+    const [exclusiveBrands, setExclusiveBrands] = useState<any[]>([])
+    const recentlyViewed = useRecentlyViewed(s => s.items)
+    const clearRecentlyViewed = useRecentlyViewed(s => s.clear)
     const searchTimeout = useRef<any>(null)
 
     useEffect(() => {
         fetchFilterOptions()
+        fetchExclusiveBrands()
+        const stored = localStorage.getItem("recent_searches")
+        if (stored) {
+            try { setRecentSearches(JSON.parse(stored)) } catch {}
+        }
+    }, [])
+
+    const fetchExclusiveBrands = async () => {
+        const { data: parent } = await supabase.from("categories").select("id").eq("slug", "exclusive").single()
+        if (!parent) return
+        const { data } = await supabase
+            .from("categories")
+            .select("id, name, slug, image_url")
+            .eq("parent_id", parent.id)
+            .order("name")
+        if (data) setExclusiveBrands(data)
+    }
+
+    const addRecentSearch = useCallback((term: string) => {
+        const t = term.trim()
+        if (!t || t.length < 2) return
+        setRecentSearches(prev => {
+            const next = [t, ...prev.filter(s => s !== t)].slice(0, 8)
+            localStorage.setItem("recent_searches", JSON.stringify(next))
+            return next
+        })
+    }, [])
+
+    const clearRecentSearches = useCallback(() => {
+        setRecentSearches([])
+        localStorage.removeItem("recent_searches")
     }, [])
 
     const fetchFilterOptions = async () => {
@@ -222,8 +260,9 @@ export default function SearchPage() {
 
         searchTimeout.current = setTimeout(() => {
             doSearch(text, { categories: selectedCategories, brands: selectedBrands, priceRangeIdx: selectedPriceRange, sortOption: sort })
+            if (text.trim().length >= 2) addRecentSearch(text)
         }, 400)
-    }, [doSearch, selectedCategories, selectedBrands, selectedPriceRange, sort])
+    }, [doSearch, selectedCategories, selectedBrands, selectedPriceRange, sort, addRecentSearch])
 
     const openFilter = () => {
         setTempCategories([...selectedCategories])
@@ -276,14 +315,8 @@ export default function SearchPage() {
 
     return (
         <div className="min-h-screen bg-white flex flex-col">
-            {/* Search bar + filter button */}
+            {/* Search bar */}
             <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                <button
-                    onClick={() => router.back()}
-                    className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors shrink-0"
-                >
-                    <ArrowLeft className="w-5 h-5 text-gray-800" />
-                </button>
                 <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-full px-4 h-11">
                     <Search className="w-4 h-4 text-gray-400 shrink-0" />
                     <input
@@ -300,17 +333,6 @@ export default function SearchPage() {
                         </button>
                     )}
                 </div>
-                <button
-                    onClick={openFilter}
-                    className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors relative shrink-0"
-                >
-                    <SlidersHorizontal className={`w-5 h-5 ${activeFilterCount > 0 ? "text-[#fc2779]" : "text-gray-600"}`} />
-                    {activeFilterCount > 0 && (
-                        <span className="absolute top-1.5 right-1.5 bg-[#fc2779] text-white text-[9px] font-bold min-w-[16px] h-4 flex items-center justify-center rounded-full px-1">
-                            {activeFilterCount}
-                        </span>
-                    )}
-                </button>
             </div>
 
             {/* Active filter chips */}
@@ -395,18 +417,105 @@ export default function SearchPage() {
             {/* Results */}
             <div className="flex-1">
                 {query.length === 0 && activeFilterCount === 0 ? (
-                    <div className="flex flex-col items-center pt-28 px-6">
-                        <Search className="w-20 h-20 text-gray-200 stroke-[1]" />
-                        <p className="text-lg font-semibold text-gray-700 mt-5">Search for products</p>
-                        <p className="text-sm text-gray-400 mt-1">Try searching by name or brand</p>
-                    </div>
+                    <>
+                        {recentSearches.length > 0 && (
+                            <div className="px-4 pt-3">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-base font-light text-gray-700">Recent Searches</h3>
+                                    <button onClick={clearRecentSearches} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Clear</button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {recentSearches.map((term) => (
+                                        <button
+                                            key={term}
+                                            onClick={() => {
+                                                setQuery(term)
+                                                doSearch(term, { categories: [], brands: [], priceRangeIdx: null, sortOption: sort })
+                                                addRecentSearch(term)
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 transition-colors"
+                                        >
+                                            <Clock className="w-3 h-3 text-gray-400" />
+                                            <span className="text-sm text-gray-600">{term}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {recentlyViewed.length > 0 && (
+                            <div className="pt-4">
+                                <div className="flex items-center justify-between mb-3 px-4">
+                                    <h3 className="text-base font-light text-gray-700">Recently Viewed</h3>
+                                    <button onClick={clearRecentlyViewed} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <div className="flex gap-4 overflow-x-auto pb-1 px-4 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                                    {recentlyViewed.map((item) => (
+                                        <Link
+                                            key={item.id}
+                                            href={`/products/${item.id}`}
+                                            className="shrink-0 flex flex-col items-center gap-1 w-20"
+                                        >
+                                            <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden shrink-0 shadow-sm">
+                                                {item.thumbnail_url ? (
+                                                    <Image
+                                                        src={item.thumbnail_url}
+                                                        alt={item.name}
+                                                        width={56}
+                                                        height={56}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm font-daciana">M</div>
+                                                )}
+                                            </div>
+                                            <span className="text-[10px] text-gray-600 text-center leading-tight line-clamp-2">{item.name}</span>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {exclusiveBrands.length > 0 && (
+                            <div className="pt-4">
+                                <h3 className="text-base font-light text-gray-700 mb-3 px-4">ICONIC BEAUTY BRANDS</h3>
+                                {[exclusiveBrands.slice(0, Math.ceil(exclusiveBrands.length / 2)), exclusiveBrands.slice(Math.ceil(exclusiveBrands.length / 2))].map((row, i) => (
+                                    <div key={i} className="flex gap-2 px-4 mb-2 last:mb-0 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                                        {row.map((brand) => (
+                                            <Link
+                                                key={brand.id}
+                                                href={`/exclusive/${brand.slug}`}
+                                                className="shrink-0 relative h-10 min-w-[100px] rounded-full bg-white overflow-hidden border border-gray-200 shadow-sm"
+                                            >
+                                                {brand.image_url ? (
+                                                    <Image src={brand.image_url} alt={brand.name} fill className="object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-sm font-semibold text-gray-400">{brand.name[0]}</div>
+                                                )}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {recentSearches.length === 0 && recentlyViewed.length === 0 && exclusiveBrands.length === 0 && (
+                            <div className="flex flex-col items-center pt-28 px-4">
+                                <Search className="w-20 h-20 text-gray-200 stroke-[1]" />
+                                <p className="text-lg font-semibold text-gray-700 mt-5">Search for products</p>
+                                <p className="text-sm text-gray-400 mt-1">Try searching by name or brand</p>
+                            </div>
+                        )}
+                    </>
                 ) : loading && results.length === 0 ? (
-                    <div className="flex flex-col items-center pt-28 px-6">
+                    <div className="flex flex-col items-center pt-28 px-4">
                         <div className="w-8 h-8 border-2 border-[#fc2779] border-t-transparent rounded-full animate-spin" />
                         <p className="text-sm text-gray-400 mt-4">Searching...</p>
                     </div>
                 ) : results.length === 0 ? (
-                    <div className="flex flex-col items-center pt-28 px-6">
+                    <div className="flex flex-col items-center pt-28 px-4">
                         <Search className="w-16 h-16 text-gray-200 stroke-[1]" />
                         <p className="text-lg font-semibold text-gray-700 mt-5">No results found</p>
                         <p className="text-sm text-gray-400 mt-1">Try different search terms or filters</p>

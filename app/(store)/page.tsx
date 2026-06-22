@@ -15,11 +15,12 @@ const BRAND_BLACKLIST = [
 export default async function GatewayPage() {
   const supabase = await createClient();
 
-  const [{ data: bannerData }, { data: catData }, { data: prodData }, { data: forever52ProdData }] = await Promise.all([
+  const [{ data: bannerData }, { data: catData }, { data: prodData }, { data: forever52ProdData }, { data: parentCatData }] = await Promise.all([
     supabase.from("hero_banners").select("*").eq("is_active", true).order("position").limit(1).maybeSingle(),
     supabase.from("categories").select("id, name, slug, image_url, parent:parent_id(slug)").not("parent_id", "is", null).order("name"),
     supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").order("created_at", { ascending: false }).limit(12),
     supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("brand", "FOREVER52").limit(20),
+    supabase.from("categories").select("id, name, slug, image_url").is("parent_id", null).order("name"),
   ]);
 
   const products = (prodData || []).map(p => ({
@@ -40,6 +41,91 @@ export default async function GatewayPage() {
       : false,
   }))
 
+  // Fetch product thumbnail mapping for shelf cards
+  const gridParents = (parentCatData || []).filter(
+    c => c.slug !== "essentials" && c.slug !== "exclusive"
+  )
+  const gridParentIds = gridParents.map(c => c.id)
+
+  // Get subcategories of these parents
+  const { data: children } = await supabase
+    .from("categories")
+    .select("id, parent_id")
+    .in("parent_id", gridParentIds)
+
+  const childMap: Record<string, string[]> = {}
+  children?.forEach(c => {
+    if (!childMap[c.parent_id]) childMap[c.parent_id] = []
+    childMap[c.parent_id].push(c.id)
+  })
+
+  const allGridCatIds = [
+    ...gridParentIds,
+    ...(children?.map(c => c.id) || []),
+  ]
+
+  let shelfProducts: Record<string, string[]> = {}
+  if (allGridCatIds.length > 0) {
+    const { data: pcData } = await supabase
+      .from("product_categories")
+      .select("category_id, products!inner(thumbnail_url)")
+      .in("category_id", allGridCatIds)
+      .not("products.thumbnail_url", "is", null)
+      .limit(500)
+
+    // Index by category_id
+    const byCat: Record<string, Set<string>> = {}
+    ;(pcData || []).forEach(r => {
+      const thumb = (r.products as any)?.thumbnail_url
+      if (thumb) {
+        if (!byCat[r.category_id]) byCat[r.category_id] = new Set()
+        byCat[r.category_id].add(thumb)
+      }
+    })
+
+    // For each parent, collect from its subcategories + direct
+    gridParentIds.forEach(pid => {
+      const set = new Set<string>()
+      ;[...(childMap[pid] || []), pid].forEach(cid => {
+        byCat[cid]?.forEach(t => set.add(t))
+      })
+      if (set.size > 0) shelfProducts[pid] = [...set].slice(0, 3)
+    })
+  }
+
+  // Fallback: for any parent still missing thumbnails, fetch a few products directly
+  const missing = gridParents.filter(c => !shelfProducts[c.id])
+  if (missing.length > 0) {
+    const missingIds = missing.map(c => c.id)
+    // Try fetching any product linked to these parent categories
+    const { data: fallbackData } = await supabase
+      .from("product_categories")
+      .select("category_id, products!inner(thumbnail_url)")
+      .in("category_id", missingIds)
+      .not("products.thumbnail_url", "is", null)
+      .limit(100)
+
+    const fallbackByCat: Record<string, Set<string>> = {}
+    ;(fallbackData || []).forEach(r => {
+      const thumb = (r.products as any)?.thumbnail_url
+      if (thumb) {
+        if (!fallbackByCat[r.category_id]) fallbackByCat[r.category_id] = new Set()
+        fallbackByCat[r.category_id].add(thumb)
+      }
+    })
+
+    missingIds.forEach(pid => {
+      if (!shelfProducts[pid] && fallbackByCat[pid]?.size) {
+        shelfProducts[pid] = [...fallbackByCat[pid]!].slice(0, 3)
+      }
+    })
+
+    // Last resort: use category.image_url
+    missing.filter(c => !shelfProducts[c.id] && c.image_url).forEach(c => {
+      shelfProducts[c.id] = [c.image_url!]
+    })
+  }
+
   return (
     <>
       {/* DESKTOP: 3 split panels (md+) */}
@@ -51,7 +137,7 @@ export default async function GatewayPage() {
 
       {/* MOBILE: native-style scrollable feed */}
       <div className="md:hidden">
-        <HomeMobile banner={bannerData} categories={categories} products={products} forever52Products={forever52Products} />
+        <HomeMobile banner={bannerData} categories={categories} products={products} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} />
       </div>
     </>
   );

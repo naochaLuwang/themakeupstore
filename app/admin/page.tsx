@@ -72,13 +72,12 @@ function DayOfWeekChart({ orders }: { orders: any[] }) {
         buckets[d].count++
     })
     const maxR = Math.max(...buckets.map(b => b.total), 1)
-    const maxC = Math.max(...buckets.map(b => b.count), 1)
     return (
         <div className="flex items-end gap-1.5 h-20 mt-1">
             {buckets.map((b, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-medium text-slate-400">{b.count}</span>
-                    <div className="w-full rounded-t-sm bg-blue-500/20" style={{ height: `${(b.count / maxC) * 100}%` }} />
+                    <span className="text-[8px] font-semibold text-emerald-600 tabular-nums">₹{Math.round(b.total / 1000)}k</span>
+                    <div className="w-full rounded-t-sm bg-emerald-400/30" style={{ height: `${(b.total / maxR) * 100}%` }} />
                     <span className="text-[9px] text-slate-500 font-semibold">{days[i]}</span>
                 </div>
             ))}

@@ -8,6 +8,7 @@ export const productSchema = z.object({
     brand: z.string().default(""),
     has_variants: z.boolean().default(false),
     category_ids: z.array(z.string()).default([]),
+    concern_ids: z.array(z.string()).default([]),
 
     // Basic Product Fields
     base_price: z.coerce.number().min(0).default(0),

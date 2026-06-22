@@ -45,6 +45,13 @@ export async function createProduct(formData: FormData) {
             )
         }
 
+        // 2b. Insert Concern Links
+        if (payload.concern_ids?.length > 0) {
+            await supabase.from("product_concerns").insert(
+                payload.concern_ids.map((concernId: string) => ({ product_id: product.id, concern_id: concernId }))
+            )
+        }
+
         // 3. Image Uploads & Store URLs
         const uploadedUrls: string[] = []
         for (let i = 0; i < files.length; i++) {
@@ -132,6 +139,14 @@ export async function updateProduct(productId: string, formData: FormData) {
         if (payload.category_ids?.length > 0) {
             await supabase.from("product_categories").insert(
                 payload.category_ids.map((id: string) => ({ product_id: productId, category_id: id }))
+            )
+        }
+
+        // 1b. Sync Concerns
+        await supabase.from("product_concerns").delete().eq("product_id", productId)
+        if (payload.concern_ids?.length > 0) {
+            await supabase.from("product_concerns").insert(
+                payload.concern_ids.map((id: string) => ({ product_id: productId, concern_id: id }))
             )
         }
 

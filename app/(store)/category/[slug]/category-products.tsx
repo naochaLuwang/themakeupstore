@@ -1,10 +1,23 @@
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
-import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { SlidersHorizontal, X, Check, ArrowUpDown, Package } from "lucide-react"
+import { SlidersHorizontal, X, Check, ArrowUpDown, Package, PackageCheck } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
+
+interface CategoryItem {
+    id: string
+    name: string
+    slug: string
+    image_url: string | null
+}
+
+interface ConcernItem {
+    id: string
+    name: string
+    slug: string
+    image_url: string | null
+}
 
 interface ProductVariant {
     id: string
@@ -17,11 +30,12 @@ interface ProductVariant {
     image_url: string | null
 }
 
-interface SubcategoryItem {
-    id: string
-    name: string
-    slug: string
-    image_url: string | null
+interface ProductConcern {
+    concern_id: string
+}
+
+interface ProductCategory {
+    category_id: string
 }
 
 interface StoreProduct {
@@ -36,7 +50,18 @@ interface StoreProduct {
     has_variants: boolean
     status: string
     product_variants: ProductVariant[]
+    product_concerns: ProductConcern[]
+    product_categories: ProductCategory[]
     created_at: string
+}
+
+interface Props {
+    slug: string
+    parent: CategoryItem | null
+    subcategories: CategoryItem[]
+    concerns: ConcernItem[]
+    initialProducts: StoreProduct[]
+    showConcerns?: boolean
 }
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
@@ -75,7 +100,9 @@ function computeEffectivePrice(product: StoreProduct): number {
     return base
 }
 
-export function CategoryClient({ category, initialProducts, subcategories = [], subThumbnails = {} }: { category: any; initialProducts: StoreProduct[]; subcategories?: SubcategoryItem[]; subThumbnails?: Record<string, string> }) {
+export function CategoryProducts({ slug, parent, subcategories, concerns, initialProducts, showConcerns = true }: Props) {
+    const [activeSub, setActiveSub] = useState<string | null>(null)
+    const [activeConcern, setActiveConcern] = useState<string | null>(null)
     const [sort, setSort] = useState<SortOption>("newest")
     const [showSort, setShowSort] = useState(false)
     const [showFilter, setShowFilter] = useState(false)
@@ -97,6 +124,17 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
+    const subImage = useMemo(() => {
+        const map: Record<string, string> = {}
+        for (const p of initialProducts) {
+            const catIds = p.product_categories?.map((pc: ProductCategory) => pc.category_id) || []
+            for (const cid of catIds) {
+                if (!map[cid] && p.thumbnail_url) map[cid] = p.thumbnail_url
+            }
+        }
+        return map
+    }, [initialProducts])
+
     const availableBrands = useMemo(() => {
         const brands = Array.from(new Set(initialProducts.map((p) => p.brand).filter(Boolean)))
         return brands.sort()
@@ -104,6 +142,14 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
 
     const products = useMemo(() => {
         const filtered = initialProducts.filter(p => {
+            if (activeSub) {
+                const catIds = p.product_categories?.map((pc: ProductCategory) => pc.category_id) || []
+                if (!catIds.includes(activeSub)) return false
+            }
+            if (activeConcern) {
+                const concernIds = p.product_concerns?.map((pc: ProductConcern) => pc.concern_id) || []
+                if (!concernIds.includes(activeConcern)) return false
+            }
             if (selectedBrands.length > 0 && !selectedBrands.includes(p.brand)) return false
             if (selectedPriceRange !== null) {
                 const effective = computeEffectivePrice(p)
@@ -134,7 +180,7 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
             default:
                 return filtered
         }
-    }, [initialProducts, sort, selectedBrands, selectedPriceRange, inStockOnly])
+    }, [initialProducts, activeSub, activeConcern, sort, selectedBrands, selectedPriceRange, inStockOnly])
 
     const activeFilterCount = selectedBrands.length + (selectedPriceRange !== null ? 1 : 0)
 
@@ -172,15 +218,13 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
 
     return (
         <div className="min-h-screen bg-white pb-24">
-            {/* Editorial Header */}
+            {/* Category Header */}
             <div className="px-4 pt-6 pb-2">
                 <div className="flex items-center gap-3 mb-1">
-                    <span className="text-[9px] font-bold text-rose-400 uppercase tracking-[0.4em]">
-                        {category?.parent?.name || "Category"}
-                    </span>
+                    <span className="text-[9px] font-bold text-rose-400 uppercase tracking-[0.4em]">Collection</span>
                 </div>
                 <h1 className="text-3xl font-light text-slate-900 tracking-tight leading-tight">
-                    {category?.name || ""}
+                    {parent?.name || ""}
                 </h1>
                 <div className="flex items-center gap-2 mt-3">
                     <div className="h-px w-8 bg-rose-300" />
@@ -193,16 +237,15 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
             {subcategories.length > 0 && (
                 <div className="flex gap-4 overflow-x-auto px-4 py-5 snap-x snap-mandatory no-scrollbar">
                     {subcategories.map((sub) => {
-                        const img = subThumbnails[sub.id]
-                        const isActive = sub.slug === category?.slug
+                        const img = subImage[sub.id]
                         return (
-                            <Link
+                            <button
                                 key={sub.id}
-                                href={`/categories/${sub.slug}`}
+                                onClick={() => setActiveSub(activeSub === sub.id ? null : sub.id)}
                                 className="snap-start shrink-0 flex flex-col items-center gap-2"
                             >
                                 <div className={`w-20 h-20 rounded-full overflow-hidden transition-all duration-300 ${
-                                    isActive
+                                    activeSub === sub.id
                                         ? "ring-2 ring-rose-400 ring-offset-2 scale-105 shadow-lg shadow-rose-100"
                                         : "shadow-md hover:shadow-lg"
                                 }`}>
@@ -215,13 +258,53 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
                                     )}
                                 </div>
                                 <span className={`text-[10px] font-semibold tracking-tight transition-colors duration-200 ${
-                                    isActive ? "text-rose-500" : "text-slate-500"
+                                    activeSub === sub.id ? "text-rose-500" : "text-slate-500"
                                 }`}>
                                     {sub.name}
                                 </span>
-                            </Link>
+                            </button>
                         )
                     })}
+                </div>
+            )}
+
+            {/* Concern Pills with Images */}
+            {showConcerns && concerns.length > 0 && (
+                <div className="px-4 pt-3 pb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em]">Shop by Skin Type</span>
+                        <div className="h-px flex-1 bg-slate-100" />
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                        {concerns.map((c) => (
+                            <button
+                                key={c.id}
+                                onClick={() => setActiveConcern(activeConcern === c.id ? null : c.id)}
+                                className={`snap-start shrink-0 flex flex-col items-center gap-1.5 transition-all duration-200 ${
+                                    activeConcern === c.id ? "scale-105" : ""
+                                }`}
+                            >
+                                <div className={`w-14 h-14 rounded-xl overflow-hidden transition-all duration-200 ${
+                                    activeConcern === c.id
+                                        ? "ring-2 ring-rose-400 ring-offset-2 shadow-md shadow-rose-200"
+                                        : "ring-1 ring-slate-200 hover:ring-slate-300"
+                                }`}>
+                                    {c.image_url ? (
+                                        <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-rose-50 flex items-center justify-center">
+                                            <span className="text-lg font-medium text-rose-400">{c.name[0]}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <span className={`text-[9px] font-semibold text-center leading-tight transition-colors ${
+                                    activeConcern === c.id ? "text-rose-500" : "text-slate-500"
+                                }`}>
+                                    {c.name}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
 
@@ -248,7 +331,10 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
                         </button>
                     )}
                     <button
-                        onClick={clearAllFilters}
+                        onClick={() => {
+                            setSelectedBrands([])
+                            setSelectedPriceRange(null)
+                        }}
                         className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-all"
                     >
                         Clear all
@@ -286,7 +372,7 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
                             <Package className="w-7 h-7 text-slate-300" />
                         </div>
                         <p className="text-sm font-medium text-slate-700">No products found</p>
-                        <p className="text-xs text-slate-400 mt-1">Try adjusting your filters</p>
+                        <p className="text-xs text-slate-400 mt-1">Try selecting a different subcategory or concern</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0">
