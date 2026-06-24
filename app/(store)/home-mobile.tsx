@@ -9,6 +9,7 @@ import {
   RotateCcw, MessageCircle, ArrowRight,
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
+import { KylieBanner } from "@/components/store/kylie-banner"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 
 const VALUES = [
@@ -229,6 +230,11 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
           </div>
         </div>
       )}
+
+      {/* KYLIE COSMETICS */}
+      <div className="mb-6">
+        <KylieBanner />
+      </div>
 
       {/* NEW ARRIVALS */}
       <Section label="NEW THIS WEEK" title="Just Landed" href="/new-arrivals" linkLabel="View All">

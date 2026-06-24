@@ -320,6 +320,8 @@ export function AddressForm({
 
         if (cleaned.length === 6) {
             setPincodeLoading(true)
+
+            // Lookup shipping zones for delivery methods
             const { data: zones } = await supabase
                 .from("shipping_zones")
                 .select("*, shipping_methods(*)")
@@ -328,7 +330,6 @@ export function AddressForm({
             if (zones && zones.length > 0) {
                 setAreaName(zones[0].area_name || zones[0].name)
                 setShippingMethods(zones[0].shipping_methods || [])
-                // Auto-select first method if none selected
                 if (!selectedMethodId && zones[0].shipping_methods?.length > 0) {
                     setSelectedMethodId(zones[0].shipping_methods[0].id)
                 }
@@ -337,6 +338,20 @@ export function AddressForm({
                 setShippingMethods([])
                 setSelectedMethodId(null)
             }
+
+            // Auto-fill city & state from India Post API
+            try {
+                const res = await fetch(`https://api.postalpincode.in/pincode/${cleaned}`)
+                const data = await res.json()
+                if (data[0]?.Status === "Success" && data[0]?.PostOffice?.length > 0) {
+                    const po = data[0].PostOffice[0]
+                    setCity(po.District)
+                    setState(po.State)
+                }
+            } catch (err) {
+                console.error("Pincode lookup failed:", err)
+            }
+
             setPincodeLoading(false)
         }
     }

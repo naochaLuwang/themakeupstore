@@ -1,138 +1,3 @@
-// "use client"
-
-// import * as React from "react"
-// import Link from "next/link"
-// import { useRouter } from "next/navigation"
-// import {
-//     ChevronLeft,
-//     User,
-//     FileText,
-//     ShieldCheck,
-//     Truck,
-//     Mail,
-//     ChevronRight,
-// } from "lucide-react"
-// import { createClient } from "@/utils/supabase/client"
-// import { AnimatePresence, motion } from "framer-motion"
-
-// export default function SettingsPage() {
-//     const router = useRouter()
-//     const supabase = createClient()
-//     const [profile, setProfile] = React.useState<any>(null)
-//     const [loading, setLoading] = React.useState(true)
-
-//     React.useEffect(() => {
-//         async function getProfile() {
-//             const { data: { user } } = await supabase.auth.getUser()
-//             if (!user) return router.push("/login")
-
-//             const { data } = await supabase
-//                 .from("profiles")
-//                 .select("*")
-//                 .eq("id", user.id)
-//                 .single()
-
-//             setProfile(data)
-//             setLoading(false)
-//         }
-//         getProfile()
-//     }, [router, supabase])
-
-
-
-//     const legalLinks = [
-//         { label: "Terms of Use", href: "/legal/terms_and_conditions", icon: FileText, detail: "Usage & agreements" },
-//         { label: "Privacy Policy", href: "/legal/privacy_policy", icon: ShieldCheck, detail: "Your data security" },
-//         { label: "Return Policy", href: "/legal/return_policy", icon: Truck, detail: "Shipping & refunds" },
-//         { label: "Contact Us", href: "/contact", icon: Mail, detail: "Get in touch with us" },
-//     ]
-
-//     return (
-//         <div className="min-h-screen bg-white pb-10">
-
-//             <AnimatePresence mode="wait">
-//                 {loading && (
-//                     <motion.div
-//                         key="loader"
-//                         initial={{ opacity: 1 }}
-//                         exit={{ opacity: 0, y: -20 }}
-//                         className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center"
-//                     >
-//                         <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-900 mb-2">The Makeup Store</h2>
-//                         <motion.div
-//                             animate={{ width: ["0%", "40%", "0%"] }}
-//                             transition={{ duration: 1.5, repeat: Infinity }}
-//                             className="h-[1px] bg-slate-900"
-//                         />
-//                     </motion.div>
-//                 )}
-//             </AnimatePresence>
-
-//             {/* HEADER */}
-//             <header className="px-6 pt-12 pb-6 border-b border-zinc-50 sticky top-0 bg-white/80 backdrop-blur-md z-20">
-//                 <div className="flex items-center gap-2">
-//                     <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-zinc-50 transition-colors">
-//                         <ChevronLeft className="w-5 h-5 text-zinc-900" />
-//                     </button>
-//                     <h1 className="text-xl font-black uppercase tracking-tight text-zinc-900 leading-none">Settings</h1>
-//                 </div>
-//             </header>
-
-//             <main className="px-6 py-8 max-w-2xl mx-auto space-y-12">
-
-//                 {/* SECTION: PERSONAL INFO */}
-//                 <section>
-//                     <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Identity</h2>
-//                     <Link href="/profile/settings/edit" className="group flex items-center justify-between p-6 bg-zinc-50 rounded-[2rem] hover:bg-zinc-100 transition-all border border-transparent hover:border-zinc-200">
-//                         <div className="flex items-center gap-5">
-//                             <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm">
-//                                 <User className="w-5 h-5 text-zinc-900" />
-//                             </div>
-//                             <div>
-//                                 <p className="text-sm font-black uppercase tracking-tight text-zinc-900">My Profile</p>
-//                                 <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest mt-1">Manage personal information</p>
-//                             </div>
-//                         </div>
-//                         <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-900 transition-all" />
-//                     </Link>
-//                 </section>
-
-//                 {/* SECTION: LEGAL & SUPPORT */}
-//                 <section>
-//                     <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Support & Legal</h2>
-//                     <div className="grid grid-cols-1 gap-3">
-//                         {legalLinks.map((item) => (
-//                             <Link
-//                                 key={item.label}
-//                                 href={item.href}
-//                                 className="group flex items-center justify-between p-5 border border-zinc-100 rounded-[1.5rem] hover:border-zinc-900 transition-all"
-//                             >
-//                                 <div className="flex items-center gap-4">
-//                                     <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center group-hover:bg-zinc-900 group-hover:text-white transition-colors">
-//                                         <item.icon className="w-4 h-4" />
-//                                     </div>
-//                                     <div>
-//                                         <p className="text-[11px] font-black uppercase tracking-tight text-zinc-900">{item.label}</p>
-//                                         <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-widest mt-0.5">{item.detail}</p>
-//                                     </div>
-//                                 </div>
-//                                 <ChevronRight className="w-3.5 h-3.5 text-zinc-300 group-hover:translate-x-1 transition-all" />
-//                             </Link>
-//                         ))}
-//                     </div>
-//                 </section>
-
-//                 {/* VERSION FOOTER */}
-//                 <footer className="pt-10 text-center">
-//                     <p className="text-[9px] font-bold text-zinc-300 uppercase tracking-[0.3em]">
-//                         The Makeup Store • Version 1.0.4 (TWA)
-//                     </p>
-//                 </footer>
-//             </main>
-//         </div>
-//     )
-// }
-
 "use client"
 
 import * as React from "react"
@@ -141,6 +6,7 @@ import { useRouter } from "next/navigation"
 import {
     ChevronLeft,
     User,
+    Lock,
     FileText,
     ShieldCheck,
     Truck,
@@ -148,28 +14,37 @@ import {
     ChevronRight,
     AlertTriangle,
     Trash2,
-    Loader2,
-    Zap
+    Eye,
+    EyeOff,
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { AnimatePresence, motion } from "framer-motion"
 import { toast } from "sonner"
-import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 export default function SettingsPage() {
     const router = useRouter()
     const supabase = createClient()
 
-    // States
     const [profile, setProfile] = React.useState<any>(null)
+    const [email, setEmail] = React.useState("")
     const [loading, setLoading] = React.useState(true)
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false)
     const [deleteLoading, setDeleteLoading] = React.useState(false)
+    const [showPasswordSheet, setShowPasswordSheet] = React.useState(false)
+    const [pwCurrent, setPwCurrent] = React.useState("")
+    const [pwNew, setPwNew] = React.useState("")
+    const [pwConfirm, setPwConfirm] = React.useState("")
+    const [pwSaving, setPwSaving] = React.useState(false)
+    const [showCurrent, setShowCurrent] = React.useState(false)
+    const [showNew, setShowNew] = React.useState(false)
+    const [showConfirm, setShowConfirm] = React.useState(false)
 
     React.useEffect(() => {
         async function getProfile() {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return router.push("/login")
+
+            setEmail(user.email || "")
 
             const { data } = await supabase
                 .from("profiles")
@@ -183,15 +58,56 @@ export default function SettingsPage() {
         getProfile()
     }, [router, supabase])
 
+    const resetPwFields = () => {
+        setPwCurrent("")
+        setPwNew("")
+        setPwConfirm("")
+        setShowCurrent(false)
+        setShowNew(false)
+        setShowConfirm(false)
+    }
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (pwNew.length < 6) return toast.error("New password must be at least 6 characters")
+        if (pwNew !== pwConfirm) return toast.error("Passwords do not match")
+
+        setPwSaving(true)
+        try {
+            // Verify current password by attempting sign-in
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password: pwCurrent,
+            })
+            if (signInError) {
+                toast.error("Current password is incorrect")
+                setPwSaving(false)
+                return
+            }
+
+            const { error: updateError } = await supabase.auth.updateUser({
+                password: pwNew,
+            })
+            if (updateError) throw updateError
+
+            toast.success("Password updated")
+            setShowPasswordSheet(false)
+            resetPwFields()
+        } catch (err: any) {
+            toast.error(err.message || "Failed to update password")
+        } finally {
+            setPwSaving(false)
+        }
+    }
+
     const handleDeleteAccount = async () => {
         setDeleteLoading(true)
         try {
-            // Call the SQL function (Ensure delete_user_account exists in your Supabase SQL editor)
             const { error: deleteError } = await supabase.rpc('delete_user_account')
             if (deleteError) throw deleteError
 
             await supabase.auth.signOut()
-            toast.success("Account permanently removed")
+            toast.success("Account deleted")
             router.push('/')
             router.refresh()
         } catch (error: any) {
@@ -209,122 +125,189 @@ export default function SettingsPage() {
         { label: "Contact Us", href: "/contact", icon: Mail, detail: "Get in touch with us" },
     ]
 
-    return (
-        <div className="min-h-screen bg-[#FDFDFD] pb-20 antialiased">
-            <AnimatePresence mode="wait">
-                {loading && (
-                    <motion.div
-                        key="loader"
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center"
-                    >
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-[#fc2779] mb-2">The Makeup Store</h2>
-                        <motion.div
-                            animate={{ width: ["0%", "40%", "0%"] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                            className="h-[1px] bg-[#fc2779]"
-                        />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+    if (loading) return (
+        <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+        </div>
+    )
 
-            {/* HEADER */}
-            <header className="px-6 pt-12 pb-6 border-b border-pink-50 sticky top-0 bg-white/80 backdrop-blur-xl z-20">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-900 active:scale-90 transition-all">
-                        <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#fc2779]">Preferences</p>
-                        <h1 className="text-xl font-black uppercase tracking-tight text-slate-950 leading-none">Settings</h1>
-                    </div>
-                </div>
+    return (
+        <div className="min-h-screen bg-white pb-12">
+            <header className="flex items-center gap-3 px-5 h-12 border-b border-gray-100">
+                <button onClick={() => router.back()} className="p-1 -ml-1 rounded hover:bg-gray-50 transition-colors">
+                    <ChevronLeft className="w-5 h-5 text-gray-700" />
+                </button>
+                <h1 className="text-sm font-semibold text-gray-900">Settings</h1>
             </header>
 
-            <main className="px-6 py-8 max-w-2xl mx-auto space-y-10">
-                <Breadcrumbs
-                    items={[
-                        { label: 'Profile', href: '/profile' },
-                        { label: 'Account Settings', href: '/profile/settings' }
-                    ]}
-                />
-
-                {/* SECTION: IDENTITY */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <Zap className="w-3 h-3 text-[#fc2779]" />
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Identity & Access</h2>
+            <main className="max-w-xl mx-auto px-5 py-6 space-y-8">
+                {/* Profile Card */}
+                <Link
+                    href="/profile/settings/edit"
+                    className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl hover:border-gray-200 transition-colors"
+                >
+                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                        <User className="w-5 h-5 text-gray-500" />
                     </div>
-                    <Link href="/profile/settings/edit" className="group flex items-center justify-between p-6 bg-white rounded-[2.5rem] border border-pink-50 shadow-sm hover:border-[#fc2779]/30 transition-all active:scale-[0.98]">
-                        <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#fc2779]">
-                                <User className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-black uppercase tracking-tight text-slate-900">Personal Profile</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Edit name, email & avatar</p>
-                            </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-[#fc2779] transition-all" />
-                    </Link>
-                </section>
-
-                {/* SECTION: SUPPORT & LEGAL */}
-                <section>
-                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 ml-1">Support & Legal</h2>
-                    <div className="bg-white rounded-[2.5rem] border border-pink-50 overflow-hidden shadow-sm">
-                        {legalLinks.map((item, idx) => (
-                            <Link
-                                key={item.label}
-                                href={item.href}
-                                className={`group flex items-center justify-between p-5 hover:bg-pink-50/30 transition-all ${idx !== legalLinks.length - 1 ? 'border-b border-pink-50' : ''}`}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-[#fc2779] group-hover:bg-white transition-all shadow-sm">
-                                        <item.icon className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] font-black uppercase tracking-tight text-slate-800">{item.label}</p>
-                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{item.detail}</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-3.5 h-3.5 text-slate-200 group-hover:translate-x-1 transition-all" />
-                            </Link>
-                        ))}
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                            {profile?.full_name || "Add your name"}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate">
+                            {profile?.phone || "Add your phone number"}
+                        </p>
                     </div>
-                </section>
+                    <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                </Link>
 
-                {/* SECTION: DANGER ZONE */}
-                <section className="pt-4">
-                    <div className="bg-rose-50/30 border border-rose-100 rounded-[2.5rem] p-8 space-y-4">
-                        <div className="flex items-center gap-2 text-rose-500">
-                            <AlertTriangle className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Danger Zone</span>
-                        </div>
+                {/* Change Password Card */}
+                <button
+                    onClick={() => setShowPasswordSheet(true)}
+                    className="w-full flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl hover:border-gray-200 transition-colors text-left"
+                >
+                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                        <Lock className="w-5 h-5 text-gray-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">Change Password</p>
+                        <p className="text-xs text-gray-400">Update your account password</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                </button>
 
-                        <div className="space-y-1">
-                            <h3 className="text-lg font-serif italic font-bold text-slate-900">Delete Account</h3>
-                            <p className="text-[11px] text-slate-500 font-medium">Permanently remove your boutique profile and history.</p>
-                        </div>
-
-                        <button
-                            onClick={() => setShowDeleteConfirm(true)}
-                            className="text-[10px] font-black uppercase tracking-widest text-rose-400 border-b border-rose-200 pb-0.5 hover:text-rose-600 transition-colors"
+                {/* Legal Links */}
+                <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+                    {legalLinks.map((item, idx) => (
+                        <Link
+                            key={item.label}
+                            href={item.href}
+                            className={`flex items-center gap-4 px-4 py-4 hover:bg-gray-50 transition-colors ${idx !== legalLinks.length - 1 ? 'border-b border-gray-50' : ''}`}
                         >
-                            Request Data Removal
-                        </button>
-                    </div>
-                </section>
+                            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                                <item.icon className="w-4 h-4 text-gray-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                                <p className="text-xs text-gray-400">{item.detail}</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                        </Link>
+                    ))}
+                </div>
 
-                <footer className="pt-10 text-center">
-                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.5em]">
-                        The Makeup Store • Version 1.0.4 (TWA)
-                    </p>
+                {/* Danger Zone */}
+                <div className="border border-red-100 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                        <span className="text-xs font-semibold text-red-400">Danger Zone</span>
+                    </div>
+                    <p className="text-sm text-gray-700 mb-3">Delete your account and all associated data</p>
+                    <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
+                    >
+                        Delete Account
+                    </button>
+                </div>
+
+                <footer className="text-center pt-4">
+                    <p className="text-[10px] text-gray-300">The Makeup Store</p>
                 </footer>
             </main>
 
-            {/* DELETE CONFIRMATION DRAWER */}
+            {/* Change Password Sheet */}
+            <AnimatePresence>
+                {showPasswordSheet && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => { setShowPasswordSheet(false); resetPwFields() }}
+                            className="fixed inset-0 bg-black/30 z-[80]"
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed bottom-0 left-0 right-0 bg-white z-[90] rounded-t-xl max-w-lg mx-auto"
+                        >
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                                <h3 className="text-sm font-semibold text-gray-900">Change Password</h3>
+                                <button onClick={() => { setShowPasswordSheet(false); resetPwFields() }} className="p-1 rounded hover:bg-gray-50 transition-colors">
+                                    <ChevronLeft className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </div>
+                            <form onSubmit={handleChangePassword} className="p-5 space-y-4">
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1.5 block">Current Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showCurrent ? "text" : "password"}
+                                            value={pwCurrent}
+                                            onChange={(e) => setPwCurrent(e.target.value)}
+                                            placeholder="Enter current password"
+                                            required
+                                            className="w-full h-11 px-4 pr-10 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        />
+                                        <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                            {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1.5 block">New Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showNew ? "text" : "password"}
+                                            value={pwNew}
+                                            onChange={(e) => setPwNew(e.target.value)}
+                                            placeholder="At least 6 characters"
+                                            required
+                                            minLength={6}
+                                            className="w-full h-11 px-4 pr-10 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        />
+                                        <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                            {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1.5 block">Confirm New Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showConfirm ? "text" : "password"}
+                                            value={pwConfirm}
+                                            onChange={(e) => setPwConfirm(e.target.value)}
+                                            placeholder="Re-enter new password"
+                                            required
+                                            minLength={6}
+                                            className="w-full h-11 px-4 pr-10 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        />
+                                        <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                            {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={pwSaving || !pwCurrent || !pwNew || !pwConfirm}
+                                    className="w-full h-11 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 mt-2"
+                                >
+                                    {pwSaving ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        "Update Password"
+                                    )}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation */}
             <AnimatePresence>
                 {showDeleteConfirm && (
                     <>
@@ -333,42 +316,45 @@ export default function SettingsPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => !deleteLoading && setShowDeleteConfirm(false)}
-                            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]"
+                            className="fixed inset-0 bg-black/30 z-[80]"
                         />
                         <motion.div
                             initial={{ y: "100%" }}
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed bottom-0 left-0 right-0 bg-white z-[70] rounded-t-[3rem] p-10 shadow-2xl max-w-lg mx-auto"
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed bottom-0 left-0 right-0 bg-white z-[90] rounded-t-xl max-w-lg mx-auto"
                         >
-                            <div className="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-8" />
-                            <div className="text-center space-y-4 mb-10">
-                                <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
-                                    <Trash2 className="w-6 h-6 text-rose-500" />
+                            <div className="p-6">
+                                <div className="text-center mb-6">
+                                    <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
+                                        <Trash2 className="w-5 h-5 text-red-400" />
+                                    </div>
+                                    <h3 className="text-base font-semibold text-gray-900">Delete Account?</h3>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        All orders, wishlists, and data will be permanently removed.
+                                    </p>
                                 </div>
-                                <h3 className="text-3xl font-serif italic text-slate-900">Are you sure?</h3>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-relaxed">
-                                    All your orders, wishlists, and preferences will be <br />
-                                    <span className="text-rose-500">permanently deleted</span>. This cannot be undone.
-                                </p>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                <button
-                                    onClick={handleDeleteAccount}
-                                    disabled={deleteLoading}
-                                    className="w-full py-5 rounded-2xl bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-rose-200 active:scale-95 transition-all flex items-center justify-center"
-                                >
-                                    {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Delete Permanently"}
-                                </button>
-                                <button
-                                    onClick={() => setShowDeleteConfirm(false)}
-                                    disabled={deleteLoading}
-                                    className="w-full py-5 rounded-2xl bg-slate-50 text-slate-900 text-[11px] font-black uppercase tracking-widest active:scale-95 transition-all"
-                                >
-                                    Cancel
-                                </button>
+                                <div className="flex flex-col gap-2.5">
+                                    <button
+                                        onClick={handleDeleteAccount}
+                                        disabled={deleteLoading}
+                                        className="w-full py-3 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {deleteLoading ? (
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            "Delete Account"
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        disabled={deleteLoading}
+                                        className="w-full py-3 rounded-xl bg-gray-50 text-gray-700 text-sm font-medium hover:bg-gray-100 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </>

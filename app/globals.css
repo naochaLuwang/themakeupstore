@@ -289,6 +289,24 @@ body::-webkit-scrollbar {
 }
 
 
+@keyframes progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes ken-burns {
+  from { transform: scale(1); }
+  to { transform: scale(1.15); }
+}
+
+.animate-progress {
+  animation: progress 4s linear forwards;
+}
+
+.animate-ken-burns {
+  animation: ken-burns 4s ease-out forwards;
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none !important;

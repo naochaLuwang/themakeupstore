@@ -12,14 +12,15 @@ export function CartSync({ userId }: { userId: string | null }) {
     const [isSynced, setIsSynced] = useState(false)
     const initialPullDone = useRef(false)
 
-    // 1. (RESTORED) CLEAR ON LOGOUT 
-    // This isoloates user sessions while allowing guest -> user merging
+    // 1. CLEAR ON LOGOUT (only when transitioning from logged-in to logged-out)
+    const prevUserId = useRef(userId)
     useEffect(() => {
-        if (!userId) {
+        if (prevUserId.current && !userId) {
             clearCart()
             initialPullDone.current = false
             setIsSynced(false)
         }
+        prevUserId.current = userId
     }, [userId, clearCart])
 
     // 2. PULL & MERGE ON LOGIN

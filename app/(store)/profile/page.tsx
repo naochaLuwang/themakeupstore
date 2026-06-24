@@ -9,9 +9,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
     ShoppingBag, Heart, MapPin, Settings,
     LogOut, ChevronRight, ShieldCheck, Bell,
-    Sparkles, Package, User, Info,
-    MessageCircle, FileText, RotateCcw,
-    Palette, Trash2
+    Sparkles, Package, Info,
+    MessageCircle, FileText, RotateCcw
 } from "lucide-react"
 import { SignatureLoader } from "@/components/store/signature-loader"
 
@@ -65,8 +64,7 @@ export default function ProfilePage() {
                 { label: "Orders", href: "/profile/orders", icon: Package },
                 { label: "Saved Addresses", href: "/profile/addresses", icon: MapPin },
                 { label: "Notifications", href: "/profile/notifications", icon: Bell },
-                { label: "Edit Profile", href: "/profile/settings/edit", icon: User },
-                { label: "Change Password", href: "/profile/settings", icon: Settings },
+                { label: "Settings", href: "/profile/settings", icon: Settings },
             ],
         },
         {
