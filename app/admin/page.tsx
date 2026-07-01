@@ -22,15 +22,15 @@ function StatCard({ label, value, subtitle, icon, change, className = "" }: {
     label: string; value: string; subtitle?: string; icon: React.ReactNode; change?: number; className?: string
 }) {
     return (
-        <div className={`rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${className}`}>
+        <div className={`rounded-xl border border-slate-200 bg-white p-2.5 sm:p-3 shadow-sm ${className}`}>
             <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
-                <div className="w-6 h-6 flex items-center justify-center rounded-md bg-slate-50 border border-slate-100">
-                    <div className="w-3.5 h-3.5 text-slate-500">{icon}</div>
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">{label}</span>
+                <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-md bg-slate-50 border border-slate-100 shrink-0 ml-1">
+                    <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500">{icon}</div>
                 </div>
             </div>
-            <div className="flex items-end justify-between">
-                <p className="text-lg font-bold text-slate-900 tracking-tight">{value}</p>
+            <div className="flex items-end justify-between gap-1">
+                <p className="text-sm sm:text-lg font-bold text-slate-900 tracking-tight truncate">{value}</p>
                 {change !== undefined && (
                     <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1 py-0.5 rounded ${
                         change >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'
@@ -250,14 +250,16 @@ export default async function AdminDashboard({ searchParams }: {
     }
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-base font-semibold text-slate-900 tracking-tight">Dashboard</h1>
-                    <p className="text-[11px] text-slate-400">{format(start, "MMM dd, yyyy")} — {format(end, "MMM dd, yyyy")}</p>
+            <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                    <h1 className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight truncate">Dashboard</h1>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">{format(start, "MMM dd, yyyy")} — {format(end, "MMM dd, yyyy")}</p>
                 </div>
-                <DateRangePicker />
+                <div className="shrink-0">
+                    <DateRangePicker />
+                </div>
             </div>
 
             {ordersRes.error && (
@@ -268,7 +270,7 @@ export default async function AdminDashboard({ searchParams }: {
             )}
 
             {/* Row 1: Real-time / Today metrics */}
-            <div className="grid grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
                 <StatCard label="Today Revenue" value={`₹${todayRev.toLocaleString('en-IN')}`} icon={<TrendingUp />} />
                 <StatCard label="Today Orders" value={todayCnt.toString()} icon={<ShoppingCart />} />
                 <StatCard label="Fulfillment" value={`${c.full.toFixed(0)}%`} subtitle={`${c.del} delivered`} icon={<CheckCircle2 />}
@@ -280,7 +282,7 @@ export default async function AdminDashboard({ searchParams }: {
             </div>
 
             {/* Row 2: Period stats with comparison */}
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
                 <StatCard label="Revenue" value={`₹${(c.rev / 1000).toFixed(1)}K`} subtitle={`${c.cnt} orders`}
                     icon={<CircleDollarSign />} change={pct(c.rev, p.rev)} />
                 <StatCard label="Avg Order" value={`₹${c.aov.toLocaleString()}`} icon={<BarChart3 />} change={pct(c.aov, p.aov)} />
@@ -292,8 +294,8 @@ export default async function AdminDashboard({ searchParams }: {
             </div>
 
             {/* Quick Actions */}
-            <SectionCard className="p-2.5">
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            <SectionCard className="p-2 sm:p-2.5">
+                <div className="flex gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar">
                     {[
                         { label: "New Product", href: "/admin/products/add", icon: PackagePlus },
                         { label: "Broadcast", href: "/admin/broadcast", icon: Send },
@@ -305,23 +307,23 @@ export default async function AdminDashboard({ searchParams }: {
                         { label: "Reports", href: "/admin/reports/sales", icon: BarChart3 },
                     ].map(a => (
                         <Link key={a.label} href={a.href}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:-translate-y-0.5 transition-all shrink-0"
+                            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:-translate-y-0.5 transition-all shrink-0"
                         >
                             <a.icon className="w-3 h-3 text-slate-500" />
-                            <span className="text-[11px] font-medium text-slate-600">{a.label}</span>
-                            <ArrowUpRight className="w-2.5 h-2.5 text-slate-300" />
+                            <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 whitespace-nowrap">{a.label}</span>
+                            <ArrowUpRight className="w-2.5 h-2.5 text-slate-300 hidden sm:block" />
                         </Link>
                     ))}
                 </div>
             </SectionCard>
 
             {/* Row 3: Charts area */}
-            <div className="grid grid-cols-6 gap-3">
-                <SectionCard className="p-4 col-span-3">
+            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 sm:gap-3">
+                <SectionCard className="p-3 sm:p-4 sm:col-span-3">
                     <SectionTitle icon={<Activity />} label="Revenue Flow" />
                     <RevenueChart orders={net} startDate={startDate} endDate={endDate} />
                 </SectionCard>
-                <SectionCard className="p-4 col-span-2">
+                <SectionCard className="p-3 sm:p-4 sm:col-span-2">
                     <SectionTitle icon={<Flame />} label="Top Products" />
                     {topProds.length === 0 ? (
                         <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
@@ -341,12 +343,12 @@ export default async function AdminDashboard({ searchParams }: {
                         </div>
                     )}
                 </SectionCard>
-                <SectionCard className="p-4 col-span-1">
+                <SectionCard className="p-3 sm:p-4 sm:col-span-1">
                     <SectionTitle icon={<Layers />} label="Orders" />
                     <div className="space-y-1.5">
                         {statusBD.map(s => (
                             <div key={s.label} className="flex items-center justify-between gap-1">
-                                <span className="text-[10px] text-slate-500">{s.label}</span>
+                                <span className={`text-[10px] ${s.color}`}>{s.label}</span>
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-xs font-semibold text-slate-700">{s.cnt}</span>
                                     <div className={`w-2 h-2 rounded-full shrink-0 ${s.bg}`} />
@@ -363,15 +365,15 @@ export default async function AdminDashboard({ searchParams }: {
             </div>
 
             {/* Row 4: Tables */}
-            <div className="grid grid-cols-6 gap-3">
-                <SectionCard className="col-span-3 overflow-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 sm:gap-3">
+                <SectionCard className="sm:col-span-3 overflow-hidden">
                     <div className="p-3 pb-0">
                         <SectionTitle icon={<ShoppingBag />} label="Recent Orders"
                             right={<Link href="/admin/orders" className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">View All →</Link>} />
                     </div>
                     <RecentOrdersTable orders={orders.slice(0, 8)} />
                 </SectionCard>
-                <SectionCard className="col-span-2 p-4">
+                <SectionCard className="p-3 sm:p-4 sm:col-span-2">
                     <SectionTitle icon={<BarChart3 />} label="Top Categories" />
                     {topCats.length === 0 ? (
                         <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
@@ -387,7 +389,7 @@ export default async function AdminDashboard({ searchParams }: {
                         </div>
                     )}
                 </SectionCard>
-                <SectionCard className="col-span-1 p-4">
+                <SectionCard className="p-3 sm:p-4 sm:col-span-1">
                     <SectionTitle icon={<CreditCard />} label="Payment" />
                     {pmBuckets.size === 0 ? (
                         <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
@@ -408,8 +410,8 @@ export default async function AdminDashboard({ searchParams }: {
             </div>
 
             {/* Row 5: Activity + Low Stock + Bottom Stats */}
-            <div className="grid grid-cols-3 gap-3">
-                <SectionCard className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                <SectionCard className="p-3 sm:p-4">
                     <SectionTitle icon={<Bell />} label="Recent Activity"
                         right={<Link href="/admin/messages" className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">View</Link>} />
                     {recentMsgs.length === 0 && recentWl.length === 0 ? (
@@ -444,13 +446,13 @@ export default async function AdminDashboard({ searchParams }: {
                     )}
                 </SectionCard>
                 <Suspense fallback={
-                    <SectionCard className="p-4 flex items-center justify-center h-32">
+                    <SectionCard className="p-3 sm:p-4 flex items-center justify-center h-32">
                         <Loader2 className="w-4 h-4 animate-spin text-slate-300" />
                     </SectionCard>
                 }>
                     <LowStockPanel />
                 </Suspense>
-                <SectionCard className="p-4">
+                <SectionCard className="p-3 sm:p-4">
                     <SectionTitle icon={<Sparkles />} label="Quick Metrics" />
                     <div className="space-y-2">
                         <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
@@ -505,7 +507,7 @@ async function LowStockPanel() {
         .lte("stock", 10).order("stock", { ascending: true }).limit(6)
 
     return (
-        <SectionCard className="p-4 h-full">
+        <SectionCard className="p-3 sm:p-4 h-full">
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                     <Zap className="w-3 h-3 text-amber-500" />

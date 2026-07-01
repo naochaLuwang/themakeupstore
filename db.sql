@@ -476,3 +476,108 @@ CREATE TABLE public.product_concerns (
   CONSTRAINT product_concerns_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE,
   CONSTRAINT product_concerns_concern_id_fkey FOREIGN KEY (concern_id) REFERENCES public.concerns(id) ON DELETE CASCADE
 );
+
+-- ============================================================
+-- POS (Point of Sale) — standalone system, not tied to admin
+-- ============================================================
+
+CREATE TABLE public.pos_customers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  phone text NOT NULL,
+  name text,
+  email text,
+  total_visits integer NOT NULL DEFAULT 0,
+  total_spent numeric NOT NULL DEFAULT 0,
+  last_visit timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT pos_customers_pkey PRIMARY KEY (id),
+  CONSTRAINT pos_customers_phone_key UNIQUE (phone)
+);
+
+CREATE TABLE public.pos_token_sequences (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  date date NOT NULL DEFAULT CURRENT_DATE,
+  counter integer NOT NULL DEFAULT 0,
+  CONSTRAINT pos_token_sequences_pkey PRIMARY KEY (id),
+  CONSTRAINT pos_token_sequences_date_key UNIQUE (date)
+);
+
+CREATE TABLE public.pos_orders (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  order_number text NOT NULL,
+  token_number text NOT NULL,
+  token_prefix text NOT NULL DEFAULT 'K'::text,
+  customer_id uuid,
+  cashier_id uuid,
+  order_type text NOT NULL DEFAULT 'kiosk'::text CHECK (order_type = ANY (ARRAY['kiosk'::text, 'counter'::text])),
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'preparing'::text, 'ready'::text, 'delivered'::text, 'completed'::text, 'refunded'::text, 'voided'::text, 'on_hold'::text])),
+  payment_status text NOT NULL DEFAULT 'pending'::text CHECK (payment_status = ANY (ARRAY['pending'::text, 'paid'::text, 'refunded'::text])),
+  customer_name text,
+  customer_phone text,
+  subtotal numeric NOT NULL DEFAULT 0,
+  discount_type text CHECK (discount_type = ANY (ARRAY['percentage'::text, 'amount'::text, 'none'::text])),
+  discount_value numeric DEFAULT 0,
+  discount_amount numeric DEFAULT 0,
+  tax_rate numeric DEFAULT 0,
+  tax_amount numeric DEFAULT 0,
+  grand_total numeric NOT NULL DEFAULT 0,
+  payment_method text DEFAULT 'cash'::text,
+  tendered_amount numeric,
+  change_amount numeric DEFAULT 0,
+  prepared_at timestamp with time zone,
+  ready_at timestamp with time zone,
+  delivered_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT pos_orders_pkey PRIMARY KEY (id),
+  CONSTRAINT pos_orders_order_number_key UNIQUE (order_number),
+  CONSTRAINT pos_orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.pos_customers(id),
+  CONSTRAINT pos_orders_cashier_id_fkey FOREIGN KEY (cashier_id) REFERENCES auth.users(id)
+);
+
+CREATE TABLE public.pos_order_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  pos_order_id uuid NOT NULL,
+  product_id uuid,
+  variant_id uuid,
+  product_name text NOT NULL,
+  variant_title text,
+  sku text,
+  quantity integer NOT NULL CHECK (quantity > 0),
+  unit_price numeric NOT NULL,
+  mrp numeric,
+  total_price numeric NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT pos_order_items_pkey PRIMARY KEY (id),
+  CONSTRAINT pos_order_items_pos_order_id_fkey FOREIGN KEY (pos_order_id) REFERENCES public.pos_orders(id) ON DELETE CASCADE,
+  CONSTRAINT pos_order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id),
+  CONSTRAINT pos_order_items_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id)
+);
+
+CREATE TABLE public.pos_sessions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  cashier_id uuid NOT NULL,
+  opened_at timestamp with time zone DEFAULT now(),
+  closed_at timestamp with time zone,
+  opening_balance numeric DEFAULT 0,
+  closing_balance numeric,
+  status text NOT NULL DEFAULT 'open'::text CHECK (status = ANY (ARRAY['open'::text, 'closed'::text])),
+  notes text,
+  CONSTRAINT pos_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT pos_sessions_cashier_id_fkey FOREIGN KEY (cashier_id) REFERENCES auth.users(id)
+);
+
+-- Token sequence atomic counter
+CREATE OR REPLACE FUNCTION public.get_next_pos_token(today date DEFAULT CURRENT_DATE)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  next_val integer;
+BEGIN
+  INSERT INTO public.pos_token_sequences (date, counter)
+  VALUES (today, 1)
+  ON CONFLICT (date) DO UPDATE SET counter = pos_token_sequences.counter + 1
+  RETURNING counter INTO next_val;
+  RETURN next_val;
+END;
+$$;

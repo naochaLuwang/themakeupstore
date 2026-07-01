@@ -27,7 +27,7 @@ export default function CartPage() {
             const variantIds = items.map((i: any) => i.variantId)
             const { data: freshVariants, error } = await supabase
                 .from("product_variants")
-                .select("id, price, discount_type, discount_value")
+                .select("id, price, discount_type, discount_value, stock")
                 .in("id", variantIds)
             if (error) throw error
             const dedupedMap = new Map()
@@ -44,7 +44,7 @@ export default function CartPage() {
                         sellingPrice = msrp - Number(fresh.discount_value)
                     }
                 }
-                const processedItem = { ...cartItem, price: Math.round(sellingPrice), originalPrice: Math.round(msrp) }
+                const processedItem = { ...cartItem, price: Math.round(sellingPrice), originalPrice: Math.round(msrp), stock: fresh?.stock ?? cartItem.stock ?? 0 }
                 if (dedupedMap.has(cartItem.variantId)) {
                     dedupedMap.get(cartItem.variantId).quantity += cartItem.quantity
                 } else {
@@ -81,6 +81,8 @@ export default function CartPage() {
     const totalMRP = useMemo(() => Math.round(items.reduce((acc: number, i: any) => acc + ((i.originalPrice || i.price) * i.quantity), 0)), [items])
     const totalDiscount = Math.max(0, totalMRP - subtotal)
     const totalSaving = totalDiscount
+    const outOfStockVariants = useMemo(() => items.filter((i: any) => (i.stock ?? 1) <= 0), [items])
+    const hasOutOfStock = outOfStockVariants.length > 0
 
     useEffect(() => {
         if (items.length > 0) {
@@ -196,6 +198,11 @@ export default function CartPage() {
                                                     {item.variantTitle && (
                                                         <p className="text-xs text-slate-400 mt-0.5">{item.variantTitle}</p>
                                                     )}
+                                                    {(item.stock ?? 1) <= 0 && (
+                                                        <span className="mt-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
+                                                            Out of Stock
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <button
                                                     onClick={() => {
@@ -303,15 +310,21 @@ export default function CartPage() {
                                     <span className="text-xl font-light text-slate-900">₹{subtotal.toLocaleString()}</span>
                                 </div>
                             </div>
-                            <Link
-                                href="/checkout"
-                                className="mt-6 w-full h-12 bg-slate-900 text-white text-sm font-medium tracking-wide rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
-                            >
-                                Checkout
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                                </svg>
-                            </Link>
+                            {hasOutOfStock ? (
+                                <div className="mt-6 w-full h-12 bg-slate-300 text-white text-sm font-medium tracking-wide rounded-lg flex items-center justify-center gap-2 cursor-not-allowed">
+                                    Some items are out of stock
+                                </div>
+                            ) : (
+                                <Link
+                                    href="/checkout"
+                                    className="mt-6 w-full h-12 bg-slate-900 text-white text-sm font-medium tracking-wide rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
+                                >
+                                    Checkout
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                                    </svg>
+                                </Link>
+                            )}
                             <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-slate-400">
                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -429,6 +442,11 @@ export default function CartPage() {
                                                     {item.variantTitle && (
                                                         <p className="text-[11px] font-medium text-gray-400 mt-0.5">Shade: {item.variantTitle}</p>
                                                     )}
+                                                    {(item.stock ?? 1) <= 0 && (
+                                                        <span className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
+                                                            Out of Stock
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <button
                                                     onClick={() => {
@@ -504,15 +522,21 @@ export default function CartPage() {
                             <p className="text-[10px] font-black tracking-wider text-gray-400">GRAND TOTAL</p>
                             <p className="text-[22px] font-black text-gray-900">₹{subtotal.toLocaleString()}</p>
                         </div>
-                        <Link
-                            href="/checkout"
-                            className="h-[42px] bg-gray-900 text-white text-[11px] font-black tracking-wider rounded-lg flex items-center justify-center gap-1.5 px-6 hover:bg-gray-800 transition-colors"
-                        >
-                            PROCEED TO CHECKOUT
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                            </svg>
-                        </Link>
+                        {hasOutOfStock ? (
+                            <div className="h-[42px] bg-gray-300 text-white text-[11px] font-black tracking-wider rounded-lg flex items-center justify-center gap-1.5 px-6 cursor-not-allowed">
+                                SOME ITEMS OUT OF STOCK
+                            </div>
+                        ) : (
+                            <Link
+                                href="/checkout"
+                                className="h-[42px] bg-gray-900 text-white text-[11px] font-black tracking-wider rounded-lg flex items-center justify-center gap-1.5 px-6 hover:bg-gray-800 transition-colors"
+                            >
+                                PROCEED TO CHECKOUT
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                                </svg>
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>

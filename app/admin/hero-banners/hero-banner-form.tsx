@@ -154,7 +154,7 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
                     </div>
                     <div className="p-8">
                         <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden bg-slate-100">
-                            <img src={initialData.image_url} alt={initialData.title} className="w-full h-full object-cover" />
+                            <img src={initialData.image_url} alt={initialData.title} className="w-full h-full object-cover" loading="lazy" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                             <div className="absolute bottom-6 left-6 right-6">
                                 <h4 className="text-white text-lg font-black uppercase tracking-wider">{initialData.title}</h4>

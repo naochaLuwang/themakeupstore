@@ -1,5 +1,3 @@
-"use client"
-
 import { Phone, Mail, MapPin, Clock, MessageCircle, ChevronRight } from "lucide-react"
 import Link from "next/link"
 

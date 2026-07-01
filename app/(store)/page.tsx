@@ -132,7 +132,7 @@ export default async function GatewayPage() {
       <main className="hidden md:flex flex-row w-full h-screen shrink-0">
         <Panel href="/exclusive" label="Premium Curation" title="Exclusive Selection" bgImage="/hero-sub.png" />
         <Panel href="/essentials" label="Daily Rituals" title="Everyday Essentials" bgImage="/hero-essential.png" />
-        <Panel href="/skincare-accessories" label="Self Care Edit" title="Skin Care & Accessories" bgImage="/hero-skincare.png" />
+        <Panel href="/skincare-accessories" label="Self Care Edit" title="Skin Care & Accessories" bgImage="/hero-skincare.webp" />
       </main>
 
       {/* MOBILE: native-style scrollable feed */}

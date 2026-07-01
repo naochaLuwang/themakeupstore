@@ -19,10 +19,18 @@ interface Product {
     id: string
     name: string
     thumbnail_url: string | null
+    category_id: string | null
+    product_categories?: { category_id: string }[]
+}
+
+interface Category {
+    id: string
+    name: string
 }
 
 interface ConcernFormProps {
     products: Product[]
+    categories: Category[]
     initialData?: {
         id: string
         name: string
@@ -32,11 +40,12 @@ interface ConcernFormProps {
     }
 }
 
-export function ConcernForm({ products, initialData }: ConcernFormProps) {
+export function ConcernForm({ products, initialData, categories }: ConcernFormProps) {
     const router = useRouter()
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [preview, setPreview] = useState<string>(initialData?.image_url || "")
     const [searchQuery, setSearchQuery] = useState("")
+    const [categoryFilter, setCategoryFilter] = useState<string>("all")
 
     const initialProductIds = initialData?.product_concerns?.map(pc => pc.product_id) || []
 
@@ -96,9 +105,15 @@ export function ConcernForm({ products, initialData }: ConcernFormProps) {
         }
     }
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredProducts = products.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase())
+        const productCategoryIds = [
+            p.category_id,
+            ...(p.product_categories?.map(pc => pc.category_id) || []),
+        ].filter(Boolean)
+        const matchesCategory = categoryFilter === "all" || productCategoryIds.includes(categoryFilter)
+        return matchesSearch && matchesCategory
+    })
 
     const selectedIds: string[] = form.watch("product_ids") || []
 
@@ -181,6 +196,35 @@ export function ConcernForm({ products, initialData }: ConcernFormProps) {
                             placeholder="Search products..."
                             className="pl-9 h-10 text-sm rounded-xl border-slate-200"
                         />
+                    </div>
+
+                    {/* Category Filter */}
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                        <button
+                            type="button"
+                            onClick={() => setCategoryFilter("all")}
+                            className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                                categoryFilter === "all"
+                                    ? "bg-rose-500 text-white border-rose-500"
+                                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                            }`}
+                        >
+                            All
+                        </button>
+                        {categories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => setCategoryFilter(cat.id)}
+                                className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                                    categoryFilter === cat.id
+                                        ? "bg-rose-500 text-white border-rose-500"
+                                        : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                                }`}
+                            >
+                                {cat.name}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Product Checkbox List */}

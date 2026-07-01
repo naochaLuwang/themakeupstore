@@ -40,7 +40,7 @@ export function ProductImages({ images }: { images: { url: string }[] }) {
                 <div ref={scrollRef} onScroll={handleScroll} className="aspect-square flex overflow-x-auto snap-x snap-mandatory no-scrollbar rounded-[2.5rem] md:rounded-[3rem] bg-slate-50 border border-slate-100">
                     {images.map((img, i) => (
                         <div key={i} className="w-full h-full flex-shrink-0 snap-center overflow-hidden relative cursor-pointer" onClick={() => setIsLightboxOpen(true)}>
-                            <img src={img.url} alt="Product" className="h-full w-full object-cover" />
+                            <img src={img.url} alt="Product" className="h-full w-full object-cover" loading="lazy" />
                         </div>
                     ))}
                 </div>
@@ -58,7 +58,7 @@ export function ProductImages({ images }: { images: { url: string }[] }) {
                 <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar px-1">
                     {images.map((img, i) => (
                         <button key={i} onClick={() => scrollToImage(i)} className={`w-16 h-16 md:w-24 md:h-24 rounded-2xl border-2 flex-shrink-0 overflow-hidden ${activeIndex === i ? "border-slate-900 scale-95" : "border-transparent opacity-40"}`}>
-                            <img src={img.url} className="w-full h-full object-cover" />
+                            <img src={img.url} className="w-full h-full object-cover" loading="lazy" />
                         </button>
                     ))}
                 </div>

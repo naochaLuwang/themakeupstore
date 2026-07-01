@@ -10,7 +10,7 @@ export default async function EditConcernPage({ params }: {
     const { id } = await params
     const supabase = await createClient()
 
-    const [concernResult, productsResult] = await Promise.all([
+    const [concernResult, productsResult, categoriesResult] = await Promise.all([
         supabase
             .from("concerns")
             .select("*, product_concerns(product_id)")
@@ -18,7 +18,11 @@ export default async function EditConcernPage({ params }: {
             .single(),
         supabase
             .from("products")
-            .select("id, name, thumbnail_url")
+            .select("id, name, thumbnail_url, category_id, product_categories(category_id)")
+            .order("name", { ascending: true }),
+        supabase
+            .from("categories")
+            .select("id, name")
             .order("name", { ascending: true }),
     ])
 
@@ -44,6 +48,7 @@ export default async function EditConcernPage({ params }: {
             <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm max-w-2xl">
                 <ConcernForm
                     products={productsResult.data || []}
+                    categories={categoriesResult.data || []}
                     initialData={concernResult.data as any}
                 />
             </div>

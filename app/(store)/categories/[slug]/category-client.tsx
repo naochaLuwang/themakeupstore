@@ -207,7 +207,7 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
                                         : "shadow-md hover:shadow-lg"
                                 }`}>
                                     {img ? (
-                                        <img src={img} alt={sub.name} className="w-full h-full object-cover" />
+                                        <img src={img} alt={sub.name} className="w-full h-full object-cover" loading="lazy" />
                                     ) : (
                                         <div className="w-full h-full bg-gradient-to-br from-rose-50 to-slate-100 flex items-center justify-center">
                                             <span className="text-xl font-bold text-rose-300">{sub.name[0]}</span>

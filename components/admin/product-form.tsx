@@ -40,7 +40,7 @@ function SortableImage({ url, index, onRemove }: { url: string; index: number; o
 
     return (
         <div ref={setNodeRef} style={style} className="relative aspect-square rounded-[1.25rem] border border-slate-100 group overflow-hidden bg-slate-50 shadow-inner">
-            <img src={url} className="object-cover w-full h-full pointer-events-none" alt="gallery" />
+            <img src={url} className="object-cover w-full h-full pointer-events-none" alt="gallery" loading="lazy" />
             <div {...attributes} {...listeners} className="absolute inset-0 cursor-grab active:cursor-grabbing flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity">
                 <GripVertical className="text-white w-6 h-6" />
             </div>
@@ -292,7 +292,7 @@ export default function ProductForm({ categories = [], concerns = [], initialDat
                                                                                 return (
                                                                                     <button key={url} type="button" onClick={() => toggleVariantImage(index, url)} className="group relative w-full text-left">
                                                                                         <div className={`relative aspect-square rounded-[2.5rem] overflow-hidden transition-all duration-500 ${isSelected ? 'ring-[10px] ring-indigo-600 ring-offset-4 scale-[0.95] shadow-xl shadow-indigo-100' : 'hover:-translate-y-2 hover:shadow-xl shadow-sm border border-slate-100 bg-white'}`}>
-                                                                                            <img src={url} className={`w-full h-full object-cover transition-all duration-700 ${isSelected ? 'brightness-[0.3]' : 'group-hover:scale-105'}`} alt="preview" />
+                                                                                            <img src={url} className={`w-full h-full object-cover transition-all duration-700 ${isSelected ? 'brightness-[0.3]' : 'group-hover:scale-105'}`} alt="preview" loading="lazy" />
                                                                                             <AnimatePresence>
                                                                                                 {isSelected && (
                                                                                                     <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="absolute inset-0 flex items-center justify-center">

@@ -493,7 +493,7 @@ function SortableImage({ url, index, onRemove }: { url: string; index: number; o
 
     return (
         <div ref={setNodeRef} style={style} className="relative aspect-square rounded-[1.25rem] border border-slate-100 group overflow-hidden bg-slate-50 shadow-inner">
-            <img src={url} className="object-cover w-full h-full pointer-events-none" alt="gallery" />
+            <img src={url} className="object-cover w-full h-full pointer-events-none" alt="gallery" loading="lazy" />
             <div {...attributes} {...listeners} className="absolute inset-0 cursor-grab active:cursor-grabbing flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity z-10">
                 <GripVertical className="text-white w-6 h-6" />
             </div>
@@ -556,7 +556,7 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                                         <>
                                             <div className="flex -space-x-2">
                                                 {selectedImages.slice(0, 3).map((url: string, i: number) => (
-                                                    <img key={i} src={url} className="w-5 h-5 rounded-full border-2 border-white object-cover" />
+                                                    <img key={i} src={url} className="w-5 h-5 rounded-full border-2 border-white object-cover" loading="lazy" />
                                                 ))}
                                             </div>
                                             <span>{selectedImages.length} Linked</span>

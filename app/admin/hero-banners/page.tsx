@@ -44,7 +44,7 @@ export default async function AdminHeroBannersPage() {
                                     <td className="py-4 px-6">
                                         <div className="w-24 h-14 rounded-xl overflow-hidden bg-slate-100">
                                             {banner.image_url ? (
-                                                <img src={banner.image_url} alt={banner.title} className="w-full h-full object-cover" />
+                                                <img src={banner.image_url} alt={banner.title} className="w-full h-full object-cover" loading="lazy" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center">
                                                     <ImageIcon className="w-4 h-4 text-slate-300" />

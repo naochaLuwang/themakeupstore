@@ -6,10 +6,16 @@ import Link from "next/link"
 export default async function AddConcernPage() {
     const supabase = await createClient()
 
-    const { data: products } = await supabase
-        .from("products")
-        .select("id, name, thumbnail_url")
-        .order("name", { ascending: true })
+    const [productsResult, categoriesResult] = await Promise.all([
+        supabase
+            .from("products")
+            .select("id, name, thumbnail_url, category_id, product_categories(category_id)")
+            .order("name", { ascending: true }),
+        supabase
+            .from("categories")
+            .select("id, name")
+            .order("name", { ascending: true }),
+    ])
 
     return (
         <div className="space-y-6">
@@ -27,7 +33,10 @@ export default async function AddConcernPage() {
             </div>
 
             <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm max-w-2xl">
-                <ConcernForm products={products || []} />
+                <ConcernForm
+                    products={productsResult.data || []}
+                    categories={categoriesResult.data || []}
+                />
             </div>
         </div>
     )

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { motion } from "framer-motion"
+
 import {
   Search, Heart, ShoppingBag, Rocket, ShieldCheck,
   RotateCcw, MessageCircle, ArrowRight,
@@ -91,12 +91,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
   return (
     <div className="bg-white">
       {/* HERO — pulled up behind the sticky navbar */}
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, ease: "easeOut" }}
-        className="-mt-40"
-      >
+      <div className="-mt-40 animate-fade-in-up">
         <div className="relative w-full h-[540px]">
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -130,7 +125,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
             </Link>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* VALUE PROPS */}
       <div className="flex py-4 px-2 mb-4">
@@ -154,7 +149,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
                 <Link key={cat.id} href={`/${pathSegment}/${cat.slug}`} className="flex flex-col items-center gap-2 w-[76px] shrink-0 group">
                   <div className="w-[76px] h-[76px] rounded-full overflow-hidden shadow-sm ring-1 ring-slate-100 group-hover:shadow-md group-hover:ring-slate-200 transition-all duration-300">
                     {cat.image_url ? (
-                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
                     ) : (
                       <div className="w-full h-full bg-slate-50 flex items-center justify-center">
                         <span className="text-base font-bold text-slate-300">{cat.name[0]}</span>
@@ -206,7 +201,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
                   {/* Torn image section */}
                   <div className="absolute inset-0" style={{ clipPath: zigzag }}>
                     {thumbs[0] || cat.image_url ? (
-                      <img src={thumbs[0] || cat.image_url || ""} alt="" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" />
+                      <img src={thumbs[0] || cat.image_url || ""} alt="" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" loading="lazy" />
                     ) : (
                       <div className="w-full h-full bg-slate-100 flex items-center justify-center">
                         <span className="text-2xl font-bold text-slate-400">{cat.name[0]}</span>
@@ -240,21 +235,20 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
       <Section label="NEW THIS WEEK" title="Just Landed" href="/new-arrivals" linkLabel="View All">
         <div className="grid grid-cols-2">
           {products.map((product, idx) => (
-            <motion.div
+            <div
               key={product.id}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: idx * 0.03 }}
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${idx * 0.03}s`, animationFillMode: "backwards" }}
             >
               <ProductCard product={product} />
-            </motion.div>
+            </div>
           ))}
         </div>
       </Section>
 
       {/* FOREVER52 BANNER */}
       <div className="mb-8 px-4">
-        <img src="/forever.png" alt="FOREVER52" className="w-full rounded-xl" />
+        <img src="/forever.webp" alt="FOREVER52" className="w-full rounded-xl" loading="lazy" />
       </div>
 
       {/* FOREVER52 PRODUCTS */}

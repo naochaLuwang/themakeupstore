@@ -436,7 +436,7 @@ export default function SkincareRoutineFinder({ open, onClose }: Props) {
                                                     >
                                                         <div className="w-12 h-12 rounded-xl bg-stone-100 overflow-hidden shrink-0">
                                                             {p.thumbnail_url ? (
-                                                                <img src={p.thumbnail_url} className="w-full h-full object-cover" alt={p.name} />
+                                                                 <img src={p.thumbnail_url} className="w-full h-full object-cover" alt={p.name} loading="lazy" />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center text-stone-300 text-[18px] font-black">{p.name.charAt(0)}</div>
                                                             )}

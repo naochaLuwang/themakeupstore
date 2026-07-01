@@ -1,5 +1,3 @@
-"use client"
-
 import { ShieldCheck, Star, Store, Heart } from "lucide-react"
 
 const FEATURES = [

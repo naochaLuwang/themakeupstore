@@ -24,11 +24,11 @@ export function RecentOrdersTable({ orders }: { orders: any[] }) {
                 <table className="w-full caption-bottom text-sm">
                     <thead>
                         <tr className="border-b border-slate-100">
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Order ID</th>
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Customer</th>
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Status</th>
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total</th>
-                            <th className="py-3 px-4 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Quick View</th>
+                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Order ID</th>
+                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">Customer</th>
+                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total</th>
+                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider">View</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -37,22 +37,22 @@ export function RecentOrdersTable({ orders }: { orders: any[] }) {
                         ) : (
                             orders.map((order) => (
                                 <tr key={order.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                    <td className="py-3 px-4 font-mono text-xs font-medium text-slate-700">#{order.id.slice(0, 8)}</td>
-                                    <td className="py-3 px-4 text-xs text-slate-700">{order.profiles?.full_name || "Guest"}</td>
-                                    <td className="py-3 px-4">
+                                    <td className="py-2 sm:py-3 px-2 sm:px-4 font-mono text-xs font-medium text-slate-700 truncate max-w-[80px] sm:max-w-none">#{order.id.slice(0, 8)}</td>
+                                    <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs text-slate-700 hidden sm:table-cell truncate max-w-[120px]">{order.profiles?.full_name || "Guest"}</td>
+                                    <td className="py-2 sm:py-3 px-2 sm:px-4">
                                         <Badge variant="outline"
                                             className={`uppercase text-[9px] font-semibold px-1.5 py-0.5 border ${statusStyles[order.status] || "bg-slate-50 text-slate-600"}`}
                                         >
                                             {order.status}
                                         </Badge>
                                     </td>
-                                    <td className="py-3 px-4 text-xs font-bold text-emerald-600">₹{Number(order.total).toLocaleString('en-IN')}</td>
-                                    <td className="py-3 px-4 text-right">
+                                    <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs font-bold text-emerald-600">₹{Number(order.total).toLocaleString('en-IN')}</td>
+                                    <td className="py-2 sm:py-3 px-2 sm:px-4 text-right">
                                         <button onClick={() => setSelected(order)}
-                                            className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                                            className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-700 transition-colors"
                                         >
                                             <Eye className="w-3 h-3" />
-                                            View
+                                            <span className="hidden sm:inline">View</span>
                                         </button>
                                     </td>
                                 </tr>

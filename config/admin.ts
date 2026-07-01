@@ -22,7 +22,8 @@ import {
     Archive,
     History,
     Store,
-    Image
+    Image,
+    AlertTriangle,
 } from "lucide-react"
 
 export const adminConfig = {
@@ -43,6 +44,7 @@ export const adminConfig = {
         { title: "Messages", href: "/admin/messages", icon: Mail },
         { title: "Reviews", href: "/admin/reviews", icon: Star },
         { title: "Return Requests", href: "/admin/return-requests", icon: RotateCcw },
+        { title: "Concerns", href: "/admin/concerns", icon: AlertTriangle },
         { title: "Back in Stock Request", href: "/admin/inventory/demand", icon: TrendingUp },
 
         // --- Additional Admin Links ---

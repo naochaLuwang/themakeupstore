@@ -52,7 +52,7 @@ export default function SkincareAccessoriesClient({
                 <section className="relative h-[70vh] min-h-[500px] bg-stone-900 overflow-hidden">
                     <div className="absolute inset-0">
                         <Image
-                            src="/hero-skincare.png"
+                            src="/hero-skincare.webp"
                             fill
                             className="object-cover opacity-60"
                             alt="Skincare & Accessories"

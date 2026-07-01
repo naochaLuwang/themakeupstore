@@ -31,11 +31,11 @@ export default async function AdminLayout({
             <AdminSidebar />
             <SidebarInset>
                 {/* Header Bar */}
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b px-3 sm:px-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
                     <SidebarTrigger className="-ml-1" />
-                    <Separator orientation="vertical" className="mr-2 h-4" />
-                    <div className="flex-1 flex justify-between items-center">
-                        <h2 className="text-sm font-semibold tracking-tight">Admin Dashboard</h2>
+                    <Separator orientation="vertical" className="mr-2 h-4 hidden sm:block" />
+                    <div className="flex-1 flex justify-between items-center min-w-0">
+                        <h2 className="text-xs sm:text-sm font-semibold tracking-tight truncate">Admin Dashboard</h2>
 
                         {/* Displaying logged in user name */}
                         <div className="flex items-center gap-2">
@@ -48,7 +48,7 @@ export default async function AdminLayout({
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 p-6 bg-slate-50/50">
+                <main className="flex-1 p-4 sm:p-6 bg-slate-50/50">
                     <div className="max-w-7xl mx-auto">
                         {children}
                     </div>

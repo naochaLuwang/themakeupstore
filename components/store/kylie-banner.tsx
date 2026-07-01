@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 
-const banners = ["/banners/KYLIE.png", "/banners/KYLIE1.png"]
+const banners = ["/banners/KYLIE.webp", "/banners/KYLIE1.webp"]
 
 export function KylieBanner() {
     const [slide, setSlide] = React.useState(0)

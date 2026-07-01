@@ -250,7 +250,7 @@ export function CategoryProducts({ slug, parent, subcategories, concerns, initia
                                         : "shadow-md hover:shadow-lg"
                                 }`}>
                                     {img ? (
-                                        <img src={img} alt={sub.name} className="w-full h-full object-cover" />
+                                        <img src={img} alt={sub.name} className="w-full h-full object-cover" loading="lazy" />
                                     ) : (
                                         <div className="w-full h-full bg-gradient-to-br from-rose-50 to-slate-100 flex items-center justify-center">
                                             <span className="text-xl font-bold text-rose-300">{sub.name[0]}</span>
@@ -290,7 +290,7 @@ export function CategoryProducts({ slug, parent, subcategories, concerns, initia
                                         : "ring-1 ring-slate-200 hover:ring-slate-300"
                                 }`}>
                                     {c.image_url ? (
-                                        <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
+                                        <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" loading="lazy" />
                                     ) : (
                                         <div className="w-full h-full bg-rose-50 flex items-center justify-center">
                                             <span className="text-lg font-medium text-rose-400">{c.name[0]}</span>

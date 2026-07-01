@@ -205,7 +205,7 @@ export default function ExclusiveCategoryPage() {
     }
 
     const isKylie = slug === "kylie-cosmetics"
-    const kylieBanners = ["/banners/KYLIE.png", "/banners/KYLIE1.png"]
+    const kylieBanners = ["/banners/KYLIE.webp", "/banners/KYLIE1.webp"]
     const [kylieSlide, setKylieSlide] = React.useState(0)
 
     React.useEffect(() => {

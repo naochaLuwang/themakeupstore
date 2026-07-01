@@ -506,7 +506,7 @@ export default function FoundationShadeFinder({ open, onClose, variants }: Props
                             {step === "processing" && sourceImage && (
                                 <div className="space-y-4">
                                     <div className="relative rounded-2xl overflow-hidden bg-stone-50">
-                                        <img ref={imgRef} src={sourceImage} onLoad={handleImageLoaded} className="w-full object-contain max-h-[400px]" alt="Upload" />
+                                        <img ref={imgRef} src={sourceImage} onLoad={handleImageLoaded} className="w-full object-contain max-h-[400px]" alt="Upload" loading="lazy" />
                                         <canvas ref={canvasRef} className="hidden" />
                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                             <div className="text-white text-center space-y-3">

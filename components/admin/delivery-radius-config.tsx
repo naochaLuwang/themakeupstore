@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from "react-leaflet"
 import L from "leaflet"
-import "leaflet/dist/leaflet.css"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
@@ -70,6 +69,7 @@ function DraggableMarker({ position, onMove }: {
 }
 
 export default function DeliveryRadiusConfig() {
+    useEffect(() => { import("leaflet/dist/leaflet.css") }, [])
     const supabase = createClient()
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)

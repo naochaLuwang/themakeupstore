@@ -20,20 +20,14 @@ export default async function PurchaseListPage() {
     }
 
     return (
-        <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-            <main className="flex-1 p-8">
-                <div className="max-w-6xl mx-auto space-y-6">
-                    <header className="flex justify-between items-end">
-                        <div className="space-y-1">
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-800">Procurement History</h1>
-                            <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">Manage and inward inventory</p>
-                        </div>
-                    </header>
-
-                    {/* Pass the data to the client component */}
-                    <PurchaseListClient initialOrders={orders || []} />
+        <div className="space-y-6">
+            <div className="flex items-end justify-between">
+                <div>
+                    <h1 className="text-2xl font-black tracking-tight">Procurement History</h1>
+                    <p className="text-sm text-slate-500">Manage and inward inventory</p>
                 </div>
-            </main>
+            </div>
+            <PurchaseListClient initialOrders={orders || []} />
         </div>
     )
 }

@@ -174,7 +174,7 @@ export default function EssentialCategoryClient({ category, siblings, products: 
                                     >
                                         <div className="w-full h-full rounded-full border-2 border-white bg-slate-100 overflow-hidden flex items-center justify-center">
                                             {sib.image_url ? (
-                                                <img src={sib.image_url} className="w-full h-full object-cover" alt="" />
+                                                <img src={sib.image_url} className="w-full h-full object-cover" alt="" loading="lazy" />
                                             ) : (
                                                 <span className="text-[9px] font-black text-slate-400 uppercase">
                                                     {sib.name?.[0] || "?"}

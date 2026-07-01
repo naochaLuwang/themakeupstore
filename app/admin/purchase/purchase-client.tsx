@@ -76,16 +76,18 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
         }
     }, [selectedSupplierName, isSupplierOpen])
 
-    const addItem = (variant: any, productName: string) => {
+    const addItem = (variant: any, productName: string, productId: string) => {
         if (selectedItems.find(i => i.variant_id === variant.id)) {
             toast.error("Item already added")
             return
         }
         setSelectedItems([...selectedItems, {
             variant_id: variant.id,
+            product_id: productId,
             name: `${productName} (${variant.title})`,
             quantity: 1,
-            unit_cost: variant.price || 0
+            unit_cost: variant.price || 0,
+            mrp: variant.price || 0
         }])
         setProductSearchQuery("")
         setIsProductSearchOpen(false)
@@ -94,18 +96,23 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
     const handleCreatePO = async () => {
         setLoading(true)
         try {
+            const ref = reference.trim() || `PO-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(Date.now()).slice(-4)}`
+            const total = selectedItems.reduce((acc, i) => acc + (i.quantity * i.unit_cost), 0)
+
             const { data: po, error: poError } = await supabase
                 .from('purchase_orders')
-                .insert({ supplier_id: supplierId, reference_number: reference, status: 'draft' })
+                .insert({ supplier_id: supplierId, reference_number: ref, status: 'draft', total_cost: total })
                 .select().single()
             if (poError) throw poError
 
             const { error: itemsError } = await supabase.from('purchase_order_items').insert(
                 selectedItems.map(item => ({
                     purchase_order_id: po.id,
+                    product_id: item.product_id,
                     variant_id: item.variant_id,
                     quantity: item.quantity,
-                    unit_cost: item.unit_cost
+                    unit_cost: item.unit_cost,
+                    mrp: item.mrp
                 }))
             )
             if (itemsError) throw itemsError
@@ -281,7 +288,7 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                                                     return (
                                                                         <button
                                                                             key={v.id}
-                                                                            onClick={() => addItem(v, p.name)}
+                                                                            onClick={() => addItem(v, p.name, p.id)}
                                                                             disabled={!!isAdded}
                                                                             className={`flex items-center justify-between p-2 rounded border text-left text-xs transition-all ${isAdded ? 'bg-slate-50 border-transparent opacity-50 cursor-not-allowed' : 'bg-white hover:border-indigo-600 hover:bg-slate-50'}`}
                                                                         >

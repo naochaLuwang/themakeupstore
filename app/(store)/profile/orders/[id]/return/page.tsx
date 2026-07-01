@@ -181,7 +181,7 @@ export default function ReturnRequestPage() {
                                     }`}
                                 >
                                     {item.products?.thumbnail_url ? (
-                                        <img src={item.products.thumbnail_url} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50" />
+                                        <img src={item.products.thumbnail_url} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50" loading="lazy" />
                                     ) : (
                                         <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
                                             <Package className="w-5 h-5 text-gray-300" />
@@ -234,7 +234,7 @@ export default function ReturnRequestPage() {
                     <div className="mt-2 flex gap-3 flex-wrap">
                         {imagePreviews.map((url, i) => (
                             <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                                <img src={url} alt="" className="w-full h-full object-cover" />
+                                <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
                                 <button
                                     type="button"
                                     onClick={() => removeImage(i)}

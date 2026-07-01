@@ -125,7 +125,7 @@ export default function PricingTable({
 
     const handleBulkApply = async () => {
         const val = parseFloat(bulkValue)
-        if (isNaN(val) || val <= 0) return toast.error("Enter a valid value")
+        if (isNaN(val) || val < 0) return toast.error("Enter a valid value")
 
         setIsBulkUpdating(true)
         let successCount = 0

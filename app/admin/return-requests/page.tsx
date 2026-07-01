@@ -136,7 +136,7 @@ export default async function ReturnRequestsPage() {
                                     <td className="py-4 px-5">
                                         <div className="flex items-center gap-3">
                                             {req.products?.thumbnail_url ? (
-                                                <img src={req.products.thumbnail_url} alt="" className="w-9 h-9 rounded-lg object-cover bg-slate-100 shrink-0" />
+                                                <img src={req.products.thumbnail_url} alt="" className="w-9 h-9 rounded-lg object-cover bg-slate-100 shrink-0" loading="lazy" />
                                             ) : (
                                                 <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 shrink-0" />
                                             )}
@@ -171,7 +171,7 @@ export default async function ReturnRequestsPage() {
                                                             rel="noopener noreferrer"
                                                             className="w-7 h-7 rounded border border-slate-200 overflow-hidden block bg-slate-50 hover:ring-2 hover:ring-slate-300 transition-all"
                                                         >
-                                                            <img src={url} alt="" className="w-full h-full object-cover" />
+                                                            <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
                                                         </a>
                                                     ))}
                                                     {images.length > 3 && (
