@@ -119,8 +119,8 @@ export default function BarcodeScanner({ onDetect }: BarcodeScannerProps) {
     const scannerRef = useRef<Html5Qrcode | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const startCalledRef = useRef(false)
-    const detectedTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
-    const analysisTimerRef = useRef<ReturnType<typeof setInterval>>()
+    const detectedTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+    const analysisTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
     useEffect(() => {
         return () => {
