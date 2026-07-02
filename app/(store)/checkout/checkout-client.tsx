@@ -43,6 +43,8 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const [showPromoPicker, setShowPromoPicker] = useState(false)
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
+    const [showBreakup, setShowBreakup] = useState(false)
+
     useEffect(() => { setMounted(true) }, [])
 
     useEffect(() => {
@@ -189,9 +191,16 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                     )}
                                     <p className="text-xs text-gray-400 mt-0.5">Qty: {item.quantity}</p>
                                 </div>
-                                <p className="text-sm font-bold text-gray-900 shrink-0">
-                                    ₹{Math.round(item.price * item.quantity)}
-                                </p>
+                                <div className="text-right shrink-0">
+                                    {item.mrp > item.price && (
+                                        <p className="text-xs text-gray-400 line-through">
+                                            ₹{Math.round(item.mrp * item.quantity)}
+                                        </p>
+                                    )}
+                                    <p className="text-sm font-bold text-gray-900">
+                                        ₹{Math.round(item.price * item.quantity)}
+                                    </p>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -261,48 +270,90 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     </div>
                 </section>
 
-                {/* Price Summary */}
+                {/* Price Breakup Accordion */}
                 <section>
-                    <div className="flex items-center gap-2 mb-3">
-                        <svg className="w-[18px] h-[18px] text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                        <h2 className="text-sm font-bold text-gray-900">Price Summary</h2>
-                    </div>
-                    <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
-                        <div className="px-4 py-3 flex justify-between">
-                            <span className="text-sm text-gray-500">Subtotal ({items.length} items)</span>
-                            <span className="text-sm font-medium text-gray-900">₹{Math.round(currentSubtotal)}</span>
-                        </div>
-                        <div className="h-px bg-gray-50 mx-4" />
-                        <div className="px-4 py-3 flex justify-between">
-                            <div>
-                                <span className="text-sm text-gray-500">
-                                    Shipping{shippingLabel !== "Standard" && shippingLabel !== "FREE" ? ` (${shippingLabel})` : ""}
-                                </span>
-                                {shippingPrice > 0 && currentSubtotal < FREE_SHIPPING_THRESHOLD && (
-                                    <p className="text-xs font-semibold text-green-500 mt-0.5">
-                                        Free above ₹{FREE_SHIPPING_THRESHOLD}
-                                    </p>
-                                )}
+                    <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden">
+                        <button
+                            onClick={() => setShowBreakup(!showBreakup)}
+                            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50/50 transition-colors"
+                        >
+                            <div className="w-9 h-9 rounded-xl bg-gray-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
                             </div>
-                            <span className={`text-sm font-medium ${isFreeShipping ? "text-green-500" : "text-gray-900"}`}>
-                                {isFreeShipping ? "FREE" : `₹${shippingPrice}`}
-                            </span>
-                        </div>
-                        {discountAmount > 0 && (
-                            <>
-                                <div className="h-px bg-gray-50 mx-4" />
-                                <div className="px-4 py-3 flex justify-between">
-                                    <span className="text-sm text-green-500">Promo Discount</span>
-                                    <span className="text-sm font-medium text-green-500">-₹{discountAmount}</span>
+                            <div className="flex-1 text-left">
+                                <p className="text-sm font-bold text-gray-900">Price Breakup</p>
+                                <p className="text-[11px] text-gray-400">{showBreakup ? "Tap to hide details" : "Tap to view details"}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-base font-extrabold text-gray-900">₹{Math.round(total)}</p>
+                            </div>
+                            <svg
+                                className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${showBreakup ? "rotate-180" : ""}`}
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div className={`transition-all duration-300 ease-in-out ${showBreakup ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}`}>
+                            <div className="border-t border-gray-100">
+                                <div className="px-5 py-3.5 flex justify-between">
+                                    <span className="text-sm text-gray-500">MRP Subtotal</span>
+                                    <span className="text-sm font-medium text-gray-700">₹{Math.round(items.reduce((a: number, i: any) => a + i.mrp * i.quantity, 0))}</span>
                                 </div>
-                            </>
-                        )}
-                        <div className="h-px bg-gray-100 mx-4" />
-                        <div className="px-4 py-3 flex justify-between">
-                            <span className="text-base font-bold text-gray-900">Total</span>
-                            <span className="text-lg font-extrabold text-gray-900">₹{Math.round(total)}</span>
+                                <div className="h-px bg-gray-50 mx-5" />
+                                <div className="px-5 py-3.5 flex justify-between">
+                                    <span className="text-sm text-red-500 font-medium">
+                                        Total Discount
+                                        {(() => {
+                                            const d = items.reduce((a: number, i: any) => a + (i.mrp - i.price) * i.quantity, 0)
+                                            const m = items.reduce((a: number, i: any) => a + i.mrp * i.quantity, 0)
+                                            const pct = m > 0 ? Math.round((d / m) * 100) : 0
+                                            return pct > 0 ? ` (${pct}% off)` : ""
+                                        })()}
+                                    </span>
+                                    <span className="text-sm font-semibold text-red-500">
+                                        −₹{Math.round(items.reduce((a: number, i: any) => a + (i.mrp - i.price) * i.quantity, 0))}
+                                    </span>
+                                </div>
+                                <div className="h-px bg-gray-50 mx-5" />
+                                <div className="px-5 py-3.5 flex justify-between">
+                                    <span className="text-sm text-gray-500">Subtotal after discount</span>
+                                    <span className="text-sm font-semibold text-gray-900">₹{Math.round(currentSubtotal)}</span>
+                                </div>
+                                <div className="h-px bg-gray-50 mx-5" />
+                                <div className="px-5 py-3.5 flex justify-between">
+                                    <div>
+                                        <span className="text-sm text-gray-500">
+                                            Shipping{shippingLabel !== "Standard" && shippingLabel !== "FREE" ? ` (${shippingLabel})` : ""}
+                                        </span>
+                                        {shippingPrice > 0 && currentSubtotal < FREE_SHIPPING_THRESHOLD && (
+                                            <p className="text-[10px] font-semibold text-green-500 mt-0.5">
+                                                Free above ₹{FREE_SHIPPING_THRESHOLD}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <span className={`text-sm font-semibold ${isFreeShipping ? "text-green-500" : "text-gray-900"}`}>
+                                        {isFreeShipping ? "FREE" : `₹${shippingPrice}`}
+                                    </span>
+                                </div>
+                                {discountAmount > 0 && (
+                                    <>
+                                        <div className="h-px bg-gray-50 mx-5" />
+                                        <div className="px-5 py-3.5 flex justify-between bg-green-50/50">
+                                            <span className="text-sm font-medium text-green-600">Promo Discount</span>
+                                            <span className="text-sm font-bold text-green-600">−₹{discountAmount}</span>
+                                        </div>
+                                    </>
+                                )}
+                                <div className="h-px bg-gray-200 mx-5" />
+                                <div className="px-5 py-4 flex justify-between">
+                                    <span className="text-sm font-bold text-gray-900">Total</span>
+                                    <span className="text-lg font-extrabold text-gray-900">₹{Math.round(total)}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>

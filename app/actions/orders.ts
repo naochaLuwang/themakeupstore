@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 import { OrderPOSSchema } from "@/lib/schemas"
 import { checkPromoEligibility } from "@/lib/promo-helper"
+import { VALID_TRANSITIONS, STATUS_TIMESTAMPS, PUSH_MESSAGES } from "@/lib/order-status"
+import { calculateDiscountedPrice } from "@/lib/price-helper"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
@@ -34,20 +36,30 @@ export async function placeOrder(
         for (const item of cartItems) {
             const { data: variant, error: varError } = await supabase
                 .from("product_variants")
-                .select("price, stock, product_id, title, products(name, category_id)")
+                .select("price, stock, product_id, title, discount_type, discount_value, products(name, category_id, discount_type, discount_value)")
                 .eq("id", item.variantId)
                 .single()
 
             if (varError || !variant) throw new Error(`Product not found: ${item.name}`)
             if (variant.stock < item.quantity) throw new Error(`Insufficient stock for ${item.name}`)
 
-            const price = Number(variant.price)
-            calculatedSubtotal += price * item.quantity
-            
+            const basePrice = Number(variant.price)
+            const variantDiscountType: string = variant.discount_type || "none"
+            const variantDiscountValue: number = Number(variant.discount_value) || 0
+            const prod = variant.products as any
+            const productDiscountType: string = prod?.discount_type || "none"
+            const productDiscountValue: number = Number(prod?.discount_value) || 0
+
+            const effectiveDiscountType = variantDiscountType !== "none" ? variantDiscountType : productDiscountType
+            const effectiveDiscountValue = variantDiscountType !== "none" ? variantDiscountValue : productDiscountValue
+            const salePrice = calculateDiscountedPrice(basePrice, effectiveDiscountType as 'percentage' | 'amount' | 'none', effectiveDiscountValue)
+
+            calculatedSubtotal += salePrice * item.quantity
+
             verifiedItems.push({
                 ...item,
-                price: price, // Use DB price
-                categoryId: (variant.products as any)?.category_id
+                price: salePrice,
+                categoryId: prod?.category_id
             })
         }
 
@@ -104,6 +116,7 @@ export async function placeOrder(
             .insert([{
                 user_id: user.id,
                 status: 'pending',
+                order_type: 'delivery',
                 payment_status: 'unpaid',
                 payment_method: 'COD',
                 total: finalTotal,
@@ -313,7 +326,7 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
         }
 
         // 4. STATUS CHECK: Prevent cancelling completed logic
-        const protectedStatuses = ['shipped', 'delivered', 'dispatched']
+        const protectedStatuses = ['shipped', 'out_for_delivery', 'delivered', 'picked_up', 'dispatched']
         if (protectedStatuses.includes(order.status.toLowerCase())) {
             throw new Error(`Cannot cancel order once it has been ${order.status}.`)
         }
@@ -442,6 +455,7 @@ export async function createWholesaleOrder(data: {
                 user_id: data.userId,
                 total: calculatedTotal,
                 status: 'pending',
+                order_type: 'delivery',
                 payment_status: 'unpaid',
                 payment_method: 'B2B_INVOICE',
                 currency: 'INR'
@@ -695,6 +709,11 @@ export async function updateOrderDiscount(orderId: string, discountAmount: numbe
     }
 }
 
+const STATUS_ORDER_TYPE: Record<string, string> = {
+    delivery: "delivery",
+    pickup: "pickup",
+}
+
 export async function updateOrderStatus(orderId: string, status: string) {
     await requireAdmin()
     const supabase = await createClient()
@@ -710,14 +729,29 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
         const oldStatus = (order.status || "").toLowerCase()
         const newStatus = status.toLowerCase()
+        const orderType = order.order_type || "delivery"
+
+        // Validate transition
+        const validNext = VALID_TRANSITIONS[orderType]?.[oldStatus] || []
+        if (!validNext.includes(newStatus)) {
+            throw new Error(`Cannot transition from "${oldStatus}" to "${newStatus}" for ${orderType} orders`)
+        }
 
         const updatePayload: any = {
             status: newStatus,
             updated_at: new Date().toISOString()
         }
 
-        if (newStatus === 'delivered' && oldStatus !== 'delivered') {
-            updatePayload.delivered_at = new Date().toISOString()
+        // Set timestamp for the new status
+        const tsField = STATUS_TIMESTAMPS[newStatus]
+        if (tsField) {
+            updatePayload[tsField] = new Date().toISOString()
+        }
+
+        // If reverting from a status, clear its timestamp
+        const revertFrom = STATUS_TIMESTAMPS[oldStatus]
+        if (revertFrom && newStatus !== "delivered" && newStatus !== "picked_up") {
+            updatePayload[revertFrom] = null
         }
 
         const { error: updateErr } = await supabase
@@ -727,16 +761,15 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
         if (updateErr) throw updateErr
 
-        // Check if transition to delivered should trigger stock decrement
-        // Only do this if it's NOT a website order (which decrements on placement)
-        // We identify wholesale/POS by payment methods or other fields.
+        // Stock decrement for B2B on delivered/picked_up
         const isB2B = order.payment_method === 'B2B_INVOICE'
-        const isDeliveredFirstTime = newStatus === 'delivered' && oldStatus !== 'delivered'
-        
-        if (isDeliveredFirstTime && isB2B) {
+        const isTerminal = newStatus === 'delivered' || newStatus === 'picked_up'
+        const wasNotTerminal = oldStatus !== 'delivered' && oldStatus !== 'picked_up'
+
+        if (isTerminal && wasNotTerminal && isB2B) {
             for (const item of order.order_items) {
                 if (!item.product_variant_id) continue;
-                
+
                 const { error: rpcErr } = await supabase.rpc('decrement_stock', {
                     row_id: item.product_variant_id,
                     amount: item.quantity
@@ -756,6 +789,34 @@ export async function updateOrderStatus(orderId: string, status: string) {
                             .eq("id", item.product_variant_id)
                     }
                 }
+            }
+        }
+
+        // Push notification
+        const bodyText = PUSH_MESSAGES[newStatus]
+        if (bodyText && order.user_id) {
+            const { data: subs } = await supabase
+                .from('push_subscriptions')
+                .select('subscription_json')
+                .eq('user_id', order.user_id)
+
+            if (subs?.length) {
+                try {
+                    await Promise.all(subs.map(s =>
+                        fetch('/api/push', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                subscription: s.subscription_json,
+                                payload: {
+                                    title: `Order Update: ${newStatus.toUpperCase()}`,
+                                    body: bodyText,
+                                    url: `/profile/orders/${orderId}`
+                                }
+                            })
+                        })
+                    ))
+                } catch {}
             }
         }
 

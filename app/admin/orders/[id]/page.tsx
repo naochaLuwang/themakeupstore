@@ -6,10 +6,11 @@ import { useParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar } from "lucide-react"
+import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck } from "lucide-react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
 import { removeOrderItem, updateOrderDiscount } from "@/app/actions/orders"
+import { getTypeStatuses, STATUS_LABELS } from "@/lib/order-status"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
@@ -50,6 +51,29 @@ export default function OrderInvoicePage() {
 
     const productSavings = subtotalMRP - subtotalActual
     const promoDiscount = Number(order.promo_discount_amount) || 0
+
+    const TIMESTAMP_FIELDS: Record<string, string> = {
+        confirmed_at: "Confirmed",
+        ...(order.order_type === "delivery"
+            ? {
+                out_for_delivery_at: "Out for Delivery",
+                failed_delivery_at: "Failed Delivery",
+                delivered_at: "Delivered",
+              }
+            : {
+                ready_for_pickup_at: "Ready for Pickup",
+                no_show_at: "No Show",
+                picked_up_at: "Picked Up",
+              }),
+    }
+
+    async function toggleOrderType() {
+        const newType = order.order_type === "delivery" ? "pickup" : "delivery"
+        const { error } = await supabase.from('orders').update({ order_type: newType, status: "pending" }).eq('id', id)
+        if (error) return toast.error("Failed to update order type")
+        toast.success(`Order type changed to ${newType}, status reset to pending`)
+        setOrder((o: any) => ({ ...o, order_type: newType, status: "pending" }))
+    }
 
     async function handleRemoveItem(itemId: string, index: number) {
         const res = await removeOrderItem(itemId, id as string)
@@ -150,8 +174,29 @@ export default function OrderInvoicePage() {
                 </div>
 
                 {!isThermal && (
-                    <div className={`mb-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border} text-[10px] font-black uppercase tracking-widest`}>
-                        {statusStyle.icon} Status: {order.payment_status}
+                    <div className="mb-6 flex flex-wrap items-center gap-2">
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border} text-[10px] font-black uppercase tracking-widest`}>
+                            {statusStyle.icon} Payment: {order.payment_status}
+                        </div>
+                        <button
+                            onClick={toggleOrderType}
+                            className={`no-print inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all hover:opacity-80 cursor-pointer ${
+                                order.order_type === "delivery"
+                                    ? "bg-sky-50 text-sky-700 border-sky-200"
+                                    : "bg-teal-50 text-teal-700 border-teal-200"
+                            }`}
+                            title={`Click to switch to ${order.order_type === "delivery" ? "pickup" : "delivery"}`}
+                        >
+                            {order.order_type === "delivery" ? <ShoppingBag className="w-3 h-3" /> : <PackageCheck className="w-3 h-3" />}
+                            {order.order_type}
+                        </button>
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${
+                            order.status === "cancelled" ? "bg-red-50 text-red-600 border-red-200" :
+                            order.status === "delivered" || order.status === "picked_up" ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                            "bg-indigo-50 text-indigo-600 border-indigo-200"
+                        }`}>
+                            {order.status}
+                        </div>
                     </div>
                 )}
 
@@ -193,9 +238,22 @@ export default function OrderInvoicePage() {
                     </div>
                 )}
 
-                {order.delivered_at && (
-                    <div className={`mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-100 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest`}>
-                        <Calendar className="w-3 h-3" /> Delivered on {format(new Date(order.delivered_at), 'MMM d, yyyy h:mm a')}
+                {!isThermal && (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                        {Object.entries(TIMESTAMP_FIELDS).map(([field, label]) => {
+                            const val = order[field]
+                            if (!val) return null
+                            const colors = field === "delivered_at" || field === "picked_up_at"
+                                ? "border-emerald-100 bg-emerald-50 text-emerald-600"
+                                : field === "failed_delivery_at" || field === "no_show_at"
+                                ? "border-red-100 bg-red-50 text-red-600"
+                                : "border-slate-100 bg-slate-50 text-slate-600"
+                            return (
+                                <div key={field} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${colors}`}>
+                                    <Calendar className="w-3 h-3" /> {label} {format(new Date(val), 'MMM d, h:mm a')}
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
 

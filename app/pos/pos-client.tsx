@@ -396,9 +396,15 @@ export default function PosClient({ cashierId, products, categories, pendingOrde
                                             className="w-full h-9 pl-9 pr-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300" />
                                     </div>
                                 </div>
-                                <div className="flex justify-between items-baseline">
-                                    <span className="text-slate-500">Total</span>
-                                    <span className="text-2xl font-black">₹{grandTotal.toLocaleString()}</span>
+                                <div className="space-y-1 pb-2 border-b border-slate-100">
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Items ({cartItems.reduce((a: number, i: any) => a + i.quantity, 0)})</span>
+                                        <span className="font-medium">₹{subtotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm font-bold">
+                                        <span className="text-slate-700">Total</span>
+                                        <span className="text-lg font-black">₹{grandTotal.toLocaleString()}</span>
+                                    </div>
                                 </div>
                                 <Button onClick={() => setShowPayment(true)}
                                     className="w-full h-12 text-sm font-bold bg-slate-900 hover:bg-slate-800">
@@ -534,8 +540,16 @@ export default function PosClient({ cashierId, products, categories, pendingOrde
             {showPayment && (
                 <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center">
                     <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 space-y-5 animate-in zoom-in-95">
-                        <div className="text-center">
-                            <p className="text-3xl font-black">₹{grandTotal.toLocaleString()}</p>
+                        {/* Price Breakup */}
+                        <div className="space-y-1.5 pb-3 border-b border-slate-100">
+                            <div className="flex justify-between text-xs">
+                                <span className="text-slate-500">Items ({cartItems.reduce((a: number, i: any) => a + i.quantity, 0)})</span>
+                                <span className="font-semibold text-slate-700">₹{subtotal.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-base font-black">
+                                <span className="text-slate-800">Total</span>
+                                <span className="text-slate-900">₹{grandTotal.toLocaleString()}</span>
+                            </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                             {[

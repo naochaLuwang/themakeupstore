@@ -334,6 +334,12 @@ export default function OrderDetailPage() {
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className="text-[11px] text-gray-500">×{item.quantity}</p>
+                                            {Number(item.mrp) > Number(item.unit_price) && (
+                                                <>
+                                                    <p className="text-[11px] text-gray-400 line-through">₹{Math.round(Number(item.mrp) * item.quantity)}</p>
+                                                    <p className="text-[11px] text-green-600">−₹{Math.round((Number(item.mrp) - Number(item.unit_price)) * item.quantity)}</p>
+                                                </>
+                                            )}
                                             <p className="text-[13px] font-semibold text-gray-900">₹{Math.round(item.unit_price * item.quantity)}</p>
                                         </div>
                                     </div>

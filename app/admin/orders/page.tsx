@@ -1,6 +1,7 @@
 "use client"
 
 import { cancelOrderAndRestoreStock, updateOrderStatus } from "@/app/actions/orders"
+import { STATUS_LABELS, getValidNextStatuses, getTypeStatuses } from "@/lib/order-status"
 import { useState, useEffect, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import {
@@ -9,19 +10,40 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
 import { format, startOfDay, endOfDay, subDays } from "date-fns"
 import {
-    Eye, Clock, Calendar as CalendarIcon, FilterX, CreditCard, ArrowUpRight, Search, Phone, User
+    Eye, Clock, Calendar as CalendarIcon, FilterX, Search, ChevronDown,
+    ShoppingBag, PackageCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { DateRange } from "react-day-picker"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
+
+const GROUP_TABS = [
+    { id: "pending", label: "Pending" },
+    { id: "active", label: "Active" },
+    { id: "completed", label: "Completed" },
+]
+
+const DELIVERY_ACTIVE = ["confirmed", "processing", "shipped", "out_for_delivery", "failed_delivery"]
+const PICKUP_ACTIVE = ["confirmed", "processing", "ready_for_pickup", "no_show"]
+
+function getGroupForOrder(order: any): string {
+    if (order.status === "pending") return "pending"
+    if (order.status === "cancelled") return "completed"
+    const type = order.order_type || "delivery"
+    if (type === "delivery") {
+        if (order.status === "delivered") return "completed"
+        if (DELIVERY_ACTIVE.includes(order.status)) return "active"
+    } else {
+        if (order.status === "picked_up") return "completed"
+        if (PICKUP_ACTIVE.includes(order.status)) return "active"
+    }
+    return "pending"
+}
 
 export default function AdminOrdersPage() {
     const supabase = createClient()
@@ -29,7 +51,7 @@ export default function AdminOrdersPage() {
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
     const [activeTab, setActiveTab] = useState("pending")
-
+    const [paymentFilter, setPaymentFilter] = useState<string>("all")
     const [date, setDate] = useState<DateRange | undefined>({
         from: subDays(new Date(), 30),
         to: new Date(),
@@ -55,72 +77,62 @@ export default function AdminOrdersPage() {
         setLoading(false)
     }
 
-    // --- PUSH NOTIFICATION HELPER ---
-    async function triggerPushNotification(userId: string, payload: { title: string, body: string, url: string }) {
-        const { data: subs } = await supabase
-            .from('push_subscriptions')
-            .select('subscription_json')
-            .eq('user_id', userId)
-
-        if (!subs || subs.length === 0) return
-
-        try {
-            await Promise.all(subs.map(s =>
-                fetch('/api/push', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        subscription: s.subscription_json,
-                        payload
-                    })
-                })
-            ))
-        } catch (err) {
-            console.error("Push failed:", err)
-        }
-    }
-
     const stats = useMemo(() => {
-        const pending = orders.filter(o => o.status === 'pending').length
+        const pending = orders.filter(o => getGroupForOrder(o) === "pending").length
+        const active = orders.filter(o => getGroupForOrder(o) === "active").length
         const totalRev = orders.filter(o => o.payment_status === 'paid').reduce((acc, curr) => acc + Number(curr.total), 0)
-        return { pending, totalRev }
+        return { pending, active, totalRev }
     }, [orders])
 
-    const filteredOrders = orders.filter(order => {
-        const matchesTab = activeTab === "all" || order.status === activeTab
-        const matchesSearch = order.shipping_address?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.id.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesTab && matchesSearch
-    })
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            if (activeTab !== "all" && getGroupForOrder(order) !== activeTab) return false
+            if (paymentFilter !== "all" && order.payment_status !== paymentFilter) return false
+            const q = searchQuery.toLowerCase()
+            return !q ||
+                order.shipping_address?.full_name?.toLowerCase().includes(q) ||
+                order.id.toLowerCase().includes(q) ||
+                order.shipping_address?.phone?.includes(q)
+        })
+    }, [orders, activeTab, searchQuery, paymentFilter])
+
+    const tabCounts = useMemo(() => {
+        const counts: Record<string, number> = {}
+        for (const tab of GROUP_TABS) {
+            counts[tab.id] = orders.filter(o => getGroupForOrder(o) === tab.id).length
+        }
+        return counts
+    }, [orders])
+
+    async function updateOrderType(orderId: string, currentType: string, currentStatus: string) {
+        const newType = currentType === "delivery" ? "pickup" : "delivery"
+        const update: Record<string, any> = { order_type: newType }
+        const allowed = getTypeStatuses(newType)
+        if (!allowed.includes(currentStatus)) update.status = "pending"
+        const { error } = await supabase.from('orders').update(update).eq('id', orderId)
+        if (error) return toast.error("Failed to update order type")
+        toast.success(`Order type changed to ${newType}${update.status ? ", status reset" : ""}`)
+        fetchOrders()
+    }
 
     async function updateStatus(orderId: string, field: 'status' | 'payment_status', val: string) {
         const currentOrder = orders.find(o => o.id === orderId)
 
         if (field === 'status' && val === 'cancelled') {
-            if (currentOrder?.status === 'shipped' || currentOrder?.status === 'delivered') {
-                toast.error(`Operation Denied: Order is already ${currentOrder.status}`)
+            const protectedStatuses = ['shipped', 'out_for_delivery', 'delivered', 'picked_up']
+            if (currentOrder && protectedStatuses.includes(currentOrder.status)) {
+                toast.error(`Cannot cancel order once it is ${currentOrder.status}`)
                 fetchOrders()
                 return
             }
 
             const confirmCancel = confirm("Cancel order and restock items?")
-            if (!confirmCancel) {
-                fetchOrders()
-                return
-            }
+            if (!confirmCancel) { fetchOrders(); return }
 
             setLoading(true)
             const res = await cancelOrderAndRestoreStock(orderId)
-            if (res.success) {
-                toast.success("Order cancelled and stock restored")
-                await triggerPushNotification(currentOrder.user_id, {
-                    title: "Order Cancelled",
-                    body: `Your order #${orderId.slice(0, 8)} has been cancelled.`,
-                    url: `/profile/orders/${orderId}`
-                })
-            } else {
-                toast.error(res.message)
-            }
+            if (res.success) toast.success("Order cancelled and stock restored")
+            else toast.error(res.message)
             setLoading(false)
             fetchOrders()
             return
@@ -134,243 +146,348 @@ export default function AdminOrdersPage() {
             return
         }
 
-        // --- HANDLE STATUS UPDATES THROUGH SERVER ACTION (For Stock Logic) ---
         setLoading(true)
         const res = await updateOrderStatus(orderId, val)
-
-        if (!res.success) {
-            toast.error(res.message || "Status update failed")
-        } else {
-            toast.success("Order status updated")
-            
-            // Push Notification
-            const statusMessages: Record<string, string> = {
-                processing: "We are now preparing your order! ✨",
-                shipped: "Great news! Your order has been shipped. 🚚",
-                delivered: "Your package has been delivered! Enjoy. 💖",
-            }
-            const bodyText = statusMessages[val.toLowerCase()]
-            if (bodyText && currentOrder) {
-                await triggerPushNotification(currentOrder.user_id, {
-                    title: `Order Update: ${val.toUpperCase()}`,
-                    body: bodyText,
-                    url: `/profile/orders/${orderId}`
-                })
-            }
-            fetchOrders()
-        }
+        if (!res.success) toast.error(res.message || "Status update failed")
+        else toast.success("Order status updated")
         setLoading(false)
+        fetchOrders()
+    }
+
+    const StatusBadge = ({ status }: { status: string }) => {
+        const colors: Record<string, string> = {
+            pending: "bg-amber-50 text-amber-700 border-amber-200",
+            confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+            processing: "bg-indigo-50 text-indigo-700 border-indigo-200",
+            shipped: "bg-sky-50 text-sky-700 border-sky-200",
+            out_for_delivery: "bg-purple-50 text-purple-700 border-purple-200",
+            failed_delivery: "bg-red-50 text-red-700 border-red-200",
+            ready_for_pickup: "bg-teal-50 text-teal-700 border-teal-200",
+            no_show: "bg-orange-50 text-orange-700 border-orange-200",
+            delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
+            picked_up: "bg-green-50 text-green-700 border-green-200",
+            cancelled: "bg-slate-100 text-slate-500 border-slate-200",
+        }
+        return (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${colors[status] || "bg-slate-50 text-slate-500 border-slate-200"}`}>
+                {STATUS_LABELS[status] || status}
+            </span>
+        )
     }
 
     return (
         <div className="space-y-6">
 
-            {/* HEADER & STATS */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            {/* HEADER */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <h1 className="text-2xl font-black tracking-tight text-slate-900">Orders</h1>
                     <p className="text-sm text-slate-500">Manage fulfillment and track revenue.</p>
                 </div>
-
-                <div className="grid grid-cols-2 lg:flex gap-3 w-full lg:w-auto">
-                    <Card className="shadow-none border border-slate-200 rounded-xl overflow-hidden">
-                        <CardContent className="p-3 lg:p-4 flex items-center gap-3 lg:gap-4">
-                            <div className="p-2 bg-amber-100 rounded-lg text-amber-600"><Clock className="w-5 h-5" /></div>
-                            <div><p className="text-[10px] lg:text-xs text-slate-500 font-semibold uppercase">Pending</p><p className="text-lg lg:text-xl font-bold">{stats.pending}</p></div>
-                        </CardContent>
-                    </Card>
-                    <Card className="shadow-none border border-slate-200 rounded-xl overflow-hidden">
-                        <CardContent className="p-3 lg:p-4 flex items-center gap-3 lg:gap-4">
-                            <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><ArrowUpRight className="w-5 h-5" /></div>
-                            <div><p className="text-[10px] lg:text-xs text-slate-500 font-semibold uppercase">Revenue</p><p className="text-lg lg:text-xl font-bold">₹{stats.totalRev.toLocaleString()}</p></div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-
-            {/* SEARCH & FILTERS */}
-            <div className="flex flex-col gap-4 bg-white p-3 lg:p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <Tabs defaultValue="pending" onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="bg-slate-100 p-1 rounded-xl w-full h-auto flex overflow-x-auto no-scrollbar justify-start lg:justify-center">
-                        {["all", "pending", "processing", "shipped", "delivered", "cancelled"].map((t) => (
-                            <TabsTrigger key={t} value={t} className="rounded-lg px-3 lg:px-4 py-2 capitalize text-xs lg:text-sm flex-shrink-0">
-                                {t}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:flex items-center gap-3">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input
-                            placeholder="Search Name or ID..."
-                            className="pl-10 h-11 rounded-xl border-slate-200 focus-visible:ring-black w-full"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200">
+                        <Clock className="w-4 h-4 text-amber-600" />
+                        <span className="text-xs font-bold text-amber-700">{stats.pending} pending</span>
                     </div>
-
-                    <div className="flex gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="h-11 flex-1 lg:w-auto px-4 rounded-xl border-slate-200 font-medium flex items-center gap-2 text-xs lg:text-sm">
-                                    <CalendarIcon className="w-4 h-4 text-slate-400" />
-                                    {date?.from ? (date.to ? `${format(date.from, "MMM d")} - ${format(date.to, "MMM d")}` : format(date.from, "MMM d")) : "Select Dates"}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                                <Calendar mode="range" selected={date} onSelect={setDate} numberOfMonths={1} />
-                            </PopoverContent>
-                        </Popover>
-
-                        <Button variant="ghost" size="icon" onClick={() => setDate(undefined)} className="h-11 w-11 rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors border border-slate-200 lg:border-none">
-                            <FilterX className="w-5 h-5" />
-                        </Button>
+                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-indigo-50 border border-indigo-200">
+                        <PackageCheck className="w-4 h-4 text-indigo-600" />
+                        <span className="text-xs font-bold text-indigo-700">{stats.active} active</span>
+                    </div>
+                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <span className="text-xs font-bold text-emerald-700">₹{stats.totalRev.toLocaleString()}</span>
                     </div>
                 </div>
             </div>
 
-            {/* TABLE FOR DESKTOP */}
+            {/* GROUPED TABS */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
+                {GROUP_TABS.map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                            activeTab === tab.id
+                                ? "bg-slate-900 text-white shadow-sm"
+                                : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                        }`}
+                    >
+                        {tab.label}
+                        <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${
+                            activeTab === tab.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                        }`}>
+                            {tabCounts[tab.id] || 0}
+                        </span>
+                    </button>
+                ))}
+            </div>
+
+            {/* PAYMENT FILTER */}
+            <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                    { id: "all", label: "All" },
+                    { id: "paid", label: "Paid" },
+                    { id: "unpaid", label: "Unpaid" },
+                    { id: "refunded", label: "Refunded" },
+                ].map(opt => (
+                    <button
+                        key={opt.id}
+                        onClick={() => setPaymentFilter(opt.id)}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${
+                            paymentFilter === opt.id
+                                ? opt.id === "paid" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                                  opt.id === "unpaid" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                                  opt.id === "refunded" ? "bg-red-50 text-red-600 border border-red-200" :
+                                  "bg-slate-900 text-white"
+                                : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"
+                        }`}
+                    >
+                        {opt.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* SEARCH & DATE FILTER */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search by name, phone, or order ID..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full h-11 pl-10 pr-4 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-200 focus:bg-white transition-all"
+                    />
+                </div>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-all whitespace-nowrap">
+                            <CalendarIcon className="w-4 h-4 text-slate-400" />
+                            {date?.from ? (date.to ? `${format(date.from, "d MMM")} – ${format(date.to, "d MMM")}` : format(date.from, "d MMM")) : "Select dates"}
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar mode="range" selected={date} onSelect={setDate} numberOfMonths={1} />
+                    </PopoverContent>
+                </Popover>
+                {date && (
+                    <button onClick={() => setDate(undefined)}
+                        className="h-11 w-11 rounded-xl border border-slate-200 bg-white flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all text-slate-400"
+                    >
+                        <FilterX className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
+
+            {/* DESKTOP TABLE */}
             <div className="hidden lg:block rounded-2xl border bg-white overflow-hidden shadow-sm">
                 <Table>
                     <TableHeader className="bg-slate-50/50">
                         <TableRow className="border-b border-slate-100">
-                            <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Order Detail</TableHead>
+                            <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Order</TableHead>
                             <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Customer</TableHead>
+                            <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Type</TableHead>
                             <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Payment</TableHead>
                             <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Fulfillment</TableHead>
-                            <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Total</TableHead>
+                            <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider text-right">Total</TableHead>
                             <TableHead className="py-4 px-6 text-right font-bold text-slate-600 text-xs uppercase tracking-wider">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody className="bg-white">
-                        {filteredOrders.map((order) => (
-                            <TableRow key={order.id} className="group border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                <TableCell className="py-4 px-6">
-                                    <div className="flex flex-col">
-                                        <span className="font-mono text-xs font-semibold text-black uppercase">#{order.id.slice(0, 8)}</span>
-                                        <span className="text-xs text-slate-400 mt-0.5">{format(new Date(order.created_at), 'PPp')}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="py-4 px-6">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-medium text-slate-800">{order.shipping_address?.full_name}</span>
-                                        <span className="text-xs text-slate-500">{order.shipping_address?.phone}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="py-4 px-6">
-                                    <Select defaultValue={order.payment_status} onValueChange={(v) => updateStatus(order.id, 'payment_status', v)}>
-                                        <SelectTrigger className={`h-8 w-28 rounded-full border-none text-[10px] font-semibold uppercase ${order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
-                                            <div className="flex items-center gap-1.5"><CreditCard className="w-3 h-3" /><SelectValue /></div>
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-xl">
-                                            <SelectItem value="unpaid">Unpaid</SelectItem>
-                                            <SelectItem value="paid">Paid</SelectItem>
-                                            <SelectItem value="refunded">Refunded</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </TableCell>
-                                <TableCell className="py-4 px-6">
-                                    <Select defaultValue={order.status} onValueChange={(v) => updateStatus(order.id, 'status', v)}>
-                                        <SelectTrigger className="h-8 w-32 rounded-full border border-slate-200 text-[10px] font-semibold uppercase shadow-none bg-white">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-xl">
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="processing">Processing</SelectItem>
-                                            <SelectItem value="shipped">Shipped</SelectItem>
-                                            <SelectItem value="delivered">Delivered</SelectItem>
-                                            <SelectItem value="cancelled" disabled={order.status === 'shipped' || order.status === 'delivered'}>Cancelled</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </TableCell>
-                                <TableCell className="py-4 px-6 font-semibold text-slate-900">₹{Number(order.total).toLocaleString()}</TableCell>
-
-                                <TableCell className="py-4 px-6 text-right">
-                                    <div className="flex justify-end items-center gap-2">
-                                        {order.status === 'pending' && (
-                                            <Button variant="outline" size="sm" asChild className="rounded-lg h-9 px-3 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white text-xs">
-                                                <Link href={`/admin/orders/${order.id}`}>Edit</Link>
-                                            </Button>
-                                        )}
-                                        <Button variant="outline" size="sm" asChild className="rounded-lg h-9 w-9 p-0 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400">
-                                            <Link href={`/admin/orders/${order.id}`}><Eye className="w-4 h-4" /></Link>
-                                        </Button>
-                                    </div>
+                    <TableBody>
+                        {filteredOrders.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-32 text-center text-slate-400 font-medium">
+                                    {loading ? "Loading..." : "No orders found"}
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
+                        {filteredOrders.map((order) => {
+                            const orderType = order.order_type || "delivery"
+                            const validNext = getValidNextStatuses(orderType, order.status)
+                            return (
+                                <TableRow key={order.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50">
+                                    <TableCell className="py-4 px-6">
+                                        <div className="flex flex-col">
+                                            <span className="font-mono text-xs font-semibold text-slate-900 uppercase">#{order.id.slice(0, 8)}</span>
+                                            <span className="text-xs text-slate-400 mt-0.5">{format(new Date(order.created_at), "d MMM yyyy, h:mm a")}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-6">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-slate-800">{order.shipping_address?.full_name || "—"}</span>
+                                            {order.shipping_address?.phone && (
+                                                <span className="text-xs text-slate-500">{order.shipping_address.phone}</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-6">
+                                        <button
+                                            onClick={() => updateOrderType(order.id, orderType, order.status)}
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all hover:opacity-80 ${
+                                                orderType === "delivery"
+                                                    ? "bg-sky-50 text-sky-700 border-sky-200"
+                                                    : "bg-teal-50 text-teal-700 border-teal-200"
+                                            }`}
+                                            title={`Click to switch to ${orderType === "delivery" ? "pickup" : "delivery"}`}
+                                        >
+                                            {orderType === "delivery" ? <ShoppingBag className="w-3 h-3" /> : <PackageCheck className="w-3 h-3" />}
+                                            {orderType}
+                                        </button>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-6">
+                                        <Select defaultValue={order.payment_status} onValueChange={(v) => updateStatus(order.id, 'payment_status', v)}>
+                                            <SelectTrigger className={`h-8 w-28 rounded-full border-none text-[10px] font-semibold uppercase ${
+                                                order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : order.payment_status === 'refunded' ? 'bg-red-50 text-red-600' : 'bg-orange-100 text-orange-700'
+                                            }`}>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl">
+                                                {["unpaid", "paid", "refunded"].map(opt => (
+                                                    <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-6">
+                                        <Select
+                                            defaultValue={order.status}
+                                            onValueChange={(v) => updateStatus(order.id, 'status', v)}
+                                        >
+                                            <SelectTrigger className="h-8 w-36 rounded-full border border-slate-200 text-[10px] font-semibold uppercase shadow-none bg-white">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl">
+                                                {getTypeStatuses(orderType).map(opt => {
+                                                    const isDisabled = !validNext.includes(opt) && opt !== order.status
+                                                    return (
+                                                        <SelectItem
+                                                            key={opt}
+                                                            value={opt}
+                                                            disabled={isDisabled}
+                                                            className="capitalize"
+                                                        >
+                                                            {STATUS_LABELS[opt] || opt}
+                                                        </SelectItem>
+                                                    )
+                                                })}
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-6 text-right font-semibold text-slate-900">
+                                        ₹{Number(order.total).toLocaleString()}
+                                    </TableCell>
+                                    <TableCell className="py-4 px-6 text-right">
+                                        <div className="flex justify-end items-center gap-2">
+                                            {order.status === 'pending' && (
+                                                <Button variant="outline" size="sm" asChild className="rounded-lg h-9 px-3 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white text-xs font-semibold">
+                                                    <Link href={`/admin/orders/${order.id}/edit`}>Edit</Link>
+                                                </Button>
+                                            )}
+                                            <Button variant="outline" size="icon" asChild className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400">
+                                                <Link href={`/admin/orders/${order.id}`}>
+                                                    <Eye className="w-4 h-4" />
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
                     </TableBody>
                 </Table>
             </div>
 
-            {/* MOBILE LIST CARDS */}
+            {/* MOBILE CARDS */}
             <div className="lg:hidden space-y-4">
-                {filteredOrders.map((order) => (
-                    <Card key={order.id} className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <div className="flex flex-col">
-                                <span className="font-mono text-xs font-semibold text-black uppercase">#{order.id.slice(0, 8)}</span>
-                                <span className="text-xs text-slate-400 mt-0.5">{format(new Date(order.created_at), 'PPp')}</span>
-                            </div>
-                            <Button variant="outline" size="sm" asChild className="rounded-full h-8 px-3 border-slate-200 text-xs font-medium">
-                                <Link href={`/admin/orders/${order.id}`}>Details</Link>
-                            </Button>
-                        </div>
-                        <CardContent className="p-4 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <p className="text-xs text-slate-400 font-medium uppercase">Customer</p>
-                                    <p className="text-sm font-medium text-slate-800 truncate">{order.shipping_address?.full_name}</p>
-                                    <p className="text-xs text-slate-500">{order.shipping_address?.phone}</p>
-                                </div>
-                                <div className="space-y-1 text-right">
-                                    <p className="text-xs text-slate-400 font-medium uppercase">Total</p>
-                                    <p className="text-sm font-semibold text-slate-900">₹{Number(order.total).toLocaleString()}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <div className="flex-1">
-                                    <p className="text-xs text-slate-400 font-medium uppercase mb-1.5">Payment</p>
-                                    <Select defaultValue={order.payment_status} onValueChange={(v) => updateStatus(order.id, 'payment_status', v)}>
-                                        <SelectTrigger className={`h-9 w-full rounded-xl border-none text-[10px] font-semibold uppercase ${order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
-                                            <div className="flex items-center gap-1.5"><CreditCard className="w-3 h-3" /><SelectValue /></div>
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-xl">
-                                            <SelectItem value="unpaid">Unpaid</SelectItem>
-                                            <SelectItem value="paid">Paid</SelectItem>
-                                            <SelectItem value="refunded">Refunded</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-xs text-slate-400 font-medium uppercase mb-1.5">Fulfillment</p>
-                                    <Select defaultValue={order.status} onValueChange={(v) => updateStatus(order.id, 'status', v)}>
-                                        <SelectTrigger className="h-9 w-full rounded-xl border border-slate-200 text-[10px] font-semibold uppercase shadow-none bg-white">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-xl">
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="processing">Processing</SelectItem>
-                                            <SelectItem value="shipped">Shipped</SelectItem>
-                                            <SelectItem value="delivered">Delivered</SelectItem>
-                                            <SelectItem value="cancelled" disabled={order.status === 'shipped' || order.status === 'delivered'}>Cancelled</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-
                 {filteredOrders.length === 0 && !loading && (
                     <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
-                        <Search className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                        <Search className="w-12 h-12 text-slate-200 mx-auto mb-3" />
                         <p className="text-slate-500 font-medium">No orders found</p>
                     </div>
                 )}
+                {filteredOrders.map((order) => {
+                    const orderType = order.order_type || "delivery"
+                    const validNext = getValidNextStatuses(orderType, order.status)
+                    return (
+                        <div key={order.id} className="rounded-2xl border bg-white shadow-sm overflow-hidden">
+                            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <div className="flex flex-col">
+                                    <span className="font-mono text-xs font-semibold text-slate-900 uppercase">#{order.id.slice(0, 8)}</span>
+                                    <span className="text-xs text-slate-400">{format(new Date(order.created_at), "d MMM yyyy")}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <StatusBadge status={order.status} />
+                                    <Button variant="outline" size="icon" asChild className="h-9 w-9 rounded-lg border border-slate-200 hover:bg-slate-100 transition-all text-slate-400">
+                                        <Link href={`/admin/orders/${order.id}`}>
+                                            <Eye className="w-4 h-4" />
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="px-5 py-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-800">{order.shipping_address?.full_name || "No name"}</p>
+                                        {order.shipping_address?.phone && (
+                                            <p className="text-xs text-slate-500">{order.shipping_address.phone}</p>
+                                        )}
+                                    </div>
+                                    <p className="text-base font-bold text-slate-900">₹{Number(order.total).toLocaleString()}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => updateOrderType(order.id, orderType, order.status)}
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all hover:opacity-80 ${
+                                            orderType === "delivery"
+                                                ? "bg-sky-50 text-sky-700 border-sky-200"
+                                                : "bg-teal-50 text-teal-700 border-teal-200"
+                                        }`}
+                                    >
+                                        {orderType === "delivery" ? <ShoppingBag className="w-3 h-3" /> : <PackageCheck className="w-3 h-3" />}
+                                        {orderType}
+                                    </button>
+                                    <Select defaultValue={order.payment_status} onValueChange={(v) => updateStatus(order.id, 'payment_status', v)}>
+                                        <SelectTrigger className={`h-8 w-auto px-3 rounded-full border-none text-[10px] font-semibold uppercase ${
+                                            order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : order.payment_status === 'refunded' ? 'bg-red-50 text-red-600' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            {["unpaid", "paid", "refunded"].map(opt => (
+                                                <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Select
+                                        defaultValue={order.status}
+                                        onValueChange={(v) => updateStatus(order.id, 'status', v)}
+                                    >
+                                        <SelectTrigger className="h-8 w-auto px-3 rounded-full border border-slate-200 text-[10px] font-semibold uppercase shadow-none bg-white">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            {getTypeStatuses(orderType).map(opt => {
+                                                const isDisabled = !validNext.includes(opt) && opt !== order.status
+                                                return (
+                                                    <SelectItem key={opt} value={opt} disabled={isDisabled} className="capitalize">
+                                                        {STATUS_LABELS[opt] || opt}
+                                                    </SelectItem>
+                                                )
+                                            })}
+                                        </SelectContent>
+                                    </Select>
+                                    {order.status === 'pending' && (
+                                        <Button variant="outline" size="sm" asChild className="rounded-lg h-8 px-3 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white text-[10px] font-semibold">
+                                            <Link href={`/admin/orders/${order.id}/edit`}>Edit</Link>
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )

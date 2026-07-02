@@ -510,7 +510,7 @@ export default function CartPage() {
                     </div>
                 )}
                 {totalSaving > 0 && (
-                    <div className="fixed bottom-[60px] left-0 right-0 bg-green-50 border-t border-gray-100 py-2 flex items-center justify-center z-30">
+                    <div className="fixed bottom-[90px] left-0 right-0 bg-green-50 border-t border-gray-100 py-2 flex items-center justify-center z-30">
                         <p className="text-xs font-bold text-gray-800">
                             You're saving <span className="text-green-500">₹{totalSaving.toLocaleString()}</span>
                         </p>

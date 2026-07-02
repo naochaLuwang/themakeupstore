@@ -126,6 +126,16 @@ CREATE TABLE public.orders (
   CONSTRAINT orders_shipping_method_id_fkey FOREIGN KEY (shipping_method_id) REFERENCES public.shipping_methods(id),
   CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
+
+-- Order status migration: add fulfillment tracking columns
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS order_type text NOT NULL DEFAULT 'delivery' CHECK (order_type IN ('delivery', 'pickup'));
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS confirmed_at timestamp with time zone;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS ready_for_pickup_at timestamp with time zone;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS picked_up_at timestamp with time zone;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS failed_delivery_at timestamp with time zone;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS out_for_delivery_at timestamp with time zone;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS no_show_at timestamp with time zone;
+
 CREATE TABLE public.product_categories (
   product_id uuid NOT NULL,
   category_id uuid NOT NULL,

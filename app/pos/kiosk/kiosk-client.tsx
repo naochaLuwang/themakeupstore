@@ -176,12 +176,12 @@ export default function KioskClient({ products, categories }: any) {
                     </p>
                     <div className="bg-slate-50 rounded-2xl p-6 border text-left space-y-2 mb-8">
                         <div className="flex justify-between text-sm">
-                            <span className="text-slate-400">Items</span>
-                            <span className="font-semibold">{cartCount}</span>
+                            <span className="text-slate-400">Items ({cartCount})</span>
+                            <span className="font-semibold">₹{cartTotal.toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-slate-400">Total</span>
-                            <span className="font-bold text-lg">₹{cartTotal.toLocaleString()}</span>
+                        <div className="border-t border-slate-200 pt-2 flex justify-between text-sm font-bold">
+                            <span className="text-slate-600">Total Due</span>
+                            <span className="font-black text-lg">₹{cartTotal.toLocaleString()}</span>
                         </div>
                         {customerName && (
                             <div className="flex justify-between text-sm">
@@ -399,9 +399,15 @@ export default function KioskClient({ products, categories }: any) {
                         {/* Checkout */}
                         {cartItems.length > 0 && checkoutStep === "cart" && (
                             <div className="border-t p-6 space-y-4 bg-white">
-                                <div className="flex justify-between items-baseline">
-                                    <span className="text-slate-500">Total</span>
-                                    <span className="text-3xl font-black">₹{cartTotal.toLocaleString()}</span>
+                                <div className="space-y-1.5 pb-2 border-b border-slate-100">
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Items ({cartCount})</span>
+                                        <span className="font-semibold">₹{cartTotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base font-black">
+                                        <span className="text-slate-800">Total</span>
+                                        <span>₹{cartTotal.toLocaleString()}</span>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={proceedToCheckout}
@@ -443,9 +449,15 @@ export default function KioskClient({ products, categories }: any) {
                                         />
                                     </div>
                                 </div>
-                                <div className="flex justify-between items-baseline pt-2">
-                                    <span className="text-slate-500">Total</span>
-                                    <span className="text-3xl font-black">₹{cartTotal.toLocaleString()}</span>
+                                <div className="space-y-1.5 pb-2 border-b border-slate-100">
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Items ({cartCount})</span>
+                                        <span className="font-semibold">₹{cartTotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base font-black">
+                                        <span className="text-slate-800">Total</span>
+                                        <span>₹{cartTotal.toLocaleString()}</span>
+                                    </div>
                                 </div>
                                 <div className="flex gap-3">
                                     <button
