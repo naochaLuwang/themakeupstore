@@ -69,6 +69,14 @@ interface BannerItem {
   route: string | null
 }
 
+interface ShowcaseItem {
+  id: string
+  title: string
+  subtitle: string | null
+  image_url: string
+  link_url: string | null
+}
+
 interface Props {
   banner: BannerItem | null
   categories: CategoryItem[]
@@ -76,9 +84,10 @@ interface Props {
   forever52Products: ProductItem[]
   parentCategories: CategoryItem[]
   shelfProducts: Record<string, string[]>
+  showcaseItems: ShowcaseItem[]
 }
 
-export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts }: Props) {
+export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts, showcaseItems }: Props) {
   const [mounted, setMounted] = useState(false)
   const recentlyViewed = useRecentlyViewed(s => s.items)
   useEffect(() => { setMounted(true) }, [])
@@ -130,9 +139,9 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
       {/* MONSOON MARQUEE */}
       <div className="overflow-hidden" style={{ background: 'linear-gradient(90deg, #166534, #c084fc)' }}>
         <div className="animate-marquee whitespace-nowrap py-2.5 text-white text-xs font-bold uppercase tracking-[0.15em]">
-          <span className="mx-6">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
-          <span className="mx-6">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
-          <span className="mx-6">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-6">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-6">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-6">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
         </div>
       </div>
 
@@ -235,11 +244,6 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
         </div>
       )}
 
-      {/* KYLIE COSMETICS */}
-      <div className="mb-6">
-        <KylieBanner />
-      </div>
-
       {/* NEW ARRIVALS */}
       <Section label="NEW THIS WEEK" title="Just Landed" href="/new-arrivals" linkLabel="View All">
         <div className="grid grid-cols-2">
@@ -255,10 +259,34 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
         </div>
       </Section>
 
-      {/* FOREVER52 BANNER */}
-      <div className="mb-8 px-4">
-        <img src="/forever.webp" alt="FOREVER52" className="w-full rounded-xl" loading="lazy" />
-      </div>
+      {/* STEAL THE SHOW */}
+      {showcaseItems.length > 0 && (
+        <div className="mx-3 mb-10 rounded-2xl bg-white shadow-[0_-4px_20px_-3px_rgba(0,0,0,0.08)]">
+          <div className="pt-6 pb-3 px-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">STEAL THE SHOW</p>
+            <h3 className="text-[26px] font-light text-slate-900 tracking-tight leading-none mt-0.5">Editor's Pick</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3 px-4 pb-6">
+            {showcaseItems.map((item) => {
+              const Wrapper = item.link_url ? Link : 'div'
+              const wrapperProps = item.link_url ? { href: item.link_url } : {}
+              return (
+                <Wrapper key={item.id} {...wrapperProps} className="group">
+                  <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[4/5]">
+                    <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                  </div>
+                  <div className="mt-2.5">
+                    <p className="text-sm font-bold text-slate-900 leading-tight">{item.title}</p>
+                    {item.subtitle && (
+                      <p className="text-[11px] text-slate-500 mt-0.5">{item.subtitle}</p>
+                    )}
+                  </div>
+                </Wrapper>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* FOREVER52 PRODUCTS */}
       {forever52Products.length > 0 && (

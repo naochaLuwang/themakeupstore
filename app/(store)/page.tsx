@@ -15,12 +15,13 @@ const BRAND_BLACKLIST = [
 export default async function GatewayPage() {
   const supabase = await createClient();
 
-  const [{ data: bannerData }, { data: catData }, { data: prodData }, { data: forever52ProdData }, { data: parentCatData }] = await Promise.all([
+  const [{ data: bannerData }, { data: catData }, { data: prodData }, { data: forever52ProdData }, { data: parentCatData }, { data: showcaseItems }] = await Promise.all([
     supabase.from("hero_banners").select("*").eq("is_active", true).order("position").limit(1).maybeSingle(),
     supabase.from("categories").select("id, name, slug, image_url, parent:parent_id(slug)").not("parent_id", "is", null).order("name"),
     supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").order("created_at", { ascending: false }).limit(12),
     supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("brand", "FOREVER52").limit(20),
     supabase.from("categories").select("id, name, slug, image_url").is("parent_id", null).order("name"),
+    supabase.from("showcase_items").select("*").eq("is_active", true).order("position", { ascending: true }),
   ]);
 
   const products = (prodData || []).map(p => ({
@@ -131,9 +132,9 @@ export default async function GatewayPage() {
       {/* MARQUEE */}
       <div className="hidden md:block overflow-hidden" style={{ background: 'linear-gradient(90deg, #166534, #c084fc)' }}>
         <div className="animate-marquee whitespace-nowrap py-2.5 text-white text-xs font-bold uppercase tracking-[0.2em]">
-          <span className="mx-8">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
-          <span className="mx-8">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
-          <span className="mx-8">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-8">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-8">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-8">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
         </div>
       </div>
 
@@ -146,7 +147,7 @@ export default async function GatewayPage() {
 
       {/* MOBILE: native-style scrollable feed */}
       <div className="md:hidden">
-        <HomeMobile banner={bannerData} categories={categories} products={products} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} />
+        <HomeMobile banner={bannerData} categories={categories} products={products} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} showcaseItems={showcaseItems || []} />
       </div>
     </>
   );

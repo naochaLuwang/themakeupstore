@@ -24,6 +24,7 @@ import {
     Store,
     Image,
     AlertTriangle,
+    Sparkles,
 } from "lucide-react"
 
 export const adminConfig = {
@@ -40,6 +41,7 @@ export const adminConfig = {
         // --- Added Broadcast Section ---
         { title: "Broadcast", href: "/admin/broadcast", icon: Radio },
         { title: "Hero Banners", href: "/admin/hero-banners", icon: Image },
+        { title: "Showcase", href: "/admin/showcase", icon: Sparkles },
 
         { title: "Messages", href: "/admin/messages", icon: Mail },
         { title: "Reviews", href: "/admin/reviews", icon: Star },
