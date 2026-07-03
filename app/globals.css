@@ -204,6 +204,15 @@ body::-webkit-scrollbar {
   }
 }
 
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.333%); }
+}
+
+.animate-marquee {
+  animation: marquee 10s linear infinite;
+}
+
 .brand-ticker-track {
   display: flex;
   width: fit-content;

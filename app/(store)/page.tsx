@@ -128,6 +128,15 @@ export default async function GatewayPage() {
 
   return (
     <>
+      {/* MARQUEE */}
+      <div className="hidden md:block overflow-hidden" style={{ background: 'linear-gradient(90deg, #166534, #c084fc)' }}>
+        <div className="animate-marquee whitespace-nowrap py-2.5 text-white text-xs font-bold uppercase tracking-[0.2em]">
+          <span className="mx-8">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-8">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-8">MONSOON SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+        </div>
+      </div>
+
       {/* DESKTOP: 3 split panels (md+) */}
       <main className="hidden md:flex flex-row w-full h-screen shrink-0">
         <Panel href="/exclusive" label="Premium Curation" title="Exclusive Selection" bgImage="/hero-sub.png" />
