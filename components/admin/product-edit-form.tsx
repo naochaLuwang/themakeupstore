@@ -711,7 +711,7 @@ export default function ProductEditForm({ product, categories, concerns = [] }: 
         defaultValues: { name: "", slug: "", description: "", brand: "", has_variants: false, category_ids: [], concern_ids: [], base_price: 0, stock: 0, discount_type: "none", discount_value: 0, image_files: [], variants: [] }
     })
 
-    const { fields: vFields, append: addV, remove: remV } = useFieldArray({ control: form.control, name: "variants" })
+    const { fields: vFields, append: addV, remove: remV } = useFieldArray({ control: form.control, name: "variants", keyName: "_rhfId" })
     const hasVariants = useWatch({ control: form.control, name: "has_variants" })
 
     React.useEffect(() => {
@@ -722,6 +722,7 @@ export default function ProductEditForm({ product, categories, concerns = [] }: 
                 ?.filter((v: any) => !v.is_default)
                 .map((v: any) => ({
                     ...v,
+                    id: v.id,
                     price: Number(v.price) || 0,
                     stock: Number(v.stock) || 0,
                     discount_value: Number(v.discount_value) || 0,
@@ -862,7 +863,7 @@ export default function ProductEditForm({ product, categories, concerns = [] }: 
                                 {hasVariants ? (
                                     <div className="space-y-4">
                                         {vFields.map((field, index) => (
-                                            <VariantRow key={field.id} index={index} form={form} previews={previews} toggleVariantImage={toggleVariantImage} remV={remV} handleNumberChange={handleNumberChange} />
+                                            <VariantRow key={field._rhfId} index={index} form={form} previews={previews} toggleVariantImage={toggleVariantImage} remV={remV} handleNumberChange={handleNumberChange} />
                                         ))}
                                         <Button type="button" variant="outline" className="w-full border-dashed h-14 rounded-[1.5rem] font-black text-slate-400 uppercase text-[10px] hover:text-indigo-600 transition-colors" onClick={() => addV({ title: "", sku: "", price: 0, stock: 0, discount_type: "none", discount_value: 0, hex_code: "#cbd5e1", variant_image_urls: [] })}>
                                             <Plus className="w-4 h-4 mr-2" /> Append Shade Option

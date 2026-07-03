@@ -194,8 +194,25 @@ export async function updateProduct(productId: string, formData: FormData) {
 
         // 5. Sync Variants
         if (payload.has_variants) {
-            const idsToKeep = payload.variants.map((v: any) => v.id).filter((id: string) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
-            await supabase.from("product_variants").delete().eq("product_id", productId).eq('is_default', false).not("id", "in", `(${idsToKeep.length > 0 ? idsToKeep.join(',') : '0'})`)
+            const { data: existingVariants } = await supabase
+                .from("product_variants")
+                .select("id")
+                .eq("product_id", productId)
+                .eq("is_default", false)
+
+            const existingIds = existingVariants?.map(v => v.id) || []
+            const incomingIds = payload.variants
+                .map((v: any) => v.id)
+                .filter((id: string) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+            const idsToRemove = existingIds.filter(id => !incomingIds.includes(id))
+
+            if (idsToRemove.length > 0) {
+                await supabase.from("variant_images").delete().in("product_variant_id", idsToRemove)
+                await supabase.from("product_variant_values").delete().in("product_variant_id", idsToRemove)
+                await supabase.from("cart_items").delete().in("product_variant_id", idsToRemove)
+                await supabase.from("back_in_stock_notifications").delete().in("product_variant_id", idsToRemove)
+                await supabase.from("product_variants").delete().in("id", idsToRemove)
+            }
 
             for (const v of payload.variants) {
                 // Determine primary image for this variant based on indices
