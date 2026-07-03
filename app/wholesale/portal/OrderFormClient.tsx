@@ -44,7 +44,7 @@ export default function OrderFormClient({ initialVariants, userId }: { initialVa
             const discount = rule?.is_active ? (Number(rule.discount_percentage) / 100) : 0
             const wholesalePrice = Math.floor(v.price * (1 - discount))
 
-            amount += (wholesalePrice * qty)
+            amount += Math.round(wholesalePrice * qty)
             units += qty
 
             if (rule?.is_active && qty < rule.min_order_quantity) {

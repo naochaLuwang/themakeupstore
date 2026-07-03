@@ -54,7 +54,7 @@ export async function placeOrder(
             const effectiveDiscountValue = variantDiscountType !== "none" ? variantDiscountValue : productDiscountValue
             const salePrice = calculateDiscountedPrice(basePrice, effectiveDiscountType as 'percentage' | 'amount' | 'none', effectiveDiscountValue)
 
-            calculatedSubtotal += salePrice * item.quantity
+            calculatedSubtotal += Math.round(salePrice * item.quantity)
 
             verifiedItems.push({
                 ...item,
@@ -84,7 +84,7 @@ export async function placeOrder(
 
             // Calculate discount on server
             if (promo.discount_type === 'percentage') {
-                verifiedDiscount = (eligibleSubtotal * Number(promo.discount_value)) / 100
+                verifiedDiscount = Math.round((eligibleSubtotal * Number(promo.discount_value)) / 100)
                 if (promo.max_discount_amount) {
                     verifiedDiscount = Math.min(verifiedDiscount, Number(promo.max_discount_amount))
                 }
@@ -108,7 +108,7 @@ export async function placeOrder(
         }
 
         // 4. FINAL TOTAL CALCULATION
-        const finalTotal = calculatedSubtotal - verifiedDiscount + verifiedShippingPrice
+        const finalTotal = Math.round(calculatedSubtotal - verifiedDiscount + verifiedShippingPrice)
 
         // 5. Insert the main Order
         const { data: order, error: orderError } = await supabase
@@ -434,7 +434,7 @@ export async function createWholesaleOrder(data: {
                 }
             }
 
-            const lineTotal = unitPrice * item.qty
+            const lineTotal = Math.round(unitPrice * item.qty)
             calculatedTotal += lineTotal
 
             verifiedItems.push({
@@ -589,7 +589,7 @@ export async function updateOrderPOS(
 
     // 4. UPDATE ORDER TOTALS
     const itemsTotal = data.items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0);
-    const finalTotal = itemsTotal - data.globalDiscount + data.additionalCharges;
+    const finalTotal = Math.round(itemsTotal - data.globalDiscount + data.additionalCharges);
 
     const { error: orderUpdateError } = await supabase
         .from('orders')
@@ -650,7 +650,7 @@ export async function removeOrderItem(itemId: string, orderId: string) {
             .single()
 
         const itemsTotal = (remaining || []).reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
-        const finalTotal = itemsTotal - Number(order?.promo_discount_amount || 0) + Number(order?.additional_charges || 0) + Number(order?.shipping_price || 0)
+        const finalTotal = Math.round(itemsTotal - Number(order?.promo_discount_amount || 0) + Number(order?.additional_charges || 0) + Number(order?.shipping_price || 0))
 
         const { error: updateErr } = await supabase
             .from('orders')
@@ -689,7 +689,7 @@ export async function updateOrderDiscount(orderId: string, discountAmount: numbe
             .eq('order_id', orderId)
 
         const itemsTotal = (items || []).reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
-        const finalTotal = itemsTotal - discountAmount + Number(order?.additional_charges || 0) + Number(order?.shipping_price || 0)
+        const finalTotal = Math.round(itemsTotal - discountAmount + Number(order?.additional_charges || 0) + Number(order?.shipping_price || 0))
 
         await supabase
             .from('orders')

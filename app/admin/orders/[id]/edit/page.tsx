@@ -104,7 +104,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
 
     // --- TOTALS ---
     const subtotal = items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
-    const finalTotal = subtotal - globalDiscount + additionalCharges;
+    const finalTotal = Math.round(subtotal - globalDiscount + additionalCharges);
 
     if (loading) return <div className="p-20 text-center font-black animate-pulse">BOOTING POS...</div>
 

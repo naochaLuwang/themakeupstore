@@ -33,7 +33,7 @@ export default function KioskClient({ products, categories }: any) {
     }, [products, activeCategory, searchQuery])
 
     const cartCount = cartItems.reduce((a, i) => a + i.quantity, 0)
-    const cartTotal = cartItems.reduce((a, i) => a + i.price * i.quantity, 0)
+    const cartTotal = Math.round(cartItems.reduce((a, i) => a + i.price * i.quantity, 0))
 
     const addToCart = useCallback((variant: any, product: any) => {
         const price = Math.round(variant.price)

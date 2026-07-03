@@ -64,7 +64,7 @@ export default function PosClient({ cashierId, products, categories, pendingOrde
     }, [products, activeCategory, searchQuery])
 
     const subtotal = cartItems.reduce((a, i) => a + i.price * i.quantity, 0)
-    const grandTotal = subtotal
+    const grandTotal = Math.round(subtotal)
 
     // ─── Cart Actions ───
     const addToCart = useCallback((variant: any, product: any) => {
@@ -135,7 +135,7 @@ export default function PosClient({ cashierId, products, categories, pendingOrde
                     grand_total: grandTotal,
                     payment_method: paymentMethod,
                     tendered_amount: paymentMethod === "cash" ? (parseFloat(tendered) || 0) : null,
-                    change_amount: paymentMethod === "cash" ? Math.max(0, (parseFloat(tendered) || 0) - grandTotal) : 0,
+                    change_amount: paymentMethod === "cash" ? Math.round(Math.max(0, (parseFloat(tendered) || 0) - grandTotal)) : 0,
                 })
                 .select()
                 .single()

@@ -3,11 +3,11 @@ export function calculateDiscountedPrice(originalPrice: number, type: 'percentag
 
     if (type === 'percentage') {
         const discountAmount = (originalPrice * value) / 100;
-        return Math.max(0, originalPrice - discountAmount);
+        return Math.round(Math.max(0, originalPrice - discountAmount));
     }
 
     if (type === 'amount') {
-        return Math.max(0, originalPrice - value);
+        return Math.round(Math.max(0, originalPrice - value));
     }
 
     return originalPrice;
