@@ -25,6 +25,8 @@ import {
     Image,
     AlertTriangle,
     Sparkles,
+    Gift,
+    Zap,
 } from "lucide-react"
 
 export const adminConfig = {
@@ -52,6 +54,8 @@ export const adminConfig = {
         // --- Additional Admin Links ---
         { title: "Live Carts", href: "/admin/live-carts", icon: ShoppingCart },
         { title: "Promos", href: "/admin/promos", icon: Tag },
+        { title: "Free Gifts", href: "/admin/free-gifts", icon: Gift },
+        { title: "Buy X Get Y", href: "/admin/bxgy", icon: Zap },
         { title: "Purchase", href: "/admin/purchase", icon: Receipt },
         { title: "Purchase History", href: "/admin/purchase/list", icon: History },
         { title: "Stock", href: "/admin/stock", icon: Archive },

@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { notFound } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
-import { ShowcaseForm } from "../showcase-form"
+import { ShowcaseForm } from "../../showcase-form"
 
 export default async function EditShowcasePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params

@@ -1,12 +1,14 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { requireAdmin } from "@/lib/admin"
 import { revalidatePath } from "next/cache"
 
 export async function updateStock(
     id: string,
     stock: number
 ) {
+    await requireAdmin()
     const supabase = await createClient()
     const { error } = await supabase
         .from("product_variants")

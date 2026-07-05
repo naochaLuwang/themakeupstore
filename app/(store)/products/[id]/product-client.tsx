@@ -7,9 +7,9 @@ import { useCart } from "@/components/store/use-cart"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import { ProductCard } from "@/components/store/product-card"
 import {
-    ArrowLeft, Heart, ShoppingBag, Star, Share2, Store, MapPin,
+    Heart, ShoppingBag, Star, Share2, Store, MapPin,
     ShieldCheck, RotateCcw, ChevronDown, ChevronUp, ChevronRight, Check, X, Plus, Minus, Bell,
-    ScanLine, Palette
+    ScanLine, Palette, Gift, Tag
 } from "lucide-react"
 import { toast } from "sonner"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
@@ -17,6 +17,7 @@ import VirtualTryOn from "@/components/store/virtual-try-on"
 import FoundationShadeFinder from "@/components/store/foundation-shade-finder"
 import { ReviewModal } from "@/components/store/review-modal"
 import { ReviewCard } from "@/components/store/review-card"
+import { useProductPromo } from "@/components/store/promotion-badge-context"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
 
@@ -58,11 +59,36 @@ function calculateDiscountPercentage(finalPrice: number, originalPrice: number):
     return Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
 }
 
-export default function ProductClient({ initialProduct }: { initialProduct: any }) {
+export default function ProductClient({ initialProduct, activeBXGY, activeGift }: { initialProduct: any; activeBXGY?: any; activeGift?: any }) {
     const router = useRouter()
     const supabase = createClient()
     const addItem = useCart((s) => s.addItem)
     const addToRecentlyViewed = useRecentlyViewed((s) => s.addItem)
+
+    // Use context as fallback when server-side query fails
+    const productCategoryIds = [
+        ...(initialProduct.category_id ? [initialProduct.category_id] : []),
+        ...(initialProduct.product_categories || []).map((pc: any) => pc.category_id).filter(Boolean)
+    ]
+    const { activePromo } = useProductPromo(initialProduct.id, initialProduct.category_id, initialProduct.brand, productCategoryIds)
+    const resolvedBXGY = activeBXGY || (activePromo?.type === 'bogo' ? { name: activePromo.ruleName, buy_quantity: 2 } : null)
+    const resolvedGift = activeGift || (activePromo?.type === 'gift' ? {
+        name: activePromo.ruleName,
+        min_cart_amount: activePromo.minCartAmount,
+        gift_product: activePromo.giftProduct,
+        gift_quantity: activePromo.giftQuantity || 1,
+    } : null)
+
+    const cartItems = useCart((s) => s.items)
+    const cartSubtotal = useMemo(() => cartItems.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((s: number, i: any) => s + i.price * i.quantity, 0), [cartItems])
+    const giftQualified = useMemo(() => {
+        if (!resolvedGift?.min_cart_amount) return true
+        return cartSubtotal >= resolvedGift.min_cart_amount
+    }, [resolvedGift?.min_cart_amount, cartSubtotal])
+    const giftRemaining = useMemo(() => {
+        if (!resolvedGift?.min_cart_amount) return 0
+        return Math.max(0, resolvedGift.min_cart_amount - cartSubtotal)
+    }, [resolvedGift?.min_cart_amount, cartSubtotal])
 
     const [product, setProduct] = useState(initialProduct)
     const [activeImage, setActiveImage] = useState(0)
@@ -153,7 +179,7 @@ export default function ProductClient({ initialProduct }: { initialProduct: any 
                         const ids = [...new Set(catProducts.map((c: any) => c.product_id))]
                         const { data: similar } = await supabase
                             .from("products")
-                            .select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
+                            .select("id, name, slug, base_price, thumbnail_url, brand, category_id, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
                             .in("id", ids)
                             .limit(10)
                         if (similar) setSimilarProducts(similar.filter((p: any) => p.thumbnail_url))
@@ -163,7 +189,7 @@ export default function ProductClient({ initialProduct }: { initialProduct: any 
                 if (initialProduct.brand) {
                     const { data: brandData } = await supabase
                         .from("products")
-                        .select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
+                        .select("id, name, slug, base_price, thumbnail_url, brand, category_id, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
                         .eq("brand", initialProduct.brand)
                         .neq("id", initialProduct.id)
                         .limit(10)
@@ -276,19 +302,23 @@ export default function ProductClient({ initialProduct }: { initialProduct: any 
         if (hasVariants && !selectedVariant) return
         if (selectedVariantData?.stock === 0) return
 
-        addItem({
+        const result = addItem({
             id: selectedVariant || product.id,
             productId: product.id,
             variantId: selectedVariant || product.id,
             name: product.name,
             price: selectedVariantData?.calculated_price || selectedVariantData?.price || product.base_price || 0,
             mrp: product.base_price || 0,
+            originalPrice: selectedVariantData?.price || product.base_price || 0,
             image: selectedVariantData?.image_url || product.thumbnail_url,
             quantity: 1,
             variantTitle: selectedVariantData?.title || "Standard",
             categoryId: product.category_id,
             stock: selectedVariantData?.stock || 0,
         })
+        if (result?.capped) {
+            toast.info(`Only ${result.maxQty} in stock — quantity capped`)
+        }
         setShowAddedToast(true)
         setTimeout(() => setShowAddedToast(false), 2000)
     }
@@ -437,12 +467,6 @@ export default function ProductClient({ initialProduct }: { initialProduct: any 
                         {discountPct}% OFF
                     </div>
                 )}
-                <button
-                    onClick={() => router.back()}
-                    className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm"
-                >
-                    <ArrowLeft className="w-5 h-5 text-gray-800" />
-                </button>
                 {(isLipProduct || isFoundationProduct) && (
                     <button
                         onClick={() => isLipProduct ? setTryOnOpen(true) : setShadeFinderOpen(true)}
@@ -570,6 +594,54 @@ export default function ProductClient({ initialProduct }: { initialProduct: any 
                             )
                         })}
                     </div>
+                </div>
+            )}
+
+            {/* Promotion Callout — above Sold By */}
+            {(resolvedBXGY || resolvedGift) && (
+                <div className="px-4 space-y-2 py-3">
+                    {resolvedBXGY && (
+                        <div className="flex items-center gap-4 p-3 border border-slate-200 rounded-xl bg-white">
+                            <div className="relative shrink-0">
+                                {resolvedBXGY.get_product?.thumbnail_url ? (
+                                    <img src={resolvedBXGY.get_product.thumbnail_url} alt={resolvedBXGY.get_product.name} className="w-16 h-16 rounded-lg object-cover border border-slate-100" />
+                                ) : (
+                                    <div className="w-16 h-16 rounded-lg bg-pink-100 flex items-center justify-center">
+                                        <Tag className="w-6 h-6 text-[#fc2779]" />
+                                    </div>
+                                )}
+                                <span className="absolute -top-1.5 -right-1.5 bg-[#fc2779] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">BOGO</span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-gray-900 truncate">{resolvedBXGY.get_product?.name || resolvedBXGY.name}</p>
+                                <p className="text-xs text-slate-500 mt-0.5">Buy {resolvedBXGY.buy_quantity} Get Y Free</p>
+                            </div>
+                        </div>
+                    )}
+                    {resolvedGift && (
+                        <div className={`flex items-center gap-4 p-3 border rounded-xl ${giftQualified ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50'}`}>
+                            <div className="relative shrink-0">
+                                {resolvedGift.gift_product?.thumbnail_url ? (
+                                    <img src={resolvedGift.gift_product.thumbnail_url} alt={resolvedGift.gift_product.name} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
+                                ) : (
+                                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
+                                        <Gift className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
+                                    </div>
+                                )}
+                                <span className={`absolute -top-1.5 -right-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${giftQualified ? 'bg-purple-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                                    {giftQualified ? 'FREE' : 'GIFT'}
+                                </span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className={`text-sm font-semibold truncate ${giftQualified ? 'text-gray-900' : 'text-slate-400'}`}>
+                                    {resolvedGift.gift_product?.name || resolvedGift.name}
+                                </p>
+                                <p className={`text-xs mt-0.5 ${giftQualified ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    {giftQualified ? 'Free Gift with Purchase' : `Add ₹${giftRemaining.toLocaleString()} more to get free gift`}
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -775,13 +847,7 @@ export default function ProductClient({ initialProduct }: { initialProduct: any 
             {/* Desktop Layout */}
             <div className="hidden md:block">
                 <div className="max-w-7xl mx-auto px-8 py-8">
-                    <button
-                        onClick={() => router.back()}
-                        className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5 text-gray-700" />
-                    </button>
-                    <div className="grid grid-cols-2 gap-12 mt-6">
+                    <div className="grid grid-cols-2 gap-12">
                         {/* Left: Image Gallery */}
                         <div>
                             <div className="relative w-full bg-[#fafafa] rounded-2xl overflow-hidden" style={{ aspectRatio: "1 / 0.85" }}>
@@ -920,6 +986,54 @@ export default function ProductClient({ initialProduct }: { initialProduct: any 
                                 </div>
                             )}
 
+                            {/* Promotion Callout — above Sold By */}
+                            {(resolvedBXGY || resolvedGift) && (
+                                <div className="space-y-2">
+                                    {resolvedBXGY && (
+                                        <div className="flex items-center gap-4 p-3 border border-slate-200 rounded-xl bg-white">
+                                            <div className="relative shrink-0">
+                                                {resolvedBXGY.get_product?.thumbnail_url ? (
+                                                    <img src={resolvedBXGY.get_product.thumbnail_url} alt={resolvedBXGY.get_product.name} className="w-16 h-16 rounded-lg object-cover border border-slate-100" />
+                                                ) : (
+                                                    <div className="w-16 h-16 rounded-lg bg-pink-100 flex items-center justify-center">
+                                                        <Tag className="w-6 h-6 text-[#fc2779]" />
+                                                    </div>
+                                                )}
+                                                <span className="absolute -top-1.5 -right-1.5 bg-[#fc2779] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">BOGO</span>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-semibold text-gray-900 truncate">{resolvedBXGY.get_product?.name || resolvedBXGY.name}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5">Buy {resolvedBXGY.buy_quantity} Get Y Free</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {resolvedGift && (
+                                        <div className={`flex items-center gap-4 p-3 border rounded-xl ${giftQualified ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50'}`}>
+                                            <div className="relative shrink-0">
+                                                {resolvedGift.gift_product?.thumbnail_url ? (
+                                                    <img src={resolvedGift.gift_product.thumbnail_url} alt={resolvedGift.gift_product.name} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
+                                                ) : (
+                                                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
+                                                        <Gift className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
+                                                    </div>
+                                                )}
+                                                <span className={`absolute -top-1.5 -right-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${giftQualified ? 'bg-purple-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                                                    {giftQualified ? 'FREE' : 'GIFT'}
+                                                </span>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className={`text-sm font-semibold truncate ${giftQualified ? 'text-gray-900' : 'text-slate-400'}`}>
+                                                    {resolvedGift.gift_product?.name || resolvedGift.name}
+                                                </p>
+                                                <p className={`text-xs mt-0.5 ${giftQualified ? 'text-slate-500' : 'text-slate-400'}`}>
+                                                    {giftQualified ? 'Free Gift with Purchase' : `Add ₹${giftRemaining.toLocaleString()} more to get free gift`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Sold By */}
                             <div className="flex items-center gap-1.5">
                                 <Store className="w-4 h-4 text-gray-400" />
@@ -981,6 +1095,7 @@ export default function ProductClient({ initialProduct }: { initialProduct: any 
                                     <span className="text-xs font-semibold text-gray-700">Easy Returns</span>
                                 </div>
                             </div>
+
 
                             {/* Description */}
                             {product?.description && (

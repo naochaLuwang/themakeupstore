@@ -30,7 +30,7 @@ export function ShowcaseForm({ item }: { item?: any }) {
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const form = useForm<FormValues>({
-        resolver: zodResolver(schema),
+        resolver: zodResolver(schema) as any,
         defaultValues: item ? {
             title: item.title || "",
             subtitle: item.subtitle || "",

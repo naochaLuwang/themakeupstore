@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useCart } from "@/components/store/use-cart"
 import { placeOrder } from "@/app/actions/orders"
 import { validatePromoCode } from "@/app/actions/promo"
@@ -31,6 +31,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
         items, shippingPrice, selectedShippingId, shippingLabel, deliveryTimeLabel,
         clearCart, setShippingMethod, getSubtotal,
         appliedPromo, setAppliedPromo, getDiscountAmount, getFinalTotal,
+        getGiftItems, getBXGYTotalDiscount, bxgyDiscounts,
     } = useCart()
 
     const [mounted, setMounted] = useState(false)
@@ -57,6 +58,18 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const subtotal = getSubtotal()
     const currentSubtotal = mounted ? subtotal : 0
     const discountAmount = mounted ? getDiscountAmount() : 0
+    const bxgyDiscount = mounted ? getBXGYTotalDiscount() : 0
+    const discountMap = useMemo(() => {
+        const map: Record<string, { amount: number; freeQty: number }> = {}
+        ;(bxgyDiscounts || []).forEach((d: any) => {
+            const existing = map[d.variant_id] || { amount: 0, freeQty: 0 }
+            existing.amount += d.discount_amount
+            existing.freeQty += d.free_quantity || 0
+            map[d.variant_id] = existing
+        })
+        return map
+    }, [bxgyDiscounts])
+    const giftItems = mounted ? getGiftItems() : []
     const total = mounted ? getFinalTotal() : 0
     const isFreeShipping = currentSubtotal >= FREE_SHIPPING_THRESHOLD && selectedShippingId
 
@@ -103,11 +116,30 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 id: appliedPromo.id
             } : undefined
 
+            const bxgyDetails = bxgyDiscount > 0 ? {
+                discount: bxgyDiscount,
+                freeItems: items.filter((i: any) => i.is_bxgy_free).map((i: any) => ({
+                    variantId: i.variantId,
+                    productId: i.productId,
+                    ruleId: i.bxgy_rule_id,
+                    quantity: i.quantity,
+                })),
+            } : undefined
+
+            const giftDetails = giftItems.length > 0 ? giftItems.map((i: any) => ({
+                variantId: i.variantId,
+                productId: i.productId,
+                ruleId: i.gift_rule_id,
+                quantity: i.quantity,
+            })) : undefined
+
             const res = await placeOrder(
                 selectedAddress,
                 items,
                 { total, price: shippingPrice, methodName: shippingLabel, deliveryTimeLabel, shipping_method_id: selectedAddress.shipping_methods?.id },
-                promoDetails
+                promoDetails,
+                bxgyDetails,
+                giftDetails
             )
             if (res.success) {
                 clearCart()
@@ -192,14 +224,19 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                     <p className="text-xs text-gray-400 mt-0.5">Qty: {item.quantity}</p>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    {item.mrp > item.price && (
-                                        <p className="text-xs text-gray-400 line-through">
-                                            ₹{Math.round(item.mrp * item.quantity)}
-                                        </p>
+                                    {discountMap[item.variantId]?.amount > 0 ? (
+                                        <>
+                                            <p className="text-xs text-gray-400 line-through">₹{Math.round(item.price * item.quantity)}</p>
+                                            <p className="text-xs font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded inline-block mt-0.5">FREE</p>
+                                        </>
+                                    ) : item.mrp > item.price ? (
+                                        <>
+                                            <p className="text-xs text-gray-400 line-through">₹{Math.round(item.mrp * item.quantity)}</p>
+                                            <p className="text-sm font-bold text-gray-900">₹{Math.round(item.price * item.quantity)}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-sm font-bold text-gray-900">₹{Math.round(item.price * item.quantity)}</p>
                                     )}
-                                    <p className="text-sm font-bold text-gray-900">
-                                        ₹{Math.round(item.price * item.quantity)}
-                                    </p>
                                 </div>
                             </div>
                         ))}
@@ -301,21 +338,22 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             <div className="border-t border-gray-100">
                                 <div className="px-5 py-3.5 flex justify-between">
                                     <span className="text-sm text-gray-500">MRP Subtotal</span>
-                                    <span className="text-sm font-medium text-gray-700">₹{Math.round(items.reduce((a: number, i: any) => a + i.mrp * i.quantity, 0))}</span>
+                                    <span className="text-sm font-medium text-gray-700">₹{Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + i.mrp * i.quantity, 0))}</span>
                                 </div>
                                 <div className="h-px bg-gray-50 mx-5" />
                                 <div className="px-5 py-3.5 flex justify-between">
                                     <span className="text-sm text-red-500 font-medium">
                                         Total Discount
                                         {(() => {
-                                            const d = items.reduce((a: number, i: any) => a + (i.mrp - i.price) * i.quantity, 0)
-                                            const m = items.reduce((a: number, i: any) => a + i.mrp * i.quantity, 0)
+                                            const paidItems = items.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
+                                            const d = paidItems.reduce((a: number, i: any) => a + (i.mrp - i.price) * i.quantity, 0)
+                                            const m = paidItems.reduce((a: number, i: any) => a + i.mrp * i.quantity, 0)
                                             const pct = m > 0 ? Math.round((d / m) * 100) : 0
                                             return pct > 0 ? ` (${pct}% off)` : ""
                                         })()}
                                     </span>
                                     <span className="text-sm font-semibold text-red-500">
-                                        −₹{Math.round(items.reduce((a: number, i: any) => a + (i.mrp - i.price) * i.quantity, 0))}
+                                        −₹{Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + (i.mrp - i.price) * i.quantity, 0))}
                                     </span>
                                 </div>
                                 <div className="h-px bg-gray-50 mx-5" />
@@ -345,6 +383,24 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                         <div className="px-5 py-3.5 flex justify-between bg-green-50/50">
                                             <span className="text-sm font-medium text-green-600">Promo Discount</span>
                                             <span className="text-sm font-bold text-green-600">−₹{discountAmount}</span>
+                                        </div>
+                                    </>
+                                )}
+                                {bxgyDiscount > 0 && (
+                                    <>
+                                        <div className="h-px bg-gray-50 mx-5" />
+                                        <div className="px-5 py-3.5 flex justify-between bg-pink-50/50">
+                                            <span className="text-sm font-medium text-pink-600">Buy X Get Y Discount</span>
+                                            <span className="text-sm font-bold text-pink-600">−₹{bxgyDiscount}</span>
+                                        </div>
+                                    </>
+                                )}
+                                {giftItems.length > 0 && (
+                                    <>
+                                        <div className="h-px bg-gray-50 mx-5" />
+                                        <div className="px-5 py-3.5 flex justify-between bg-purple-50/50">
+                                            <span className="text-sm font-medium text-purple-600">Free Gift{giftItems.length > 1 ? 's' : ''}</span>
+                                            <span className="text-sm font-bold text-purple-600">₹0</span>
                                         </div>
                                     </>
                                 )}

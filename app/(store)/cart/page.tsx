@@ -2,7 +2,7 @@
 
 import { useCart } from "@/components/store/use-cart"
 import { Button } from "@/components/ui/button"
-import { Minus, Plus, ShoppingBag, X } from "lucide-react"
+import { Minus, Plus, ShoppingBag, X, Gift, Tag, Zap } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useState, useMemo, useCallback } from "react"
@@ -10,9 +10,10 @@ import { createClient } from "@/utils/supabase/client"
 import { toast } from "sonner"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import { ProductCard } from "@/components/store/product-card"
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/cart-constants"
 
 export default function CartPage() {
-    const { items, removeItem, updateQuantity, setItems } = useCart() as any
+    const { items, removeItem, updateQuantity, setItems, removeGift, bxgyDiscounts, giftProgress, bxgyProgress } = useCart() as any
     const [mounted, setMounted] = useState(false)
     const [pendingItem, setPendingItem] = useState<any | null>(null)
     const [isSyncing, setIsSyncing] = useState(false)
@@ -32,6 +33,11 @@ export default function CartPage() {
             if (error) throw error
             const dedupedMap = new Map()
             items.forEach((cartItem: any) => {
+                // Skip gift/BXGY free items — their price must stay at 0
+                if (cartItem.is_gift || cartItem.is_bxgy_free) {
+                    dedupedMap.set(cartItem.variantId, { ...cartItem, price: 0 })
+                    return
+                }
                 const fresh = freshVariants?.find((v: any) => v.id === cartItem.variantId)
                 let sellingPrice = cartItem.price
                 let msrp = cartItem.originalPrice || cartItem.price
@@ -63,26 +69,37 @@ export default function CartPage() {
     useEffect(() => { setMounted(true); syncCartPrices() }, [mounted, items.length, syncCartPrices])
 
     const handleRemove = async (variantId: string) => {
-        setIsSyncing(true)
-        const { error } = await supabase.from("cart_items").delete().eq("product_variant_id", variantId)
-        if (error) toast.error("Cloud sync failed")
-        else { removeItem(variantId); toast.success("Item removed from bag") }
+        removeItem(variantId)
+        toast.success("Item removed from bag")
         setPendingItem(null)
-        setIsSyncing(false)
+        // DB sync handled by CartSync's debounced push
     }
 
     const handleUpdateQuantity = async (variantId: string, newQty: number) => {
         if (newQty < 1) return
         updateQuantity(variantId, newQty)
-        await supabase.from("cart_items").update({ quantity: newQty }).eq("product_variant_id", variantId)
+        // DB sync handled by CartSync's debounced push
     }
 
-    const subtotal = useMemo(() => Math.round(items.reduce((acc: number, i: any) => acc + (i.price * i.quantity), 0)), [items])
-    const totalMRP = useMemo(() => Math.round(items.reduce((acc: number, i: any) => acc + ((i.originalPrice || i.price) * i.quantity), 0)), [items])
+    const subtotal = useMemo(() => Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((acc: number, i: any) => acc + (i.price * i.quantity), 0)), [items])
+    const totalMRP = useMemo(() => Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((acc: number, i: any) => acc + ((i.originalPrice || i.price) * i.quantity), 0)), [items])
     const totalDiscount = Math.max(0, totalMRP - subtotal)
     const totalSaving = totalDiscount
-    const outOfStockVariants = useMemo(() => items.filter((i: any) => (i.stock ?? 1) <= 0), [items])
+    const outOfStockVariants = useMemo(() => items.filter((i: any) => (i.stock ?? 1) <= 0 && !i.is_gift && !i.is_bxgy_free), [items])
     const hasOutOfStock = outOfStockVariants.length > 0
+    const giftItems = useMemo(() => items.filter((i: any) => i.is_gift), [items])
+    const bxgyFreeItems = useMemo(() => items.filter((i: any) => i.is_bxgy_free), [items])
+    const totalBXGYDiscount = useMemo(() => (bxgyDiscounts || []).reduce((sum: number, d: any) => sum + d.discount_amount, 0), [bxgyDiscounts])
+    const discountMap = useMemo(() => {
+        const map: Record<string, { amount: number; freeQty: number }> = {}
+        ;(bxgyDiscounts || []).forEach((d: any) => {
+            const existing = map[d.variant_id] || { amount: 0, freeQty: 0 }
+            existing.amount += d.discount_amount
+            existing.freeQty += d.free_quantity || 0
+            map[d.variant_id] = existing
+        })
+        return map
+    }, [bxgyDiscounts])
 
     useEffect(() => {
         if (items.length > 0) {
@@ -113,10 +130,9 @@ export default function CartPage() {
 
     if (!mounted) return null
 
-    const totalQty = items.reduce((a: number, b: any) => a + b.quantity, 0)
+    const totalQty = items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, b: any) => a + b.quantity, 0)
 
     // Desktop layout
-    const FREE_SHIPPING_THRESHOLD = 3000
     const freeShippingRemaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal)
 
     const desktop = (
@@ -146,7 +162,7 @@ export default function CartPage() {
 
                 {/* Free shipping bar */}
                 {freeShippingRemaining > 0 && (
-                    <div className="mb-8 bg-slate-50 border border-slate-100 rounded-lg p-4">
+                    <div className="mb-4 bg-slate-50 border border-slate-100 rounded-lg p-4">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-500">
                                 Add <span className="font-semibold text-slate-900">₹{freeShippingRemaining.toLocaleString()}</span> more for <span className="font-semibold text-emerald-600">free shipping</span>
@@ -159,6 +175,70 @@ export default function CartPage() {
                                 style={{ width: `${Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%` }}
                             />
                         </div>
+                    </div>
+                )}
+
+                {/* Gift progress banners - desktop */}
+                {(giftProgress || []).filter((gp: any) => !gp.qualifies && gp.neededAmount > 0 && gp.qualifyingVariantIds.length > 0).length > 0 && (
+                    <div className="mb-6 space-y-3">
+                        {(giftProgress || []).filter((gp: any) => !gp.qualifies && gp.neededAmount > 0 && gp.qualifyingVariantIds.length > 0).map((gp: any) => {
+                            const totalForProgress = gp.currentSubtotal + gp.neededAmount
+                            const progressPct = totalForProgress > 0 ? Math.min(100, (gp.currentSubtotal / totalForProgress) * 100) : 0
+                            return (
+                                <div key={gp.ruleId} className="bg-white border border-amber-200 rounded-xl overflow-hidden shadow-sm">
+                                    <div className="flex items-center gap-4 p-4">
+                                        {gp.giftProductImage ? (
+                                            <Image src={gp.giftProductImage} alt={gp.giftProductName} width={64} height={64} className="w-16 h-16 rounded-xl object-cover border border-slate-100 shrink-0" />
+                                        ) : (
+                                            <div className="w-16 h-16 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                                                <Gift className="w-6 h-6 text-amber-500" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-slate-900">
+                                                Free Gift: {gp.giftProductName}
+                                            </p>
+                                            <p className="text-xs text-amber-700 mt-0.5">
+                                                Add <strong>₹{gp.neededAmount.toLocaleString()}</strong>{gp.triggerType !== 'cart_total' ? <> from <strong>{gp.qualifyingLabel}</strong></> : null} more to get it free
+                                            </p>
+                                            <div className="mt-2.5 h-1.5 bg-amber-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+
+                {/* BXGY progress banners - desktop */}
+                {(bxgyProgress || []).filter((bp: any) => !bp.qualifies && bp.neededQty > 0 && bp.qualifyingVariantIds.length > 0).length > 0 && (
+                    <div className="mb-6 space-y-3">
+                        {(bxgyProgress || []).filter((bp: any) => !bp.qualifies && bp.neededQty > 0 && bp.qualifyingVariantIds.length > 0).map((bp: any) => {
+                            const totalForProgress = bp.currentQty + bp.neededQty
+                            const progressPct = totalForProgress > 0 ? Math.min(100, (bp.currentQty / totalForProgress) * 100) : 0
+                            return (
+                                <div key={bp.ruleId} className="bg-white border border-pink-200 rounded-xl overflow-hidden shadow-sm">
+                                    <div className="flex items-center gap-4 p-4">
+                                        <div className="w-16 h-16 rounded-xl bg-pink-100 flex items-center justify-center shrink-0">
+                                            <Zap className="w-6 h-6 text-pink-500" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-slate-900">
+                                                FREE: {bp.getLabel}
+                                            </p>
+                                            <p className="text-xs text-pink-700 mt-0.5">
+                                                Add <strong>{bp.neededQty} more</strong>{bp.neededQty > 0 && bp.qualifyingLabel ? <> from <strong>{bp.qualifyingLabel}</strong></> : null} to get it free
+                                            </p>
+                                            <div className="mt-2.5 h-1.5 bg-pink-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-pink-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
 
@@ -206,25 +286,40 @@ export default function CartPage() {
                                                 </div>
                                                 <button
                                                     onClick={() => {
+                                                        if (item.is_gift || item.is_bxgy_free) return;
                                                         if (confirm("Remove this item from your bag?")) handleRemove(item.variantId)
                                                     }}
-                                                    className="text-xs text-slate-400 hover:text-red-500 transition-colors w-fit"
+                                                    className={`text-xs transition-colors w-fit ${item.is_gift || item.is_bxgy_free ? 'text-slate-300 cursor-not-allowed' : 'text-slate-400 hover:text-red-500'}`}
                                                 >
-                                                    Remove
+                                                    {item.is_gift || item.is_bxgy_free ? 'Free Gift' : 'Remove'}
                                                 </button>
                                             </div>
                                         </div>
 
                                         {/* Price - desktop */}
                                         <div className="hidden lg:flex flex-col items-center justify-center">
-                                            <p className="text-sm font-semibold text-slate-900">₹{unitPrice.toLocaleString()}</p>
-                                            {hasDiscount && (
-                                                <p className="text-xs text-slate-400 line-through">₹{unitMrp.toLocaleString()}</p>
+                                            {item.is_gift || item.is_bxgy_free ? (
+                                                <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">FREE</span>
+                                            ) : discountMap[item.variantId]?.amount > 0 ? (
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className="text-xs font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">FREE</span>
+                                                    <p className="text-xs text-slate-400 line-through">{'₹' + unitPrice.toLocaleString()}</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <p className="text-sm font-semibold text-slate-900">{'₹' + unitPrice.toLocaleString()}</p>
+                                                    {hasDiscount && (
+                                                        <p className="text-xs text-slate-400 line-through">{'₹' + unitMrp.toLocaleString()}</p>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
 
                                         {/* Quantity - desktop */}
                                         <div className="hidden lg:flex items-center justify-center">
+                                            {item.is_gift || item.is_bxgy_free ? (
+                                                <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full">Qty: 1</span>
+                                            ) : (
                                             <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
                                                 <button
                                                     onClick={() => {
@@ -246,11 +341,21 @@ export default function CartPage() {
                                                     <Plus className="w-3 h-3 text-slate-500" />
                                                 </button>
                                             </div>
+                                            )}
                                         </div>
 
                                         {/* Subtotal - desktop */}
                                         <div className="hidden lg:flex flex-col items-end justify-center">
-                                            <p className="text-sm font-semibold text-slate-900">₹{Math.round(unitPrice * item.quantity).toLocaleString()}</p>
+                                            {item.is_gift || item.is_bxgy_free ? (
+                                                <span className="text-xs font-bold text-purple-600">₹0</span>
+                                            ) : discountMap[item.variantId]?.amount > 0 ? (
+                                                <div className="flex flex-col items-end gap-0.5">
+                                                    <span className="text-xs text-slate-400 line-through">₹{Math.round(unitPrice * item.quantity).toLocaleString()}</span>
+                                                    <span className="text-xs font-semibold text-pink-600">₹{Math.round(unitPrice * (item.quantity - (discountMap[item.variantId]?.freeQty || 0))).toLocaleString()}</span>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm font-semibold text-slate-900">₹{Math.round(unitPrice * item.quantity).toLocaleString()}</p>
+                                            )}
                                         </div>
                                     </div>
                                 )
@@ -292,13 +397,31 @@ export default function CartPage() {
                             <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-6">Order Summary</h2>
                             <div className="space-y-3">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500">Subtotal</span>
-                                    <span className="font-medium text-slate-900">₹{subtotal.toLocaleString()}</span>
+                                    <span className="text-slate-500">Total MRP ({totalQty} item{totalQty !== 1 ? 's' : ''})</span>
+                                    <span className="font-medium text-slate-900">₹{totalMRP.toLocaleString()}</span>
                                 </div>
                                 {totalDiscount > 0 && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-emerald-600">Discount</span>
                                         <span className="font-medium text-emerald-600">-₹{totalDiscount.toLocaleString()}</span>
+                                    </div>
+                                )}
+                                {totalBXGYDiscount > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-[#fc2779] flex items-center gap-1.5">
+                                            <Tag className="w-3.5 h-3.5" />
+                                            Buy X Get Y
+                                        </span>
+                                        <span className="font-medium text-[#fc2779]">-₹{totalBXGYDiscount.toLocaleString()}</span>
+                                    </div>
+                                )}
+                                {giftItems.length > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-purple-600 flex items-center gap-1.5">
+                                            <Gift className="w-3.5 h-3.5" />
+                                            Free Gift{giftItems.length > 1 ? 's' : ''}
+                                        </span>
+                                        <span className="font-medium text-purple-600">FREE</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-sm">
@@ -307,8 +430,13 @@ export default function CartPage() {
                                 </div>
                                 <div className="border-t border-slate-200 pt-3 flex justify-between items-baseline">
                                     <span className="text-sm font-semibold text-slate-900">Total</span>
-                                    <span className="text-xl font-light text-slate-900">₹{subtotal.toLocaleString()}</span>
+                                    <span className="text-xl font-light text-slate-900">₹{Math.max(0, subtotal - totalBXGYDiscount).toLocaleString()}</span>
                                 </div>
+                                {(totalDiscount > 0 || totalBXGYDiscount > 0) && (
+                                    <div className="flex justify-between items-center pt-1">
+                                        <span className="text-[11px] font-semibold text-emerald-600">You will save ₹{(totalDiscount + totalBXGYDiscount).toLocaleString()} on this order</span>
+                                    </div>
+                                )}
                             </div>
                             {hasOutOfStock ? (
                                 <div className="mt-6 w-full h-12 bg-slate-300 text-white text-sm font-medium tracking-wide rounded-lg flex items-center justify-center gap-2 cursor-not-allowed">
@@ -409,12 +537,74 @@ export default function CartPage() {
             {desktop}
 
             {/* MOBILE — untouched */}
-            <div className="lg:hidden min-h-screen bg-white pb-24">
+                <div className="lg:hidden min-h-screen bg-white pb-24">
                 <div className="px-5 pt-6 pb-3">
                     <h1 className="text-xl font-semibold text-gray-900">
                         Bag Items ({totalQty})
                     </h1>
                 </div>
+                {/* Gift progress banners - mobile */}
+                {(giftProgress || []).filter((gp: any) => !gp.qualifies && gp.neededAmount > 0 && gp.qualifyingVariantIds.length > 0).length > 0 && (
+                    <div className="px-5 mb-3 space-y-2">
+                        {(giftProgress || []).filter((gp: any) => !gp.qualifies && gp.neededAmount > 0 && gp.qualifyingVariantIds.length > 0).map((gp: any) => {
+                            const totalForProgress = gp.currentSubtotal + gp.neededAmount
+                            const progressPct = totalForProgress > 0 ? Math.min(100, (gp.currentSubtotal / totalForProgress) * 100) : 0
+                            return (
+                                <div key={gp.ruleId} className="bg-white border border-amber-200 rounded-xl overflow-hidden shadow-sm">
+                                    <div className="flex items-center gap-3 p-3">
+                                        {gp.giftProductImage ? (
+                                            <Image src={gp.giftProductImage} alt={gp.giftProductName} width={48} height={48} className="w-12 h-12 rounded-lg object-cover border border-slate-100 shrink-0" />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                                                <Gift className="w-5 h-5 text-amber-500" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-slate-900 leading-tight">
+                                                Free: {gp.giftProductName}
+                                            </p>
+                                            <p className="text-[11px] text-amber-700 mt-0.5">
+                                                Add <strong>₹{gp.neededAmount.toLocaleString()}</strong>{gp.triggerType !== 'cart_total' ? <> from <strong>{gp.qualifyingLabel}</strong></> : null} more
+                                            </p>
+                                            <div className="mt-1.5 h-1 bg-amber-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+                {/* BXGY progress banners - mobile */}
+                {(bxgyProgress || []).filter((bp: any) => !bp.qualifies && bp.neededQty > 0 && bp.qualifyingVariantIds.length > 0).length > 0 && (
+                    <div className="px-5 mb-3 space-y-2">
+                        {(bxgyProgress || []).filter((bp: any) => !bp.qualifies && bp.neededQty > 0 && bp.qualifyingVariantIds.length > 0).map((bp: any) => {
+                            const totalForProgress = bp.currentQty + bp.neededQty
+                            const progressPct = totalForProgress > 0 ? Math.min(100, (bp.currentQty / totalForProgress) * 100) : 0
+                            return (
+                                <div key={bp.ruleId} className="bg-white border border-pink-200 rounded-xl overflow-hidden shadow-sm">
+                                    <div className="flex items-center gap-3 p-3">
+                                        <div className="w-12 h-12 rounded-lg bg-pink-100 flex items-center justify-center shrink-0">
+                                            <Zap className="w-5 h-5 text-pink-500" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-slate-900 leading-tight">
+                                                FREE: {bp.getLabel}
+                                            </p>
+                                            <p className="text-[11px] text-pink-700 mt-0.5">
+                                                Add <strong>{bp.neededQty} more</strong>{bp.qualifyingLabel ? <> from <strong>{bp.qualifyingLabel}</strong></> : null}
+                                            </p>
+                                            <div className="mt-1.5 h-1 bg-pink-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-pink-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
                 <div className="px-5 pb-4 space-y-3">
                     {items.map((item: any) => {
                         const unitPrice = Math.round(item.price)
@@ -450,15 +640,24 @@ export default function CartPage() {
                                                 </div>
                                                 <button
                                                     onClick={() => {
+                                                        if (item.is_gift || item.is_bxgy_free) return;
                                                         if (confirm("Remove this item from your bag?")) handleRemove(item.variantId)
                                                     }}
-                                                    className="w-5 h-5 flex items-center justify-center shrink-0"
+                                                    className={`w-5 h-5 flex items-center justify-center shrink-0 ${item.is_gift || item.is_bxgy_free ? 'cursor-default' : ''}`}
                                                 >
-                                                    <X className="w-4 h-4 text-gray-400" />
+                                                    {item.is_gift || item.is_bxgy_free ? (
+                                                        <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">FREE</span>
+                                                    ) : (
+                                                        <X className="w-4 h-4 text-gray-400" />
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 mt-2">
+                                            {item.is_gift || item.is_bxgy_free ? (
+                                                <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full">Qty: 1</span>
+                                            ) : (
+                                            <>
                                             <button
                                                 onClick={() => {
                                                     if (item.quantity <= 1) {
@@ -478,17 +677,33 @@ export default function CartPage() {
                                             >
                                                 <Plus className="w-3 h-3 text-gray-600" />
                                             </button>
+                                            </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                                 <div className="border-t border-gray-100 mt-2.5 pt-2 flex items-center justify-between">
-                                    <span className="text-xs font-medium text-gray-400">You pay</span>
+                                    <span className="text-xs font-medium text-gray-400">
+                                        {item.is_gift || item.is_bxgy_free ? 'Free Gift' : 'You pay'}
+                                    </span>
                                     <div className="flex items-center gap-1.5">
-                                        <span className="text-sm font-bold text-gray-900">₹{Math.round(unitPrice * item.quantity)}</span>
-                                        {hasDiscount && (
+                                        {item.is_gift || item.is_bxgy_free ? (
+                                            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">FREE</span>
+                                        ) : discountMap[item.variantId]?.amount > 0 ? (
                                             <>
-                                                <span className="text-xs font-medium text-gray-400 line-through">₹{Math.round(unitMrp * item.quantity)}</span>
-                                                <span className="text-xs font-bold text-green-500">{saving} off</span>
+                                                <span className="text-xs font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">FREE</span>
+                                                <span className="text-xs font-medium text-gray-400 line-through">₹{Math.round(unitPrice * item.quantity)}</span>
+                                                <span className="text-xs font-bold text-pink-600">₹{Math.round(unitPrice * (item.quantity - (discountMap[item.variantId]?.freeQty || 0)))}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-sm font-bold text-gray-900">₹{Math.round(unitPrice * item.quantity)}</span>
+                                                {hasDiscount && (
+                                                    <>
+                                                        <span className="text-xs font-medium text-gray-400 line-through">₹{Math.round(unitMrp * item.quantity)}</span>
+                                                        <span className="text-xs font-bold text-green-500">{saving} off</span>
+                                                    </>
+                                                )}
                                             </>
                                         )}
                                     </div>
@@ -510,7 +725,7 @@ export default function CartPage() {
                     </div>
                 )}
                 {totalSaving > 0 && (
-                    <div className="fixed bottom-[90px] left-0 right-0 bg-green-50 border-t border-gray-100 py-2 flex items-center justify-center z-30">
+                    <div className="fixed bottom-[73px] left-0 right-0 bg-green-50 border-t border-gray-100 py-2 flex items-center justify-center z-30">
                         <p className="text-xs font-bold text-gray-800">
                             You're saving <span className="text-green-500">₹{totalSaving.toLocaleString()}</span>
                         </p>

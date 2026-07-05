@@ -6,7 +6,7 @@ import Link from "next/link"
 
 import {
   Search, Heart, ShoppingBag, Rocket, ShieldCheck,
-  RotateCcw, MessageCircle, ArrowRight,
+  RotateCcw, MessageCircle, ArrowRight, X,
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { KylieBanner } from "@/components/store/kylie-banner"
@@ -89,8 +89,19 @@ interface Props {
 
 export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts, showcaseItems }: Props) {
   const [mounted, setMounted] = useState(false)
+  const [showDiorPopup, setShowDiorPopup] = useState(false)
   const recentlyViewed = useRecentlyViewed(s => s.items)
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    const seen = sessionStorage.getItem("dior-launch-seen")
+    if (!seen) setShowDiorPopup(true)
+  }, [])
+
+  const dismissDiorPopup = () => {
+    sessionStorage.setItem("dior-launch-seen", "1")
+    setShowDiorPopup(false)
+  }
 
   if (!mounted) return null
 
@@ -245,19 +256,21 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
       )}
 
       {/* NEW ARRIVALS */}
-      <Section label="NEW THIS WEEK" title="Just Landed" href="/new-arrivals" linkLabel="View All">
-        <div className="grid grid-cols-2">
-          {products.map((product, idx) => (
-            <div
-              key={product.id}
-              className="animate-fade-in-up"
-              style={{ animationDelay: `${idx * 0.03}s`, animationFillMode: "backwards" }}
-            >
-              <ProductCard product={product} />
-            </div>
-          ))}
-        </div>
-      </Section>
+      {products.length > 0 && (
+        <Section label="NEW THIS WEEK" title="Just Landed" href="/new-arrivals" linkLabel="View All">
+          <div className="grid grid-cols-2">
+            {products.map((product, idx) => (
+              <div
+                key={product.id}
+                className="animate-fade-in-up"
+                style={{ animationDelay: `${idx * 0.03}s`, animationFillMode: "backwards" }}
+              >
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* STEAL THE SHOW */}
       {showcaseItems.length > 0 && (
@@ -268,10 +281,8 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
           </div>
           <div className="grid grid-cols-2 gap-3 px-4 pb-6">
             {showcaseItems.map((item) => {
-              const Wrapper = item.link_url ? Link : 'div'
-              const wrapperProps = item.link_url ? { href: item.link_url } : {}
-              return (
-                <Wrapper key={item.id} {...wrapperProps} className="group">
+              return item.link_url ? (
+                <Link key={item.id} href={item.link_url} className="group">
                   <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[4/5]">
                     <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                   </div>
@@ -281,7 +292,19 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
                       <p className="text-[11px] text-slate-500 mt-0.5">{item.subtitle}</p>
                     )}
                   </div>
-                </Wrapper>
+                </Link>
+              ) : (
+                <div key={item.id} className="group">
+                  <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[4/5]">
+                    <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                  </div>
+                  <div className="mt-2.5">
+                    <p className="text-sm font-bold text-slate-900 leading-tight">{item.title}</p>
+                    {item.subtitle && (
+                      <p className="text-[11px] text-slate-500 mt-0.5">{item.subtitle}</p>
+                    )}
+                  </div>
+                </div>
               )
             })}
           </div>
@@ -323,6 +346,19 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
           ))}
         </div>
       </div>
+
+      {/* Dior Launch Popup */}
+      {showDiorPopup && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={dismissDiorPopup} />
+          <div className="relative w-full h-[50vh] animate-slide-up mb-[4.5rem] px-4">
+            <img src="/dior.png" alt="Dior" className="w-full h-full object-cover rounded-t-3xl" />
+            <button onClick={dismissDiorPopup} className="absolute top-4 right-8 z-10 rounded-full h-8 w-8 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+              <X className="w-4 h-4 text-slate-700" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

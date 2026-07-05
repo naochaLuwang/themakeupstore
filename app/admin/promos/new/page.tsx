@@ -24,14 +24,12 @@ export default async function NewPromoPage() {
                     <ChevronLeft className="w-5 h-5" />
                 </Link>
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Create Discount</h1>
-                    <p className="text-sm text-slate-500">Define the rules, constraints, and scope for your new campaign</p>
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900">New Promo Code</h1>
+                    <p className="text-sm text-slate-500">Create a discount code for your customers</p>
                 </div>
             </div>
 
-            <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm max-w-2xl">
-                <PromoForm products={products} categories={categories} />
-            </div>
+            <PromoForm products={products} categories={categories} />
         </div>
     )
 }

@@ -142,6 +142,7 @@ export default function OrderDetailPage() {
                     variantTitle: item.variant_title || "",
                     price: Number(item.unit_price),
                     mrp: Number(item.mrp || item.unit_price),
+                    originalPrice: Number(item.mrp || item.unit_price),
                     image: item.products?.thumbnail_url || "",
                     quantity: item.quantity,
                     stock: stockMap[item.product_variant_id] ?? 999,

@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client"
 import { Search, SearchX } from "lucide-react"
 import { SignatureLoader } from "@/components/store/signature-loader"
 
-const BLACKLISTED_NAMES = ["Foundation", "Concealer", "Face Primer", "Lipstick", "Lip Gloss", "Lip Liner", "Liquid Lipstick", "Blush", "Contour", "Highlighter", "Loose Powder", "Compact", "Eye Brow Enhancers", "Eyeliner", "Mascara", "Eye shadow", "Setting Spray", "Makeup Remover", "Skincare", "Fragrance", "Tools & Brushes", "Kajal", "Lip Balm", "Lip Tint", "Cleansers & Toners", "Moisturisers", "Serum", "Sunscreen", "False Eyelashes", "Makeup Brushes", "Makeup remover & wipes", "Sheet Mask", "Sponges & Applicators"]
+const BLACKLISTED_NAMES = ["Foundation", "Concealer", "Face Primer", "Lipstick", "Lip Gloss", "Lip Liner", "Liquid Lipstick", "Blush", "Bronzer & Contour", "Highlighter & Illuminator", "Loose Powder", "Compact", "Eye Brow Enhancers", "Eyeliner", "Mascara", "Eye shadow", "Setting Spray", "Makeup Remover", "Skincare", "Fragrance", "Tools & Brushes", "Kajal", "Lip Balm", "Lip Tint", "Cleansers & Toners", "Moisturisers", "Serum", "Sunscreen", "False Eyelashes", "Makeup Brushes", "Makeup remover & wipes", "Sheet Mask", "Sponges & Applicators"]
 
 function BrandCard({ item }: { item: any }) {
     const parentSlug = item.parent?.slug
