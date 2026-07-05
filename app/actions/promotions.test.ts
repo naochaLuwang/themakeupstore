@@ -5,6 +5,10 @@ vi.mock('@/utils/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
+vi.mock('@/lib/admin', () => ({
+  requireAdmin: vi.fn(),
+}))
+
 function createChain() {
   const chain: any = {
     select: vi.fn(() => chain),

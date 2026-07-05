@@ -112,10 +112,20 @@ export async function placeOrder(
 
             calculatedSubtotal += Math.round(salePrice * item.quantity)
 
+            let itemCatId = prod?.category_id
+            if (!itemCatId) {
+                const { data: cats } = await supabase
+                    .from('product_categories')
+                    .select('category_id')
+                    .eq('product_id', variant.product_id)
+                    .limit(1)
+                if (cats && cats.length > 0) itemCatId = cats[0].category_id
+            }
+
             verifiedItems.push({
                 ...item,
                 price: salePrice,
-                categoryId: prod?.category_id
+                categoryId: itemCatId
             })
         }
 

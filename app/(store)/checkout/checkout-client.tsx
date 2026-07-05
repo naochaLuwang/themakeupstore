@@ -85,17 +85,21 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     }
 
     const handleApplyPromo = async (promo: any) => {
-        const result = await validatePromoCode(promo.code, items)
-        if (result.success) {
-            setAppliedPromo({
-                ...result,
-                allowedProductIds: promo.promo_code_products?.map((p: any) => String(p.product_id)),
-                allowedCategoryIds: promo.promo_code_categories?.map((c: any) => String(c.category_id)),
-            })
-            setShowPromoPicker(false)
-            toast.success(`Coupon ${promo.code} Applied!`)
-        } else {
-            toast.error(result.message || "Cannot apply this coupon")
+        try {
+            const result = await validatePromoCode(promo.code, items)
+            if (result.success) {
+                setAppliedPromo({
+                    ...result,
+                    allowedProductIds: promo.promo_code_products?.map((p: any) => String(p.product_id)),
+                    allowedCategoryIds: promo.promo_code_categories?.map((c: any) => String(c.category_id)),
+                })
+                setShowPromoPicker(false)
+                toast.success(`Coupon ${promo.code} Applied!`)
+            } else {
+                toast.error(result.message || "Cannot apply this coupon")
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to apply coupon — check console")
         }
     }
 
@@ -156,8 +160,12 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
     if (!mounted) return null
 
-    const eligiblePromos = allPromos.filter((p: any) => checkPromoEligibility(p, items).isEligible)
-    const ineligiblePromos = allPromos.filter((p: any) => !checkPromoEligibility(p, items).isEligible)
+    const eligiblePromos = allPromos.filter((p: any) => {
+        try { return checkPromoEligibility(p, items).isEligible } catch { return false }
+    })
+    const ineligiblePromos = allPromos.filter((p: any) => {
+        try { return !checkPromoEligibility(p, items).isEligible } catch { return true }
+    })
 
     return (
         <div className="min-h-screen bg-gray-50/80 pb-24">
@@ -573,7 +581,9 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 <div>
                                     <p className="text-xs font-extrabold uppercase tracking-wider text-gray-400 mb-3">Other offers</p>
                                     {ineligiblePromos.map((promo: any) => {
-                                        const { reasons } = checkPromoEligibility(promo, items)
+                                        const { reasons } = (() => {
+                                            try { return checkPromoEligibility(promo, items) } catch { return { reasons: ["Error checking eligibility"] } }
+                                        })()
                                         return (
                                             <div
                                                 key={promo.id}

@@ -30,6 +30,8 @@ export function checkPromoEligibility(promo: any, items: CartItem[]) {
         }
         if (promo.apply_to === 'specific_categories') {
             const allowedIds = promo.promo_code_categories?.map((c: any) => String(c.category_id)) || [];
+            // If item has no categoryId on client, can't determine — assume might match (server will re-validate)
+            if (!item.categoryId) return true;
             return allowedIds.includes(String(item.categoryId));
         }
         return false;

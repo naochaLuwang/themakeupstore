@@ -66,102 +66,128 @@ export async function createPromoCode(formData: FormData) {
 // @/app/actions/promo.ts
 
 export async function validatePromoCode(code: string, cartItems: any[]) {
-    const supabase = await createClient()
+    try {
+        const supabase = await createClient()
 
-    // 1. Fetch promo and its relationships
-    const { data: promo, error } = await supabase
-        .from('promo_codes')
-        .select(`
+        // 1. Fetch promo and its relationships
+        const { data: promo, error } = await supabase
+            .from('promo_codes')
+            .select(`
             *,
             promo_code_products(product_id),
             promo_code_categories(category_id)
         `)
-        .eq('code', code.toUpperCase())
-        .eq('is_active', true)
-        .single()
-
-    if (error || !promo) return { success: false, message: "Invalid promo code" }
-
-    // 2. Check Expiry and Starts At
-    const now = new Date()
-    if (promo.starts_at && new Date(promo.starts_at) > now) {
-        return { success: false, message: "This promo code is not active yet" }
-    }
-    if (promo.expires_at && new Date(promo.expires_at) < now) {
-        return { success: false, message: "This promo code has expired" }
-    }
-
-    // 3. Check Usage Limit
-    if (promo.usage_limit && promo.used_count >= promo.usage_limit) {
-        return { success: false, message: "This promo code has reached its usage limit" }
-    }
-
-    // 4. NEW: Check Once Per User Restriction
-    const { data: { user } } = await supabase.auth.getUser()
-    if (promo.once_per_user && user) {
-        const { data: previousRedemption } = await supabase
-            .from('promo_redemptions')
-            .select('id')
-            .eq('promo_id', promo.id)
-            .eq('user_id', user.id)
+            .eq('code', code.toUpperCase())
+            .eq('is_active', true)
             .single()
 
-        if (previousRedemption) {
-            return { success: false, message: "This coupon can only be used once per customer" }
+        if (error || !promo) return { success: false, message: "Invalid promo code" }
+
+        // 2. Check Expiry and Starts At
+        const now = new Date()
+        if (promo.starts_at && new Date(promo.starts_at) > now) {
+            return { success: false, message: "This promo code is not active yet" }
         }
-    }
-
-    // 4. Map the IDs from junction tables (UUID strings)
-    const allowedProductIds = promo.promo_code_products?.map((p: any) => String(p.product_id)) || []
-    const allowedCategoryIds = promo.promo_code_categories?.map((c: any) => String(c.category_id)) || []
-
-    // 5. Filter items in the bag that are eligible for this specific promo
-    const eligibleItems = cartItems.filter(item => {
-        // Normalize IDs to strings for comparison
-        const itemProdId = String(item.productId);
-        const itemCatId = item.categoryId ? String(item.categoryId) : null;
-
-        if (promo.apply_to === 'all') return true;
-
-        if (promo.apply_to === 'specific_products') {
-            return allowedProductIds.includes(itemProdId);
+        if (promo.expires_at && new Date(promo.expires_at) < now) {
+            return { success: false, message: "This promo code has expired" }
         }
 
-        if (promo.apply_to === 'specific_categories') {
-            // Check if the item's category matches any of the promo's allowed categories
-            return itemCatId && allowedCategoryIds.includes(itemCatId);
+        // 3. Check Usage Limit
+        if (promo.usage_limit && promo.used_count >= promo.usage_limit) {
+            return { success: false, message: "This promo code has reached its usage limit" }
         }
 
-        return false;
-    });
+        // 4. Once Per User Restriction
+        const { data: { user } } = await supabase.auth.getUser()
+        if (promo.once_per_user && user) {
+            const { data: previousRedemption } = await supabase
+                .from('promo_redemptions')
+                .select('id')
+                .eq('promo_id', promo.id)
+                .eq('user_id', user.id)
+                .single()
 
-    // 6. Validation: Are there any eligible items?
-    if (eligibleItems.length === 0) {
-        return { success: false, message: "This code is not applicable to the items in your bag" }
-    }
+            if (previousRedemption) {
+                return { success: false, message: "This coupon can only be used once per customer" }
+            }
+        }
 
-    // 7. Validation: Minimum Order Amount (calculated only on ELIGIBLE items)
-    const eligibleSubtotal = eligibleItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        // 5. Map the IDs from junction tables (UUID strings)
+        const allowedProductIds = promo.promo_code_products?.map((p: any) => String(p.product_id)) || []
+        const allowedCategoryIds = promo.promo_code_categories?.map((c: any) => String(c.category_id)) || []
 
-    if (eligibleSubtotal < (promo.min_order_amount || 0)) {
+        // 6. Filter items in the bag that are eligible for this specific promo
+        const eligibleItems: any[] = [];
+        for (const item of cartItems) {
+            const itemProdId = String(item.productId);
+
+            if (promo.apply_to === 'all') {
+                eligibleItems.push(item);
+                continue;
+            }
+
+            if (promo.apply_to === 'specific_products') {
+                if (allowedProductIds.includes(itemProdId)) {
+                    eligibleItems.push(item);
+                }
+                continue;
+            }
+
+            if (promo.apply_to === 'specific_categories') {
+                let itemCatId = item.categoryId ? String(item.categoryId) : null;
+                // If categoryId not available on item (products.category_id is often NULL),
+                // look up actual categories from the junction table
+                if (!itemCatId) {
+                    const { data: cats } = await supabase
+                        .from('product_categories')
+                        .select('category_id')
+                        .eq('product_id', itemProdId)
+                    if (cats && cats.length > 0) {
+                        // Check if ANY of the product's categories match
+                        const productCatIds = cats.map(c => String(c.category_id));
+                        if (productCatIds.some(cid => allowedCategoryIds.includes(cid))) {
+                            eligibleItems.push(item);
+                        }
+                    }
+                } else if (allowedCategoryIds.includes(itemCatId)) {
+                    eligibleItems.push(item);
+                }
+                continue;
+            }
+        }
+
+        // 7. Validation: Are there any eligible items?
+        if (eligibleItems.length === 0) {
+            return { success: false, message: "This code is not applicable to the items in your bag" }
+        }
+
+        // 8. Minimum Order Amount
+        const eligibleSubtotal = eligibleItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+        if (eligibleSubtotal < (promo.min_order_amount || 0)) {
+            return {
+                success: false,
+                message: `Add ₹${((promo.min_order_amount || 0) - eligibleSubtotal).toLocaleString()} more of eligible items to use this code`
+            }
+        }
+
+        // 9. Return success with all data needed for the frontend to calculate discount
         return {
-            success: false,
-            message: `Add ₹${((promo.min_order_amount || 0) - eligibleSubtotal).toLocaleString()} more of eligible items to use this code`
+            success: true,
+            id: promo.id,
+            code: promo.code,
+            discount_type: promo.discount_type,
+            discount_value: Number(promo.discount_value),
+            max_discount_amount: promo.max_discount_amount,
+            apply_to: promo.apply_to,
+            min_order_amount: promo.min_order_amount,
+            allowedProductIds,
+            allowedCategoryIds,
+            eligibleVariantIds: eligibleItems.map((i: any) => i.variantId)
         }
-    }
-
-    // 8. Return success with all data needed for the frontend to calculate discount
-    return {
-        success: true,
-        id: promo.id,
-        code: promo.code,
-        discount_type: promo.discount_type,
-        discount_value: Number(promo.discount_value),
-        max_discount_amount: promo.max_discount_amount,
-        apply_to: promo.apply_to,
-        // Pass these back so the Cart store knows which items to discount
-        allowedProductIds,
-        allowedCategoryIds
+    } catch (err: any) {
+        console.error("validatePromoCode error:", err)
+        return { success: false, message: "Something went wrong. Please try again." }
     }
 }
 

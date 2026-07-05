@@ -242,6 +242,9 @@ export const useCart = create<CartStore>()(
 
                 // Check eligibility based on targeting
                 const eligibleItems = items.filter(item => {
+                    if (appliedPromo.eligibleVariantIds) {
+                        return appliedPromo.eligibleVariantIds.includes(item.variantId);
+                    }
                     if (appliedPromo.apply_to === 'all') return true;
                     if (appliedPromo.apply_to === 'specific_products') {
                         return appliedPromo.allowedProductIds?.includes(String(item.productId));
@@ -302,6 +305,9 @@ export const useCart = create<CartStore>()(
 
                 // 1. Filter eligible items
                 const eligibleItems = items.filter(item => {
+                    if (appliedPromo.eligibleVariantIds) {
+                        return appliedPromo.eligibleVariantIds.includes(item.variantId);
+                    }
                     if (appliedPromo.apply_to === 'all') return true;
                     if (appliedPromo.apply_to === 'specific_products') {
                         return appliedPromo.allowedProductIds?.includes(String(item.productId));

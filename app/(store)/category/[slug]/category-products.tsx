@@ -172,13 +172,33 @@ export function CategoryProducts({ slug, parent, subcategories, concerns, initia
 
         switch (sort) {
             case "price_asc":
-                return filtered.sort((a, b) => (a as any)._effectivePrice - (b as any)._effectivePrice)
+                return filtered.sort((a, b) => {
+                    const aOOS = (a as any)._outOfStock ? 1 : 0;
+                    const bOOS = (b as any)._outOfStock ? 1 : 0;
+                    if (aOOS !== bOOS) return aOOS - bOOS;
+                    return (a as any)._effectivePrice - (b as any)._effectivePrice;
+                })
             case "price_desc":
-                return filtered.sort((a, b) => (b as any)._effectivePrice - (a as any)._effectivePrice)
+                return filtered.sort((a, b) => {
+                    const aOOS = (a as any)._outOfStock ? 1 : 0;
+                    const bOOS = (b as any)._outOfStock ? 1 : 0;
+                    if (aOOS !== bOOS) return aOOS - bOOS;
+                    return (b as any)._effectivePrice - (a as any)._effectivePrice;
+                })
             case "name":
-                return filtered.sort((a, b) => a.name.localeCompare(b.name))
+                return filtered.sort((a, b) => {
+                    const aOOS = (a as any)._outOfStock ? 1 : 0;
+                    const bOOS = (b as any)._outOfStock ? 1 : 0;
+                    if (aOOS !== bOOS) return aOOS - bOOS;
+                    return a.name.localeCompare(b.name);
+                })
             default:
-                return filtered
+                return filtered.sort((a, b) => {
+                    const aOOS = (a as any)._outOfStock ? 1 : 0;
+                    const bOOS = (b as any)._outOfStock ? 1 : 0;
+                    if (aOOS !== bOOS) return aOOS - bOOS;
+                    return 0;
+                })
         }
     }, [initialProducts, activeSub, activeConcern, sort, selectedBrands, selectedPriceRange, inStockOnly])
 
