@@ -135,6 +135,9 @@ export default function ExclusiveCategoryPage() {
             let processed = [...(prodData || [])].map((p) => ({
                 ...p,
                 _effectivePrice: computeEffectivePrice(p),
+                outOfStock: p.product_variants?.length > 0
+                    ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
+                    : (p.stock != null && Number(p.stock) <= 0),
             }))
 
             if (selectedPriceRange !== null) {
@@ -144,10 +147,34 @@ export default function ExclusiveCategoryPage() {
                 )
             }
 
-            if (sort === "price_asc") {
-                processed.sort((a, b) => a._effectivePrice - b._effectivePrice)
+            if (sort === "name") {
+                processed.sort((a, b) => {
+                    const aOOS = a.outOfStock ? 1 : 0;
+                    const bOOS = b.outOfStock ? 1 : 0;
+                    if (aOOS !== bOOS) return aOOS - bOOS;
+                    return a.name.localeCompare(b.name);
+                });
+            } else if (sort === "newest") {
+                processed.sort((a, b) => {
+                    const aOOS = a.outOfStock ? 1 : 0;
+                    const bOOS = b.outOfStock ? 1 : 0;
+                    if (aOOS !== bOOS) return aOOS - bOOS;
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                });
+            } else if (sort === "price_asc") {
+                processed.sort((a, b) => {
+                    const aOOS = a.outOfStock ? 1 : 0;
+                    const bOOS = b.outOfStock ? 1 : 0;
+                    if (aOOS !== bOOS) return aOOS - bOOS;
+                    return a._effectivePrice - b._effectivePrice;
+                });
             } else if (sort === "price_desc") {
-                processed.sort((a, b) => b._effectivePrice - a._effectivePrice)
+                processed.sort((a, b) => {
+                    const aOOS = a.outOfStock ? 1 : 0;
+                    const bOOS = b.outOfStock ? 1 : 0;
+                    if (aOOS !== bOOS) return aOOS - bOOS;
+                    return b._effectivePrice - a._effectivePrice;
+                });
             }
 
             setProducts(processed)

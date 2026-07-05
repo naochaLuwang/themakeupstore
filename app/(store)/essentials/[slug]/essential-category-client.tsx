@@ -107,13 +107,33 @@ export default function EssentialCategoryClient({ category, siblings, products: 
         }
 
         if (sort === "name") {
-            processed.sort((a, b) => a.name.localeCompare(b.name))
+            processed.sort((a, b) => {
+                const aOOS = a.outOfStock ? 1 : 0;
+                const bOOS = b.outOfStock ? 1 : 0;
+                if (aOOS !== bOOS) return aOOS - bOOS;
+                return a.name.localeCompare(b.name);
+            });
         } else if (sort === "price_asc") {
-            processed.sort((a, b) => a._effectivePrice - b._effectivePrice)
+            processed.sort((a, b) => {
+                const aOOS = a.outOfStock ? 1 : 0;
+                const bOOS = b.outOfStock ? 1 : 0;
+                if (aOOS !== bOOS) return aOOS - bOOS;
+                return a._effectivePrice - b._effectivePrice;
+            });
         } else if (sort === "price_desc") {
-            processed.sort((a, b) => b._effectivePrice - a._effectivePrice)
+            processed.sort((a, b) => {
+                const aOOS = a.outOfStock ? 1 : 0;
+                const bOOS = b.outOfStock ? 1 : 0;
+                if (aOOS !== bOOS) return aOOS - bOOS;
+                return b._effectivePrice - a._effectivePrice;
+            });
         } else if (sort === "newest") {
-            processed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            processed.sort((a, b) => {
+                const aOOS = a.outOfStock ? 1 : 0;
+                const bOOS = b.outOfStock ? 1 : 0;
+                if (aOOS !== bOOS) return aOOS - bOOS;
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            });
         }
 
         setProducts(processed)

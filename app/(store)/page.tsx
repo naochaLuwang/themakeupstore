@@ -4,7 +4,7 @@ import { HomeMobile } from "./home-mobile";
 
 const BRAND_BLACKLIST = [
   "Foundation", "Concealer", "Face Primer", "Lipstick", "Lip Gloss", "Lip Liner",
-  "Liquid Lipstick", "Blush", "Contour", "Highlighter", "Loose Powder", "Compact",
+  "Liquid Lipstick", "Blush", "Bronzer & Contour", "Highlighter & Illuminator", "Loose Powder", "Compact",
   "Eye Brow Enhancers", "Eyeliner", "Mascara", "Eye shadow", "Setting Spray",
   "Makeup Remover", "Skincare", "Fragrance", "Tools & Brushes", "Kajal", "Lip Balm",
   "Lip Tint", "Cleansers & Toners", "Moisturisers", "Serum", "Sunscreen",
@@ -74,20 +74,20 @@ export default async function GatewayPage() {
 
     // Index by category_id
     const byCat: Record<string, Set<string>> = {}
-    ;(pcData || []).forEach(r => {
-      const thumb = (r.products as any)?.thumbnail_url
-      if (thumb) {
-        if (!byCat[r.category_id]) byCat[r.category_id] = new Set()
-        byCat[r.category_id].add(thumb)
-      }
-    })
+      ; (pcData || []).forEach(r => {
+        const thumb = (r.products as any)?.thumbnail_url
+        if (thumb) {
+          if (!byCat[r.category_id]) byCat[r.category_id] = new Set()
+          byCat[r.category_id].add(thumb)
+        }
+      })
 
     // For each parent, collect from its subcategories + direct
     gridParentIds.forEach(pid => {
       const set = new Set<string>()
-      ;[...(childMap[pid] || []), pid].forEach(cid => {
-        byCat[cid]?.forEach(t => set.add(t))
-      })
+        ;[...(childMap[pid] || []), pid].forEach(cid => {
+          byCat[cid]?.forEach(t => set.add(t))
+        })
       if (set.size > 0) shelfProducts[pid] = [...set].slice(0, 3)
     })
   }
@@ -105,13 +105,13 @@ export default async function GatewayPage() {
       .limit(100)
 
     const fallbackByCat: Record<string, Set<string>> = {}
-    ;(fallbackData || []).forEach(r => {
-      const thumb = (r.products as any)?.thumbnail_url
-      if (thumb) {
-        if (!fallbackByCat[r.category_id]) fallbackByCat[r.category_id] = new Set()
-        fallbackByCat[r.category_id].add(thumb)
-      }
-    })
+      ; (fallbackData || []).forEach(r => {
+        const thumb = (r.products as any)?.thumbnail_url
+        if (thumb) {
+          if (!fallbackByCat[r.category_id]) fallbackByCat[r.category_id] = new Set()
+          fallbackByCat[r.category_id].add(thumb)
+        }
+      })
 
     missingIds.forEach(pid => {
       if (!shelfProducts[pid] && fallbackByCat[pid]?.size) {

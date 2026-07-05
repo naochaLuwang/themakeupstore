@@ -82,7 +82,12 @@ export default async function EssentialsCategoryPage({
 
     const deduped = (products || []).filter(
         (p, i, arr) => arr.findIndex((x) => x.id === p.id) === i
-    )
+    ).map(p => ({
+        ...p,
+        outOfStock: (p as any).product_variants?.length > 0
+            ? (p as any).product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
+            : ((p as any).stock != null && Number((p as any).stock) <= 0),
+    })).sort((a, b) => (a.outOfStock === b.outOfStock ? 0 : a.outOfStock ? 1 : -1))
 
     return (
         <EssentialCategoryClient
