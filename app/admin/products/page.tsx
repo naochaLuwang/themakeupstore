@@ -34,6 +34,7 @@ export default async function ProductsPage({
             product_variants (id, stock)
         `)
         .order("created_at", { ascending: false })
+        .limit(500)
 
     if (query) {
         dbQuery = dbQuery.or(`name.ilike.%${query}%, brand.ilike.%${query}%`)

@@ -43,6 +43,12 @@ export default function WishlistPage() {
 
     React.useEffect(() => { fetchWishlist() }, [fetchWishlist])
 
+    React.useEffect(() => {
+        const handler = () => fetchWishlist()
+        window.addEventListener("wishlist-updated", handler)
+        return () => window.removeEventListener("wishlist-updated", handler)
+    }, [fetchWishlist])
+
     const handleRemove = async (wishlistId: string) => {
         setItems(prev => prev.filter(item => item.wishlist_id !== wishlistId))
         const { data: { user } } = await supabase.auth.getUser()
@@ -52,9 +58,7 @@ export default function WishlistPage() {
             .delete()
             .eq('id', wishlistId)
             .eq('user_id', user.id)
-        window.dispatchEvent(new CustomEvent("wishlist-sync", {
-            detail: { count: items.length - 1 }
-        }))
+        window.dispatchEvent(new CustomEvent("wishlist-updated"))
     }
 
     const isInCart = (productId: string) => cartItems.some(i => i.productId === productId)

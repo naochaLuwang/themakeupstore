@@ -36,6 +36,13 @@
 ### Blocked
 - (none)
 
+## Abandoned Cart Recovery
+- Two Edge Functions exist:
+  - `send-abandoned-cart` — on-demand, called by admin "Send Recovery Emails" button
+  - `scheduled-abandoned-cart` — runs every 2h via pg_cron, protected by `CRON_SECRET` env var
+- Migration `20260708_abandoned_cart_cron.sql` sets up pg_cron + pg_net schedule
+- `app.actions.cart.sendRecoveryEmails()` now checks `resp.ok` before marking carts as sent
+
 ## Key Decisions
 - Stock for all products (including non-variant) lives in `product_variants` via a default variant with `is_default: true` — never check `products.stock` column
 - Admin layout already provides `bg-slate-50/50` background and `max-w-7xl mx-auto` wrapper — individual pages should NOT add their own bg/wrapper, just use `space-y-6`

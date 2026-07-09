@@ -50,7 +50,7 @@ export default function ReturnRequestPage() {
             .eq("user_id", user.user.id)
             .single()
 
-        if (!order || order.status !== "delivered") {
+        if (!order || !["delivered", "picked_up"].includes(order.status)) {
             router.push(`/profile/orders/${orderId}`)
             return
         }
@@ -234,7 +234,7 @@ export default function ReturnRequestPage() {
                     <div className="mt-2 flex gap-3 flex-wrap">
                         {imagePreviews.map((url, i) => (
                             <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                                <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                <img src={url} alt="Return item photo" className="w-full h-full object-cover" loading="lazy" />
                                 <button
                                     type="button"
                                     onClick={() => removeImage(i)}

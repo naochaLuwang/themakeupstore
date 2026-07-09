@@ -49,7 +49,7 @@ export function OrderListener() {
 
                     // B. Audio Alert
                     const audio = new Audio('/order-alert.mp3');
-                    audio.play().catch(() => console.log("Sound blocked by browser"));
+                    audio.play().catch(() => {});
                 }
             )
             .subscribe()

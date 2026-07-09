@@ -7,12 +7,27 @@ import { createClient } from "@/utils/supabase/client"
 import { ArrowLeft, Package, Clock, Truck, CheckCircle2, RefreshCw, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useCart } from "@/components/store/use-cart"
+import { cancelOrderAndRestoreStock } from "@/app/actions/orders"
+
+const STEP_MAP: Record<string, number> = {
+  pending: 0, confirmed: 0,
+  processing: 1,
+  shipped: 2, out_for_delivery: 2, failed_delivery: 2,
+  delivered: 3, picked_up: 3,
+}
+
+const PICKUP_STEP_MAP: Record<string, number> = {
+  pending: 0, confirmed: 0,
+  processing: 1,
+  ready_for_pickup: 2, no_show: 2,
+  picked_up: 3,
+}
 
 const steps = [
-    { status: "pending", label: "Placed", icon: Clock },
-    { status: "processing", label: "Processing", icon: Package },
-    { status: "shipped", label: "In Transit", icon: Truck },
-    { status: "delivered", label: "Delivered", icon: CheckCircle2 },
+    { id: "placed", label: "Placed", icon: Clock },
+    { id: "processing", label: "Processing", icon: Package },
+    { id: "transit", label: "In Transit", icon: Truck },
+    { id: "delivered", label: "Delivered", icon: CheckCircle2 },
 ]
 
 export default function OrderDetailPage() {
@@ -31,6 +46,31 @@ export default function OrderDetailPage() {
 
     useEffect(() => {
         if (id) fetchOrder()
+    }, [id])
+
+    // Re-fetch when tab becomes visible again (e.g. after admin updates order)
+    useEffect(() => {
+        const onVisible = () => { if (document.visibilityState === 'visible' && id) fetchOrder() }
+        const onFocus = () => { if (id) fetchOrder() }
+        document.addEventListener('visibilitychange', onVisible)
+        window.addEventListener('focus', onFocus)
+        return () => {
+            document.removeEventListener('visibilitychange', onVisible)
+            window.removeEventListener('focus', onFocus)
+        }
+    }, [id])
+
+    // Realtime subscription for live status updates
+    useEffect(() => {
+        if (!id) return
+        const channel = supabase
+            .channel(`order-${id}`)
+            .on('postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${id}` },
+                () => fetchOrder()
+            )
+            .subscribe()
+        return () => { supabase.removeChannel(channel) }
     }, [id])
 
     useEffect(() => {
@@ -80,10 +120,10 @@ export default function OrderDetailPage() {
                     `)
                     .eq("order_id", id),
                 supabase
-                    .from("reward_points")
-                    .select("points, status, created_at")
-                    .eq("order_id", id)
-                    .eq("type", "earned")
+                    .from("loyalty_transactions")
+                    .select("amount as points, status, created_at")
+                    .eq("reference_id", id)
+                    .eq("type", "earn")
                     .maybeSingle(),
             ])
             if (returns) setReturnRequests(returns)
@@ -96,15 +136,12 @@ export default function OrderDetailPage() {
         if (!confirm("Are you sure you want to cancel this order?")) return
         setCancelling(true)
         try {
-            const { error } = await supabase
-                .from("orders")
-                .update({ status: "cancelled" })
-                .eq("id", id)
-            if (error) throw error
+            const result = await cancelOrderAndRestoreStock(id)
+            if (!result.success) throw new Error(result.message)
             setOrder((prev: any) => ({ ...prev, status: "cancelled" }))
             toast.success("Order cancelled")
-        } catch {
-            toast.error("Failed to cancel order")
+        } catch (e: any) {
+            toast.error(e.message || "Failed to cancel order")
         } finally {
             setCancelling(false)
         }
@@ -166,8 +203,8 @@ export default function OrderDetailPage() {
     }
 
     const getDeliveryLine = () => {
-        if (order.status === "shipped") return "Out for delivery"
-        if (order.status === "delivered") {
+        if (["shipped", "out_for_delivery"].includes(order.status)) return "Out for delivery"
+        if (["delivered", "picked_up"].includes(order.status)) {
             if (order.delivered_at) {
                 const d = new Date(order.delivered_at)
                 return `Delivered on ${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}`
@@ -221,12 +258,19 @@ export default function OrderDetailPage() {
         )
     }
 
-    const currentStep = steps.findIndex(s => s.status === order.status?.toLowerCase())
+    const isPickup = order.order_type === "pickup"
+    const currentStep = isPickup
+      ? PICKUP_STEP_MAP[order.status?.toLowerCase()] ?? -1
+      : STEP_MAP[order.status?.toLowerCase()] ?? -1
     const isCancelled = order.status === "cancelled"
+    const isActive = ["pending", "confirmed", "processing"].includes(order.status?.toLowerCase())
+    const isDelivered = ["delivered", "picked_up"].includes(order.status?.toLowerCase())
     const address = order.shipping_address as any
     const discount = Number(order.promo_discount_amount) || 0
+    const bxgyDiscount = Number(order.bxgy_discount_amount) || 0
+    const giftCardDiscount = Number(order.gift_card_discount) || 0
     const shipping = Number(order.shipping_price) || 0
-    const subtotal = (Number(order.total) + discount) - shipping
+    const subtotal = Number(order.total) + discount + bxgyDiscount + giftCardDiscount - shipping
 
     const statusColors: Record<string, string> = {
         pending: "#F59E0B",
@@ -272,7 +316,7 @@ export default function OrderDetailPage() {
                                 const current = idx === currentStep && !isCancelled
                                 const Icon = step.icon
                                 return (
-                                    <div key={step.status} className="flex flex-col items-center gap-1.5 z-10">
+                                    <div key={step.id} className="flex flex-col items-center gap-1.5 z-10">
                                         <div
                                             className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all ${
                                                 active
@@ -293,6 +337,32 @@ export default function OrderDetailPage() {
                             })}
                         </div>
                     </div>
+
+                    {/* Status Badge */}
+                    {!isCancelled && (() => {
+                        const badge: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+                            pending:          { label: "PENDING",          color: "text-amber-600", bg: "bg-amber-50", icon: Clock },
+                            confirmed:        { label: "CONFIRMED",        color: "text-blue-600", bg: "bg-blue-50", icon: CheckCircle2 },
+                            processing:       { label: "PROCESSING",       color: "text-indigo-600", bg: "bg-indigo-50", icon: Package },
+                            shipped:          { label: "SHIPPED",          color: "text-sky-600", bg: "bg-sky-50", icon: Truck },
+                            out_for_delivery: { label: "OUT FOR DELIVERY", color: "text-purple-600", bg: "bg-purple-50", icon: Truck },
+                            failed_delivery:  { label: "FAILED DELIVERY",  color: "text-red-500", bg: "bg-red-50", icon: XCircle },
+                            ready_for_pickup: { label: "READY FOR PICKUP", color: "text-teal-600", bg: "bg-teal-50", icon: Package },
+                            no_show:          { label: "NO SHOW",          color: "text-orange-600", bg: "bg-orange-50", icon: XCircle },
+                            delivered:        { label: "DELIVERED",        color: "text-emerald-600", bg: "bg-emerald-50", icon: CheckCircle2 },
+                            picked_up:        { label: "PICKED UP",        color: "text-green-600", bg: "bg-green-50", icon: CheckCircle2 },
+                        }
+                        const cfg = badge[order.status?.toLowerCase()] || badge.pending
+                        const Icon = cfg.icon
+                        return (
+                            <div className="flex justify-center mb-4">
+                                <div className={`flex items-center gap-1.5 ${cfg.bg} px-3 py-1 rounded-full`}>
+                                    <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
+                                    <span className={`text-[10px] font-extrabold tracking-wider ${cfg.color}`}>{cfg.label}</span>
+                                </div>
+                            </div>
+                        )
+                    })()}
 
                     {/* Order Info */}
                     <div className="text-center mb-1">
@@ -319,7 +389,7 @@ export default function OrderDetailPage() {
                                         {item.products?.thumbnail_url ? (
                                             <img
                                                 src={item.products.thumbnail_url}
-                                                alt=""
+                                                alt={item.product_name || "Order item"}
                                                 className="w-11 h-11 rounded object-cover bg-gray-50"
                                             />
                                         ) : (
@@ -344,7 +414,7 @@ export default function OrderDetailPage() {
                                             <p className="text-[13px] font-semibold text-gray-900">₹{Math.round(item.unit_price * item.quantity)}</p>
                                         </div>
                                     </div>
-                                    {order.status === "delivered" && !hasReturn && (
+                                    {isDelivered && !hasReturn && (
                                         <Link
                                             href={`/profile/orders/${order.id}/return?item=${item.id}`}
                                             className="w-full flex items-center justify-center gap-1.5 py-2 my-1 rounded-lg border border-gray-200 text-[#FC2779] text-xs font-bold"
@@ -353,7 +423,7 @@ export default function OrderDetailPage() {
                                             Request Return
                                         </Link>
                                     )}
-                                    {order.status === "delivered" && returnReq && (
+                                    {isDelivered && returnReq && (
                                         <div className="flex items-center gap-1.5 py-1.5 mb-1">
                                             <div
                                                 className="w-2 h-2 rounded-full"
@@ -391,6 +461,12 @@ export default function OrderDetailPage() {
                                 <span className="text-[13px] font-medium text-green-600">-₹{discount}</span>
                             </div>
                         )}
+                        {giftCardDiscount > 0 && (
+                            <div className="flex justify-between mb-1.5">
+                                <span className="text-[13px] text-blue-600">Gift Card</span>
+                                <span className="text-[13px] font-medium text-blue-600">-₹{giftCardDiscount}</span>
+                            </div>
+                        )}
                         <p className="text-[10px] tracking-wider text-gray-300 my-2 text-center">- - - - - - - - - - - - - - - -</p>
                         <div className="flex justify-between items-center mt-1 mb-2">
                             <span className="text-[17px] font-extrabold text-gray-900">TOTAL</span>
@@ -402,7 +478,7 @@ export default function OrderDetailPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                                 </svg>
                                 <span className="text-[11px] font-bold text-gray-500">
-                                    +{rewardPoints.points} points {rewardPoints.status === "available" ? "earned" : "pending (available after delivery)"}
+                                    +{rewardPoints.points} M Coins {rewardPoints.status === "available" ? "earned" : "pending (available on delivery)"}
                                 </span>
                             </div>
                         )}
@@ -448,7 +524,7 @@ export default function OrderDetailPage() {
                 </div>
 
                 {/* Cancel Order */}
-                {order.status === "pending" && (
+                {isActive && (
                     <button
                         onClick={handleCancelOrder}
                         disabled={cancelling}
@@ -469,7 +545,7 @@ export default function OrderDetailPage() {
                 )}
 
                 {/* Reorder */}
-                {order.status === "delivered" && (
+                {isDelivered && (
                     <button
                         onClick={handleReorder}
                         disabled={reordering}

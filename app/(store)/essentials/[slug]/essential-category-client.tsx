@@ -194,7 +194,7 @@ export default function EssentialCategoryClient({ category, siblings, products: 
                                     >
                                         <div className="w-full h-full rounded-full border-2 border-white bg-slate-100 overflow-hidden flex items-center justify-center">
                                             {sib.image_url ? (
-                                                <img src={sib.image_url} className="w-full h-full object-cover" alt="" loading="lazy" />
+                                                <img src={sib.image_url} className="w-full h-full object-cover" alt={sib.name || "Category"} loading="lazy" />
                                             ) : (
                                                 <span className="text-[9px] font-black text-slate-400 uppercase">
                                                     {sib.name?.[0] || "?"}
@@ -277,8 +277,8 @@ export default function EssentialCategoryClient({ category, siblings, products: 
                     </div>
                 ) : products.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-white overflow-hidden">
-                        {products.map((p) => (
-                            <ProductCard key={p.id} product={p} />
+                        {products.map((p, idx) => (
+                            <ProductCard key={p.id} product={p} priority={idx < 4} />
                         ))}
                     </div>
                 ) : (

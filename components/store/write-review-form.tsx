@@ -30,7 +30,7 @@ export function WriteReviewForm({ productId, user }: { productId: string, user: 
             rating: rating,
             title: formData.get("title"),
             comment: formData.get("comment"),
-            is_verified: true // Assuming logic checks they bought it
+            is_verified: false // Server should set this based on purchase verification
         })
 
         if (error) {

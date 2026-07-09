@@ -219,7 +219,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                 image_url: first.image_url || null,
                 stock: first.stock,
                 hex_code: first.hex_code,
-                images: variantImages.length > 0 ? variantImages : first.image_url ? [first.image_url] : [],
+                images: variantImages.length > 0 ? variantImages : (first.image_url ? [first.image_url] : []),
             })
         }
     }, [product?.product_variants])
@@ -326,15 +326,18 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
     const toggleWishlist = async () => {
         if (wishlistLoading) return
         if (!user) { router.push("/login"); return }
+        const prev = isWishlisted
+        setIsWishlisted(!prev)
         setWishlistLoading(true)
         try {
-            if (isWishlisted) {
+            if (prev) {
                 await supabase.from("wishlist").delete().eq("user_id", user.id).eq("product_id", product.id)
-                setIsWishlisted(false)
             } else {
                 await supabase.from("wishlist").insert({ user_id: user.id, product_id: product.id })
-                setIsWishlisted(true)
             }
+            window.dispatchEvent(new CustomEvent("wishlist-updated"))
+        } catch {
+            setIsWishlisted(prev)
         } finally { setWishlistLoading(false) }
     }
 
@@ -565,7 +568,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                                             id: v.id, title: v.title, price: v.price,
                                             calculated_price: vp.salePrice, image_url: v.image_url || null,
                                             stock: v.stock, hex_code: v.hex_code,
-                                            images: variantImages.length > 0 ? variantImages : v.image_url ? [v.image_url] : [],
+                                            images: variantImages.length > 0 ? variantImages : (v.image_url ? [v.image_url] : []),
                                         })
                                     }}
                                     className="flex flex-col items-center gap-1 shrink-0"
@@ -881,7 +884,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                                                 activeImage === i ? "border-[#fc2779]" : "border-gray-200"
                                             }`}
                                         >
-                                            <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                            <img src={img} alt="Review photo" className="w-full h-full object-cover" loading="lazy" />
                                         </button>
                                     ))}
                                 </div>
@@ -954,7 +957,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                                                             id: v.id, title: v.title, price: v.price,
                                                             calculated_price: vp.salePrice, image_url: v.image_url || null,
                                                             stock: v.stock, hex_code: v.hex_code,
-                                                            images: variantImages.length > 0 ? variantImages : v.image_url ? [v.image_url] : [],
+                                                            images: variantImages.length > 0 ? variantImages : (v.image_url ? [v.image_url] : []),
                                                         })
                                                     }}
                                                     className="flex flex-col items-center gap-1 shrink-0"
@@ -1251,7 +1254,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                                                 id: v.id, title: v.title, price: v.price,
                                                 calculated_price: vp.salePrice, image_url: v.image_url || null,
                                                 stock: v.stock, hex_code: v.hex_code,
-                                                images: variantImages.length > 0 ? variantImages : v.image_url ? [v.image_url] : [],
+                                                images: variantImages.length > 0 ? variantImages : (v.image_url ? [v.image_url] : []),
                                             })
                                             setVariantModalVisible(false)
                                         }}

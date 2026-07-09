@@ -337,7 +337,7 @@ export default function SkincareRoutineFinder({ open, onClose }: Props) {
                                     {step === "quiz" ? "Build Your Routine" : "Your Routine"}
                                 </h3>
                             </div>
-                            <button onClick={onClose} className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center hover:bg-stone-200">
+                            <button onClick={onClose} aria-label="Close" className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center hover:bg-stone-200">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>

@@ -52,6 +52,7 @@ export function Footer() {
                         <h4 className="font-black uppercase text-[10px] tracking-[0.2em] mb-6 text-slate-300">Shop & Info</h4>
                         <ul className="space-y-4 text-xs font-bold uppercase tracking-widest text-slate-600">
                             <li><Link href="/shop" className="hover:text-[#fc2779] transition-colors">All Products</Link></li>
+                            <li><Link href="/rewards" className="hover:text-[#fc2779] transition-colors">Rewards</Link></li>
                             <li><Link href="/contact" className="hover:text-[#fc2779] transition-colors">Contact Us</Link></li>
                         </ul>
                     </div>
@@ -104,6 +105,7 @@ export function Footer() {
                     {/* Tablet Friendly Link Grid - Wider spacing for large tablets */}
                     <div className=" hidden md:flex flex-wrap justify-center gap-x-10 gap-y-6 px-4 text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
                         <Link href="/shop" className="hover:text-zinc-900">Shop All</Link>
+                        <Link href="/rewards" className="hover:text-zinc-900">Rewards</Link>
                         <Link href="/legal/privacy_policy" className="hover:text-zinc-900">Privacy</Link>
                         <Link href="/legal/terms_and_conditions" className="hover:text-zinc-900">Terms</Link>
                         <Link href="/contact" className="hover:text-zinc-900">Contact Us</Link>

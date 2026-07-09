@@ -123,7 +123,7 @@ export default function CategoriesPage() {
                                                 {bgImage && (
                                                     <img
                                                         src={bgImage}
-                                                        alt=""
+                                                        alt={parent.name || "Category"}
                                                         className="absolute inset-0 w-full h-full object-cover"
                                                         style={{
                                                             backgroundColor: tint.bg,

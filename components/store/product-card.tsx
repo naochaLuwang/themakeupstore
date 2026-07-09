@@ -68,7 +68,7 @@ function getCheapestVariantPrice(product: any) {
     return { salePrice: sale, mrp: mrpVal, discountPercentage, discountAmount, hasDiscount: discountAmount > 0 }
 }
 
-export function ProductCard({ product }: { product: any }) {
+export function ProductCard({ product, priority }: { product: any; priority?: boolean }) {
     const [isWishlisted, setIsWishlisted] = useState(false)
     const [isPending, setIsPending] = useState(false)
     const [showVariantSelector, setShowVariantSelector] = useState(false)
@@ -161,16 +161,19 @@ export function ProductCard({ product }: { product: any }) {
         e.stopPropagation()
         if (isPending) return
         setIsPending(true)
+        const prev = isWishlisted
+        setIsWishlisted(!prev)
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return router.push("/login")
+        if (!user) { setIsWishlisted(prev); setIsPending(false); return router.push("/login") }
         try {
-            if (isWishlisted) {
+            if (prev) {
                 await supabase.from("wishlist").delete().eq("user_id", user.id).eq("product_id", product.id)
-                setIsWishlisted(false)
             } else {
                 await supabase.from("wishlist").insert({ user_id: user.id, product_id: product.id })
-                setIsWishlisted(true)
             }
+            window.dispatchEvent(new CustomEvent("wishlist-updated"))
+        } catch {
+            setIsWishlisted(prev)
         } finally {
             setIsPending(false)
         }
@@ -186,6 +189,8 @@ export function ProductCard({ product }: { product: any }) {
                         src={product.thumbnail_url}
                         alt={product.name}
                         fill
+                        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        priority={priority}
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                 ) : (

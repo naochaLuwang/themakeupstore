@@ -22,6 +22,8 @@ export default function CartPage() {
     const recentlyViewed = useRecentlyViewed((s) => s.items)
     const clearRecentlyViewed = useRecentlyViewed((s) => s.clear)
 
+    useEffect(() => { document.title = "Shopping Cart | THE MAKEUP STORE WANGKHEI" }, [])
+
     const syncCartPrices = useCallback(async () => {
         if (!items || items.length === 0 || isSyncing) return
         try {
@@ -106,7 +108,7 @@ export default function CartPage() {
             const productIds = [...new Set(items.map((i: any) => i.productId))]
             supabase
                 .from("products")
-                .select("*, product_variants(*)")
+                .select("*, product_variants(id, price, stock)")
                 .in("id", productIds)
                 .limit(1)
                 .then(({ data }) => {
@@ -115,7 +117,7 @@ export default function CartPage() {
                         if (brand) {
                             supabase
                                 .from("products")
-                                .select("*, product_variants(*)")
+                                .select("*, product_variants(id, price, stock)")
                                 .eq("brand", brand)
                                 .not("id", "in", `(${productIds.join(",")})`)
                                 .limit(6)

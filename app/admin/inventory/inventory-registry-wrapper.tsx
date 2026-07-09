@@ -248,7 +248,7 @@ export default function InventoryRegistryWrapper({
                                         <td className="py-2.5 px-4" colSpan={2}>
                                             <div className="flex items-center gap-2.5">
                                                 {product.thumbnail_url ? (
-                                                    <img src={product.thumbnail_url} alt="" className="w-7 h-7 rounded-lg object-cover bg-slate-100 shrink-0" />
+                                                    <img src={product.thumbnail_url} alt={product.name || "Product"} className="w-7 h-7 rounded-lg object-cover bg-slate-100 shrink-0" />
                                                 ) : (
                                                     <div className="w-7 h-7 rounded-lg bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
                                                         <Package className="w-3.5 h-3.5 text-slate-300" />

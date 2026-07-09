@@ -9,14 +9,12 @@ import {
     ClipboardList,
     Mail,
     Star,
-    Radio,      // New for Broadcast
-    BarChart3,  // New for Reports
-    DollarSign, // For Revenue Report
-    TrendingUp, // For Sales Report
+    Radio,
+    BarChart3,
+    DollarSign,
+    TrendingUp,
     RotateCcw,
-    BookOpen,
     ShoppingCart,
-    Activity,
     Tag,
     Receipt,
     Archive,
@@ -27,53 +25,82 @@ import {
     Sparkles,
     Gift,
     Zap,
+    Award,
+    MessageSquare,
 } from "lucide-react"
 
+export interface SidebarGroup {
+    label: string
+    items: { title: string; href: string; icon: any }[]
+}
+
 export const adminConfig = {
-    sidebarNav: [
-        { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
-        { title: "Products", href: "/admin/products", icon: ShoppingBag },
-        { title: "Categories", href: "/admin/categories", icon: FolderTree },
-        { title: "Orders", href: "/admin/orders", icon: ClipboardList },
-        { title: "Inventory", href: "/admin/inventory", icon: PackageSearch },
-        { title: "Customers", href: "/admin/customers", icon: Users },
-        { title: "Shipping", href: "/admin/shipping", icon: Truck },
-        { title: "Pricing", href: "/admin/pricing", icon: PackageSearch },
-
-        // --- Added Broadcast Section ---
-        { title: "Broadcast", href: "/admin/broadcast", icon: Radio },
-        { title: "Hero Banners", href: "/admin/hero-banners", icon: Image },
-        { title: "Showcase", href: "/admin/showcase", icon: Sparkles },
-
-        { title: "Messages", href: "/admin/messages", icon: Mail },
-        { title: "Reviews", href: "/admin/reviews", icon: Star },
-        { title: "Return Requests", href: "/admin/return-requests", icon: RotateCcw },
-        { title: "Concerns", href: "/admin/concerns", icon: AlertTriangle },
-        { title: "Back in Stock Request", href: "/admin/inventory/demand", icon: TrendingUp },
-
-        // --- Additional Admin Links ---
-        { title: "Live Carts", href: "/admin/live-carts", icon: ShoppingCart },
-        { title: "Promos", href: "/admin/promos", icon: Tag },
-        { title: "Free Gifts", href: "/admin/free-gifts", icon: Gift },
-        { title: "Buy X Get Y", href: "/admin/bxgy", icon: Zap },
-        { title: "Purchase", href: "/admin/purchase", icon: Receipt },
-        { title: "Purchase History", href: "/admin/purchase/list", icon: History },
-        { title: "Stock", href: "/admin/stock", icon: Archive },
-        { title: "Visitor History", href: "/admin/visitor-history", icon: History },
-        { title: "Wholesale", href: "/admin/wholesale", icon: Store },
-
-        // --- Added Reports Section ---
+    sidebarGroups: [
         {
-            title: "Revenue Report",
-            href: "/admin/reports/revenue",
-            icon: DollarSign
+            label: "Dashboard",
+            items: [
+                { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+            ],
         },
         {
-            title: "Sales Report",
-            href: "/admin/reports/sales",
-            icon: BarChart3
+            label: "Orders",
+            items: [
+                { title: "Orders", href: "/admin/orders", icon: ClipboardList },
+                { title: "Return Requests", href: "/admin/return-requests", icon: RotateCcw },
+                { title: "Concerns", href: "/admin/concerns", icon: AlertTriangle },
+                { title: "Live Carts", href: "/admin/live-carts", icon: ShoppingCart },
+                { title: "Abandoned Carts", href: "/admin/abandoned-carts", icon: ShoppingCart },
+            ],
         },
-
-        { title: "Legal Settings", href: "/admin/settings/legal", icon: Settings },
-    ],
+        {
+            label: "Products",
+            items: [
+                { title: "Products", href: "/admin/products", icon: ShoppingBag },
+                { title: "Categories", href: "/admin/categories", icon: FolderTree },
+                { title: "Stock", href: "/admin/stock", icon: Archive },
+                { title: "Inventory", href: "/admin/inventory", icon: PackageSearch },
+                { title: "Pricing", href: "/admin/pricing", icon: TrendingUp },
+            ],
+        },
+        {
+            label: "Promotions",
+            items: [
+                { title: "Promos", href: "/admin/promos", icon: Tag },
+                { title: "Free Gifts", href: "/admin/free-gifts", icon: Gift },
+                { title: "Buy X Get Y", href: "/admin/bxgy", icon: Zap },
+                { title: "Gift Cards", href: "/admin/gift-cards", icon: Gift },
+                { title: "Rewards", href: "/admin/rewards", icon: Award },
+                { title: "Hero Banners", href: "/admin/hero-banners", icon: Image },
+                { title: "Showcase", href: "/admin/showcase", icon: Sparkles },
+                { title: "Broadcast", href: "/admin/broadcast", icon: Radio },
+            ],
+        },
+        {
+            label: "Customer Service",
+            items: [
+                { title: "Messages", href: "/admin/messages", icon: Mail },
+                { title: "Reviews", href: "/admin/reviews", icon: Star },
+                { title: "Back in Stock", href: "/admin/inventory/demand", icon: TrendingUp },
+            ],
+        },
+        {
+            label: "Reports",
+            items: [
+                { title: "Revenue Report", href: "/admin/reports/revenue", icon: DollarSign },
+                { title: "Sales Report", href: "/admin/reports/sales", icon: BarChart3 },
+            ],
+        },
+        {
+            label: "Admin",
+            items: [
+                { title: "Customers", href: "/admin/customers", icon: Users },
+                { title: "Shipping", href: "/admin/shipping", icon: Truck },
+                { title: "Purchase", href: "/admin/purchase", icon: Receipt },
+                { title: "Purchase History", href: "/admin/purchase/list", icon: History },
+                { title: "Visitor History", href: "/admin/visitor-history", icon: History },
+                { title: "Wholesale", href: "/admin/wholesale", icon: Store },
+                { title: "Legal Settings", href: "/admin/settings/legal", icon: Settings },
+            ],
+        },
+    ] as SidebarGroup[],
 }

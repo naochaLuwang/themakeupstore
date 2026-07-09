@@ -320,7 +320,7 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                     </thead>
                                     <tbody className="divide-y">
                                         {selectedItems.map((item, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                            <tr key={item.variant_id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-6 py-4">
                                                     <p className="text-sm font-semibold">{item.name}</p>
                                                 </td>
@@ -417,7 +417,7 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                 <Building className="w-5 h-5 text-indigo-600" />
                                 <h2 className="font-bold">Add New Vendor</h2>
                             </div>
-                            <button onClick={() => setIsVendorModalOpen(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600 transition-colors" /></button>
+                            <button onClick={() => setIsVendorModalOpen(false)} aria-label="Close modal"><X className="w-5 h-5 text-slate-400 hover:text-slate-600 transition-colors" /></button>
                         </div>
                         <form onSubmit={handleCreateVendor} className="p-6 space-y-4">
                             <div className="space-y-1.5">

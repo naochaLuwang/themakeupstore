@@ -1,25 +1,37 @@
+import type { Metadata } from "next"
 import { createClient } from "@/utils/supabase/server"
 import { notFound } from "next/navigation"
 import ProductClient from "./product-client"
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+    const { id } = await params
+    return { title: `Product ${id.slice(0, 8)}`, description: "View product details" }
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const supabase = await createClient()
 
-    const { data, error } = await supabase
-        .from("products")
-        .select(`
-            *,
-            product_categories(category_id, category:category_id(slug, name)),
-            product_images(*),
-            product_variants(*, variant_images(*)),
-            product_reviews(id, rating, title, comment, created_at, user_name, is_approved)
-        `)
-        .eq("id", id)
-        .eq("product_reviews.is_approved", true)
-        .order("created_at", { foreignTable: "product_reviews", ascending: false })
-        .single()
-
+    let data: any, error: any
+    try {
+        const res = await supabase
+            .from("products")
+            .select(`
+                *,
+                product_categories(category_id, category:category_id(slug, name)),
+                product_images(*),
+                product_variants(*, variant_images(*)),
+                product_reviews(id, rating, title, comment, created_at, user_name, is_approved)
+            `)
+            .eq("id", id)
+            .eq("product_reviews.is_approved", true)
+            .order("created_at", { foreignTable: "product_reviews", ascending: false })
+            .single()
+        data = res.data
+        error = res.error
+    } catch {
+        notFound()
+    }
     if (error || !data) notFound()
 
     let allImages: string[] = []

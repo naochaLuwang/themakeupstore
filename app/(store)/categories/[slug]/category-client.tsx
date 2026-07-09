@@ -317,7 +317,7 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3, delay: idx * 0.02 }}
                             >
-                                <ProductCard product={product} />
+                                <ProductCard product={product} priority={idx < 4} />
                             </motion.div>
                         ))}
                     </div>

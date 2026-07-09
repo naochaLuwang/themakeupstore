@@ -10,7 +10,7 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
 
     const { data: category } = await supabase
         .from("categories")
-        .select("*")
+        .select("id, name, slug, image_url, parent_id")
         .eq("id", id)
         .single()
 

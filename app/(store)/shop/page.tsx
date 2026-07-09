@@ -18,14 +18,14 @@ export default async function ShopPage({
     // Initial Data Fetch
     let supabaseQuery = supabase
         .from('products')
-        .select(`*, product_variants(*)`)
+        .select(`*, product_variants(id, price, stock)`)
         .eq('status', 'active')
 
     if (query) {
         supabaseQuery = supabaseQuery.textSearch("search_vector", query, { type: "websearch", config: "english" })
     }
 
-    const { data: products } = await supabaseQuery.order('created_at', { ascending: false })
+    const { data: products } = await supabaseQuery.order('created_at', { ascending: false }).limit(100)
 
     return <ShopClient initialProducts={products || []} searchQuery={query} />
 }

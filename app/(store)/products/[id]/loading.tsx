@@ -1,5 +1,3 @@
-"use client"
-
 export default function ProductLoading() {
     return (
         <div className="min-h-screen bg-white animate-pulse">

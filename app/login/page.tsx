@@ -23,7 +23,7 @@ export default function AuthPage() {
     const supabase = createClient()
     const router = useRouter()
 
-    useEffect(() => { setMounted(true) }, [])
+    useEffect(() => { setMounted(true); document.title = "Sign In | THE MAKEUP STORE WANGKHEI" }, [])
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

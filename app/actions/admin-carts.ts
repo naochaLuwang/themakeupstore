@@ -2,6 +2,72 @@
 import { createClient } from "@/utils/supabase/server"
 import { requireAdmin } from "@/lib/admin"
 
+export async function sendLiveCartEmail(cartId: string) {
+  await requireAdmin()
+
+  const EDGE_FUNCTION_URL =
+    (process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") || "") +
+    "/functions/v1/send-abandoned-cart"
+  const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  const supabase = await createClient()
+
+  const { data: cart } = await supabase
+    .from("carts")
+    .select(`
+      id,
+      user_id,
+      profiles!inner(id, full_name),
+      cart_items(
+        products!inner(name)
+      )
+    `)
+    .eq("id", cartId)
+    .single()
+
+  if (!cart) return { success: false, error: "Cart not found" }
+
+  const profile = (cart as any).profiles as any
+  const userName = profile?.full_name || "there"
+
+  // Fetch email from auth.users
+  let email: string | null = null
+  if (cart.user_id) {
+    const { data: authUser } = await supabase
+      .from("auth.users")
+      .select("email")
+      .eq("id", cart.user_id)
+      .single()
+    email = authUser?.email || null
+  }
+  const items = (cart as any).cart_items || []
+  const itemNames = items.map((i: any) => i.products?.name).filter(Boolean).join(", ")
+
+  if (!email) return { success: false, error: "No email on profile" }
+
+  try {
+    const resp = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${ANON_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        userName,
+        itemCount: items.length,
+        itemNames,
+        cartUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://themakeupstorewangkhei.com"}/cart`,
+      }),
+    })
+    const body = await resp.text()
+    if (!resp.ok) return { success: false, error: `${resp.status}: ${body.slice(0, 200)}` }
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Unknown error" }
+  }
+}
+
 export async function getLiveCarts() {
     await requireAdmin()
     const supabase = await createClient()
@@ -13,7 +79,7 @@ export async function getLiveCarts() {
             updated_at,
             profiles ( 
                 full_name, 
-                phone 
+                phone
             ),
             cart_items (
                 quantity,

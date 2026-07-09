@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
-import { getLiveCarts } from "@/app/actions/admin-carts"
+import { getLiveCarts, sendLiveCartEmail } from "@/app/actions/admin-carts"
 import {
     ShoppingCart, RefreshCw, User, Package, Clock,
     ChevronDown, ChevronUp, Search, IndianRupee,
@@ -219,7 +219,16 @@ export default function LiveCartsPage() {
                                             <div className="flex flex-col justify-end gap-2">
                                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Actions</p>
                                                 <button
-                                                    onClick={() => toast.success("Email notification queued")}
+                                                    onClick={async () => {
+                                                        toast.loading("Sending...")
+                                                        const res = await sendLiveCartEmail(cart.id)
+                                                        toast.dismiss()
+                                                        if (res.success) {
+                                                            toast.success("Email sent!")
+                                                        } else {
+                                                            toast.error(`Failed: ${res.error}`)
+                                                        }
+                                                    }}
                                                     className="h-10 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2"
                                                 >
                                                     <Mail className="w-3.5 h-3.5" /> Send Email

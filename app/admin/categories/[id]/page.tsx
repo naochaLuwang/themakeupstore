@@ -37,7 +37,7 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
     if (linkedIds.length > 0) {
         availableProductsQuery = availableProductsQuery.not("id", "in", `(${linkedIds.join(',')})`)
     }
-    const { data: allProducts } = await availableProductsQuery.order("name")
+    const { data: allProducts } = await availableProductsQuery.order("name").limit(500)
 
     /** SERVER ACTIONS **/
     async function linkProduct(formData: FormData) {

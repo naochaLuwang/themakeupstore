@@ -102,13 +102,16 @@ export async function validatePromoCode(code: string, cartItems: any[]) {
         if (promo.once_per_user && user) {
             const { data: previousRedemption } = await supabase
                 .from('promo_redemptions')
-                .select('id')
+                .select('id, order_id')
                 .eq('promo_id', promo.id)
                 .eq('user_id', user.id)
-                .single()
+                .maybeSingle()
 
             if (previousRedemption) {
-                return { success: false, message: "This coupon can only be used once per customer" }
+                // Also verify this was an actual promo code redemption (has order_id)
+                if (previousRedemption.order_id) {
+                    return { success: false, message: "This coupon can only be used once per customer" }
+                }
             }
         }
 
@@ -230,8 +233,8 @@ export async function getActivePromos() {
             promo_code_categories(category_id)
         `)
         .eq('is_active', true)
-        // .or(`expires_at.gt.${now},expires_at.is.null`)
-        // .lte('starts_at', now)
+        .or(`expires_at.gt.${now},expires_at.is.null`)
+        .lte('starts_at', now)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -271,7 +274,7 @@ export async function updatePromoCode(id: string, formData: FormData) {
         max_discount_amount: formData.get('max_discount_amount') ? parseFloat(formData.get('max_discount_amount') as string) : null,
         usage_limit: formData.get('usage_limit') ? parseInt(formData.get('usage_limit') as string) : null,
         expires_at: formData.get('expires_at') ? new Date(formData.get('expires_at') as string).toISOString() : null,
-        starts_at: formData.get('starts_at') ? new Date(formData.get('starts_at') as string).toISOString() : null,
+        starts_at: formData.get('starts_at') ? new Date(formData.get('starts_at') as string).toISOString() : new Date().toISOString(),
         once_per_user: formData.get('once_per_user') === 'on'
     }
 
@@ -329,8 +332,8 @@ export async function getPromosForProduct(productId: string, categoryIds: string
             promo_code_categories(category_id)
         `)
         .eq('is_active', true)
-        // .or(`expires_at.gt.${now},expires_at.is.null`)
-        // .lte('starts_at', now)
+        .or(`expires_at.gt.${now},expires_at.is.null`)
+        .lte('starts_at', now)
 
     if (error || !promos) return []
 

@@ -5,7 +5,7 @@ import Link from "next/link"
 
 export default async function AdminPromosPage() {
     const supabase = await createClient()
-    const { data: promos } = await supabase.from('promo_codes').select('*').order('created_at', { ascending: false })
+    const { data: promos } = await supabase.from('promo_codes').select('id, code, apply_to, discount_type, discount_value, min_order_amount, used_count, usage_limit, starts_at, expires_at, is_active').order('created_at', { ascending: false }).limit(500)
 
     return (
         <div className="space-y-6">

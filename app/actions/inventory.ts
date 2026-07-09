@@ -8,14 +8,21 @@ export async function updateStock(
     id: string,
     stock: number
 ) {
-    await requireAdmin()
-    const supabase = await createClient()
-    const { error } = await supabase
-        .from("product_variants")
-        .update({ stock })
-        .eq("id", id)
+    try {
+        await requireAdmin()
+        const supabase = await createClient()
+        const stockVal = Number(stock)
+        if (isNaN(stockVal) || stockVal < 0 || !Number.isInteger(stockVal)) throw new Error("Invalid stock value")
+        const { error } = await supabase
+            .from("product_variants")
+            .update({ stock })
+            .eq("id", id)
 
-    if (error) throw new Error(error.message)
+        if (error) throw new Error(error.message)
 
-    revalidatePath("/admin/inventory")
+        revalidatePath("/admin/inventory")
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, message: error.message }
+    }
 }

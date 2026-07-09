@@ -124,7 +124,7 @@ export default function OrderFormClient({ initialVariants, userId }: { initialVa
                                     <tr key={v.id} className="hover:bg-blue-50/10 transition-colors">
                                         <td className="p-6">
                                             <div className="flex items-center gap-4">
-                                                <img src={v.products.thumbnail_url} className="w-14 h-14 rounded-xl object-cover border" alt="" loading="lazy" />
+                                                <img src={v.products.thumbnail_url} className="w-14 h-14 rounded-xl object-cover border" alt={v.products.name || "Product"} loading="lazy" />
                                                 <div>
                                                     <div className="font-bold text-slate-900">{v.products.name}</div>
                                                     <div className="text-xs text-slate-500">{v.title} <span className="mx-1">•</span> <span className="font-mono">{v.sku}</span></div>

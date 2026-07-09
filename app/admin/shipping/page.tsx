@@ -161,8 +161,8 @@ function ZoneCard({ zone, refresh }: { zone: any, refresh: () => void }) {
                     <div className="flex items-center justify-between mb-6">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Location</span>
                         <div className="flex items-center gap-1">
-                            <button type="button" onClick={() => setIsEditing(!isEditing)} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500"><Pencil className="w-4 h-4" /></button>
-                            <button type="button" onClick={handleDeleteZone} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                            <button type="button" onClick={() => setIsEditing(!isEditing)} aria-label="Edit zone" className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500"><Pencil className="w-4 h-4" /></button>
+                            <button type="button" onClick={handleDeleteZone} aria-label="Delete zone" className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                         </div>
                     </div>
 
@@ -260,8 +260,8 @@ function MethodRow({ method, refresh }: { method: any, refresh: () => void }) {
                         </div>
                     </div>
                     <div className="flex gap-2 mt-4 md:mt-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button type="button" onClick={() => setIsEditing(true)} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:border-slate-400 shadow-sm"><Pencil className="w-4 h-4" /></button>
-                        <button type="button" onClick={async () => { if (confirm("Delete rate?")) { await supabase.from('shipping_methods').delete().eq('id', method.id); refresh(); } }} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-red-500 hover:border-red-200 shadow-sm"><Trash2 className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => setIsEditing(true)} aria-label="Edit method" className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:border-slate-400 shadow-sm"><Pencil className="w-4 h-4" /></button>
+                        <button type="button" onClick={async () => { if (confirm("Delete rate?")) { await supabase.from('shipping_methods').delete().eq('id', method.id); refresh(); } }} aria-label="Delete method" className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-red-500 hover:border-red-200 shadow-sm"><Trash2 className="w-4 h-4" /></button>
                     </div>
                 </>
             )}

@@ -2,12 +2,14 @@ import { createClient } from "@/utils/supabase/server"
 import { CustomerTable } from "@/components/admin/customers/customer-table"
 import { CustomerFilters } from "@/components/admin/customers/customer-filters"
 import { Users, UserCheck } from "lucide-react"
+import { requireAdmin } from "@/lib/admin"
 
 export default async function CustomersPage({
     searchParams
 }: {
     searchParams: Promise<{ q?: string; page?: string; from?: string; to?: string }>
 }) {
+    await requireAdmin()
     const { q, from, to } = await searchParams
     const supabase = await createClient()
 

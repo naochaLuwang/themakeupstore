@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { DateRangePicker } from "@/components/admin/date-range-picker"
 import { RecentOrdersTable } from "@/components/admin/recent-orders-table"
 import { Suspense } from "react"
+import dynamic from "next/dynamic"
 import {
     Loader2, TrendingUp, AlertCircle, CheckCircle2,
     PackagePlus, Send, Tag, MessageSquare, UserPlus, BarChart3,
@@ -11,9 +12,12 @@ import {
     Eye, CreditCard, RefreshCw, Target, Percent, Flame, CalendarDays,
     Phone, Mail, User, Wallet, Banknote, BadgePercent
 } from "lucide-react"
-import { RevenueChart } from "@/components/admin/revenue-chart"
 import { format, startOfDay, endOfDay, subDays, parseISO, differenceInDays, getDay } from "date-fns"
 import Link from "next/link"
+
+const RevenueChart = dynamic(() => import("@/components/admin/revenue-chart").then(m => ({ default: m.RevenueChart })), {
+    loading: () => <div className="rounded-2xl border bg-white p-6 shadow-sm h-80 flex items-center justify-center"><Loader2 className="w-6 h-6 text-slate-300 animate-spin" /></div>,
+})
 import { Badge } from "@/components/ui/badge"
 
 // ─── Stat Card (compact) ───
@@ -117,27 +121,40 @@ export default async function AdminDashboard({ searchParams }: {
         toIso(startOfDay(now)), toIso(endOfDay(now)),
     ]
 
-    const [
-        ordersRes, priorRes, todayRes, msgsRes, wlRes, invRes, refundRes,
-        trafficRes, catRes, newCustRes
-    ] = await Promise.all([
-        supabase.from("orders").select(`id,total,status,payment_status,payment_method,promo_code,created_at,user_id,
-            order_items(quantity,product_name,product_id,unit_price),profiles!orders_user_id_fkey(full_name)`)
-            .gte("created_at", startDate).lte("created_at", endDate).order("created_at", { ascending: false }),
-        supabase.from("orders").select("id,total,status,payment_status,created_at")
-            .gte("created_at", pStart).lte("created_at", pEnd),
-        supabase.from("orders").select("id,total,status,created_at", { count: "exact" })
-            .gte("created_at", todayStart).lte("created_at", todayEnd),
-        supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "unread"),
-        supabase.from("wholesale_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("product_variants").select("id,stock"),
-        supabase.from("orders").select("id", { count: "exact" }).eq("payment_status", "refunded")
-            .gte("created_at", startDate).lte("created_at", endDate),
-        supabase.from("traffic_log").select("id", { count: "exact", head: true }).gte("created_at", toIso(subDays(now, 1))),
-        supabase.from("product_categories").select("product_id,categories!inner(name)"),
-        supabase.from("orders").select("user_id")
-            .lt("created_at", startDate).not("user_id", "is", null),
-    ])
+    let ordersRes: any, priorRes: any, todayRes: any, msgsRes: any, wlRes: any, invRes: any, refundRes: any,
+        trafficRes: any, catRes: any, newCustRes: any
+    try {
+        [ordersRes, priorRes, todayRes, msgsRes, wlRes, invRes, refundRes,
+            trafficRes, catRes, newCustRes] = await Promise.all([
+            supabase.from("orders").select(`id,total,status,payment_status,payment_method,promo_code,created_at,user_id,
+                order_items(quantity,product_name,product_id,unit_price),profiles!orders_user_id_fkey(full_name)`)
+                .gte("created_at", startDate).lte("created_at", endDate).order("created_at", { ascending: false }),
+            supabase.from("orders").select("id,total,status,payment_status,created_at")
+                .gte("created_at", pStart).lte("created_at", pEnd),
+            supabase.from("orders").select("id,total,status,created_at", { count: "exact" })
+                .gte("created_at", todayStart).lte("created_at", todayEnd),
+            supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "unread"),
+            supabase.from("wholesale_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
+            supabase.from("product_variants").select("id,stock"),
+            supabase.from("orders").select("id", { count: "exact" }).eq("payment_status", "refunded")
+                .gte("created_at", startDate).lte("created_at", endDate),
+            supabase.from("traffic_log").select("id", { count: "exact", head: true }).gte("created_at", toIso(subDays(now, 1))),
+            supabase.from("product_categories").select("product_id,categories!inner(name)"),
+            supabase.from("orders").select("user_id")
+                .lt("created_at", startDate).not("user_id", "is", null),
+        ])
+    } catch {
+        ordersRes = { data: [], count: 0 }
+        priorRes = { data: [] }
+        todayRes = { data: [], count: 0 }
+        msgsRes = { count: 0 }
+        wlRes = { count: 0 }
+        invRes = { data: [] }
+        refundRes = { count: 0 }
+        trafficRes = { count: 0 }
+        catRes = { data: [] }
+        newCustRes = { data: [] }
+    }
 
     // ── Derived ──
     const orders = ordersRes.data || []
@@ -183,9 +200,9 @@ export default async function AdminDashboard({ searchParams }: {
     const returningIds = new Set((newCustRes.data || []).map((r: any) => r.user_id).filter(Boolean))
     const orderUserIds = net.map((o: any) => o.user_id).filter(Boolean)
     const totalCustomers = new Set(orderUserIds).size
-    const returning = orderUserIds.filter(id => returningIds.has(id)).length
+    const returning = orderUserIds.filter((id: any) => returningIds.has(id)).length
     const isUnique = new Set()
-    const returningUnique = orderUserIds.filter(id => {
+    const returningUnique = orderUserIds.filter((id: any) => {
         if (isUnique.has(id)) return false
         isUnique.add(id)
         return returningIds.has(id)

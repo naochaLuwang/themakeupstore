@@ -106,7 +106,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
   if (!mounted) return null
 
   const hero = banner
-  const heroImage = hero?.image_url || "/hero-sub.png"
+  const heroImage = hero?.image_url || "/hero-sub.webp"
 
   return (
     <div className="bg-white">
@@ -230,7 +230,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
                   {/* Torn image section */}
                   <div className="absolute inset-0" style={{ clipPath: zigzag }}>
                     {thumbs[0] || cat.image_url ? (
-                      <img src={thumbs[0] || cat.image_url || ""} alt="" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" loading="lazy" />
+                      <img src={thumbs[0] || cat.image_url || ""} alt={cat.name || "Category"} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" loading="lazy" />
                     ) : (
                       <div className="w-full h-full bg-slate-100 flex items-center justify-center">
                         <span className="text-2xl font-bold text-slate-400">{cat.name[0]}</span>
@@ -352,7 +352,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={dismissDiorPopup} />
           <div className="relative w-full h-[50vh] animate-slide-up mb-[4.5rem] px-4">
-            <img src="/dior.png" alt="Dior" className="w-full h-full object-cover rounded-t-3xl" />
+            <img src="/dior.webp" alt="Dior" className="w-full h-full object-cover rounded-t-3xl" />
             <button onClick={dismissDiorPopup} className="absolute top-4 right-8 z-10 rounded-full h-8 w-8 flex items-center justify-center bg-white/80 backdrop-blur-sm">
               <X className="w-4 h-4 text-slate-700" />
             </button>

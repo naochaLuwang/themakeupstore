@@ -9,8 +9,13 @@ export async function generateMetadata(
 ): Promise<Metadata> {
     const { slug } = await params
     const supabase = await createClient()
-    const { data: category } = await supabase.from("categories").select("name, description, image_url").eq("slug", slug).single()
-
+    let category: any
+    try {
+        const { data: cat } = await supabase.from("categories").select("name, description, image_url").eq("slug", slug).single()
+        category = cat
+    } catch {
+        return {}
+    }
     if (!category) return {}
 
     const previousImages = (await parent).openGraph?.images || []
@@ -86,7 +91,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     if (productIds.length > 0) {
         const { data: products } = await supabase
             .from("products")
-            .select("*, product_variants(*), product_concerns(concern_id), product_categories(category_id)")
+            .select("*, product_variants(id, price, stock), product_concerns(concern_id), product_categories(category_id)")
             .eq("status", "active")
             .in("id", productIds)
             .order("created_at", { ascending: false })

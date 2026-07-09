@@ -114,7 +114,7 @@ export function NavSearch() {
                     {loading ? (
                         <Loader2 className="w-4 h-4 animate-spin text-[#fc2779]" />
                     ) : query.length > 0 && (
-                        <button onClick={clearSearch} type="button" className="p-1 hover:bg-pink-50 rounded-full">
+                        <button onClick={clearSearch} type="button" aria-label="Clear search" className="p-1 hover:bg-pink-50 rounded-full">
                             <X className="w-4 h-4 text-slate-400 hover:text-[#fc2779]" />
                         </button>
                     )}
@@ -142,7 +142,7 @@ export function NavSearch() {
                                             className="flex items-center gap-4 p-4 hover:bg-[#fc2779]/5 transition-all group"
                                         >
                                             <div className="relative w-12 h-12 bg-white/50 rounded-lg overflow-hidden shrink-0 border border-pink-50 shadow-sm">
-                                                <Image src={product.thumbnail_url || "/placeholder.png"} alt="" fill className="object-cover transition-transform group-hover:scale-110" sizes="48px" />
+                                                <Image src={product.thumbnail_url || "/placeholder.png"} alt={product.name} fill className="object-cover transition-transform group-hover:scale-110" sizes="48px" />
                                             </div>
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="text-[8px] font-black text-[#fc2779] uppercase tracking-tighter">
@@ -189,7 +189,7 @@ export function NavSearch() {
                                         className="flex items-center gap-4 p-4 hover:bg-[#fc2779]/5 transition-all group"
                                     >
                                         <div className="relative w-10 h-10 bg-white/50 rounded-md overflow-hidden shrink-0 border border-pink-50">
-                                            <Image src={product.thumbnail_url || "/placeholder.png"} alt="" fill className="object-cover" sizes="40px" />
+                                            <Image src={product.thumbnail_url || "/placeholder.png"} alt={product.name} fill className="object-cover" sizes="40px" />
                                         </div>
                                         <span className="text-[11px] font-bold text-slate-600 group-hover:text-slate-900 transition-colors uppercase tracking-tight">
                                             {product.name}

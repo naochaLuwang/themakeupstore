@@ -35,7 +35,7 @@ export default function NewArrivalsPage() {
                 // Fetch products from BOTH the direct category_id column AND the junction table
                 let query = supabase
                     .from('products')
-                    .select('*, product_variants(*)')
+                    .select('*, product_variants(id, price, stock)')
                     .eq('status', 'active')
 
                 if (productIds.length > 0) {
@@ -104,7 +104,7 @@ export default function NewArrivalsPage() {
                         >
                             <div className="flex justify-between items-center mb-10">
                                 <h2 className="text-sm font-black uppercase tracking-widest">Filter By</h2>
-                                <button onClick={() => setShowFilters(false)}><X className="w-5 h-5" /></button>
+                                <button onClick={() => setShowFilters(false)} aria-label="Close filters"><X className="w-5 h-5" /></button>
                             </div>
 
                             {/* Brand Filter UI */}

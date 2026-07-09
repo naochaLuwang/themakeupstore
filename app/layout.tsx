@@ -10,6 +10,7 @@ import localFont from "next/font/local";
 import NextTopLoader from "nextjs-toploader";
 import PushInitializer from "@/components/PushInitializer"
 import { Analytics } from "@vercel/analytics/next"
+import { Suspense } from "react"
 
 const myBrandFont = localFont({
   src: "../public/fonts/Anders.ttf",
@@ -91,14 +92,17 @@ export const metadata: Metadata = {
   },
 };
 
+async function AuthCartSync() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return <CartSync userId={user?.id || null} />;
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
   return (
     <html lang="en" className="no-scrollbar" suppressHydrationWarning>
       <body
@@ -106,7 +110,9 @@ export default async function RootLayout({
       >
         <div id="app-scroller">
           <NextTopLoader color="#0f172a" showSpinner={false} />
-          <CartSync userId={user?.id || null} />
+          <Suspense fallback={<CartSync userId={null} />}>
+            <AuthCartSync />
+          </Suspense>
           <PushInitializer />
 
           <main>

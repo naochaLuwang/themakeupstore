@@ -152,20 +152,37 @@ export async function evaluateFreeGifts(
         // Check usage limit
         if (rule.usage_limit && rule.used_count >= rule.usage_limit) continue
 
-        // Check once_per_user
+        // Check once_per_user via order_items (own table, not promo_redemptions)
         if (rule.once_per_user && userId) {
-            const { data: redemption } = await supabase
-                .from("promo_redemptions")
+            const { data: userOrders } = await supabase
+                .from("orders")
                 .select("id")
-                .eq("promo_id", rule.id)
                 .eq("user_id", userId)
-                .limit(1)
-            if (redemption && redemption.length > 0) continue
+            const orderIds = (userOrders || []).map(o => o.id)
+            if (orderIds.length > 0) {
+                const { data: existing } = await supabase
+                    .from("order_items")
+                    .select("id")
+                    .in("order_id", orderIds)
+                    .eq("product_id", rule.gift_product_id)
+                    .eq("is_gift", true)
+                    .limit(1)
+                if (existing && existing.length > 0) continue
+            }
         }
 
         // Check gift product/variant stock
         const giftVariant = rule.gift_variant
         if (giftVariant && giftVariant.stock < rule.gift_quantity) continue
+        if (!giftVariant) {
+            const { data: defaultVariant } = await supabase
+                .from('product_variants')
+                .select('stock')
+                .eq('product_id', rule.gift_product_id)
+                .eq('is_default', true)
+                .maybeSingle()
+            if (!defaultVariant || defaultVariant.stock < rule.gift_quantity) continue
+        }
 
         // Evaluate trigger condition
         let qualifies = false
@@ -379,7 +396,8 @@ export async function evaluateBXGY(
         if (totalQualifying < minForFree) continue
 
         // How many times can this BXGY apply?
-        const timesApplicable = 1
+        const calculatedApplicable = Math.floor(totalQualifying / minForFree)
+        const timesApplicable = rule.max_per_order ? Math.min(calculatedApplicable, rule.max_per_order) : calculatedApplicable
 
         if (rule.get_type === "cheapest_free") {
             // Find cheapest qualifying item, apply discount

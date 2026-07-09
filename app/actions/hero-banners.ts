@@ -8,6 +8,10 @@ export async function createHeroBanner(formData: FormData) {
     await requireAdmin()
     const supabase = await createClient()
 
+    const title = formData.get("title")
+    const subtitle = formData.get("subtitle")
+    if (!title || typeof title !== 'string' || title.trim().length === 0) throw new Error("Title is required")
+
     const { error } = await supabase.from("hero_banners").insert({
         title: formData.get("title") as string,
         subtitle: formData.get("subtitle") as string,

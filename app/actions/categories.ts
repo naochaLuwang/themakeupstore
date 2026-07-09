@@ -134,22 +134,26 @@ export async function updateCategory(categoryId: string, formData: FormData) {
 }
 
 export async function deleteCategory(id: string) {
-    const supabase = await createClient()
+    try {
+        const supabase = await createClient()
 
-    // 1. RLS FIX
-    const isAdmin = await verifyAdmin(supabase)
-    if (!isAdmin) return { error: "Unauthorized" }
+        // 1. RLS FIX
+        const isAdmin = await verifyAdmin(supabase)
+        if (!isAdmin) return { error: "Unauthorized" }
 
-    const { error } = await supabase
-        .from("categories")
-        .delete()
-        .eq("id", id)
+        const { error } = await supabase
+            .from("categories")
+            .delete()
+            .eq("id", id)
 
-    if (error) {
+        if (error) {
+            return { error: error.message }
+        }
+
+        revalidatePath("/admin/categories")
+        revalidatePath("/exclusive")
+        return { success: true }
+    } catch (error: any) {
         return { error: error.message }
     }
-
-    revalidatePath("/admin/categories")
-    revalidatePath("/exclusive")
-    return { success: true }
 }

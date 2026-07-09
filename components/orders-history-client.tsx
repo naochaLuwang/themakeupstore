@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
@@ -9,18 +9,24 @@ import { motion } from "framer-motion"
 
 const statusVariant: Record<string, { label: string; color: string }> = {
     pending:          { label: "PENDING",           color: "bg-amber-50 text-amber-600 border-amber-200" },
-    processing:       { label: "PROCESSING",         color: "bg-blue-50 text-blue-600 border-blue-200" },
-    shipped:          { label: "SHIPPED",            color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
-    delivered:        { label: "DELIVERED",          color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
-    cancelled:        { label: "CANCELLED",          color: "bg-red-50 text-red-500 border-red-200" },
-    return_requested: { label: "RETURN REQUESTED",   color: "bg-purple-50 text-purple-600 border-purple-200" },
-    return_approved:  { label: "RETURN APPROVED",    color: "bg-sky-50 text-sky-600 border-sky-200" },
-    return_refunded:  { label: "REFUNDED",           color: "bg-blue-50 text-blue-600 border-blue-200" },
-    return_rejected:  { label: "RETURN REJECTED",    color: "bg-orange-50 text-orange-600 border-orange-200" },
+    confirmed:        { label: "CONFIRMED",         color: "bg-blue-50 text-blue-600 border-blue-200" },
+    processing:       { label: "PROCESSING",        color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
+    shipped:          { label: "SHIPPED",           color: "bg-sky-50 text-sky-600 border-sky-200" },
+    out_for_delivery: { label: "OUT FOR DELIVERY",  color: "bg-purple-50 text-purple-600 border-purple-200" },
+    failed_delivery:  { label: "FAILED DELIVERY",   color: "bg-red-50 text-red-500 border-red-200" },
+    ready_for_pickup: { label: "READY FOR PICKUP",  color: "bg-teal-50 text-teal-600 border-teal-200" },
+    no_show:          { label: "NO SHOW",           color: "bg-orange-50 text-orange-600 border-orange-200" },
+    delivered:        { label: "DELIVERED",         color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
+    picked_up:        { label: "PICKED UP",         color: "bg-green-50 text-green-600 border-green-200" },
+    cancelled:        { label: "CANCELLED",         color: "bg-red-50 text-red-500 border-red-200" },
+    return_requested: { label: "RETURN REQUESTED",  color: "bg-purple-50 text-purple-600 border-purple-200" },
+    return_approved:  { label: "RETURN APPROVED",   color: "bg-sky-50 text-sky-600 border-sky-200" },
+    return_refunded:  { label: "REFUNDED",          color: "bg-blue-50 text-blue-600 border-blue-200" },
+    return_rejected:  { label: "RETURN REJECTED",   color: "bg-orange-50 text-orange-600 border-orange-200" },
 }
 
 function getDeliveryLine(order: any, fallbackMap: Record<string, string>): string | null {
-    if (order.status === 'shipped') return 'Out for delivery'
+    if (['shipped', 'out_for_delivery'].includes(order.status)) return 'Out for delivery'
     if (order.status === 'delivered') {
         if (order.delivered_at) {
             const d = new Date(order.delivered_at)
@@ -72,6 +78,57 @@ export default function OrdersHistoryClient({ initialOrders }: { initialOrders: 
     const router = useRouter()
     const supabase = createClient()
 
+    // Refresh orders when user returns to the tab (admin may have updated status)
+    const fetchLatestOrders = useCallback(async () => {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+            .from("orders")
+            .select(`
+                id, created_at, status, total, payment_status, payment_method,
+                shipping_address, delivered_at,
+                return_requests (status),
+                order_items (id, product_id, product_name, variant_title, quantity, unit_price)
+            `)
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+        if (data) {
+            const priority = ["pending", "approved", "refunded", "rejected"]
+            setOrders(data.map(o => {
+                const returns: any[] = (o as any).return_requests || []
+                const best = returns.filter(r => r.status).sort(
+                    (a: any, b: any) => priority.indexOf(a.status) - priority.indexOf(b.status)
+                )[0]
+                return { ...o, return_status: best?.status || null }
+            }))
+        }
+    }, [])
+
+    useEffect(() => {
+        const onVisible = () => { if (document.visibilityState === 'visible') fetchLatestOrders() }
+        const onFocus = () => fetchLatestOrders()
+        document.addEventListener('visibilitychange', onVisible)
+        window.addEventListener('focus', onFocus)
+        return () => {
+            document.removeEventListener('visibilitychange', onVisible)
+            window.removeEventListener('focus', onFocus)
+        }
+    }, [fetchLatestOrders])
+
+    // Realtime subscription for live order status updates
+    useEffect(() => {
+        const channel = supabase
+            .channel('orders-live')
+            .on('postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'orders' },
+                () => fetchLatestOrders()
+            )
+            .subscribe()
+        return () => { supabase.removeChannel(channel) }
+    }, [fetchLatestOrders])
+
+    // Fallback delivery labels
     useEffect(() => {
         const missing = orders.filter(o => {
             const addr = o.shipping_address as any
@@ -183,9 +240,9 @@ export default function OrdersHistoryClient({ initialOrders }: { initialOrders: 
                                                         {oi.image_url ? (
                                                             <img
                                                                 src={oi.image_url}
-                                                                alt=""
-                                                                className="w-10 h-10 rounded-lg object-cover bg-slate-50"
-                                                            />
+alt={oi.product_name || "Order item"}
+                                                            className="w-10 h-10 rounded-lg object-cover bg-slate-50"
+                                                        />
                                                         ) : (
                                                             <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center">
                                                                 <ImageIcon className="w-4 h-4 text-slate-300" />

@@ -112,7 +112,7 @@ export default function ExclusiveCategoryPage() {
 
             let query = supabase
                 .from("products")
-                .select("*, product_variants(*)")
+                .select("*, product_variants(id, price, stock)")
                 .eq("status", "active")
 
             if (junctionProductIds.length > 0) {
@@ -256,7 +256,7 @@ export default function ExclusiveCategoryPage() {
                             <img
                                 key={i}
                                 src={src}
-                                alt=""
+                                alt={"Banner"}
                                 className="w-full h-auto object-cover shrink-0"
                             />
                         ))}
@@ -308,7 +308,7 @@ export default function ExclusiveCategoryPage() {
                                                     <img
                                                         src={sib.image_url}
                                                         className="w-full h-full object-cover"
-                                                        alt=""
+                                                        alt={sib.name || "Product"}
                                                     />
                                                 ) : (
                                                     <span className="text-[9px] font-black text-slate-400 uppercase">
@@ -398,8 +398,8 @@ export default function ExclusiveCategoryPage() {
                     </div>
                 ) : products.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-white overflow-hidden">
-                        {products.map((p) => (
-                            <ProductCard key={p.id} product={p} />
+                        {products.map((p, idx) => (
+                            <ProductCard key={p.id} product={p} priority={idx < 4} />
                         ))}
                     </div>
                 ) : (

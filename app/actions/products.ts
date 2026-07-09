@@ -18,6 +18,8 @@ export async function createProduct(formData: FormData) {
     await requireAdmin()
     const supabase = await createClient()
     const payload = JSON.parse(formData.get("payload") as string)
+    if (!payload || typeof payload !== 'object') throw new Error("Invalid product payload")
+    if (!payload.name || typeof payload.name !== 'string') throw new Error("Product name is required")
     const files = formData.getAll("files") as File[]
 
     try {

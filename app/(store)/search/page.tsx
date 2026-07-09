@@ -31,6 +31,7 @@ const sortOptions: { key: SortOption; label: string }[] = [
 export default function SearchPage() {
     const router = useRouter()
     const supabase = createClient()
+    useEffect(() => { document.title = "Search Products | THE MAKEUP STORE WANGKHEI" }, [])
 
     const [query, setQuery] = useState("")
     const [results, setResults] = useState<any[]>([])
@@ -193,7 +194,7 @@ export default function SearchPage() {
                 // Step 3: build final query
                 let query = supabase
                     .from("products")
-                    .select("*, product_variants(*)")
+                    .select("*, product_variants(id, price, stock)")
                     .eq("status", "active")
 
                 if (matchIds !== null) {
@@ -210,7 +211,7 @@ export default function SearchPage() {
                     query = query.order("created_at", { ascending: false })
                 }
 
-                const { data } = await query
+                const { data } = await query.limit(200)
             if (data) {
                 let processed = data.map((p: any) => ({
                     ...p,

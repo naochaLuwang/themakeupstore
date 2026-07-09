@@ -75,28 +75,70 @@ export async function placeOrder(
     },
     promoDetails?: { code: string; discount: number; id?: string },
     bxgyDetails?: { discount: number; freeItems?: { variantId: string; productId: string; ruleId?: string; quantity: number }[] },
-    giftDetails?: { variantId: string; productId: string; ruleId?: string; quantity: number }[]
+    giftDetails?: { variantId: string; productId: string; ruleId?: string; quantity: number }[],
+    giftCardDetails?: { code: string; amount: number },
+    rewardCoupon?: { id: string; discount: number }
 ) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error("User not authenticated")
 
+    // Hoisted for catch rollback access
+    const stockDecremented: { variantId: string; quantity: number }[] = []
+    let createdOrderId: string | null = null
+
     try {
-        // 1. RE-VALIDATE PRICES AND STOCK
+        // ── HELPER: batch fetch variants ──
+        async function batchVariants(ids: string[]) {
+            const unique = [...new Set(ids)]
+            if (unique.length === 0) return []
+            const { data } = await supabase
+                .from("product_variants")
+                .select("id, price, stock, product_id, title, discount_type, discount_value, products(name, category_id, discount_type, discount_value)")
+                .in("id", unique)
+            return data || []
+        }
+
+        async function batchSimpleVariants(ids: string[]) {
+            const unique = [...new Set(ids)]
+            if (unique.length === 0) return []
+            const { data } = await supabase
+                .from("product_variants")
+                .select("id, stock, price")
+                .in("id", unique)
+            return data || []
+        }
+
+        // ── 1. RE-VALIDATE PRICES AND STOCK (batched) ──
         let calculatedSubtotal = 0;
         const verifiedItems = [];
+        const paidItems = cartItems.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
+        const paidVariantIds = paidItems.map((i: any) => i.variantId)
+        const paidVariants = await batchVariants(paidVariantIds)
+        const paidVariantMap = new Map(paidVariants.map((v: any) => [v.id, v]))
 
-        for (const item of cartItems) {
-            // Skip gift/BXGY free items — they are validated separately and priced at ₹0
-            if (item.is_gift || item.is_bxgy_free) continue
+        // Batch category lookups for items missing category_id
+        const itemsMissingCat = paidItems.filter((i: any) => {
+            const v = paidVariantMap.get(i.variantId)
+            return !v?.products?.category_id
+        })
+        const missingCatProductIds = [...new Set(itemsMissingCat.map((i: any) => i.productId || paidVariantMap.get(i.variantId)?.product_id))]
+        let catMap = new Map<string, string>()
+        if (missingCatProductIds.length > 0) {
+            const { data: catData } = await supabase
+                .from("product_categories")
+                .select("product_id, category_id")
+                .in("product_id", missingCatProductIds)
+            if (catData) {
+                for (const c of catData) {
+                    if (!catMap.has(c.product_id)) catMap.set(c.product_id, c.category_id)
+                }
+            }
+        }
 
-            const { data: variant, error: varError } = await supabase
-                .from("product_variants")
-                .select("price, stock, product_id, title, discount_type, discount_value, products(name, category_id, discount_type, discount_value)")
-                .eq("id", item.variantId)
-                .single()
-
-            if (varError || !variant) throw new Error(`Product not found: ${item.name}`)
+        for (const item of paidItems) {
+            const variant = paidVariantMap.get(item.variantId)
+            if (!variant) throw new Error(`Product not found: ${item.name}`)
             if (variant.stock < item.quantity) throw new Error(`Insufficient stock for ${item.name}`)
 
             const basePrice = Number(variant.price)
@@ -113,23 +155,11 @@ export async function placeOrder(
             calculatedSubtotal += Math.round(salePrice * item.quantity)
 
             let itemCatId = prod?.category_id
-            if (!itemCatId) {
-                const { data: cats } = await supabase
-                    .from('product_categories')
-                    .select('category_id')
-                    .eq('product_id', variant.product_id)
-                    .limit(1)
-                if (cats && cats.length > 0) itemCatId = cats[0].category_id
-            }
-
-            verifiedItems.push({
-                ...item,
-                price: salePrice,
-                categoryId: itemCatId
-            })
+            if (!itemCatId) itemCatId = catMap.get(variant.product_id)
+            verifiedItems.push({ ...item, price: salePrice, categoryId: itemCatId })
         }
 
-        // 2. RE-VALIDATE PROMO
+        // ── 2. RE-VALIDATE PROMO ──
         let verifiedDiscount = 0;
         if (promoDetails?.code) {
             const { data: promo, error: promoError } = await supabase
@@ -144,11 +174,9 @@ export async function placeOrder(
                 .single()
 
             if (promoError || !promo) throw new Error("Invalid promo code")
-
             const { isEligible, eligibleSubtotal } = checkPromoEligibility(promo, verifiedItems)
             if (!isEligible) throw new Error("Promo code is no longer applicable")
 
-            // Calculate discount on server
             if (promo.discount_type === 'percentage') {
                 verifiedDiscount = Math.round((eligibleSubtotal * Number(promo.discount_value)) / 100)
                 if (promo.max_discount_amount) {
@@ -159,53 +187,79 @@ export async function placeOrder(
             }
         }
 
-        // 2b. RE-VALIDATE BXGY DISCOUNT
+        // ── 2b. RE-VALIDATE BXGY DISCOUNT (batched) ──
         let verifiedBXGYDiscount = 0;
-        if (bxgyDetails?.discount && bxgyDetails.discount > 0) {
-            // Verify the BXGY rules are still active and valid
-            if (bxgyDetails.freeItems && bxgyDetails.freeItems.length > 0) {
-                const resolvedBXGYFreeItems = [];
-                for (const freeItem of bxgyDetails.freeItems) {
-                    let variant = await supabase
-                        .from('product_variants')
-                        .select('id, stock, price')
-                        .eq('id', freeItem.variantId)
-                        .maybeSingle()
-                        .then(r => r.data)
+        if (bxgyDetails?.discount && bxgyDetails.discount > 0 && bxgyDetails.freeItems?.length) {
+            const bxgyVariantIds = bxgyDetails.freeItems.map((f: any) => f.variantId)
+            const bxgyVariants = await batchSimpleVariants(bxgyVariantIds)
+            const bxgyVariantMap = new Map(bxgyVariants.map((v: any) => [v.id, v]))
 
-                    if (!variant) {
-                        variant = await supabase
-                            .from('product_variants')
-                            .select('id, stock, price')
-                            .eq('product_id', freeItem.productId)
-                            .eq('is_default', true)
-                            .maybeSingle()
-                            .then(r => r.data)
-                    }
-
-                    if (!variant || variant.stock < freeItem.quantity) {
-                        throw new Error(`Free gift item is no longer available`)
-                    }
-                    resolvedBXGYFreeItems.push({ ...freeItem, variantId: variant.id })
+            // Fallback: for items not found by variantId, look up by productId default variant
+            const productIds = bxgyDetails.freeItems
+                .filter((f: any) => !bxgyVariantMap.has(f.variantId))
+                .map((f: any) => f.productId)
+            let defaultFallbackMap = new Map<string, any>()
+            if (productIds.length > 0) {
+                const { data: defaults } = await supabase
+                    .from("product_variants")
+                    .select("id, stock, price, product_id")
+                    .in("product_id", productIds)
+                    .eq("is_default", true)
+                if (defaults) {
+                    for (const d of defaults) defaultFallbackMap.set(d.product_id, d)
                 }
-                bxgyDetails.freeItems = resolvedBXGYFreeItems;
             }
-            // Use client-reported BXGY discount (already calculated client-side against rules)
-            verifiedBXGYDiscount = bxgyDetails.discount;
+
+            const resolvedBXGYFreeItems = [];
+            for (const freeItem of bxgyDetails.freeItems) {
+                let variant = bxgyVariantMap.get(freeItem.variantId)
+                if (!variant) variant = defaultFallbackMap.get(freeItem.productId)
+                if (!variant || variant.stock < freeItem.quantity) {
+                    throw new Error(`Free gift item is no longer available`)
+                }
+                resolvedBXGYFreeItems.push({ ...freeItem, variantId: variant.id })
+            }
+            bxgyDetails.freeItems = resolvedBXGYFreeItems
+            verifiedBXGYDiscount = bxgyDetails.discount
         }
 
-        // 2c. VALIDATE FREE GIFTS
+        // ── 2c. VALIDATE FREE GIFTS (batched) ──
         let verifiedGiftItems: any[] = [];
         if (giftDetails && giftDetails.length > 0) {
+            // Verify gift rules (batched)
+            const ruleIds = giftDetails.map((g: any) => g.ruleId).filter(Boolean)
+            let ruleMap = new Map<string, any>()
+            if (ruleIds.length > 0) {
+                const { data: rules } = await supabase
+                    .from("free_gifts")
+                    .select("id, min_cart_amount, is_active, starts_at, expires_at")
+                    .in("id", ruleIds)
+                if (rules) for (const r of rules) ruleMap.set(r.id, r)
+            }
+
+            const giftVariantIds = giftDetails.map((g: any) => g.variantId)
+            const giftVariants = await batchSimpleVariants(giftVariantIds)
+            const giftVariantMap = new Map(giftVariants.map((v: any) => [v.id, v]))
+
+            const giftProductIds = giftDetails
+                .filter((g: any) => !giftVariantMap.has(g.variantId))
+                .map((g: any) => g.productId)
+            let giftDefaultMap = new Map<string, any>()
+            if (giftProductIds.length > 0) {
+                const { data: defaults } = await supabase
+                    .from("product_variants")
+                    .select("id, stock, price, product_id")
+                    .in("product_id", giftProductIds)
+                    .eq("is_default", true)
+                if (defaults) {
+                    for (const d of defaults) giftDefaultMap.set(d.product_id, d)
+                }
+            }
+
             for (const gift of giftDetails) {
-                // Verify the gift rule is still active and check min_cart_amount
                 if (gift.ruleId) {
-                    const { data: rule } = await supabase
-                        .from('free_gifts')
-                        .select('min_cart_amount, is_active, starts_at, expires_at')
-                        .eq('id', gift.ruleId)
-                        .single()
-                    if (!rule || !rule.is_active) throw new Error(`Free gift rule is no longer active`)
+                    const rule = ruleMap.get(gift.ruleId)
+                    if (!rule || !rule.is_active) throw new Error("Free gift rule is no longer active")
                     if (rule.min_cart_amount && rule.min_cart_amount > 0) {
                         const paidSubtotal = cartItems
                             .filter((i: any) => !i.is_gift && !i.is_bxgy_free)
@@ -216,37 +270,16 @@ export async function placeOrder(
                     }
                 }
 
-                let variant = await supabase
-                    .from('product_variants')
-                    .select('id, stock, price')
-                    .eq('id', gift.variantId)
-                    .maybeSingle()
-                    .then(r => r.data)
-
-                // If variant not found by variantId (e.g. gift uses product UUID directly),
-                // fall back to the product's default variant
-                if (!variant) {
-                    variant = await supabase
-                        .from('product_variants')
-                        .select('id, stock, price')
-                        .eq('product_id', gift.productId)
-                        .eq('is_default', true)
-                        .maybeSingle()
-                        .then(r => r.data)
-                }
-
+                let variant = giftVariantMap.get(gift.variantId)
+                if (!variant) variant = giftDefaultMap.get(gift.productId)
                 if (!variant || variant.stock < gift.quantity) {
-                    throw new Error(`Free gift is no longer available`)
+                    throw new Error("Free gift is no longer available")
                 }
-                verifiedGiftItems.push({
-                    ...gift,
-                    variantId: variant.id,
-                    verifiedPrice: 0, // Gifts are always ₹0
-                })
+                verifiedGiftItems.push({ ...gift, variantId: variant.id, verifiedPrice: 0 })
             }
         }
 
-        // 3. RE-VERIFY SHIPPING PRICE (with free shipping threshold)
+        // ── 3. RE-VERIFY SHIPPING PRICE ──
         let verifiedShippingPrice = 0;
         if (shippingDetails.shipping_method_id) {
             const { data: method } = await supabase
@@ -259,10 +292,52 @@ export async function placeOrder(
             }
         }
 
-        // 4. FINAL TOTAL CALCULATION
-        const finalTotal = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount + verifiedShippingPrice))
+        // ── 4. FINAL TOTAL CALCULATION ──
+        const giftCardAmount = giftCardDetails?.amount || 0
+        const rewardCouponDiscount = rewardCoupon?.discount || 0
+        const finalTotal = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - giftCardAmount - rewardCouponDiscount + verifiedShippingPrice))
 
-        // 5. Insert the main Order
+        // ── 5. Build order items array ──
+        const orderItems: any[] = verifiedItems.map(item => ({
+            product_id: item.productId,
+            product_variant_id: item.variantId,
+            product_name: item.name,
+            variant_title: item.variantTitle,
+            quantity: item.quantity,
+            unit_price: item.price,
+            mrp: item.mrp || item.price,
+            is_gift: false,
+        }))
+
+        for (const gift of verifiedGiftItems) {
+            orderItems.push({
+                product_id: gift.productId,
+                product_variant_id: gift.variantId,
+                product_name: gift.product_name || 'Free Gift',
+                variant_title: null,
+                quantity: gift.quantity,
+                unit_price: 0,
+                mrp: 0,
+                is_gift: true,
+            })
+        }
+
+        if (bxgyDetails?.freeItems) {
+            for (const freeItem of bxgyDetails.freeItems) {
+                orderItems.push({
+                    product_id: freeItem.productId,
+                    product_variant_id: freeItem.variantId,
+                    product_name: 'Free Item',
+                    variant_title: null,
+                    quantity: freeItem.quantity,
+                    unit_price: 0,
+                    mrp: 0,
+                    is_gift: true,
+                })
+            }
+        }
+
+        // ── 6. Insert the main Order FIRST (before stock decrement) ──
         const { data: order, error: orderError } = await supabase
             .from('orders')
             .insert([{
@@ -279,110 +354,61 @@ export async function placeOrder(
                 promo_code: promoDetails?.code || null,
                 promo_discount_amount: verifiedDiscount,
                 bxgy_discount_amount: verifiedBXGYDiscount || 0,
+                gift_card_discount: giftCardAmount,
             }])
             .select()
             .single()
 
         if (orderError) throw orderError
+        createdOrderId = order.id
 
-        // 3. Insert Order Items (Using database verified prices)
-        const itemsToInsert = verifiedItems.map(item => ({
-            order_id: order.id,
-            product_id: item.productId,
-            product_variant_id: item.variantId,
-            product_name: item.name,
-            variant_title: item.variantTitle,
-            quantity: item.quantity,
-            unit_price: item.price, // VERIFIED PRICE
-            mrp: item.mrp || item.price,
-            is_gift: false,
-        }))
-
-        // Add verified free gift items at ₹0
-        for (const gift of verifiedGiftItems) {
-            const { data: giftVariant } = await supabase
-                .from('product_variants')
-                .select('title, products(name, thumbnail_url)')
-                .eq('id', gift.variantId)
-                .single()
-            itemsToInsert.push({
-                order_id: order.id,
-                product_id: gift.productId,
-                product_variant_id: gift.variantId,
-                product_name: (giftVariant?.products as any)?.name || 'Free Gift',
-                variant_title: giftVariant?.title || null,
-                quantity: gift.quantity,
-                unit_price: 0, // Gift is always ₹0
-                mrp: 0,
-                is_gift: true,
-            })
-        }
-
-        // Add verified BXGY free items at ₹0
-        if (bxgyDetails?.freeItems && bxgyDetails.freeItems.length > 0) {
-            for (const freeItem of bxgyDetails.freeItems) {
-                const { data: freeVariant } = await supabase
-                    .from('product_variants')
-                    .select('title, products(name, thumbnail_url)')
-                    .eq('id', freeItem.variantId)
-                    .single()
-                itemsToInsert.push({
-                    order_id: order.id,
-                    product_id: freeItem.productId,
-                    product_variant_id: freeItem.variantId,
-                    product_name: (freeVariant?.products as any)?.name || 'Free Item',
-                    variant_title: freeVariant?.title || null,
-                    quantity: freeItem.quantity,
-                    unit_price: 0,
-                    mrp: 0,
-                    is_gift: true,
-                })
-            }
-        }
-
+        // 8. Insert Order Items
         const { error: itemsError } = await supabase
             .from('order_items')
-            .insert(itemsToInsert)
+            .insert(orderItems.map(item => ({ ...item, order_id: order.id })))
 
         if (itemsError) throw itemsError
 
-        // 4. Promo Usage Logic (Update count and record redemption)
-        if (promoDetails?.code) {
-            const { data: promoRecord } = await supabase
-                .from('promo_codes')
-                .select('id, used_count')
-                .eq('code', promoDetails.code)
-                .single()
-
-            if (promoRecord) {
-                await supabase
-                    .from('promo_codes')
-                    .update({ used_count: (promoRecord.used_count || 0) + 1 })
-                    .eq('id', promoRecord.id)
-
-                await supabase
-                    .from('promo_redemptions')
-                    .insert({
-                        promo_id: promoRecord.id,
-                        user_id: user.id,
-                        order_id: order.id
-                    })
-            }
-        }
-
-        // 6. Stock Update (Atomic, with robust fallbacks)
-        // Only decrement stock for real cart items (not gifts/BXGY free — handled below)
+        // 9. STOCK DECREMENT AFTER ORDER COMMIT (crash leaves orphaned order, not lost stock)
         for (const item of cartItems) {
             if (item.is_gift || item.is_bxgy_free) continue
-            await atomicDecrementStock(supabase, item.variantId, item.quantity)
+            const ok = await atomicDecrementStock(supabase, item.variantId, item.quantity)
+            if (!ok) throw new Error(`Insufficient stock for ${item.name}`)
+            stockDecremented.push({ variantId: item.variantId, quantity: item.quantity })
         }
-        // Decrement stock for free gift items (once, not duplicated)
         for (const gift of verifiedGiftItems) {
-            await atomicDecrementStock(supabase, gift.variantId, gift.quantity)
+            const ok = await atomicDecrementStock(supabase, gift.variantId, gift.quantity)
+            if (!ok) throw new Error(`Free gift is no longer available`)
+            stockDecremented.push({ variantId: gift.variantId, quantity: gift.quantity })
         }
 
-        // 6. Push Notifications (Your existing logic)
-        // ... (Keep as is)
+        // 10. Non-critical follow-up (fire-and-forget, won't fail order)
+        if (promoDetails?.code) {
+            try {
+                const { data: promoRecord } = await supabase
+                    .from('promo_codes')
+                    .select('id, used_count')
+                    .eq('code', promoDetails.code)
+                    .single()
+                if (promoRecord) {
+                    await supabase.from('promo_codes').update({ used_count: (promoRecord.used_count || 0) + 1 }).eq('id', promoRecord.id)
+                    await supabase.from('promo_redemptions').insert({ promo_id: promoRecord.id, user_id: user.id, order_id: order.id })
+                }
+            } catch {}
+        }
+
+        if (giftCardDetails) {
+            try {
+                const { data: gc } = await supabase.from('gift_cards').select('id').eq('code', giftCardDetails.code).single()
+                if (gc) await supabase.from('gift_card_redemptions').insert({ gift_card_id: gc.id, order_id: order.id, amount: giftCardDetails.amount })
+            } catch {}
+        }
+
+        if (rewardCoupon) {
+            try { const { markCouponUsed } = await import("./loyalty"); await markCouponUsed(rewardCoupon.id) } catch {}
+        }
+
+        try { const { earnOrderPoints } = await import("./loyalty"); await earnOrderPoints(user.id, order.id, finalTotal) } catch {}
 
         revalidatePath("/admin/orders")
         revalidatePath("/profile")
@@ -390,6 +416,14 @@ export async function placeOrder(
 
     } catch (error: any) {
         console.error("ORDER_PLACEMENT_ERROR:", error)
+        // Rollback stock that was decremented (will be partial if crash occurred mid-decrement)
+        for (const { variantId, quantity } of stockDecremented) {
+            try { await supabase.rpc('increment_stock', { row_id: variantId, amount: quantity }) } catch {}
+        }
+        // Delete order if it was created (stock was decremented after order, so this prevents partial orders)
+        if (createdOrderId) {
+            try { await supabase.from('orders').delete().eq('id', createdOrderId) } catch {}
+        }
         return { success: false, message: error.message }
     }
 }
@@ -560,7 +594,23 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
             }
         }
 
-        // 7. CACHE CLEARING: Update the UI for both Admin and User
+        // 7. Void pending loyalty points for this order
+        try {
+            const { data: pendingTx } = await supabase
+                .from("loyalty_transactions")
+                .select("id")
+                .eq("reference_id", orderId)
+                .eq("status", "pending")
+                .maybeSingle()
+            if (pendingTx) {
+                await supabase
+                    .from("loyalty_transactions")
+                    .update({ status: "cancelled", note: "Order cancelled — points voided" })
+                    .eq("id", pendingTx.id)
+            }
+        } catch {}
+
+        // 8. CACHE CLEARING: Update the UI for both Admin and User
         revalidatePath("/admin/orders")
         revalidatePath("/admin/products")
         revalidatePath("/profile")
@@ -967,6 +1017,14 @@ export async function updateOrderStatus(orderId: string, status: string) {
                     }
                 }
             }
+        }
+
+        // Release loyalty points on delivery
+        if (newStatus === "delivered" && oldStatus !== "delivered") {
+            try {
+                const { releasePendingPoints } = await import("./loyalty")
+                await releasePendingPoints(orderId)
+            } catch {}
         }
 
         // Push notification

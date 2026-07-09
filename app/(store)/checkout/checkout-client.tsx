@@ -4,11 +4,13 @@ import { useState, useEffect, useMemo } from "react"
 import { useCart } from "@/components/store/use-cart"
 import { placeOrder } from "@/app/actions/orders"
 import { validatePromoCode } from "@/app/actions/promo"
+import { validateGiftCard } from "@/app/actions/gift-cards"
+import { applyRewardCoupon } from "@/app/actions/loyalty"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import {
     Plus, Loader2, Check, ChevronRight,
-    MapPin, ShoppingBag, Ticket, X, Sparkles,
+    MapPin, ShoppingBag, Ticket, X, Sparkles, Gift, Tag,
 } from "lucide-react"
 import { checkPromoEligibility } from "@/lib/promo-helper"
 
@@ -45,6 +47,16 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
     const [showBreakup, setShowBreakup] = useState(false)
+    const currency = (n: number) =>
+        new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n)
+    const [giftCard, setGiftCard] = useState<any | null>(null)
+    const [giftCardCode, setGiftCardCode] = useState("")
+    const [applyingGiftCard, setApplyingGiftCard] = useState(false)
+    const [giftCardError, setGiftCardError] = useState("")
+    const [rewardCoupon, setRewardCoupon] = useState<any | null>(null)
+    const [rewardCouponCode, setRewardCouponCode] = useState("")
+    const [applyingRewardCoupon, setApplyingRewardCoupon] = useState(false)
+    const [rewardCouponError, setRewardCouponError] = useState("")
 
     useEffect(() => { setMounted(true) }, [])
 
@@ -71,6 +83,9 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     }, [bxgyDiscounts])
     const giftItems = mounted ? getGiftItems() : []
     const total = mounted ? getFinalTotal() : 0
+    const giftCardDiscount = giftCard ? Math.min(Number(giftCard.remaining_balance), total) : 0
+    const rewardCouponDiscount = rewardCoupon ? Math.min(Number(rewardCoupon.discount_amount), total) : 0
+    const adjustedTotal = Math.max(0, total - giftCardDiscount - rewardCouponDiscount)
     const isFreeShipping = currentSubtotal >= FREE_SHIPPING_THRESHOLD && selectedShippingId
 
     const handleAddressAdded = (newAddr: any) => {
@@ -108,6 +123,48 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
         toast.info("Promo code removed")
     }
 
+    const handleApplyGiftCard = async () => {
+        if (!giftCardCode.trim()) return
+        setApplyingGiftCard(true)
+        setGiftCardError("")
+        const res = await validateGiftCard(giftCardCode.trim())
+        if (res.success) {
+            setGiftCard(res.giftCard)
+            setGiftCardCode("")
+            toast.success("Gift card applied!")
+        } else {
+            setGiftCardError(res.message || "Invalid gift card")
+            toast.error(res.message || "Invalid gift card")
+        }
+        setApplyingGiftCard(false)
+    }
+
+    const handleRemoveGiftCard = () => {
+        setGiftCard(null)
+        toast.info("Gift card removed")
+    }
+
+    const handleApplyRewardCoupon = async () => {
+        if (!rewardCouponCode.trim()) return
+        setApplyingRewardCoupon(true)
+        setRewardCouponError("")
+        const res = await applyRewardCoupon(rewardCouponCode.trim())
+        if (res.success) {
+            setRewardCoupon(res.coupon)
+            setRewardCouponCode("")
+            toast.success("Reward coupon applied!")
+        } else {
+            setRewardCouponError(res.message || "Invalid coupon")
+            toast.error(res.message || "Invalid reward coupon")
+        }
+        setApplyingRewardCoupon(false)
+    }
+
+    const handleRemoveRewardCoupon = () => {
+        setRewardCoupon(null)
+        toast.info("Reward coupon removed")
+    }
+
     const handlePlaceOrder = async () => {
         if (!selectedAddress || !selectedShippingId) {
             return toast.error("Please select a delivery address")
@@ -143,7 +200,9 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 { total, price: shippingPrice, methodName: shippingLabel, deliveryTimeLabel, shipping_method_id: selectedAddress.shipping_methods?.id },
                 promoDetails,
                 bxgyDetails,
-                giftDetails
+                giftDetails,
+                giftCard ? { code: giftCard.code, amount: giftCardDiscount } : undefined,
+                rewardCoupon ? { id: rewardCoupon.id, discount: rewardCouponDiscount } : undefined
             )
             if (res.success) {
                 clearCart()
@@ -293,6 +352,94 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     )}
                 </section>
 
+                {/* Gift Card */}
+                <section>
+                    <div className="flex items-center gap-2 mb-3">
+                        <Gift className="w-[18px] h-[18px] text-gray-700" />
+                        <h2 className="text-sm font-bold text-gray-900">Gift Card</h2>
+                    </div>
+                    {giftCard ? (
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
+                            <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center shrink-0">
+                                <Gift className="w-[18px] h-[18px] text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-bold text-gray-900">{giftCard.code}</p>
+                                <p className="text-xs font-semibold text-blue-600">Balance: {currency(Number(giftCard.remaining_balance))}</p>
+                            </div>
+                            <button onClick={handleRemoveGiftCard}>
+                                <X className="w-[18px] h-[18px] text-gray-400" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-white border border-gray-200 rounded-xl p-3">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Enter gift card code"
+                                    value={giftCardCode}
+                                    onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                                    className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-900 transition-colors placeholder:text-gray-300"
+                                />
+                                <button
+                                    onClick={handleApplyGiftCard}
+                                    disabled={applyingGiftCard || !giftCardCode.trim()}
+                                    className="h-10 px-4 bg-gray-900 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-gray-800 transition-colors shrink-0"
+                                >
+                                    {applyingGiftCard ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                                </button>
+                            </div>
+                            {giftCardError && (
+                                <p className="text-[11px] font-medium text-red-500 mt-2">{giftCardError}</p>
+                            )}
+                        </div>
+                    )}
+                </section>
+
+                {/* Reward Coupon */}
+                <section>
+                    <div className="flex items-center gap-2 mb-3">
+                        <Tag className="w-[18px] h-[18px] text-emerald-600" />
+                        <h2 className="text-sm font-bold text-gray-900">Reward Coupon</h2>
+                    </div>
+                    {rewardCoupon ? (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-3">
+                            <div className="w-9 h-9 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
+                                <Tag className="w-[18px] h-[18px] text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-bold text-gray-900">{rewardCoupon.code}</p>
+                                <p className="text-xs font-semibold text-emerald-600">{currency(rewardCoupon.discount_amount)} OFF</p>
+                            </div>
+                            <button onClick={handleRemoveRewardCoupon}>
+                                <X className="w-[18px] h-[18px] text-gray-400" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-white border border-gray-200 rounded-xl p-3">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Enter reward coupon code"
+                                    value={rewardCouponCode}
+                                    onChange={(e) => setRewardCouponCode(e.target.value.toUpperCase())}
+                                    className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-900 transition-colors placeholder:text-gray-300"
+                                />
+                                <button
+                                    onClick={handleApplyRewardCoupon}
+                                    disabled={applyingRewardCoupon || !rewardCouponCode.trim()}
+                                    className="h-10 px-4 bg-emerald-600 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-emerald-700 transition-colors shrink-0"
+                                >
+                                    {applyingRewardCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                                </button>
+                            </div>
+                            {rewardCouponError && (
+                                <p className="text-[11px] font-medium text-red-500 mt-2">{rewardCouponError}</p>
+                            )}
+                        </div>
+                    )}
+                </section>
+
                 {/* Payment Method */}
                 <section>
                     <div className="flex items-center gap-2 mb-3">
@@ -332,7 +479,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 <p className="text-[11px] text-gray-400">{showBreakup ? "Tap to hide details" : "Tap to view details"}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-base font-extrabold text-gray-900">₹{Math.round(total)}</p>
+                                <p className="text-base font-extrabold text-gray-900">₹{Math.round(adjustedTotal)}</p>
                             </div>
                             <svg
                                 className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${showBreakup ? "rotate-180" : ""}`}
@@ -412,10 +559,28 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                         </div>
                                     </>
                                 )}
+                                {giftCardDiscount > 0 && (
+                                    <>
+                                        <div className="h-px bg-gray-50 mx-5" />
+                                        <div className="px-5 py-3.5 flex justify-between bg-blue-50/50">
+                                            <span className="text-sm font-medium text-blue-600">Gift Card</span>
+                                            <span className="text-sm font-bold text-blue-600">−₹{Math.round(giftCardDiscount)}</span>
+                                        </div>
+                                    </>
+                                )}
+                                {rewardCouponDiscount > 0 && (
+                                    <>
+                                        <div className="h-px bg-gray-50 mx-5" />
+                                        <div className="px-5 py-3.5 flex justify-between bg-emerald-50/50">
+                                            <span className="text-sm font-medium text-emerald-600">Reward Coupon</span>
+                                            <span className="text-sm font-bold text-emerald-600">−₹{Math.round(rewardCouponDiscount)}</span>
+                                        </div>
+                                    </>
+                                )}
                                 <div className="h-px bg-gray-200 mx-5" />
                                 <div className="px-5 py-4 flex justify-between">
                                     <span className="text-sm font-bold text-gray-900">Total</span>
-                                    <span className="text-lg font-extrabold text-gray-900">₹{Math.round(total)}</span>
+                                    <span className="text-lg font-extrabold text-gray-900">₹{Math.round(adjustedTotal)}</span>
                                 </div>
                             </div>
                         </div>
@@ -427,7 +592,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex items-center gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-50">
                 <div>
                     <p className="text-[10px] font-black tracking-wider text-gray-400 uppercase">Total</p>
-                    <p className="text-xl font-extrabold text-gray-900">₹{Math.round(total)}</p>
+                    <p className="text-xl font-extrabold text-gray-900">₹{Math.round(adjustedTotal)}</p>
                     <p className="text-[10px] text-gray-400">incl. taxes & fees</p>
                 </div>
                 <div className="flex-1">

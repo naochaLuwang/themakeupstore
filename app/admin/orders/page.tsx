@@ -67,6 +67,7 @@ export default function AdminOrdersPage() {
             .from('orders')
             .select(`*, order_items(*)`)
             .order('created_at', { ascending: false })
+            .limit(1000)
 
         if (date?.from) query = query.gte('created_at', startOfDay(date.from).toISOString())
         if (date?.to) query = query.lte('created_at', endOfDay(date.to).toISOString())

@@ -14,6 +14,10 @@ export async function uploadEditorImage(formData: FormData) {
     const file = formData.get('file') as File
     if (!file) throw new Error("No file provided")
 
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+    if (!allowedTypes.includes(file.type)) throw new Error("Invalid file type. Allowed: JPEG, PNG, WebP, AVIF")
+    if (file.size > 5 * 1024 * 1024) throw new Error("File too large. Max 5MB")
+
     const buffer = Buffer.from(await file.arrayBuffer())
 
     try {

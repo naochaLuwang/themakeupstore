@@ -7,7 +7,7 @@ export default async function AdminHeroBannersPage() {
     const supabase = await createClient()
     const { data: banners } = await supabase
         .from("hero_banners")
-        .select("*")
+        .select("id, image_url, title, subtitle, position, route, is_active")
         .order("position", { ascending: true })
         .order("created_at", { ascending: false })
 

@@ -163,17 +163,23 @@ export function MobileMenu({ user }: { user: any }) {
                 <div className="p-6 border-t border-pink-50 bg-[#FDFDFD]">
                     {user ? (
                         <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-3 gap-2">
                                 <SheetClose asChild>
-                                    <Link href="/profile/wishlist" className="flex flex-col items-center justify-center py-5 rounded-2xl bg-white border border-pink-50 shadow-sm active:bg-pink-50/30 transition-colors group">
+                                    <Link href="/profile/wishlist" className="flex flex-col items-center justify-center py-4 rounded-2xl bg-white border border-pink-50 shadow-sm active:bg-pink-50/30 transition-colors group">
                                         <Heart className="w-5 h-5 text-[#fc2779] mb-2 stroke-[2.5]" />
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-900">Wishlist</span>
+                                        <span className="text-[7px] font-black uppercase tracking-widest text-slate-900">Wishlist</span>
                                     </Link>
                                 </SheetClose>
                                 <SheetClose asChild>
-                                    <Link href="/profile/orders" className="flex flex-col items-center justify-center py-5 rounded-2xl bg-white border border-pink-50 shadow-sm active:bg-pink-50/30 transition-colors group">
+                                    <Link href="/rewards" className="flex flex-col items-center justify-center py-4 rounded-2xl bg-white border border-pink-50 shadow-sm active:bg-pink-50/30 transition-colors group">
+                                        <Award className="w-5 h-5 text-amber-500 mb-2 stroke-[2]" />
+                                        <span className="text-[7px] font-black uppercase tracking-widest text-slate-900">Rewards</span>
+                                    </Link>
+                                </SheetClose>
+                                <SheetClose asChild>
+                                    <Link href="/profile/orders" className="flex flex-col items-center justify-center py-4 rounded-2xl bg-white border border-pink-50 shadow-sm active:bg-pink-50/30 transition-colors group">
                                         <Package className="w-5 h-5 text-slate-900 mb-2 stroke-[2]" />
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-900">My Orders</span>
+                                        <span className="text-[7px] font-black uppercase tracking-widest text-slate-900">My Orders</span>
                                     </Link>
                                 </SheetClose>
                             </div>

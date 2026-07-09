@@ -86,6 +86,9 @@ export default function ShopClient({ initialProducts, searchQuery }: { initialPr
         let processed = [...products].map((p) => ({
             ...p,
             _effectivePrice: computeEffectivePrice(p),
+            _outOfStock: p.product_variants?.length > 0
+                ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
+                : false,
         }))
 
         if (selectedBrands.length > 0) {
@@ -100,13 +103,33 @@ export default function ShopClient({ initialProducts, searchQuery }: { initialPr
         }
 
         if (sort === "name") {
-            processed.sort((a, b) => a.name.localeCompare(b.name))
+            processed.sort((a, b) => {
+                const aOOS = a._outOfStock ? 1 : 0;
+                const bOOS = b._outOfStock ? 1 : 0;
+                if (aOOS !== bOOS) return aOOS - bOOS;
+                return a.name.localeCompare(b.name);
+            });
         } else if (sort === "price_asc") {
-            processed.sort((a, b) => a._effectivePrice - b._effectivePrice)
+            processed.sort((a, b) => {
+                const aOOS = a._outOfStock ? 1 : 0;
+                const bOOS = b._outOfStock ? 1 : 0;
+                if (aOOS !== bOOS) return aOOS - bOOS;
+                return a._effectivePrice - b._effectivePrice;
+            });
         } else if (sort === "price_desc") {
-            processed.sort((a, b) => b._effectivePrice - a._effectivePrice)
+            processed.sort((a, b) => {
+                const aOOS = a._outOfStock ? 1 : 0;
+                const bOOS = b._outOfStock ? 1 : 0;
+                if (aOOS !== bOOS) return aOOS - bOOS;
+                return b._effectivePrice - a._effectivePrice;
+            });
         } else if (sort === "newest") {
-            processed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            processed.sort((a, b) => {
+                const aOOS = a._outOfStock ? 1 : 0;
+                const bOOS = b._outOfStock ? 1 : 0;
+                if (aOOS !== bOOS) return aOOS - bOOS;
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            });
         }
 
         setFiltered(processed)
@@ -220,8 +243,8 @@ export default function ShopClient({ initialProducts, searchQuery }: { initialPr
                     </div>
                 ) : filtered.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-white overflow-hidden">
-                        {filtered.map((p) => (
-                            <ProductCard key={p.id} product={p} />
+                        {filtered.map((p, idx) => (
+                            <ProductCard key={p.id} product={p} priority={idx < 4} />
                         ))}
                     </div>
                 ) : (

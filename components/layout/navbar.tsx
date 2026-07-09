@@ -101,6 +101,9 @@ export default async function Navbar() {
                                                 <DropdownMenuItem asChild className="cursor-pointer text-[10px] uppercase py-3 font-bold tracking-widest focus:bg-primary/5">
                                                     <Link href="/profile">Dashboard</Link>
                                                 </DropdownMenuItem>
+                                                <DropdownMenuItem asChild className="cursor-pointer text-[10px] uppercase py-3 font-bold tracking-widest focus:bg-primary/5">
+                                                    <Link href="/rewards">Rewards</Link>
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem className="text-red-600 focus:bg-red-50 cursor-pointer text-[10px] uppercase py-3 font-bold tracking-widest">
                                                     <form action={signOut} className="w-full">
                                                         <button type="submit" className="w-full text-left uppercase font-bold">Sign Out</button>

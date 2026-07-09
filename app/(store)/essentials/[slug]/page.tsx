@@ -71,7 +71,7 @@ export default async function EssentialsCategoryPage({
     // 5. Fetch products using embedded join
     const { data: products, error: prodError } = await supabase
         .from("products")
-        .select("*, product_variants(*), product_categories!inner(category_id)")
+        .select("*, product_variants(id, price, stock), product_categories!inner(category_id)")
         .in("product_categories.category_id", targetCategoryIds)
         .eq("status", "active")
         .order("created_at", { ascending: false })

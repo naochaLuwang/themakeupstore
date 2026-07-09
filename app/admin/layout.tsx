@@ -1,4 +1,5 @@
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
+import { OrderNotification } from "@/components/admin/order-notification"
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar"
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
@@ -38,11 +39,14 @@ export default async function AdminLayout({
                         <h2 className="text-xs sm:text-sm font-semibold tracking-tight truncate">Admin Dashboard</h2>
 
                         {/* Displaying logged in user name */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-500 font-medium">
-                                Hello, {profile.full_name?.split(' ')[0] || 'Admin'}
-                            </span>
-                            <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="flex items-center gap-3">
+                            <OrderNotification />
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500 font-medium">
+                                    Hello, {profile.full_name?.split(' ')[0] || 'Admin'}
+                                </span>
+                                <div className="h-2 w-2 rounded-full bg-green-500" />
+                            </div>
                         </div>
                     </div>
                 </header>

@@ -5,12 +5,17 @@ export default async function PublicLegalPage({ params }: { params: Promise<{ sl
     const { slug } = await params
     const supabase = await createClient()
 
-    const { data } = await supabase
-        .from("site_settings")
-        .select("*")
-        .eq("key", slug)
-        .single()
-
+    let data: any
+    try {
+        const { data: result } = await supabase
+            .from("site_settings")
+            .select("*")
+            .eq("key", slug)
+            .single()
+        data = result
+    } catch {
+        notFound()
+    }
     if (!data) notFound()
 
     return (

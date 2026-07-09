@@ -7,7 +7,7 @@ export default async function AdminShowcasePage() {
     const supabase = await createClient()
     const { data: items } = await supabase
         .from("showcase_items")
-        .select("*")
+        .select("id, title, subtitle, image_url, position, is_active")
         .order("position", { ascending: true })
         .order("created_at", { ascending: false })
 

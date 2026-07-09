@@ -6,36 +6,42 @@ import { requireAdmin } from "@/lib/admin"
 import { variantOptionSchema, type VariantFormValues } from "@/lib/validations/variants"
 
 export async function createVariantWithValues(data: VariantFormValues) {
-    await requireAdmin()
-    const supabase = await createClient()
+    try {
+        await requireAdmin()
+        const supabase = await createClient()
 
-    // 1. Insert the Parent Option
-    const { data: option, error: optionError } = await supabase
-        .from("variant_options")
-        .insert([{
-            name: data.name,
-            slug: data.slug,
-            position: data.position
-        }])
-        .select()
-        .single()
+        if (!data.name || typeof data.name !== 'string') throw new Error("Variant name is required")
 
-    if (optionError) return { error: optionError.message }
+        // 1. Insert the Parent Option
+        const { data: option, error: optionError } = await supabase
+            .from("variant_options")
+            .insert([{
+                name: data.name,
+                slug: data.slug,
+                position: data.position
+            }])
+            .select()
+            .single()
 
-    // 2. Prepare and Insert the Values
-    const valuesToInsert = data.values.map(v => ({
-        variant_option_id: option.id,
-        value: v.value,
-        slug: v.slug,
-        hex_code: v.hex_code || null
-    }))
+        if (optionError) return { error: optionError.message }
 
-    const { error: valuesError } = await supabase
-        .from("variant_option_values")
-        .insert(valuesToInsert)
+        // 2. Prepare and Insert the Values
+        const valuesToInsert = data.values.map(v => ({
+            variant_option_id: option.id,
+            value: v.value,
+            slug: v.slug,
+            hex_code: v.hex_code || null
+        }))
 
-    if (valuesError) return { error: valuesError.message }
+        const { error: valuesError } = await supabase
+            .from("variant_option_values")
+            .insert(valuesToInsert)
 
-    revalidatePath("/admin/variants")
-    return { success: true }
+        if (valuesError) return { error: valuesError.message }
+
+        revalidatePath("/admin/variants")
+        return { success: true }
+    } catch (error: any) {
+        return { error: error.message }
+    }
 }

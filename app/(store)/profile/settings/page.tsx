@@ -20,6 +20,7 @@ import {
 import { createClient } from "@/utils/supabase/client"
 import { AnimatePresence, motion } from "framer-motion"
 import { toast } from "sonner"
+import { deleteAccount } from "@/app/actions/profile"
 
 export default function SettingsPage() {
     const router = useRouter()
@@ -103,9 +104,8 @@ export default function SettingsPage() {
     const handleDeleteAccount = async () => {
         setDeleteLoading(true)
         try {
-            const { error: deleteError } = await supabase.rpc('delete_user_account')
-            if (deleteError) throw deleteError
-
+            const result = await deleteAccount()
+            if (!result.success) throw new Error("Failed to delete account")
             await supabase.auth.signOut()
             toast.success("Account deleted")
             router.push('/')

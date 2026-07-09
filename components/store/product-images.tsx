@@ -106,8 +106,8 @@ export function ProductImages({ images }: { images: { url: string }[] }) {
 
                             {scale === 1 && (
                                 <div className="hidden md:flex absolute inset-0 justify-between items-center px-10 pointer-events-none">
-                                    <button onClick={() => paginate(-1)} className="p-4 bg-white/50 backdrop-blur-md rounded-full pointer-events-auto hover:bg-white"><ChevronLeft className="w-6 h-6" /></button>
-                                    <button onClick={() => paginate(1)} className="p-4 bg-white/50 backdrop-blur-md rounded-full pointer-events-auto hover:bg-white"><ChevronRight className="w-6 h-6" /></button>
+<button onClick={() => paginate(-1)} aria-label="Previous image" className="p-4 bg-white/50 backdrop-blur-md rounded-full pointer-events-auto hover:bg-white"><ChevronLeft className="w-6 h-6" /></button>
+<button onClick={() => paginate(1)} aria-label="Next image" className="p-4 bg-white/50 backdrop-blur-md rounded-full pointer-events-auto hover:bg-white"><ChevronRight className="w-6 h-6" /></button>
                                 </div>
                             )}
                         </div>
@@ -118,7 +118,7 @@ export function ProductImages({ images }: { images: { url: string }[] }) {
                                 <span className="text-[10px] font-black w-12 text-center tracking-widest">{Math.round(scale * 100)}%</span>
                                 <button onClick={() => setScale(s => Math.min(s + 0.5, 4))} className="p-2 hover:bg-white rounded-xl shadow-sm"><ZoomIn className="w-5 h-5" /></button>
                                 <div className="w-[1px] h-4 bg-slate-200 mx-1" />
-                                <button onClick={() => setScale(1)} className="p-2 hover:bg-white rounded-xl shadow-sm text-slate-400"><RotateCcw className="w-4 h-4" /></button>
+                                <button onClick={() => setScale(1)} aria-label="Rotate image" className="p-2 hover:bg-white rounded-xl shadow-sm text-slate-400"><RotateCcw className="w-4 h-4" /></button>
                             </div>
                         </div>
                     </motion.div>
