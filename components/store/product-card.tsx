@@ -35,8 +35,8 @@ function getCheapestVariantPrice(product: any) {
     if (variants.length > 0) {
         let minSale = Infinity
         let minMrp = Infinity
-        let minDiscount = 0
-        let minDiscountAmount = 0
+        let bestDiscPct = 0
+        let bestDiscAmount = 0
         let hasDisc = false
         for (const v of variants) {
             const base = Number(v.price) || 0
@@ -46,15 +46,18 @@ function getCheapestVariantPrice(product: any) {
             let sale = base
             if (dType === "percentage" && dVal > 0) sale = base - base * (dVal / 100)
             else if ((dType === "fixed" || dType === "amount") && dVal > 0) sale = Math.max(0, base - dVal)
+            const discAmt = Math.max(0, mrpVal - sale)
+            if (discAmt > 0) hasDisc = true
             if (sale < minSale) {
                 minSale = sale
                 minMrp = mrpVal
-                minDiscount = dType !== "none" && dVal > 0 ? (dType === "percentage" ? dVal : Math.round(((mrpVal - sale) / mrpVal) * 100)) : 0
-                minDiscountAmount = Math.max(0, mrpVal - sale)
-                hasDisc = minDiscountAmount > 0
+            }
+            if (discAmt > bestDiscAmount) {
+                bestDiscAmount = discAmt
+                bestDiscPct = dType !== "none" && dVal > 0 ? (dType === "percentage" ? dVal : (mrpVal > 0 ? Math.round((discAmt / mrpVal) * 100) : 0)) : 0
             }
         }
-        return { salePrice: minSale, mrp: minMrp, discountPercentage: minDiscount, discountAmount: minDiscountAmount, hasDiscount: hasDisc }
+        return { salePrice: minSale, mrp: minMrp, discountPercentage: bestDiscPct, discountAmount: bestDiscAmount, hasDiscount: hasDisc }
     }
     const base = product.base_price || 0
     const mrpVal = product.mrp || base

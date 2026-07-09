@@ -35,7 +35,7 @@ export default function NewArrivalsPage() {
                 // Fetch products from BOTH the direct category_id column AND the junction table
                 let query = supabase
                     .from('products')
-                    .select('*, product_variants(id, price, stock)')
+                    .select('*, product_variants(id, price, stock, discount_type, discount_value)')
                     .eq('status', 'active')
 
                 if (productIds.length > 0) {

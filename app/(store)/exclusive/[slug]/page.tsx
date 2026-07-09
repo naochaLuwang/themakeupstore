@@ -112,7 +112,7 @@ export default function ExclusiveCategoryPage() {
 
             let query = supabase
                 .from("products")
-                .select("*, product_variants(id, price, stock)")
+                .select("*, product_variants(id, price, stock, discount_type, discount_value)")
                 .eq("status", "active")
 
             if (junctionProductIds.length > 0) {

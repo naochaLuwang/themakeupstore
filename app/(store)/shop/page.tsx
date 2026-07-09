@@ -18,7 +18,7 @@ export default async function ShopPage({
     // Initial Data Fetch
     let supabaseQuery = supabase
         .from('products')
-        .select(`*, product_variants(id, price, stock)`)
+        .select(`*, product_variants(id, price, stock, discount_type, discount_value)`)
         .eq('status', 'active')
 
     if (query) {
