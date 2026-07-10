@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/store/use-cart"
-import { Loader2, Home, Briefcase, MapPin, Navigation, Truck, ArrowRight, ArrowLeft, Check, User, Phone } from "lucide-react"
+import { Loader2, Home, Briefcase, MapPin, Navigation, Truck, ArrowRight, ArrowLeft, Check, User, Phone, X, Search } from "lucide-react"
 import { toast } from "sonner"
 
 export function AddressForm({
@@ -37,6 +37,27 @@ export function AddressForm({
     // Shipping State
     const [shippingMethods, setShippingMethods] = useState<any[]>([])
     const [selectedMethodId, setSelectedMethodId] = useState<string | null>(initialData?.shipping_method_id ?? null)
+
+    const [showPincodeList, setShowPincodeList] = useState(false)
+    const [serviceablePincodes, setServiceablePincodes] = useState<any[]>([])
+    const pincodesFetched = useRef(false)
+
+    const openPincodeList = async () => {
+        if (!pincodesFetched.current) {
+            const { data } = await supabase
+                .from("shipping_zones")
+                .select("pincode, area_name, name")
+                .order("pincode")
+            if (data) setServiceablePincodes(data)
+            pincodesFetched.current = true
+        }
+        setShowPincodeList(true)
+    }
+
+    const selectPincode = (code: string) => {
+        setShowPincodeList(false)
+        handlePincodeChange(code)
+    }
 
     // Logic: If editing an address that already has a method, we can optionally lock it 
     // or allow re-selection. Here we allow re-selection but default to previous.
@@ -137,13 +158,33 @@ export function AddressForm({
             {/* STEP 1: PERSONAL DETAILS */}
             {step === 1 && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
-                    <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="pl-12 h-14 rounded-2xl" />
+                    <div className="space-y-1">
+                        <div className="relative">
+                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name *" className="pl-12 h-14 rounded-2xl" />
+                        </div>
+                        {fullName.length > 0 && fullName.length < 2 && (
+                            <p className="text-[11px] text-red-500 ml-1">Enter a valid name</p>
+                        )}
                     </div>
-                    <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone Number" className="pl-12 h-14 rounded-2xl" />
+                    <div className="space-y-1">
+                        <div className="relative flex items-center">
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+                            <div className="absolute left-12 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+                                <span className="text-sm font-medium text-slate-400">+91</span>
+                                <span className="text-slate-200">|</span>
+                            </div>
+                            <Input
+                                value={phone}
+                                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                placeholder="Phone Number *"
+                                className="pl-[5.5rem] h-14 rounded-2xl"
+                                inputMode="numeric"
+                            />
+                        </div>
+                        {phone.length > 0 && phone.length < 10 && (
+                            <p className="text-[11px] text-red-500 ml-1">Enter a valid 10-digit number</p>
+                        )}
                     </div>
                     <div className="flex gap-2">
                         {['Home', 'Work', 'Other'].map((l) => (
@@ -154,7 +195,7 @@ export function AddressForm({
                             </Button>
                         ))}
                     </div>
-                    <Button disabled={!fullName || !phone} onClick={() => setStep(2)} className="w-full h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest mt-4">
+                    <Button disabled={!fullName || fullName.length < 2 || phone.length !== 10} onClick={() => setStep(2)} className="w-full h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest mt-4">
                         Next <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                 </div>
@@ -164,15 +205,33 @@ export function AddressForm({
             {step === 2 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                     <div className="space-y-4">
-                        <div className="relative">
-                            <Navigation className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${pincodeLoading ? "text-blue-500 animate-spin" : "text-slate-400"}`} />
-                            <Input
-                                value={pincode}
-                                onChange={e => handlePincodeChange(e.target.value)}
-                                placeholder="6-Digit Pincode"
-                                className="pl-12 h-14 rounded-2xl"
-                            />
-                        </div>
+                        {pincode ? (
+                            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                                <div className="flex items-center gap-3">
+                                    <Navigation className="w-4 h-4 text-slate-400" />
+                                    <div>
+                                        <span className="text-sm font-bold text-slate-900">{pincode}</span>
+                                        {city && <span className="text-xs text-slate-400 ml-2">— {city}, {state}</span>}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={openPincodeList}
+                                    className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 underline underline-offset-2"
+                                >
+                                    Change
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={openPincodeList}
+                                className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-dashed border-slate-200 bg-white hover:border-slate-300 transition-all"
+                            >
+                                <Navigation className="w-4 h-4 text-slate-400" />
+                                <span className="text-sm font-medium text-slate-400">Select a serviceable pincode</span>
+                            </button>
+                        )}
 
                         {shippingMethods.length > 0 && (
                             <div className="space-y-2">
@@ -199,7 +258,7 @@ export function AddressForm({
 
                     <div className="flex gap-2">
                         <Button variant="ghost" onClick={() => setStep(1)} className="h-14 w-14 rounded-2xl"><ArrowLeft className="w-4 h-4" /></Button>
-                        <Button disabled={!selectedMethodId || pincode.length !== 6 || shippingMethods.length === 0} onClick={() => setStep(3)} className="flex-1 h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest">
+                        <Button disabled={!selectedMethodId || !pincode || shippingMethods.length === 0} onClick={() => setStep(3)} className="flex-1 h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest">
                             Continue
                         </Button>
                     </div>
@@ -235,6 +294,71 @@ export function AddressForm({
                     </div>
                 </div>
             )}
+
+            {/* Serviceable Pincodes Modal */}
+            {showPincodeList && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+                        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b shrink-0">
+                            <h3 className="text-sm font-black tracking-tight text-slate-900">Serviceable Pincodes</h3>
+                            <button onClick={() => setShowPincodeList(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors shrink-0">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <PincodeList pincodes={serviceablePincodes} currentPincode={pincode} onSelect={selectPincode} />
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function PincodeList({ pincodes, currentPincode, onSelect }: { pincodes: any[]; currentPincode: string; onSelect: (code: string) => void }) {
+    const [query, setQuery] = useState("")
+
+    const filtered = query
+        ? pincodes.filter(z => z.pincode.includes(query) || z.area_name?.toLowerCase().includes(query.toLowerCase()))
+        : pincodes
+
+    return (
+        <div className="flex flex-col overflow-hidden">
+            <div className="relative px-5 pt-4 pb-2">
+                <Search className="absolute left-8 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                    type="text"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder="Search pincode or area..."
+                    className="w-full h-9 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+            </div>
+            <div className="overflow-y-auto px-5 pb-5 pt-1 space-y-1">
+                {filtered.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-6">No matches found.</p>
+                ) : (
+                    filtered.map((z) => {
+                        const isSelected = z.pincode === currentPincode
+                        return (
+                            <button
+                                key={z.pincode}
+                                type="button"
+                                onClick={() => onSelect(z.pincode)}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                                    isSelected
+                                        ? "border-slate-900 bg-slate-50"
+                                        : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50"
+                                }`}
+                            >
+                                <div className="flex items-center gap-2 min-w-0">
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-slate-900 shrink-0" />}
+                                    <span className={`text-sm font-bold truncate ${isSelected ? "text-slate-900" : "text-slate-700"}`}>{z.name || z.pincode}</span>
+                                </div>
+                                <span className={`text-xs font-mono shrink-0 ml-2 ${isSelected ? "text-slate-500" : "text-slate-400"}`}>{z.pincode}</span>
+                            </button>
+                        )
+                    })
+                )}
+            </div>
         </div>
     )
 }

@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
-import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Search, Plus, Trash2, MapPin, Clock, Pencil, Check, X, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
+import { getZones, createZone, updateZone, deleteZone, createMethod, updateMethod, deleteMethod } from "@/app/actions/shipping"
 
 const DeliveryRadiusConfig = dynamic(
     () => import("@/components/admin/delivery-radius-config"),
@@ -15,7 +15,6 @@ const DeliveryRadiusConfig = dynamic(
 )
 
 export default function ShippingAdmin() {
-    const supabase = createClient()
     const [zones, setZones] = useState<any[]>([])
     const [searchQuery, setSearchQuery] = useState("")
     const [newZone, setNewZone] = useState({ name: "", pincode: "", description: "" })
@@ -23,16 +22,13 @@ export default function ShippingAdmin() {
     useEffect(() => { fetchZones() }, [])
 
     async function fetchZones() {
-        const { data, error } = await supabase
-            .from('shipping_zones')
-            .select('*, shipping_methods(*)')
-            .order('pincode', { ascending: true })
-
-        if (error) {
-            console.error("Fetch Zones Error:", error)
+        try {
+            const data = await getZones()
+            if (data) setZones(data)
+        } catch (err: any) {
+            console.error("Fetch Zones Error:", err)
             toast.error("Failed to load zones")
         }
-        if (data) setZones(data)
     }
 
     // Safely cast to strings to prevent crashes if DB returns integers
@@ -43,22 +39,18 @@ export default function ShippingAdmin() {
 
     async function addZone() {
         if (!newZone.name || !newZone.pincode) return toast.error("Area Name and Pincode are required")
-
-        const payload = {
-            name: newZone.name,
-            pincode: String(newZone.pincode),
-            description: newZone.description ? newZone.description : null
-        }
-
-        const { error } = await supabase.from('shipping_zones').insert([payload])
-
-        if (error) {
-            console.error("Add Zone Error:", error)
-            toast.error(error.message)
-        } else {
+        try {
+            await createZone({
+                name: newZone.name,
+                pincode: String(newZone.pincode),
+                description: newZone.description || null
+            })
             toast.success("Zone created successfully")
             setNewZone({ name: "", pincode: "", description: "" })
             fetchZones()
+        } catch (err: any) {
+            console.error("Add Zone Error:", err)
+            toast.error(err.message)
         }
     }
 
@@ -117,40 +109,32 @@ export default function ShippingAdmin() {
 }
 
 function ZoneCard({ zone, refresh }: { zone: any, refresh: () => void }) {
-    const supabase = createClient()
     const [isEditing, setIsEditing] = useState(false)
     const [editData, setEditData] = useState({ name: zone.name, pincode: zone.pincode })
 
     async function handleUpdate() {
-        const payload = {
-            name: editData.name,
-            pincode: String(editData.pincode)
-        }
-        const { error } = await supabase.from('shipping_zones').update(payload).eq('id', zone.id)
-
-        if (error) {
-            console.error("Update Zone Error:", error)
-            toast.error(error.message)
-        } else {
+        try {
+            await updateZone(zone.id, {
+                name: editData.name,
+                pincode: String(editData.pincode)
+            })
             toast.success("Zone updated")
             setIsEditing(false)
             refresh()
+        } catch (err: any) {
+            console.error("Update Zone Error:", err)
+            toast.error(err.message)
         }
     }
 
     async function handleDeleteZone() {
         if (!confirm(`Are you sure? This deletes ${zone.name} and all its rates.`)) return
-
-        const { error: mErr } = await supabase.from('shipping_methods').delete().eq('zone_id', zone.id)
-        if (mErr) return toast.error("Failed to clear rates first")
-
-        const { error } = await supabase.from('shipping_zones').delete().eq('id', zone.id)
-        if (error) {
-            console.error("Delete Zone Error:", error)
-            toast.error(error.message)
-        } else {
+        try {
+            await deleteZone(zone.id)
             toast.success("Zone deleted")
             refresh()
+        } catch (err: any) {
+            toast.error(err.message)
         }
     }
 
@@ -200,26 +184,32 @@ function ZoneCard({ zone, refresh }: { zone: any, refresh: () => void }) {
 }
 
 function MethodRow({ method, refresh }: { method: any, refresh: () => void }) {
-    const supabase = createClient()
     const [isEditing, setIsEditing] = useState(false)
     const [data, setData] = useState({ name: method.name, price: method.price.toString(), time: method.delivery_time_label })
 
     async function handleUpdate() {
-        const payload = {
-            name: data.name,
-            price: Number(data.price),
-            delivery_time_label: data.time
-        }
-
-        const { error } = await supabase.from('shipping_methods').update(payload).eq('id', method.id)
-
-        if (error) {
-            console.error("Update Method Error:", error)
-            toast.error(error.message)
-        } else {
+        try {
+            await updateMethod(method.id, {
+                name: data.name,
+                price: Number(data.price),
+                delivery_time_label: data.time
+            })
             toast.success("Updated")
             setIsEditing(false)
             refresh()
+        } catch (err: any) {
+            console.error("Update Method Error:", err)
+            toast.error(err.message)
+        }
+    }
+
+    async function handleDelete() {
+        if (!confirm("Delete rate?")) return
+        try {
+            await deleteMethod(method.id)
+            refresh()
+        } catch (err: any) {
+            toast.error(err.message)
         }
     }
 
@@ -261,7 +251,7 @@ function MethodRow({ method, refresh }: { method: any, refresh: () => void }) {
                     </div>
                     <div className="flex gap-2 mt-4 md:mt-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button type="button" onClick={() => setIsEditing(true)} aria-label="Edit method" className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:border-slate-400 shadow-sm"><Pencil className="w-4 h-4" /></button>
-                        <button type="button" onClick={async () => { if (confirm("Delete rate?")) { await supabase.from('shipping_methods').delete().eq('id', method.id); refresh(); } }} aria-label="Delete method" className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-red-500 hover:border-red-200 shadow-sm"><Trash2 className="w-4 h-4" /></button>
+                        <button type="button" onClick={handleDelete} aria-label="Delete method" className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-red-500 hover:border-red-200 shadow-sm"><Trash2 className="w-4 h-4" /></button>
                     </div>
                 </>
             )}
@@ -269,30 +259,25 @@ function MethodRow({ method, refresh }: { method: any, refresh: () => void }) {
     )
 }
 function AddMethodMini({ zoneId, refresh }: { zoneId: string, refresh: () => void }) {
-    const supabase = createClient()
     const [open, setOpen] = useState(false)
     const [data, setData] = useState({ name: "", price: "", time: "" })
 
     async function handleAdd() {
         if (!data.name || !data.price) return toast.error("Name and Price required")
-
-        const payload = {
-            zone_id: zoneId,
-            name: data.name,
-            price: Number(data.price),
-            delivery_time_label: data.time || "2-3 Days"
-        }
-
-        const { error } = await supabase.from('shipping_methods').insert([payload])
-
-        if (error) {
-            console.error("Add Method Error:", error)
-            toast.error(error.message)
-        } else {
+        try {
+            await createMethod({
+                zone_id: zoneId,
+                name: data.name,
+                price: Number(data.price),
+                delivery_time_label: data.time || "2-3 Days"
+            })
             toast.success("Shipping rate added successfully")
             setData({ name: "", price: "", time: "" })
             setOpen(false)
             refresh()
+        } catch (err: any) {
+            console.error("Add Method Error:", err)
+            toast.error(err.message)
         }
     }
 
