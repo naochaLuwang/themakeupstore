@@ -428,7 +428,7 @@ export default function CartPage() {
                                 )}
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-500">Shipping</span>
-                                    <span className="font-medium text-slate-500">{freeShippingRemaining === 0 ? "FREE" : "Calculated at checkout"}</span>
+                                    <span className="font-medium text-slate-500">Calculated at checkout</span>
                                 </div>
                                 <div className="border-t border-slate-200 pt-3 flex justify-between items-baseline">
                                     <span className="text-sm font-semibold text-slate-900">Total</span>

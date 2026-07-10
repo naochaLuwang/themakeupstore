@@ -1,5 +1,7 @@
 export const FREE_SHIPPING_THRESHOLD = 3000
 
+export const FREE_SHIPPING_PINCODES = ["795001", "795005"]
+
 export const CART_STORAGE_VERSION = 8
 
 export const CART_SYNC_DEBOUNCE_MS = 2000

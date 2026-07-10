@@ -7,7 +7,7 @@ import { OrderPOSSchema } from "@/lib/schemas"
 import { checkPromoEligibility } from "@/lib/promo-helper"
 import { VALID_TRANSITIONS, STATUS_TIMESTAMPS, PUSH_MESSAGES } from "@/lib/order-status"
 import { calculateDiscountedPrice } from "@/lib/price-helper"
-import { FREE_SHIPPING_THRESHOLD } from "@/lib/cart-constants"
+import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from "@/lib/cart-constants"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
@@ -288,7 +288,8 @@ export async function placeOrder(
                 .eq('id', shippingDetails.shipping_method_id)
                 .single()
             if (method) {
-                verifiedShippingPrice = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : Number(method.price);
+                const pincodeOk = FREE_SHIPPING_PINCODES.includes(formData.pincode)
+                verifiedShippingPrice = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD && pincodeOk ? 0 : Number(method.price);
             }
         }
 

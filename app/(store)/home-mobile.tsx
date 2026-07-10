@@ -150,9 +150,9 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
       {/* MONSOON MARQUEE */}
       <div className="overflow-hidden" style={{ background: 'linear-gradient(90deg, #166534, #c084fc)' }}>
         <div className="animate-marquee whitespace-nowrap py-2.5 text-white text-xs font-bold uppercase tracking-[0.15em]">
-          <span className="mx-6">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
-          <span className="mx-6">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
-          <span className="mx-6">MID YEAR SALE IS LIVE ! FREE SHIPPING ON ALL ORDERS ABOVE ₹2999</span>
+          <span className="mx-6">FREE SHIPPING ABOVE ₹2999 — IMPHAL EAST & WEST DISTRICT</span>
+          <span className="mx-6">FREE SHIPPING ABOVE ₹2999 — IMPHAL EAST & WEST DISTRICT</span>
+          <span className="mx-6">FREE SHIPPING ABOVE ₹2999 — IMPHAL EAST & WEST DISTRICT</span>
         </div>
       </div>
 

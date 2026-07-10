@@ -19,6 +19,7 @@ import { AddressForm } from "@/components/store/address-form"
 import { Button } from "@/components/ui/button"
 
 const FREE_SHIPPING_THRESHOLD = 3000
+import { FREE_SHIPPING_PINCODES } from "@/lib/cart-constants"
 
 interface CheckoutClientProps {
     profile: any
@@ -31,7 +32,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const router = useRouter()
     const {
         items, shippingPrice, selectedShippingId, shippingLabel, deliveryTimeLabel,
-        clearCart, setShippingMethod, getSubtotal,
+        clearCart, setShippingMethod, getSubtotal, setShippingPincode,
         appliedPromo, setAppliedPromo, getDiscountAmount, getFinalTotal,
         getGiftItems, getBXGYTotalDiscount, bxgyDiscounts,
     } = useCart()
@@ -65,7 +66,10 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
             const method = selectedAddress.shipping_methods
             setShippingMethod({ id: method.id, name: method.name, price: Number(method.price), delivery_time_label: method.delivery_time_label })
         }
-    }, [selectedAddress, setShippingMethod])
+        if (selectedAddress?.pincode) {
+            setShippingPincode(selectedAddress.pincode)
+        }
+    }, [selectedAddress, setShippingMethod, setShippingPincode])
 
     const subtotal = getSubtotal()
     const currentSubtotal = mounted ? subtotal : 0
@@ -86,7 +90,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const giftCardDiscount = giftCard ? Math.min(Number(giftCard.remaining_balance), total) : 0
     const rewardCouponDiscount = rewardCoupon ? Math.min(Number(rewardCoupon.discount_amount), total) : 0
     const adjustedTotal = Math.max(0, total - giftCardDiscount - rewardCouponDiscount)
-    const isFreeShipping = currentSubtotal >= FREE_SHIPPING_THRESHOLD && selectedShippingId
+    const isFreeShipping = currentSubtotal >= FREE_SHIPPING_THRESHOLD && selectedShippingId && FREE_SHIPPING_PINCODES.includes(selectedAddress?.pincode)
 
     const handleAddressAdded = (newAddr: any) => {
         setSavedAddresses((prev: any) => [newAddr, ...prev])

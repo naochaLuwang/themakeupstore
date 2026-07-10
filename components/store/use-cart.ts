@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { FREE_SHIPPING_THRESHOLD } from '@/lib/cart-constants';
+import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from '@/lib/cart-constants';
 import { saveCart } from '@/app/actions/cart';
 
 export interface CartItem {
@@ -77,6 +77,7 @@ interface CartStore {
     shippingLabel: string;
     deliveryTimeLabel: string;
     selectedShippingId: string | null;
+    shippingPincode: string;
 
     // Actions
     addItem: (item: CartItem) => { capped: boolean; maxQty: number };
@@ -92,6 +93,7 @@ interface CartStore {
     // Logistics Engine
     setShippingMethod: (method: { id: string, name: string, price: number, delivery_time_label?: string }) => void;
     setSelectedShipping: (id: string | null, price: number, label?: string) => void;
+    setShippingPincode: (pincode: string) => void;
 
     autoCalculateShipping: () => void;
     autoRevalidatePromo: () => void;
@@ -118,6 +120,7 @@ export const useCart = create<CartStore>()(
             shippingLabel: '',
             deliveryTimeLabel: '',
             selectedShippingId: null,
+            shippingPincode: '',
 
             getSubtotal: () => {
                 return get().items
@@ -125,10 +128,16 @@ export const useCart = create<CartStore>()(
                     .reduce((acc, item) => acc + (item.price * item.quantity), 0);
             },
 
+            pincodeQualifiesForFree: (pincode: string) => {
+                return FREE_SHIPPING_PINCODES.includes(pincode)
+            },
+
             // This handles the new object-based logic
             setShippingMethod: (method) => {
                 const subtotal = get().getSubtotal();
-                const isFree = subtotal >= FREE_SHIPPING_THRESHOLD && subtotal > 0;
+                const pincode = get().shippingPincode;
+                const pincodeOk = FREE_SHIPPING_PINCODES.includes(pincode)
+                const isFree = subtotal >= FREE_SHIPPING_THRESHOLD && subtotal > 0 && pincodeOk;
 
                 set({
                     selectedShippingId: method.id,
@@ -142,7 +151,9 @@ export const useCart = create<CartStore>()(
             // This fixes the Type Error by providing the function your component is looking for
             setSelectedShipping: (id, price, label) => {
                 const subtotal = get().getSubtotal();
-                const isFree = subtotal >= FREE_SHIPPING_THRESHOLD && subtotal > 0;
+                const pincode = get().shippingPincode;
+                const pincodeOk = FREE_SHIPPING_PINCODES.includes(pincode)
+                const isFree = subtotal >= FREE_SHIPPING_THRESHOLD && subtotal > 0 && pincodeOk;
 
                 set({
                     selectedShippingId: id,
@@ -153,14 +164,20 @@ export const useCart = create<CartStore>()(
             },
 
             autoCalculateShipping: () => {
-                const { selectedShippingId, baseShippingPrice } = get();
+                const { selectedShippingId, baseShippingPrice, shippingPincode } = get();
                 if (!selectedShippingId) return;
 
-                const isFree = get().getSubtotal() >= FREE_SHIPPING_THRESHOLD;
+                const pincodeOk = FREE_SHIPPING_PINCODES.includes(shippingPincode)
+                const isFree = get().getSubtotal() >= FREE_SHIPPING_THRESHOLD && pincodeOk;
 
                 set({
                     shippingPrice: isFree ? 0 : baseShippingPrice
                 });
+            },
+
+            setShippingPincode: (pincode: string) => {
+                set({ shippingPincode: pincode })
+                get().autoCalculateShipping()
             },
 
             addItem: (newItem) => {
@@ -355,7 +372,7 @@ export const useCart = create<CartStore>()(
         {
             name: 'shopping-cart',
             storage: createJSONStorage(() => localStorage),
-            version: 9, // Bumped to 9 for free_gifts/bxgy fields
+            version: 10, // Bumped to 9 for free_gifts/bxgy fields
         }
     )
 );
