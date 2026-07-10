@@ -127,7 +127,12 @@ export default function AdminOrdersPage() {
                 return
             }
 
-            const confirmCancel = confirm("Cancel order and restock items?")
+            const isRazorpay = currentOrder?.payment_method === 'razorpay' && currentOrder?.payment_status === 'paid'
+            const confirmCancel = confirm(
+                isRazorpay
+                    ? "Cancel order and restock items? A Razorpay refund will be processed."
+                    : "Cancel order and restock items?"
+            )
             if (!confirmCancel) { fetchOrders(); return }
 
             setLoading(true)

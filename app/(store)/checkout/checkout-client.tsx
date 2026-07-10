@@ -58,17 +58,47 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const [rewardCouponCode, setRewardCouponCode] = useState("")
     const [applyingRewardCoupon, setApplyingRewardCoupon] = useState(false)
     const [rewardCouponError, setRewardCouponError] = useState("")
+    const [paymentMethod, setPaymentMethod] = useState<"cod" | "razorpay">("cod")
 
     useEffect(() => { setMounted(true) }, [])
 
+    // Load Razorpay checkout script (disabled for now, no live keys)
     useEffect(() => {
-        if (selectedAddress?.shipping_methods) {
-            const method = selectedAddress.shipping_methods
-            setShippingMethod({ id: method.id, name: method.name, price: Number(method.price), delivery_time_label: method.delivery_time_label })
+        const script = document.createElement("script")
+        script.src = "https://checkout.razorpay.com/v1/checkout.js"
+        script.async = true
+        document.body.appendChild(script)
+        return () => { document.body.removeChild(script) }
+    }, [])
+
+    useEffect(() => {
+        if (!selectedAddress) {
+            setShippingMethod({ id: "", name: "", price: 0, delivery_time_label: "" })
+            setShippingPincode("")
+            return
         }
-        if (selectedAddress?.pincode) {
+        const fetchShippingByPincode = async () => {
+            if (!selectedAddress?.pincode) return
+
+            const { data: zones, error } = await supabase
+                .from("shipping_zones")
+                .select("id, shipping_methods(id, name, price, delivery_time_label)")
+                .eq("pincode", selectedAddress.pincode)
+
+            if (error) {
+                console.error("Shipping zone lookup failed:", error)
+                return
+            }
+
+            const zone = zones?.[0]
+            const method = zone?.shipping_methods?.[0]
+
+            if (method) {
+                setShippingMethod({ id: method.id, name: method.name, price: Number(method.price), delivery_time_label: method.delivery_time_label })
+            }
             setShippingPincode(selectedAddress.pincode)
         }
+        fetchShippingByPincode()
     }, [selectedAddress, setShippingMethod, setShippingPincode])
 
     const subtotal = getSubtotal()
@@ -320,128 +350,42 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         <Ticket className="w-[18px] h-[18px] text-gray-700" />
                         <h2 className="text-sm font-bold text-gray-900">Offers & Coupons</h2>
                     </div>
-                    {appliedPromo ? (
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
-                            <div className="w-9 h-9 bg-green-500 rounded-lg flex items-center justify-center shrink-0">
-                                <Check className="w-[18px] h-[18px] text-white" />
+                    <div className="space-y-2">
+                        {appliedPromo ? (
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
+                                <div className="w-9 h-9 bg-green-500 rounded-lg flex items-center justify-center shrink-0">
+                                    <Check className="w-[18px] h-[18px] text-white" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-gray-900">{appliedPromo.code}</p>
+                                    <p className="text-xs font-semibold text-green-600">You saved ₹{discountAmount}</p>
+                                </div>
+                                <button onClick={handleRemovePromo}>
+                                    <X className="w-[18px] h-[18px] text-gray-400" />
+                                </button>
                             </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-bold text-gray-900">{appliedPromo.code}</p>
-                                <p className="text-xs font-semibold text-green-600">You saved ₹{discountAmount}</p>
-                            </div>
-                            <button onClick={handleRemovePromo}>
-                                <X className="w-[18px] h-[18px] text-gray-400" />
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => setShowPromoPicker(true)}
-                            className="w-full bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-3"
-                        >
-                            <div className="w-9 h-9 bg-pink-50 rounded-lg flex items-center justify-center shrink-0">
-                                <Ticket className="w-4 h-4 text-gray-900" />
-                            </div>
-                            <span className="flex-1 text-sm font-semibold text-gray-900 text-left">
-                                {eligiblePromos.length > 0
-                                    ? `${eligiblePromos.length} coupon${eligiblePromos.length > 1 ? "s" : ""} available`
-                                    : "View all coupons"}
-                            </span>
-                            {eligiblePromos.length > 0 && (
-                                <span className="h-5 min-w-[22px] px-1.5 bg-gray-900 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
-                                    {eligiblePromos.length}
+                        ) : (
+                            <button
+                                onClick={() => setShowPromoPicker(true)}
+                                className="w-full bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-3"
+                            >
+                                <div className="w-9 h-9 bg-pink-50 rounded-lg flex items-center justify-center shrink-0">
+                                    <Ticket className="w-4 h-4 text-gray-900" />
+                                </div>
+                                <span className="flex-1 text-sm font-semibold text-gray-900 text-left">
+                                    {eligiblePromos.length > 0
+                                        ? `${eligiblePromos.length} coupon${eligiblePromos.length > 1 ? "s" : ""} available`
+                                        : "View all coupons"}
                                 </span>
-                            )}
-                            <ChevronRight className="w-4 h-4 text-gray-400" />
-                        </button>
-                    )}
-                </section>
-
-                {/* Gift Card */}
-                <section>
-                    <div className="flex items-center gap-2 mb-3">
-                        <Gift className="w-[18px] h-[18px] text-gray-700" />
-                        <h2 className="text-sm font-bold text-gray-900">Gift Card</h2>
-                    </div>
-                    {giftCard ? (
-                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
-                            <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center shrink-0">
-                                <Gift className="w-[18px] h-[18px] text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-bold text-gray-900">{giftCard.code}</p>
-                                <p className="text-xs font-semibold text-blue-600">Balance: {currency(Number(giftCard.remaining_balance))}</p>
-                            </div>
-                            <button onClick={handleRemoveGiftCard}>
-                                <X className="w-[18px] h-[18px] text-gray-400" />
+                                {eligiblePromos.length > 0 && (
+                                    <span className="h-5 min-w-[22px] px-1.5 bg-gray-900 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
+                                        {eligiblePromos.length}
+                                    </span>
+                                )}
+                                <ChevronRight className="w-4 h-4 text-gray-400" />
                             </button>
-                        </div>
-                    ) : (
-                        <div className="bg-white border border-gray-200 rounded-xl p-3">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="Enter gift card code"
-                                    value={giftCardCode}
-                                    onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
-                                    className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-900 transition-colors placeholder:text-gray-300"
-                                />
-                                <button
-                                    onClick={handleApplyGiftCard}
-                                    disabled={applyingGiftCard || !giftCardCode.trim()}
-                                    className="h-10 px-4 bg-gray-900 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-gray-800 transition-colors shrink-0"
-                                >
-                                    {applyingGiftCard ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
-                                </button>
-                            </div>
-                            {giftCardError && (
-                                <p className="text-[11px] font-medium text-red-500 mt-2">{giftCardError}</p>
-                            )}
-                        </div>
-                    )}
-                </section>
-
-                {/* Reward Coupon */}
-                <section>
-                    <div className="flex items-center gap-2 mb-3">
-                        <Tag className="w-[18px] h-[18px] text-emerald-600" />
-                        <h2 className="text-sm font-bold text-gray-900">Reward Coupon</h2>
+                        )}
                     </div>
-                    {rewardCoupon ? (
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-3">
-                            <div className="w-9 h-9 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
-                                <Tag className="w-[18px] h-[18px] text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-bold text-gray-900">{rewardCoupon.code}</p>
-                                <p className="text-xs font-semibold text-emerald-600">{currency(rewardCoupon.discount_amount)} OFF</p>
-                            </div>
-                            <button onClick={handleRemoveRewardCoupon}>
-                                <X className="w-[18px] h-[18px] text-gray-400" />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="bg-white border border-gray-200 rounded-xl p-3">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="Enter reward coupon code"
-                                    value={rewardCouponCode}
-                                    onChange={(e) => setRewardCouponCode(e.target.value.toUpperCase())}
-                                    className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-900 transition-colors placeholder:text-gray-300"
-                                />
-                                <button
-                                    onClick={handleApplyRewardCoupon}
-                                    disabled={applyingRewardCoupon || !rewardCouponCode.trim()}
-                                    className="h-10 px-4 bg-emerald-600 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-emerald-700 transition-colors shrink-0"
-                                >
-                                    {applyingRewardCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
-                                </button>
-                            </div>
-                            {rewardCouponError && (
-                                <p className="text-[11px] font-medium text-red-500 mt-2">{rewardCouponError}</p>
-                            )}
-                        </div>
-                    )}
                 </section>
 
                 {/* Payment Method */}
@@ -452,17 +396,133 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         </svg>
                         <h2 className="text-sm font-bold text-gray-900">Payment Method</h2>
                     </div>
-                    <div className="bg-white border-2 border-gray-900 rounded-xl p-4 flex items-center gap-3">
-                        <div className="w-11 h-11 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                            <svg className="w-5 h-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125V9M2.25 6h18m10.5 0V9" />
-                            </svg>
+                    <div className="space-y-2">
+                        <div className="flex gap-2">
+                            {[
+                                { id: "cod" as const, label: "Cash on Delivery", icon: "cod" },
+                                { id: "razorpay" as const, label: "Pay Online", icon: "online" },
+                            ].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    disabled={opt.id === "razorpay"}
+                                    onClick={() => opt.id !== "razorpay" && setPaymentMethod(opt.id)}
+                                    className={`flex-1 h-12 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                                        opt.id === "razorpay"
+                                            ? "bg-white text-gray-300 border border-gray-100 cursor-not-allowed"
+                                            : paymentMethod === opt.id
+                                                ? "bg-gray-900 text-white shadow-sm"
+                                                : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
+                                    }`}
+                                >
+                                    {opt.icon === "cod" ? (
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125V9M2.25 6h18m10.5 0V9" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.078.879 4.249 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    )}
+                                    {opt.label}
+                                </button>
+                            ))}
                         </div>
-                        <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">Cash on Delivery</p>
-                            <p className="text-xs text-gray-400">Pay when your order arrives</p>
-                        </div>
-                        <Check className="w-5 h-5 text-gray-900" />
+
+                        {/* Gift Card */}
+                        <details className="group bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                                <ChevronRight className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" />
+                                <Gift className="w-4 h-4 text-gray-500" />
+                                Gift Card
+                                {giftCard && <span className="text-[10px] font-bold text-blue-600 ml-auto">Applied</span>}
+                            </summary>
+                            <div className="px-4 pb-4">
+                                {giftCard ? (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3 mt-2">
+                                        <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center shrink-0">
+                                            <Gift className="w-[18px] h-[18px] text-white" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-gray-900">{giftCard.code}</p>
+                                            <p className="text-xs font-semibold text-blue-600">Balance: {currency(Number(giftCard.remaining_balance))}</p>
+                                        </div>
+                                        <button onClick={handleRemoveGiftCard}>
+                                            <X className="w-[18px] h-[18px] text-gray-400" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white border border-gray-200 rounded-xl p-3 mt-2">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Enter gift card code"
+                                                value={giftCardCode}
+                                                onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                                                className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-900 transition-colors placeholder:text-gray-300"
+                                            />
+                                            <button
+                                                onClick={handleApplyGiftCard}
+                                                disabled={applyingGiftCard || !giftCardCode.trim()}
+                                                className="h-10 px-4 bg-gray-900 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-gray-800 transition-colors shrink-0"
+                                            >
+                                                {applyingGiftCard ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                                            </button>
+                                        </div>
+                                        {giftCardError && (
+                                            <p className="text-[11px] font-medium text-red-500 mt-2">{giftCardError}</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+
+                        {/* Reward Coupon */}
+                        <details className="group bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                                <ChevronRight className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" />
+                                <Tag className="w-4 h-4 text-emerald-500" />
+                                Reward Coupon
+                                {rewardCoupon && <span className="text-[10px] font-bold text-emerald-600 ml-auto">Applied</span>}
+                            </summary>
+                            <div className="px-4 pb-4">
+                                {rewardCoupon ? (
+                                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-3 mt-2">
+                                        <div className="w-9 h-9 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
+                                            <Tag className="w-[18px] h-[18px] text-white" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-gray-900">{rewardCoupon.code}</p>
+                                            <p className="text-xs font-semibold text-emerald-600">{currency(rewardCoupon.discount_amount)} OFF</p>
+                                        </div>
+                                        <button onClick={handleRemoveRewardCoupon}>
+                                            <X className="w-[18px] h-[18px] text-gray-400" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white border border-gray-200 rounded-xl p-3 mt-2">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Enter reward coupon code"
+                                                value={rewardCouponCode}
+                                                onChange={(e) => setRewardCouponCode(e.target.value.toUpperCase())}
+                                                className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-900 transition-colors placeholder:text-gray-300"
+                                            />
+                                            <button
+                                                onClick={handleApplyRewardCoupon}
+                                                disabled={applyingRewardCoupon || !rewardCouponCode.trim()}
+                                                className="h-10 px-4 bg-emerald-600 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-emerald-700 transition-colors shrink-0"
+                                            >
+                                                {applyingRewardCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                                            </button>
+                                        </div>
+                                        {rewardCouponError && (
+                                            <p className="text-[11px] font-medium text-red-500 mt-2">{rewardCouponError}</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </details>
                     </div>
                 </section>
 
@@ -528,7 +588,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                         </span>
                                         {shippingPrice > 0 && currentSubtotal < FREE_SHIPPING_THRESHOLD && (
                                             <p className="text-[10px] font-semibold text-green-500 mt-0.5">
-                                                Free above ₹{FREE_SHIPPING_THRESHOLD}
+                                                Free shipping on selected pincodes
                                             </p>
                                         )}
                                     </div>

@@ -77,7 +77,8 @@ export async function placeOrder(
     bxgyDetails?: { discount: number; freeItems?: { variantId: string; productId: string; ruleId?: string; quantity: number }[] },
     giftDetails?: { variantId: string; productId: string; ruleId?: string; quantity: number }[],
     giftCardDetails?: { code: string; amount: number },
-    rewardCoupon?: { id: string; discount: number }
+    rewardCoupon?: { id: string; discount: number },
+    paymentDetails?: { method: string; payment_id?: string; status: string }
 ) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -345,8 +346,9 @@ export async function placeOrder(
                 user_id: user.id,
                 status: 'pending',
                 order_type: 'delivery',
-                payment_status: 'unpaid',
-                payment_method: 'COD',
+                payment_status: paymentDetails?.status || 'unpaid',
+                payment_method: paymentDetails?.method || 'COD',
+                razorpay_payment_id: paymentDetails?.payment_id || null,
                 total: finalTotal,
                 shipping_price: verifiedShippingPrice,
                 shipping_label: shippingDetails.methodName,
@@ -522,7 +524,7 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
         const [orderRes, profileRes] = await Promise.all([
             supabase
                 .from('orders')
-                .select('status, user_id, order_items(product_variant_id, quantity)')
+                .select('status, user_id, payment_method, payment_status, razorpay_payment_id, order_items(product_variant_id, quantity)')
                 .eq('id', orderId)
                 .single(),
             supabase
@@ -553,14 +555,33 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
             throw new Error("Order is already cancelled")
         }
 
-        // 5. UPDATE: Set status to cancelled + record who cancelled
+        // 4b. Process Razorpay refund if paid via Razorpay
+        if (order.payment_method === 'razorpay' && order.payment_status === 'paid' && order.razorpay_payment_id) {
+            try {
+                const { default: Razorpay } = await import("razorpay")
+                const razorpay = new Razorpay({
+                    key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+                    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+                })
+                await razorpay.payments.refund(order.razorpay_payment_id, {})
+            } catch (refundErr) {
+                console.error("Razorpay refund error:", refundErr)
+                throw new Error("Failed to process Razorpay refund")
+            }
+        }
+
+        // 5. UPDATE: Set status to cancelled + record who cancelled + update payment status
+        const updatePayload: any = {
+            status: 'cancelled',
+            cancelled_by: isAdmin ? 'admin' : 'user',
+            updated_at: new Date().toISOString(),
+        }
+        if (order.payment_method === 'razorpay') {
+            updatePayload.payment_status = 'refunded'
+        }
         const { error: updateErr } = await supabase
             .from('orders')
-            .update({
-                status: 'cancelled',
-                cancelled_by: isAdmin ? 'admin' : 'user',
-                updated_at: new Date().toISOString()
-            })
+            .update(updatePayload)
             .eq('id', orderId)
 
         if (updateErr) throw updateErr

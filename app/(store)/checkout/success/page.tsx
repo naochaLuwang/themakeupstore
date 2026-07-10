@@ -1,12 +1,25 @@
-"use client"
-
-import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowRight, FileText, Check, Package, MapPin } from "lucide-react"
+import { Check, Package, MapPin } from "lucide-react"
+import { createClient } from "@/utils/supabase/server"
 
-export default function OrderSuccessPage() {
-    const searchParams = useSearchParams()
-    const orderId = searchParams.get("orderId")
+export default async function OrderSuccessPage(props: { searchParams: Promise<{ orderId?: string }> }) {
+    const searchParams = await props.searchParams
+    const orderId = searchParams.orderId
+
+    let paymentMethod = "Cash on Delivery"
+    let paymentStatus = "unpaid"
+    if (orderId) {
+        const supabase = await createClient()
+        const { data: order } = await supabase
+            .from("orders")
+            .select("payment_method, payment_status")
+            .eq("id", orderId)
+            .maybeSingle()
+        if (order) {
+            paymentMethod = order.payment_method === "razorpay" ? "Razorpay" : order.payment_method || "Cash on Delivery"
+            paymentStatus = order.payment_status || "unpaid"
+        }
+    }
 
     return (
         <div className="min-h-auto bg-white flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
@@ -41,31 +54,24 @@ export default function OrderSuccessPage() {
                             </p>
                         </div>
                         <div className="space-y-1.5 text-right">
-                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Payment Status</p>
+                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Payment</p>
                             <p className="text-[10px] font-black uppercase tracking-tight text-slate-900">
-                                Cash on Delivery
+                                {paymentMethod}
+                            </p>
+                            <p className={`text-[9px] font-bold uppercase tracking-wider ${
+                                paymentStatus === "paid" ? "text-emerald-600" : "text-slate-400"
+                            }`}>
+                                {paymentStatus === "paid" ? "Paid" : paymentStatus}
                             </p>
                         </div>
                     </div>
 
                     <div className="pt-8 space-y-6">
-                        {/* <div className="flex items-start gap-4">
-                            <div className="p-2.5 bg-white rounded-xl border border-slate-100">
-                                <FileText className="w-4 h-4 text-slate-400" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Email Confirmation</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-0.5">
-                                    A summary has been sent to your registered address.
-                                </p>
-                            </div>
-                        </div> */}
-
                         <Link
                             href={`/profile/orders/${orderId}`}
                             className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-black transition-all active:scale-[0.98]"
                         >
-                            View Order Details <ArrowRight className="w-4 h-4" />
+                            View Order Details <Check className="w-4 h-4" />
                         </Link>
                     </div>
                 </div>

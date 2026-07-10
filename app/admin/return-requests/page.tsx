@@ -58,7 +58,7 @@ export default async function ReturnRequestsPage() {
         .select(`
             *,
             return_status_logs(id, status, note, created_at),
-            orders(shipping_address),
+            orders(shipping_address, payment_method, razorpay_payment_id),
             products(name, thumbnail_url)
         `)
         .order("created_at", { ascending: false })
@@ -97,6 +97,7 @@ export default async function ReturnRequestsPage() {
                             <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Product</th>
                             <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Reason</th>
                             <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Status</th>
+                            <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Payment</th>
                             <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Transaction ID</th>
                             <th className="py-3.5 px-5 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">Submitted</th>
                             <th className="py-3.5 px-5 text-right text-[10px] font-semibold uppercase tracking-widest text-slate-400">Actions</th>
@@ -105,7 +106,7 @@ export default async function ReturnRequestsPage() {
                     <tbody className="divide-y divide-slate-50">
                         {(!requests || requests.length === 0) && (
                             <tr>
-                                <td colSpan={7} className="py-16 text-center">
+                                <td colSpan={8} className="py-16 text-center">
                                     <div className="flex flex-col items-center gap-2">
                                         <AlertTriangle className="w-8 h-8 text-slate-200" />
                                         <p className="text-sm text-slate-400">No return requests yet.</p>
@@ -181,6 +182,12 @@ export default async function ReturnRequestsPage() {
                                                 </div>
                                             )}
                                         </div>
+                                    </td>
+
+                                    <td className="py-4 px-5">
+                                        <span className="text-xs font-medium text-slate-700">
+                                            {req.orders?.payment_method === "razorpay" ? "Razorpay" : req.orders?.payment_method || "—"}
+                                        </span>
                                     </td>
 
                                     <td className="py-4 px-5 align-middle">

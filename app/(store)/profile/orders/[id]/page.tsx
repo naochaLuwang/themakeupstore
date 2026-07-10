@@ -489,6 +489,9 @@ export default function OrderDetailPage() {
                             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                 {order.payment_method} • {order.payment_status}
                             </span>
+                            {order.razorpay_payment_id && (
+                                <span className="text-[9px] font-mono text-gray-300 ml-1">#{order.razorpay_payment_id.slice(-8)}</span>
+                            )}
                         </div>
                     </div>
 

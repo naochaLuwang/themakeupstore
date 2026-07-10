@@ -43,7 +43,7 @@ export default async function ReturnRequestDetailPage({
             *,
             return_status_logs(id, status, note, created_at),
             orders(
-                id, status, total, shipping_price, shipping_address, created_at
+                id, status, total, shipping_price, shipping_address, payment_method, razorpay_payment_id, created_at
             ),
             products(name, thumbnail_url)
         `)
@@ -279,6 +279,16 @@ export default async function ReturnRequestDetailPage({
                                     <span className="text-slate-500">Shipping</span>
                                     <span className="text-slate-900">{req.orders.shipping_price ? `₹${req.orders.shipping_price}` : "FREE"}</span>
                                 </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Payment</span>
+                                    <span className="text-slate-900">{req.orders.payment_method || "—"}</span>
+                                </div>
+                                {req.orders.razorpay_payment_id && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">Payment ID</span>
+                                        <code className="text-[11px] font-mono text-slate-800 bg-slate-50 px-1.5 py-0.5 rounded">{req.orders.razorpay_payment_id}</code>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <span className="text-slate-500">Items</span>
                                     <span className="text-slate-900">—</span>

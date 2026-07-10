@@ -9,7 +9,7 @@ import { ProductCard } from "@/components/store/product-card"
 import {
     Heart, ShoppingBag, Star, Share2, Store, MapPin,
     ShieldCheck, RotateCcw, ChevronDown, ChevronUp, ChevronRight, Check, X, Plus, Minus, Bell,
-    ScanLine, Palette, Gift, Tag
+    ScanLine, Palette, Gift, Tag, Search
 } from "lucide-react"
 import { toast } from "sonner"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
@@ -355,6 +355,27 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
     const [deliveryStatus, setDeliveryStatus] = useState<"idle" | "available" | "unavailable">("idle")
     const [deliveryLabel, setDeliveryLabel] = useState("")
     const [showPincodeInput, setShowPincodeInput] = useState(false)
+    const [showPincodeList, setShowPincodeList] = useState(false)
+    const [serviceablePincodes, setServiceablePincodes] = useState<any[]>([])
+    const pincodesFetched = useRef(false)
+
+    const openPincodeList = async () => {
+        if (!pincodesFetched.current) {
+            const { data } = await supabase
+                .from("shipping_zones")
+                .select("pincode, area_name, name, shipping_methods!inner(id)")
+                .order("pincode")
+            if (data) setServiceablePincodes(data)
+            pincodesFetched.current = true
+        }
+        setShowPincodeList(true)
+    }
+
+    const selectPincode = (code: string) => {
+        setShowPincodeList(false)
+        setPincode(code)
+        checkDelivery(code)
+    }
 
     const checkDelivery = async (prefillPin?: string) => {
         const clean = (prefillPin || pincode).trim()
@@ -376,7 +397,6 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                 .from("shipping_methods")
                 .select("delivery_time_label")
                 .eq("zone_id", zone.id)
-                .eq("is_active", true)
                 .order("price", { ascending: true })
                 .limit(1)
             if (methods && methods.length > 0) {
@@ -696,6 +716,9 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                         <button onClick={() => setShowPincodeInput(true)} className="text-[#fc2779] text-xs font-bold">Change</button>
                     </div>
                 )}
+                <button onClick={openPincodeList} className="mt-1.5 text-[10px] font-semibold text-rose-500 hover:text-rose-600 transition-colors">
+                    See all serviceable pincodes
+                </button>
             </div>
 
             {/* Features */}
@@ -1309,6 +1332,21 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                 onClose={() => setReviewsModalVisible(false)}
             />
 
+            {/* Serviceable Pincodes Modal */}
+            {showPincodeList && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+                        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b shrink-0">
+                            <h3 className="text-sm font-black tracking-tight text-slate-900">Serviceable Pincodes</h3>
+                            <button onClick={() => setShowPincodeList(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors shrink-0">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <PincodeList pincodes={serviceablePincodes} currentPincode={pincode} onSelect={selectPincode} />
+                    </div>
+                </div>
+            )}
+
             {/* Notify Me Modal */}
             {notifyModalVisible && (
                 <div className="fixed inset-0 z-50">
@@ -1334,6 +1372,56 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                     </div>
                 </div>
             )}
+        </div>
+    )
+}
+
+function PincodeList({ pincodes, currentPincode, onSelect }: { pincodes: any[]; currentPincode: string; onSelect: (code: string) => void }) {
+    const [query, setQuery] = useState("")
+
+    const filtered = query
+        ? pincodes.filter(z => z.pincode.includes(query) || z.area_name?.toLowerCase().includes(query.toLowerCase()))
+        : pincodes
+
+    return (
+        <div className="flex flex-col overflow-hidden">
+            <div className="relative px-5 pt-4 pb-2">
+                <Search className="absolute left-8 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                    type="text"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder="Search pincode or area..."
+                    className="w-full h-9 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+            </div>
+            <div className="overflow-y-auto px-5 pb-5 pt-1 space-y-1">
+                {filtered.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-6">No matches found.</p>
+                ) : (
+                    filtered.map((z) => {
+                        const isSelected = z.pincode === currentPincode
+                        return (
+                            <button
+                                key={z.pincode}
+                                type="button"
+                                onClick={() => onSelect(z.pincode)}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                                    isSelected
+                                        ? "border-slate-900 bg-slate-50"
+                                        : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50"
+                                }`}
+                            >
+                                <div className="flex items-center gap-2 min-w-0">
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-slate-900 shrink-0" />}
+                                    <span className={`text-sm font-bold truncate ${isSelected ? "text-slate-900" : "text-slate-700"}`}>{z.name || z.pincode}</span>
+                                </div>
+                                <span className={`text-xs font-mono shrink-0 ml-2 ${isSelected ? "text-slate-500" : "text-slate-400"}`}>{z.pincode}</span>
+                            </button>
+                        )
+                    })
+                )}
+            </div>
         </div>
     )
 }

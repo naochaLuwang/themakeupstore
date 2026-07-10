@@ -342,6 +342,9 @@ export default function OrderInvoicePage() {
                         <div className={isThermal ? '' : 'text-left'}>
                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Net Payable</p>
                             <p className="text-[9px] font-black text-slate-900 uppercase italic leading-none">{order.payment_method}</p>
+                            {order.razorpay_payment_id && (
+                                <p className="text-[7px] font-mono text-slate-400 mt-0.5">ID: {order.razorpay_payment_id}</p>
+                            )}
                         </div>
                         <p className={`${isThermal ? 'text-[18px]' : 'text-5xl'} font-black italic tracking-tighter text-slate-900`}>₹{Number(order.total).toLocaleString()}</p>
                     </div>
