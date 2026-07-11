@@ -6,10 +6,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
-import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import {
     Search, X,
-    ChevronDown, ChevronUp, ArrowUpDown, Check, Clock, Trash2
+    ChevronDown, ChevronUp, ArrowUpDown, Check, Clock
 } from "lucide-react"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
@@ -53,8 +52,6 @@ export default function SearchPage() {
     const categoryMap = useRef<Map<string, string>>(new Map())
     const [recentSearches, setRecentSearches] = useState<string[]>([])
     const [exclusiveBrands, setExclusiveBrands] = useState<any[]>([])
-    const recentlyViewed = useRecentlyViewed(s => s.items)
-    const clearRecentlyViewed = useRecentlyViewed(s => s.clear)
     const searchTimeout = useRef<any>(null)
 
     useEffect(() => {
@@ -443,40 +440,7 @@ export default function SearchPage() {
                             </div>
                         )}
 
-                        {recentlyViewed.length > 0 && (
-                            <div className="pt-4">
-                                <div className="flex items-center justify-between mb-3 px-4">
-                                    <h3 className="text-base font-light text-gray-700">Recently Viewed</h3>
-                                    <button onClick={clearRecentlyViewed} className="text-gray-400 hover:text-gray-600 transition-colors">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                                <div className="flex gap-4 overflow-x-auto pb-1 px-4 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-                                    {Array.isArray(recentlyViewed) && recentlyViewed.filter((item: any) => item && typeof item.name === "string").map((item: any) => (
-                                        <Link
-                                            key={item.id}
-                                            href={`/products/${item.id}`}
-                                            className="shrink-0 flex flex-col items-center gap-1 w-20"
-                                        >
-                                            <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden shrink-0 shadow-sm">
-                                                {item.thumbnail_url ? (
-                                                    <Image
-                                                        src={item.thumbnail_url}
-                                                        alt={item.name}
-                                                        width={56}
-                                                        height={56}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm font-daciana">M</div>
-                                                )}
-                                            </div>
-                                            <span className="text-[10px] text-gray-600 text-center leading-tight line-clamp-2">{item.name}</span>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+
 
                         {exclusiveBrands.length > 0 && (
                             <div className="pt-4">
@@ -501,7 +465,7 @@ export default function SearchPage() {
                             </div>
                         )}
 
-                        {recentSearches.length === 0 && recentlyViewed.length === 0 && exclusiveBrands.length === 0 && (
+                        {recentSearches.length === 0 && exclusiveBrands.length === 0 && (
                             <div className="flex flex-col items-center pt-28 px-4">
                                 <Search className="w-20 h-20 text-gray-200 stroke-[1]" />
                                 <p className="text-lg font-semibold text-gray-700 mt-5">Search for products</p>
