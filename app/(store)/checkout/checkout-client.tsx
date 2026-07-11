@@ -58,7 +58,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const [rewardCouponCode, setRewardCouponCode] = useState("")
     const [applyingRewardCoupon, setApplyingRewardCoupon] = useState(false)
     const [rewardCouponError, setRewardCouponError] = useState("")
-    const [paymentMethod, setPaymentMethod] = useState<"cod" | "razorpay">("cod")
+    const [paymentMethod, setPaymentMethod] = useState<"cod" | "razorpay">("razorpay")
 
     useEffect(() => { setMounted(true) }, [])
 
@@ -486,36 +486,67 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         </svg>
                         <h2 className="text-sm font-bold text-gray-900">Payment Method</h2>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex gap-2">
-                            {[
-                                { id: "cod" as const, label: "Cash on Delivery", icon: "cod" },
-                                { id: "razorpay" as const, label: "Pay Online", icon: "online" },
-                            ].map(opt => (
-                                <button
-                                    key={opt.id}
-                                    onClick={() => setPaymentMethod(opt.id)}
-                                    className={`flex-1 h-12 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                                        paymentMethod === opt.id
-                                            ? "bg-gray-900 text-white shadow-sm"
-                                            : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
-                                    }`}
-                                >
-                                    {opt.icon === "cod" ? (
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125V9M2.25 6h18m10.5 0V9" />
-                                        </svg>
-                                    ) : (
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.078.879 4.249 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    )}
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                        {/* Pay Online — first / default */}
+                        <button
+                            onClick={() => setPaymentMethod("razorpay")}
+                            className={`w-full flex items-center gap-4 px-4 py-4 transition-colors ${
+                                paymentMethod === "razorpay" ? "bg-pink-50/50" : ""
+                            } ${paymentMethod === "cod" ? "border-b border-gray-100" : ""}`}
+                        >
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                paymentMethod === "razorpay" ? "border-pink-500" : "border-gray-300"
+                            }`}>
+                                {paymentMethod === "razorpay" && (
+                                    <div className="w-2.5 h-2.5 rounded-full bg-pink-500" />
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 flex-1">
+                                <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.078.879 4.249 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div className="text-left">
+                                    <p className="text-sm font-semibold text-gray-900">Pay Online</p>
+                                    <p className="text-[11px] text-gray-400">Credit / Debit card, UPI, Net Banking, Wallet</p>
+                                </div>
+                            </div>
+                            {paymentMethod === "razorpay" && (
+                                <div className="flex items-center gap-1">
+                                    <img src="https://img.icons8.com/color/24/visa.png" alt="Visa" className="w-5 h-5" />
+                                    <img src="https://img.icons8.com/color/24/mastercard.png" alt="Mastercard" className="w-5 h-5" />
+                                    <img src="https://img.icons8.com/color/24/rupay.png" alt="RuPay" className="w-5 h-5" />
+                                </div>
+                            )}
+                        </button>
 
-                        {/* Gift Card */}
+                        {/* COD — second */}
+                        <button
+                            onClick={() => setPaymentMethod("cod")}
+                            className={`w-full flex items-center gap-4 px-4 py-4 transition-colors ${
+                                paymentMethod === "cod" ? "bg-pink-50/50" : ""
+                            }`}
+                        >
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                paymentMethod === "cod" ? "border-pink-500" : "border-gray-300"
+                            }`}>
+                                {paymentMethod === "cod" && (
+                                    <div className="w-2.5 h-2.5 rounded-full bg-pink-500" />
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 flex-1">
+                                <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125V9M2.25 6h18m10.5 0V9" />
+                                </svg>
+                                <div className="text-left">
+                                    <p className="text-sm font-semibold text-gray-900">Cash on Delivery</p>
+                                    <p className="text-[11px] text-gray-400">Pay when your order is delivered</p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* Gift Card + Reward Coupon collapsibles */}
+                    <div className="space-y-2 mt-2">
                         <details className="group bg-white border border-gray-200 rounded-xl overflow-hidden">
                             <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                                 <ChevronRight className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" />
@@ -563,7 +594,6 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             </div>
                         </details>
 
-                        {/* Reward Coupon */}
                         <details className="group bg-white border border-gray-200 rounded-xl overflow-hidden">
                             <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                                 <ChevronRight className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" />
