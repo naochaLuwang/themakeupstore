@@ -228,7 +228,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 quantity: i.quantity,
             })) : undefined
 
-            const res = await placeOrder(
+            const commonOrderArgs = [
                 selectedAddress,
                 items,
                 { total, price: shippingPrice, methodName: shippingLabel, deliveryTimeLabel, shipping_method_id: selectedAddress.shipping_methods?.id },
@@ -236,17 +236,107 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 bxgyDetails,
                 giftDetails,
                 giftCard ? { code: giftCard.code, amount: giftCardDiscount } : undefined,
-                rewardCoupon ? { id: rewardCoupon.id, discount: rewardCouponDiscount } : undefined
-            )
-            if (res.success) {
-                clearCart()
-                router.push(`/checkout/success?orderId=${res.orderId}`)
-            } else {
-                toast.error(res.message || "Order failed")
+                rewardCoupon ? { id: rewardCoupon.id, discount: rewardCouponDiscount } : undefined,
+            ] as const
+
+            if (paymentMethod === "cod") {
+                try {
+                    const res = await placeOrder(...commonOrderArgs, undefined)
+                    if (res.success) {
+                        clearCart()
+                        router.push(`/checkout/success?orderId=${res.orderId}`)
+                    } else {
+                        toast.error(res.message || "Order failed")
+                    }
+                } catch (err) {
+                    toast.error("Order submission failed")
+                } finally {
+                    setLoading(false)
+                }
+                return
+            }
+
+            // Razorpay flow
+            try {
+                if (!(window as any).Razorpay) {
+                    toast.error("Payment gateway loading. Please try again.")
+                    setLoading(false)
+                    return
+                }
+
+                const amountPaise = Math.round(adjustedTotal * 100)
+                if (amountPaise < 100) {
+                    toast.error("Minimum order amount is ₹1")
+                    setLoading(false)
+                    return
+                }
+                const orderRes = await fetch("/api/create-order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ amount: amountPaise }),
+                })
+                if (!orderRes.ok) {
+                    const errData = await orderRes.json()
+                    throw new Error(errData.error || "Failed to create payment order")
+                }
+                const { order_id, amount } = await orderRes.json()
+
+                const razorpay = new (window as any).Razorpay({
+                    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                    order_id,
+                    amount,
+                    currency: "INR",
+                    name: "THE MAKE UP STORE WANGKHEI",
+                    description: `Order ${selectedAddress?.full_name}`,
+                    prefill: {
+                        name: selectedAddress?.full_name,
+                        email: profile?.email,
+                        contact: selectedAddress?.phone,
+                    },
+                    handler: async function (response: any) {
+                        try {
+                            const verifyRes = await fetch("/api/verify-payment", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                }),
+                            })
+                            if (!verifyRes.ok) {
+                                toast.error("Payment verification failed")
+                                setLoading(false)
+                                return
+                            }
+
+                            const res = await placeOrder(...commonOrderArgs, { method: "razorpay", payment_id: response.razorpay_payment_id, status: "paid" })
+                            if (res.success) {
+                                clearCart()
+                                router.push(`/checkout/success?orderId=${res.orderId}`)
+                            } else {
+                                toast.error(res.message || "Order failed")
+                            }
+                        } catch (err) {
+                            toast.error("Payment verified but order submission failed")
+                        } finally {
+                            setLoading(false)
+                        }
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            setLoading(false)
+                            toast.info("Payment cancelled")
+                        },
+                    },
+                })
+                razorpay.open()
+            } catch (err: any) {
+                toast.error(err.message || "Payment initiation failed")
+                setLoading(false)
             }
         } catch (err) {
             toast.error("Process interrupted")
-        } finally {
             setLoading(false)
         }
     }
@@ -404,14 +494,11 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             ].map(opt => (
                                 <button
                                     key={opt.id}
-                                    disabled={opt.id === "razorpay"}
-                                    onClick={() => opt.id !== "razorpay" && setPaymentMethod(opt.id)}
+                                    onClick={() => setPaymentMethod(opt.id)}
                                     className={`flex-1 h-12 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                                        opt.id === "razorpay"
-                                            ? "bg-white text-gray-300 border border-gray-100 cursor-not-allowed"
-                                            : paymentMethod === opt.id
-                                                ? "bg-gray-900 text-white shadow-sm"
-                                                : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
+                                        paymentMethod === opt.id
+                                            ? "bg-gray-900 text-white shadow-sm"
+                                            : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
                                     }`}
                                 >
                                     {opt.icon === "cod" ? (
@@ -667,8 +754,10 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     >
                         {loading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : paymentMethod === "razorpay" ? (
+                            <span>Pay ₹{Math.round(adjustedTotal).toLocaleString()}</span>
                         ) : (
-                            "Place Order"
+                            <span>Place Order • COD</span>
                         )}
                     </button>
                 </div>

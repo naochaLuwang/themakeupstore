@@ -423,9 +423,12 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
             d.setDate(d.getDate() + diff)
             return `Delivery by ${d.toLocaleDateString("en-IN", opts)}`
         }
-        const match = deliveryLabel.match(/(\d+)\s*-\s*\d+/)
+        if (/same\s*day/i.test(deliveryLabel)) {
+            return `Delivery by ${new Date().toLocaleDateString("en-IN", opts)}`
+        }
+        const match = deliveryLabel.match(/(\d+)\s*-\s*(\d+)/)
         if (match) {
-            const days = parseInt(match[1], 10)
+            const days = parseInt(match[2], 10)
             const date = new Date()
             date.setDate(date.getDate() + days)
             return `Delivery by ${date.toLocaleDateString("en-IN", opts)}`

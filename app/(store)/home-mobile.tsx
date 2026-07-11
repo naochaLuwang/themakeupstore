@@ -90,6 +90,7 @@ interface Props {
 export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts, showcaseItems }: Props) {
   const [mounted, setMounted] = useState(false)
   const [showDiorPopup, setShowDiorPopup] = useState(false)
+  const [showAppBanner, setShowAppBanner] = useState(false)
   const recentlyViewed = useRecentlyViewed(s => s.items)
   useEffect(() => { setMounted(true) }, [])
 
@@ -97,6 +98,16 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
     const seen = sessionStorage.getItem("dior-launch-seen")
     if (!seen) setShowDiorPopup(true)
   }, [])
+
+  useEffect(() => {
+    const hidden = localStorage.getItem("app-banner-hidden")
+    if (!hidden) setShowAppBanner(true)
+  }, [])
+
+  const dismissAppBanner = () => {
+    localStorage.setItem("app-banner-hidden", "1")
+    setShowAppBanner(false)
+  }
 
   const dismissDiorPopup = () => {
     sessionStorage.setItem("dior-launch-seen", "1")
@@ -346,6 +357,42 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
           ))}
         </div>
       </div>
+
+      {/* Download App Banner */}
+      {showAppBanner && (
+        <div className="fixed bottom-14 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gray-900 shrink-0 flex items-center justify-center shadow-sm">
+            <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="5" y="2" width="14" height="20" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 18h.01" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-black tracking-tight text-gray-900 truncate">THE MAKEUP STORE</p>
+            <div className="flex items-center gap-1">
+              <div className="flex">
+                {[1,2,3,4].map(i => (
+                  <svg key={i} className="w-3 h-3 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                ))}
+              </div>
+              <span className="text-[10px] font-bold text-gray-500">4.8</span>
+            </div>
+          </div>
+          <a
+            href="https://play.google.com/store/apps/details?id=com.themakeupstorewangkhei.twa"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 h-9 px-5 bg-gray-900 text-white rounded-lg text-[11px] font-black flex items-center tracking-wider hover:bg-gray-800 transition-colors"
+          >
+            GET
+          </a>
+          <button onClick={dismissAppBanner} className="shrink-0 w-8 h-8 flex items-center justify-center">
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+      )}
 
       {/* Dior Launch Popup */}
       {showDiorPopup && (

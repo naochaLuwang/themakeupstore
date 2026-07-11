@@ -223,9 +223,13 @@ export default function OrderDetailPage() {
             d.setDate(d.getDate() + diff)
             return `${prefix} ${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}`
         }
-        const match = label.match(/(\d+)\s*-\s*\d+/)
+        if (/same\s*day/i.test(label)) {
+            const d = new Date(baseDate)
+            return `${prefix} ${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}`
+        }
+        const match = label.match(/(\d+)\s*-\s*(\d+)/)
         if (match) {
-            const days = parseInt(match[1], 10)
+            const days = parseInt(match[2], 10)
             const d = new Date(baseDate)
             d.setDate(d.getDate() + days)
             return `${prefix} ${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}`

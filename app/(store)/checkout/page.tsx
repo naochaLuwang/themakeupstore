@@ -21,7 +21,7 @@ export default async function CheckoutPage() {
     let profileRes: any, addressRes: any, promos: any
     try {
         [profileRes, addressRes, promos] = await Promise.all([
-            supabase.from("profiles").select("id").eq("id", user.id).single(),
+            supabase.from("profiles").select("id, email").eq("id", user.id).single(),
             supabase.from("user_addresses")
                 .select(`
                     *,

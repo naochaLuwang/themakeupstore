@@ -367,6 +367,44 @@ export default async function GatewayPage() {
 
           </div>
         </div>
+
+        {/* Download App */}
+        <div className="hidden md:block max-w-7xl mx-auto px-6 pb-16">
+          <div className="bg-gray-900 rounded-3xl p-10 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 rounded-2xl bg-white/10 shrink-0 flex items-center justify-center">
+                <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="5" y="2" width="14" height="20" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 18h.01" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-white">THE MAKEUP STORE</h2>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex">
+                    {[1,2,3,4,5].map(i => (
+                      <svg key={i} className={`w-4 h-4 ${i <= 4 ? "text-amber-400" : "text-gray-600"}`} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                    ))}
+                  </div>
+                  <span className="text-sm font-bold text-gray-300">4.8</span>
+                  <span className="text-sm text-gray-500">(120+)</span>
+                </div>
+                <p className="text-sm text-gray-400 mt-1">Shop authentic makeup & beauty products on the go.</p>
+              </div>
+            </div>
+            <a
+              href="https://play.google.com/store/apps/details?id=com.themakeupstorewangkhei.twa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-white text-gray-900 px-7 py-3.5 rounded-xl text-sm font-black hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 12.404c0 .602-.074 1.058-.23 1.373-.146.315-.37.572-.674.776-.283.192-.6.324-.953.394-.342.082-.703.12-1.083.12h-4.12v-5.33h3.4c.48 0 .867.027 1.162.092.294.064.554.176.776.332.234.155.413.365.547.634.134.27.214.572.214.914v.695h-1.577v-.634c0-.214-.037-.403-.113-.568-.074-.164-.18-.293-.316-.388-.136-.094-.294-.162-.483-.2-.19-.04-.393-.06-.612-.06h-1.715v5.338h2.14c.262 0 .493-.023.698-.07.204-.048.388-.12.548-.22.172-.1.307-.226.416-.38.107-.154.163-.345.163-.57v-.582h1.576zM5.28 12.546c0 .345-.058.656-.176.934-.116.278-.274.516-.48.717-.203.2-.444.355-.725.466-.28.11-.585.166-.912.166-.31 0-.606-.052-.882-.154-.278-.104-.517-.24-.72-.41-.202-.172-.367-.375-.493-.61-.126-.233-.202-.483-.226-.746h1.423c.018.128.066.248.141.358.076.11.166.204.28.282.113.078.24.14.385.186.144.045.28.068.414.068.163 0 .31-.028.438-.082.128-.055.23-.133.31-.232.08-.1.142-.217.19-.352.05-.134.074-.28.074-.442V9.27h1.59v3.276zM2.475 7.233h1.577v4.81H2.475v-4.81zM21.35 7.59a.527.527 0 01-.528.53.528.528 0 01-.53-.53c0-.294.236-.53.53-.53.292 0 .528.236.528.53zm.344 5.546h-1.578v-4.04H21.35v4.04h.344z"/></svg>
+              GET IT ON GOOGLE PLAY
+            </a>
+          </div>
+        </div>
       </main>
 
       {/* MOBILE: native-style scrollable feed */}
