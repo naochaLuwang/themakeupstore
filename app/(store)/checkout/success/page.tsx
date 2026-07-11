@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Check, Package, MapPin } from "lucide-react"
 import { createClient } from "@/utils/supabase/server"
+import { CartClearer } from "@/components/store/cart-clearer"
 
 export default async function OrderSuccessPage(props: { searchParams: Promise<{ orderId?: string }> }) {
     const searchParams = await props.searchParams
@@ -23,6 +24,7 @@ export default async function OrderSuccessPage(props: { searchParams: Promise<{ 
 
     return (
         <div className="min-h-auto bg-white flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
+            <CartClearer />
 
             <div className="w-full max-w-xl space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
 

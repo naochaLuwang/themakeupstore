@@ -129,20 +129,32 @@ export function AddressForm({
                 is_default: initialData?.is_default ?? false
             }
 
-            // Perform the operation and immediately join shipping_methods
-            // This ensures the CheckoutClient receives the object it expects
-            const query = initialData?.id
-                ? supabase.from("user_addresses").update(payload).eq("id", initialData.id).eq("user_id", userId)
-                : supabase.from("user_addresses").insert([payload])
+            let addressId: string
+            if (initialData?.id) {
+                const { error } = await supabase
+                    .from("user_addresses")
+                    .update(payload)
+                    .eq("id", initialData.id)
+                    .eq("user_id", userId)
+                if (error) throw error
+                addressId = initialData.id
+            } else {
+                const { data: inserted, error } = await supabase
+                    .from("user_addresses")
+                    .insert([payload])
+                    .select("id")
+                    .single()
+                if (error) throw error
+                addressId = inserted.id
+            }
 
-            const { data, error } = await query
-                .select(`
-                    *,
-                    shipping_methods:shipping_method_id (*)
-                `)
+            const { data, error: fetchError } = await supabase
+                .from("user_addresses")
+                .select("*, shipping_methods:shipping_method_id (*)")
+                .eq("id", addressId)
                 .single()
 
-            if (error) throw error
+            if (fetchError) throw fetchError
 
             toast.success("Destination Saved Successfully")
             if (onSuccess) onSuccess(data)

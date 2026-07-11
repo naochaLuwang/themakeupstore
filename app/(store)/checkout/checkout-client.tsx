@@ -32,7 +32,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const router = useRouter()
     const {
         items, shippingPrice, selectedShippingId, shippingLabel, deliveryTimeLabel,
-        clearCart, setShippingMethod, getSubtotal, setShippingPincode,
+        setShippingMethod, getSubtotal, setShippingPincode,
         appliedPromo, setAppliedPromo, getDiscountAmount, getFinalTotal,
         getGiftItems, getBXGYTotalDiscount, bxgyDiscounts,
     } = useCart()
@@ -243,7 +243,6 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 try {
                     const res = await placeOrder(...commonOrderArgs, undefined)
                     if (res.success) {
-                        clearCart()
                         router.push(`/checkout/success?orderId=${res.orderId}`)
                     } else {
                         toast.error(res.message || "Order failed")
@@ -312,7 +311,6 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
                             const res = await placeOrder(...commonOrderArgs, { method: "razorpay", payment_id: response.razorpay_payment_id, status: "paid" })
                             if (res.success) {
-                                clearCart()
                                 router.push(`/checkout/success?orderId=${res.orderId}`)
                             } else {
                                 toast.error(res.message || "Order failed")
