@@ -125,7 +125,7 @@ export function AddressForm({
                 pincode,
                 area_name: areaName,
                 label,
-                shipping_method_id: selectedMethodId,
+                shipping_method_id: selectedMethodId || null,
                 is_default: initialData?.is_default ?? false
             }
 
@@ -139,13 +139,12 @@ export function AddressForm({
                 if (error) throw error
                 addressId = initialData.id
             } else {
-                const { data: inserted, error } = await supabase
+                const newId = crypto.randomUUID()
+                const { error } = await supabase
                     .from("user_addresses")
-                    .insert([payload])
-                    .select("id")
-                    .single()
+                    .insert({ ...payload, id: newId })
                 if (error) throw error
-                addressId = inserted.id
+                addressId = newId
             }
 
             const { data, error: fetchError } = await supabase
@@ -158,8 +157,9 @@ export function AddressForm({
 
             toast.success("Destination Saved Successfully")
             if (onSuccess) onSuccess(data)
-        } catch (err) {
-            toast.error("Error saving record")
+        } catch (err: any) {
+            console.error("Address save error:", err?.message || err, err?.details || "", err?.hint || "")
+            toast.error(err?.message || "Error saving record")
         } finally {
             setLoading(false)
         }

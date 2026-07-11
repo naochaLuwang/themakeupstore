@@ -17,27 +17,18 @@ export default async function CheckoutPage() {
         redirect("/login?next=/checkout")
     }
 
-    // Fetch profile and addresses with their fixed shipping methods
-    let profileRes: any, addressRes: any, promos: any
-    try {
-        [profileRes, addressRes, promos] = await Promise.all([
-            supabase.from("profiles").select("id, email").eq("id", user.id).single(),
-            supabase.from("user_addresses")
-                .select(`
-                    *,
-                    shipping_methods:shipping_method_id (*)
-                `)
-                .eq("user_id", user.id)
-                .order("is_default", { ascending: false }),
-            getActivePromos()
-        ])
-    } catch {
-        profileRes = { data: null }
-        addressRes = { data: [] }
-        promos = []
-    }
+    // Fetch profile, addresses, and promos independently
+    const profileRes = await supabase.from("profiles").select("id, email").eq("id", user.id).single()
+    const addressRes = await supabase.from("user_addresses")
+        .select(`
+            *,
+            shipping_methods:shipping_method_id (*)
+        `)
+        .eq("user_id", user.id)
+        .order("is_default", { ascending: false })
+    const promos = await getActivePromos()
 
-    const initialProfile = profileRes.data || {}
+    const initialProfile = profileRes.data || { id: user.id }
     const initialAddresses = addressRes.data || []
     const allPromos = promos || []
 
