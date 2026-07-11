@@ -39,12 +39,14 @@ export const useRecentlyViewed = create<RecentlyViewedStore>()(
     {
       name: 'tms-recently-viewed',
       storage: createJSONStorage(() => localStorage),
-      merge: (persisted, current) => {
-        const raw = (persisted as any)?.items
-        const items = Array.isArray(raw)
-          ? raw.filter((item: any) => item && typeof item.id === "string" && typeof item.name === "string")
-          : []
-        return { ...current, items }
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        const valid = (state.items || []).filter(
+          (item: any) => item && typeof item.name === "string"
+        )
+        if (valid.length !== state.items.length) {
+          state.items = valid as ViewedProduct[]
+        }
       },
     }
   )

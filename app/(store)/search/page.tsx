@@ -452,33 +452,28 @@ export default function SearchPage() {
                                     </button>
                                 </div>
                                 <div className="flex gap-4 overflow-x-auto pb-1 px-4 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-                                    {(recentlyViewed || []).map((item: any) => {
-                                            if (!item || typeof item.id !== "string") return null
-                                            return (
-                                                <Link
-                                                    key={item.id}
-                                                    href={`/products/${item.id}`}
-                                                    className="shrink-0 flex flex-col items-center gap-1 w-20"
-                                                >
-                                                    <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden shrink-0 shadow-sm">
-                                                        {typeof item.thumbnail_url === "string" ? (
-                                                            <Image
-                                                                src={item.thumbnail_url}
-                                                                alt={typeof item.name === "string" ? item.name : ""}
-                                                                width={56}
-                                                                height={56}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm font-daciana">M</div>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-[10px] text-gray-600 text-center leading-tight line-clamp-2">
-                                                        {typeof item.name === "string" ? item.name : ""}
-                                                    </span>
-                                                </Link>
-                                            )
-                                        })}
+                                    {Array.isArray(recentlyViewed) && recentlyViewed.filter((item: any) => item && typeof item.name === "string").map((item: any) => (
+                                        <Link
+                                            key={item.id}
+                                            href={`/products/${item.id}`}
+                                            className="shrink-0 flex flex-col items-center gap-1 w-20"
+                                        >
+                                            <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden shrink-0 shadow-sm">
+                                                {item.thumbnail_url ? (
+                                                    <Image
+                                                        src={item.thumbnail_url}
+                                                        alt={item.name}
+                                                        width={56}
+                                                        height={56}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm font-daciana">M</div>
+                                                )}
+                                            </div>
+                                            <span className="text-[10px] text-gray-600 text-center leading-tight line-clamp-2">{item.name}</span>
+                                        </Link>
+                                    ))}
                                 </div>
                             </div>
                         )}
