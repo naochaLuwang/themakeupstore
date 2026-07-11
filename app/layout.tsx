@@ -9,7 +9,6 @@ import { createClient } from "@/utils/supabase/server";
 import localFont from "next/font/local";
 import NextTopLoader from "nextjs-toploader";
 import PushInitializer from "@/components/PushInitializer"
-import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 
 const myBrandFont = localFont({
@@ -117,7 +116,6 @@ export default async function RootLayout({
 
           <main>
             {children}
-            <Analytics />
           </main>
 
           <Toaster position="top-right" />
