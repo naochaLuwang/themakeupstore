@@ -7,6 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: 'MakeUpStore',
         description: 'One Stop Destination For All Your Makeup Needs.',
         start_url: '/',
+        scope: '/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#000000',

@@ -6,10 +6,10 @@ import withPWAInit from "@ducanh2912/next-pwa";
 const withPWA = withPWAInit({
   dest: "public",
   cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
   sw: "sw.js",
-  customWorkerSrc: "worker", // Explicitly name the output service worker
+  customWorkerSrc: "worker",
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: true,

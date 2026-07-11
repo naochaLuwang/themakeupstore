@@ -58,8 +58,8 @@ export default function SearchPage() {
     const searchTimeout = useRef<any>(null)
 
     useEffect(() => {
-        fetchFilterOptions()
-        fetchExclusiveBrands()
+        fetchFilterOptions().catch(() => {})
+        fetchExclusiveBrands().catch(() => {})
         const stored = localStorage.getItem("recent_searches")
         if (stored) {
             try { setRecentSearches(JSON.parse(stored)) } catch {}
@@ -325,7 +325,6 @@ export default function SearchPage() {
                         placeholder="Search products, brands..."
                         value={query}
                         onChange={(e) => handleSearch(e.target.value)}
-                        autoFocus
                         className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none"
                     />
                     {query.length > 0 && (
