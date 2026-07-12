@@ -9,6 +9,7 @@ import { CategoryFilter } from "@/components/admin/category-filter"
 import { revalidatePath } from "next/cache"
 import { DeleteProductButton } from "@/components/admin/delete-product-button"
 import { Card, CardContent } from "@/components/ui/card"
+import { requireAdmin } from "@/lib/admin"
 
 export default async function ProductsPage({
     searchParams,
@@ -49,7 +50,7 @@ export default async function ProductsPage({
     /** SERVER ACTIONS **/
     async function toggleStatus(id: string, currentStatus: string) {
         "use server"
-        const supabase = await createClient()
+        const { supabase } = await requireAdmin()
         const newStatus = currentStatus === "active" ? "inactive" : "active"
         await supabase.from("products").update({ status: newStatus }).eq("id", id)
         revalidatePath("/admin/products")
@@ -57,8 +58,8 @@ export default async function ProductsPage({
 
     async function deleteProduct(formData: FormData) {
         "use server"
+        const { supabase } = await requireAdmin()
         const id = formData.get("productId") as string
-        const supabase = await createClient()
         await supabase.from("products").delete().eq("id", id)
         revalidatePath("/admin/products")
     }

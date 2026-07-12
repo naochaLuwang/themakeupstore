@@ -3,9 +3,10 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { sendBackInStockEmail } from "@/lib/resend"
+import { requireAdmin } from "@/lib/admin"
 
 export async function markNotified(variantId: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { data: notifications, error: fetchError } = await supabase
         .from("back_in_stock_notifications")
@@ -52,6 +53,7 @@ export async function markNotified(variantId: string) {
 }
 
 export async function batchMarkNotified(variantIds: string[]) {
+    await requireAdmin()
     const results = []
     for (const id of variantIds) {
         const r = await markNotified(id)

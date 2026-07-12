@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 import { AddProductSidebar } from "@/components/admin/category-add-product"
 import { notFound } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
+import { requireAdmin } from "@/lib/admin"
 
 interface LinkedProduct {
     id: string;
@@ -42,15 +43,15 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
     /** SERVER ACTIONS **/
     async function linkProduct(formData: FormData) {
         "use server"
+        const { supabase } = await requireAdmin()
         const productId = formData.get("productId") as string
-        const supabase = await createClient()
         await supabase.from("product_categories").insert({ product_id: productId, category_id: id })
         revalidatePath(`/admin/categories/${id}`)
     }
 
     async function linkMultipleProducts(productIds: string[]) {
         "use server"
-        const supabase = await createClient()
+        const { supabase } = await requireAdmin()
         const links = productIds.map(pid => ({ product_id: pid, category_id: id }))
         await supabase.from("product_categories").insert(links)
         revalidatePath(`/admin/categories/${id}`)
@@ -58,7 +59,7 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
 
     async function unlinkProduct(productId: string) {
         "use server"
-        const supabase = await createClient()
+        const { supabase } = await requireAdmin()
         await supabase
             .from("product_categories")
             .delete()

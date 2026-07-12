@@ -272,7 +272,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 const orderRes = await fetch("/api/create-order", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ amount: amountPaise }),
+                    body: JSON.stringify({ amount: amountPaise, cartItems: items }),
                 })
                 if (!orderRes.ok) {
                     const errData = await orderRes.json()

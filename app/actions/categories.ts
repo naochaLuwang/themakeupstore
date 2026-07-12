@@ -4,6 +4,7 @@ import { v2 as cloudinary } from 'cloudinary'
 import { createClient } from "@/utils/supabase/server"
 import { categorySchema } from "@/lib/validations/category"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -11,28 +12,8 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
-/**
- * Helper to verify admin status on the server
- */
-async function verifyAdmin(supabase: any) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return false
-
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single()
-
-    return !!profile?.is_admin
-}
-
 export async function createCategory(formData: FormData) {
-    const supabase = await createClient()
-
-    // 1. RLS FIX: Verify Admin Identity
-    const isAdmin = await verifyAdmin(supabase)
-    if (!isAdmin) return { error: "Unauthorized: Admin access required" }
+    const { supabase } = await requireAdmin()
 
     // 2. Extract and Validate
     const payloadRaw = formData.get("payload")
@@ -84,11 +65,7 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function updateCategory(categoryId: string, formData: FormData) {
-    const supabase = await createClient()
-
-    // 1. RLS FIX
-    const isAdmin = await verifyAdmin(supabase)
-    if (!isAdmin) return { error: "Unauthorized" }
+    const { supabase } = await requireAdmin()
 
     try {
         const payloadRaw = formData.get("payload")
@@ -135,11 +112,7 @@ export async function updateCategory(categoryId: string, formData: FormData) {
 
 export async function deleteCategory(id: string) {
     try {
-        const supabase = await createClient()
-
-        // 1. RLS FIX
-        const isAdmin = await verifyAdmin(supabase)
-        if (!isAdmin) return { error: "Unauthorized" }
+        const { supabase } = await requireAdmin()
 
         const { error } = await supabase
             .from("categories")

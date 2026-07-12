@@ -4,6 +4,9 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 import { PromoSchema } from "@/lib/schemas"
+import { rateLimit } from "@/lib/rate-limit"
+
+const promoLimiter = rateLimit("promo-validate", { windowMs: 60_000, max: 20 })
 
 export async function createPromoCode(formData: FormData) {
     await requireAdmin()
@@ -66,6 +69,9 @@ export async function createPromoCode(formData: FormData) {
 // @/app/actions/promo.ts
 
 export async function validatePromoCode(code: string, cartItems: any[]) {
+    const { success } = promoLimiter.check(`validate:${code}`)
+    if (!success) return { success: false, message: "Too many attempts. Please try again later." }
+
     try {
         const supabase = await createClient()
 

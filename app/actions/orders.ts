@@ -339,7 +339,27 @@ export async function placeOrder(
             }
         }
 
-        // ── 6. Insert the main Order FIRST (before stock decrement) ──
+        // ── VERIFY RAZORPAY PAYMENT AMOUNT ──
+        if (paymentDetails?.method === 'razorpay' && paymentDetails?.payment_id) {
+            try {
+                const { default: Razorpay } = await import("razorpay")
+                const razorpay = new Razorpay({
+                    key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+                    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+                })
+                const payment = await razorpay.payments.fetch(paymentDetails.payment_id)
+                const paidAmount = Math.round(Number(payment.amount) / 100)
+                if (paidAmount !== finalTotal) {
+                    throw new Error(`Payment amount mismatch: paid ₹${paidAmount}, expected ₹${finalTotal}`)
+                }
+            } catch (err: any) {
+                if (err.message?.includes('Payment amount mismatch')) throw err
+                console.error("Razorpay payment verification error:", err)
+                throw new Error("Could not verify payment — order not placed")
+            }
+        }
+
+        // ── Insert the main Order FIRST (before stock decrement) ──
         const { data: order, error: orderError } = await supabase
             .from('orders')
             .insert([{
@@ -365,14 +385,14 @@ export async function placeOrder(
         if (orderError) throw orderError
         createdOrderId = order.id
 
-        // 8. Insert Order Items
+        // Insert Order Items
         const { error: itemsError } = await supabase
             .from('order_items')
             .insert(orderItems.map(item => ({ ...item, order_id: order.id })))
 
         if (itemsError) throw itemsError
 
-        // 9. STOCK DECREMENT AFTER ORDER COMMIT (crash leaves orphaned order, not lost stock)
+        // STOCK DECREMENT AFTER ORDER COMMIT (crash leaves orphaned order, not lost stock)
         for (const item of cartItems) {
             if (item.is_gift || item.is_bxgy_free) continue
             const ok = await atomicDecrementStock(supabase, item.variantId, item.quantity)
@@ -385,7 +405,7 @@ export async function placeOrder(
             stockDecremented.push({ variantId: gift.variantId, quantity: gift.quantity })
         }
 
-        // 10. Non-critical follow-up (fire-and-forget, won't fail order)
+        // Non-critical follow-up (fire-and-forget, won't fail order)
         if (promoDetails?.code) {
             try {
                 const { data: promoRecord } = await supabase

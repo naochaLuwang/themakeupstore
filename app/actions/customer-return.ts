@@ -2,6 +2,7 @@
 
 import { v2 as cloudinary } from "cloudinary"
 import { createClient } from "@/utils/supabase/server"
+import { rateLimit } from "@/lib/rate-limit"
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -9,10 +10,15 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
+const returnLimiter = rateLimit("return-request", { windowMs: 60_000, max: 3 })
+
 export async function submitReturnRequest(formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error("You must be logged in")
+
+    const { success } = returnLimiter.check(`user:${user.id}`)
+    if (!success) throw new Error("Too many requests. Please try again later.")
 
     const orderId = formData.get("order_id") as string
     const orderItemId = formData.get("order_item_id") as string

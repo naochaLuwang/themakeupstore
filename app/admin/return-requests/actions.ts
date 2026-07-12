@@ -2,12 +2,13 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { requireAdmin } from "@/lib/admin"
 
 export async function updateReturnStatus(formData: FormData) {
+    const { supabase } = await requireAdmin()
     const id = formData.get("id") as string
     const status = formData.get("status") as string
     const adminNote = formData.get("admin_note") as string
-    const supabase = await createClient()
 
     const { error } = await supabase
         .from("return_requests")
@@ -26,8 +27,8 @@ export async function updateReturnStatus(formData: FormData) {
 }
 
 export async function markRefunded(formData: FormData) {
+    const { supabase } = await requireAdmin()
     const id = formData.get("id") as string
-    const supabase = await createClient()
 
     // Fetch return request with order payment info
     const { data: req } = await supabase

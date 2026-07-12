@@ -4,6 +4,9 @@ import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { requireAdmin } from "@/lib/admin"
 import { revalidatePath } from "next/cache"
+import { rateLimit } from "@/lib/rate-limit"
+
+const giftCardLimiter = rateLimit("gift-card", { windowMs: 60_000, max: 10 })
 
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -49,6 +52,9 @@ export async function purchaseGiftCard(formData: FormData) {
 
 // ─── User-facing: Validate a gift card code ───
 export async function validateGiftCard(code: string) {
+  const { success } = giftCardLimiter.check(`validate:${code}`)
+  if (!success) return { success: false, message: "Too many attempts. Please try again later." }
+
   const supabase = await createClient()
 
   const { data: gc } = await supabase
@@ -68,6 +74,9 @@ export async function validateGiftCard(code: string) {
 
 // ─── User-facing: Redeem gift card against an order ───
 export async function redeemGiftCard(code: string, orderId: string, amount: number) {
+  const { success } = giftCardLimiter.check(`redeem:${code}`)
+  if (!success) return { success: false, message: "Too many attempts. Please try again later." }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, message: "Please sign in" }

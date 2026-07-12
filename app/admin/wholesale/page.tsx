@@ -4,6 +4,7 @@ import { Check, X, Building2, FileText, User, Eye, MapPin, Ban, History, Users, 
 import { revalidatePath } from "next/cache"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { requireAdmin } from "@/lib/admin"
 
 export default async function AdminWholesalePanel() {
     const supabase = await createClient()
@@ -28,9 +29,9 @@ export default async function AdminWholesalePanel() {
 
     async function updateStatus(formData: FormData) {
         "use server"
+        const { supabase } = await requireAdmin()
         const id = formData.get("id")
         const status = formData.get("status")
-        const supabase = await createClient()
         await supabase.from('wholesale_applications').update({ status }).eq('id', id)
         revalidatePath('/admin/wholesale')
     }

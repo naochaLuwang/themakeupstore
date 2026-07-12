@@ -555,7 +555,16 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                         )}
                     </div>
                     <button
-                        onClick={() => { /* share */ }}
+                        onClick={() => {
+                            const url = window.location.href
+                            if (navigator.share) {
+                                navigator.share({ title: document.title, url }).catch(() => {})
+                            } else {
+                                navigator.clipboard.writeText(url)
+                                    .then(() => toast.success("Link copied!"))
+                                    .catch(() => {})
+                            }
+                        }}
                         className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center"
                     >
                         <Share2 className="w-4 h-4 text-gray-500" />

@@ -1,8 +1,14 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { rateLimit } from "@/lib/rate-limit"
+
+const waitlistLimiter = rateLimit("waitlist", { windowMs: 60_000, max: 3 })
 
 export async function joinWaitlistAction(email: string) {
+    const { success } = waitlistLimiter.check(`email:${email}`)
+    if (!success) return { error: "Too many requests. Please try again later." }
+
     const supabase = await createClient()
 
     const { error } = await supabase

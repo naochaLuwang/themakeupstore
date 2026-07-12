@@ -1,6 +1,9 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { rateLimit } from "@/lib/rate-limit"
+
+const stockLimiter = rateLimit("back-in-stock", { windowMs: 60_000, max: 5 })
 
 export async function submitStockNotification(formData: {
     userName: string;
@@ -9,6 +12,9 @@ export async function submitStockNotification(formData: {
     productId: string;
     variantId: string;
 }) {
+    const { success } = stockLimiter.check(`email:${formData.email}`)
+    if (!success) return { success: false, error: "Too many requests. Please try again later." }
+
     const supabase = await createClient()
 
     const { error } = await supabase

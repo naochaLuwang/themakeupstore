@@ -8,11 +8,12 @@ export async function requireAdmin() {
 
     const { data: profile, error } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('is_admin, user_type')
         .eq('id', user.id)
         .single()
 
-    if (error || !profile?.is_admin) {
+    const isAdmin = profile?.is_admin || profile?.user_type === 'admin'
+    if (error || !isAdmin) {
         throw new Error("Unauthorized: Administrative access required")
     }
 
