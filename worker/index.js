@@ -2,8 +2,8 @@ self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : { title: 'The Makeup Store', body: 'New Update!' };
   const options = {
     body: data.body,
-    icon: '/icon-192x192.png',
-    badge: '/icon-192x192.png',
+    icon: '/icon-192x192.png?v=2',
+    badge: '/icon-192x192.png?v=2',
     data: {
       url: data.url || '/'
     }
@@ -26,7 +26,7 @@ self.addEventListener('push', function (event) {
 
     const options = {
       body: data.body,
-      icon: '/icon-192x192.png',
+      icon: '/icon-192x192.png?v=2',
       badge: '/badge-72x72.png',
       vibrate: [200, 100, 200, 100, 200],
       tag: 'admin-order-notification',

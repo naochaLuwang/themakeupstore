@@ -55,8 +55,16 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         ],
       },
+      {
+        source: '/icon-:size(192|512)x:size2(192|512).png',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+
     ]
   },
+
 };
 
 export default withPWA(nextConfig);
