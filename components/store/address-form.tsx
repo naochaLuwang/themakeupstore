@@ -365,7 +365,7 @@ function PincodeList({ pincodes, currentPincode, onSelect }: { pincodes: any[]; 
                                     {isSelected && <Check className="w-3.5 h-3.5 text-slate-900 shrink-0" />}
                                     <span className={`text-sm font-bold truncate ${isSelected ? "text-slate-900" : "text-slate-700"}`}>{z.name || z.pincode}</span>
                                 </div>
-                                <span className={`text-xs font-mono shrink-0 ml-2 ${isSelected ? "text-slate-500" : "text-slate-400"}`}>{z.pincode}</span>
+                                {/* <span className={`text-xs font-mono shrink-0 ml-2 ${isSelected ? "text-slate-500" : "text-slate-400"}`}>{z.pincode}</span> */}
                             </button>
                         )
                     })
