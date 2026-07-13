@@ -82,10 +82,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/icon-192x192.png?v=3', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-192x192-v2.png', sizes: '192x192', type: 'image/png' },
     ],
     apple: [
-      { url: "/icon-192x192.png?v=3", sizes: "192x192", type: "image/png" },
+      { url: "/icon-192x192-v2.png", sizes: "192x192", type: "image/png" },
     ],
   },
 };

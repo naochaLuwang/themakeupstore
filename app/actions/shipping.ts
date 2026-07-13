@@ -44,6 +44,11 @@ export async function deleteZone(id: string) {
             .update({ shipping_method_id: null })
             .in('shipping_method_id', methodIds)
         if (nullErr) throw new Error("Failed to detach orders: " + nullErr.message)
+        const { error: addrErr } = await supabase
+            .from('user_addresses')
+            .update({ shipping_method_id: null })
+            .in('shipping_method_id', methodIds)
+        if (addrErr) throw new Error("Failed to detach addresses: " + addrErr.message)
     }
     const { error: mErr } = await supabase.from('shipping_methods').delete().eq('zone_id', id)
     if (mErr) throw new Error("Failed to clear rates: " + mErr.message)
@@ -73,6 +78,11 @@ export async function deleteMethod(id: string) {
         .update({ shipping_method_id: null })
         .eq('shipping_method_id', id)
     if (nullErr) throw new Error("Failed to detach orders: " + nullErr.message)
+    const { error: addrErr } = await supabase
+        .from('user_addresses')
+        .update({ shipping_method_id: null })
+        .eq('shipping_method_id', id)
+    if (addrErr) throw new Error("Failed to detach addresses: " + addrErr.message)
     const { error } = await supabase.from('shipping_methods').delete().eq('id', id)
     if (error) throw new Error(error.message)
 }

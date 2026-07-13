@@ -231,7 +231,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
             const commonOrderArgs = [
                 selectedAddress,
                 items,
-                { total, price: shippingPrice, methodName: shippingLabel, deliveryTimeLabel, shipping_method_id: selectedAddress.shipping_methods?.id },
+                { total, price: shippingPrice, methodName: shippingLabel, deliveryTimeLabel, shipping_method_id: selectedShippingId },
                 promoDetails,
                 bxgyDetails,
                 giftDetails,

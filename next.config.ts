@@ -56,7 +56,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/icon-:size(192|512)x:size2(192|512).png',
+        source: '/icon-:size(192|512)x:size2(192|512)-v2.png',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
         ],

@@ -82,7 +82,7 @@ export default function AuthPage() {
                 <div className="pt-20 pb-8 px-6 text-center">
                     <div className="w-20 h-20 mx-auto mb-5 p-1.5 bg-white rounded-2xl border border-slate-100 shadow-sm">
                         <img
-                            src="/icon-192x192.png?v=2"
+                            src="/icon-192x192-v2.png"
                             alt="Logo"
                             className="w-full h-full object-contain rounded-xl"
                         />
