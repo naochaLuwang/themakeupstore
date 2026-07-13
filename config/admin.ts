@@ -95,6 +95,7 @@ export const adminConfig = {
             items: [
                 { title: "Customers", href: "/admin/customers", icon: Users },
                 { title: "Shipping", href: "/admin/shipping", icon: Truck },
+                { title: "Delivery Partners", href: "/admin/delivery-partners", icon: Truck },
                 { title: "Purchase", href: "/admin/purchase", icon: Receipt },
                 { title: "Purchase History", href: "/admin/purchase/list", icon: History },
                 { title: "Visitor History", href: "/admin/visitor-history", icon: History },

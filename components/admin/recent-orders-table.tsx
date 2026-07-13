@@ -9,7 +9,7 @@ import { Eye, Package, CreditCard, User, Calendar, Tag, X } from "lucide-react"
 
 const statusStyles: Record<string, string> = {
     pending: "bg-amber-50 text-amber-600 border-amber-200",
-    processing: "bg-blue-50 text-blue-600 border-blue-200",
+    packed: "bg-blue-50 text-blue-600 border-blue-200",
     shipped: "bg-purple-50 text-purple-600 border-purple-200",
     delivered: "bg-emerald-50 text-emerald-600 border-emerald-200",
     cancelled: "bg-red-50 text-red-600 border-red-200",

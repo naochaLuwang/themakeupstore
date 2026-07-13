@@ -1,9 +1,11 @@
 "use client"
 
 import { cancelOrderAndRestoreStock, updateOrderStatus } from "@/app/actions/orders"
+import { getDeliveryPartners } from "@/app/actions/delivery-partners"
 import { STATUS_LABELS, getValidNextStatuses, getTypeStatuses } from "@/lib/order-status"
 import { useState, useEffect, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
+import { Input } from "@/components/ui/input"
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table"
@@ -14,7 +16,7 @@ import { toast } from "sonner"
 import { format, startOfDay, endOfDay, subDays } from "date-fns"
 import {
     Eye, Clock, Calendar as CalendarIcon, FilterX, Search, ChevronDown,
-    ShoppingBag, PackageCheck
+    ShoppingBag, PackageCheck, X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -28,8 +30,8 @@ const GROUP_TABS = [
     { id: "completed", label: "Completed" },
 ]
 
-const DELIVERY_ACTIVE = ["confirmed", "processing", "shipped", "out_for_delivery", "failed_delivery"]
-const PICKUP_ACTIVE = ["confirmed", "processing", "ready_for_pickup", "no_show"]
+const DELIVERY_ACTIVE = ["confirmed", "packed", "shipped", "out_for_delivery", "failed_delivery"]
+const PICKUP_ACTIVE = ["confirmed", "packed", "ready_for_pickup", "no_show"]
 
 function getGroupForOrder(order: any): string {
     if (order.status === "pending") return "pending"
@@ -56,9 +58,14 @@ export default function AdminOrdersPage() {
         from: subDays(new Date(), 30),
         to: new Date(),
     })
+    const [deliveryPartners, setDeliveryPartners] = useState<any[]>([])
+    const [shipModal, setShipModal] = useState<{ orderId: string; orderType: string } | null>(null)
+    const [shipPartnerId, setShipPartnerId] = useState("")
+    const [shipTracking, setShipTracking] = useState("")
 
     useEffect(() => {
         fetchOrders()
+        getDeliveryPartners().then(setDeliveryPartners).catch(() => {})
     }, [date])
 
     async function fetchOrders() {
@@ -152,6 +159,14 @@ export default function AdminOrdersPage() {
             return
         }
 
+        if (field === 'status' && val === 'shipped') {
+            const currentOrder = orders.find(o => o.id === orderId)
+            setShipModal({ orderId, orderType: currentOrder?.order_type || 'delivery' })
+            setShipPartnerId("")
+            setShipTracking("")
+            return
+        }
+
         setLoading(true)
         const res = await updateOrderStatus(orderId, val)
         if (!res.success) toast.error(res.message || "Status update failed")
@@ -160,11 +175,22 @@ export default function AdminOrdersPage() {
         fetchOrders()
     }
 
+    async function handleShipConfirm() {
+        if (!shipModal) return
+        setLoading(true)
+        const res = await updateOrderStatus(shipModal.orderId, 'shipped', shipPartnerId || undefined, shipTracking || undefined)
+        if (!res.success) toast.error(res.message || "Status update failed")
+        else toast.success("Order marked as shipped")
+        setLoading(false)
+        setShipModal(null)
+        fetchOrders()
+    }
+
     const StatusBadge = ({ status }: { status: string }) => {
         const colors: Record<string, string> = {
             pending: "bg-amber-50 text-amber-700 border-amber-200",
             confirmed: "bg-blue-50 text-blue-700 border-blue-200",
-            processing: "bg-indigo-50 text-indigo-700 border-indigo-200",
+            packed: "bg-indigo-50 text-indigo-700 border-indigo-200",
             shipped: "bg-sky-50 text-sky-700 border-sky-200",
             out_for_delivery: "bg-purple-50 text-purple-700 border-purple-200",
             failed_delivery: "bg-red-50 text-red-700 border-red-200",
@@ -495,6 +521,52 @@ export default function AdminOrdersPage() {
                     )
                 })}
             </div>
+
+            {/* SHIP MODAL */}
+            {shipModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-5">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-black text-slate-900">Mark as Shipped</h3>
+                            <button onClick={() => setShipModal(null)} className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all">
+                                <X className="w-4 h-4 text-slate-400" />
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Delivery Partner</label>
+                                <Select value={shipPartnerId} onValueChange={setShipPartnerId}>
+                                    <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50 text-sm">
+                                        <SelectValue placeholder="Select delivery partner..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        {deliveryPartners.filter(p => p.is_active).map(p => (
+                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tracking Number (optional)</label>
+                                <Input
+                                    placeholder="e.g. AWB123456789"
+                                    value={shipTracking}
+                                    onChange={(e) => setShipTracking(e.target.value)}
+                                    className="h-11 rounded-xl border-slate-200 bg-slate-50 text-sm"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 justify-end">
+                            <Button variant="outline" onClick={() => setShipModal(null)} className="rounded-xl h-10 px-6 text-xs font-bold">
+                                Cancel
+                            </Button>
+                            <Button onClick={handleShipConfirm} className="rounded-xl h-10 px-6 bg-sky-600 hover:bg-sky-700 text-xs font-bold">
+                                Confirm Shipped
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

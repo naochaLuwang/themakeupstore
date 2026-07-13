@@ -10,7 +10,7 @@ import { motion } from "framer-motion"
 const statusVariant: Record<string, { label: string; color: string }> = {
     pending:          { label: "PENDING",           color: "bg-amber-50 text-amber-600 border-amber-200" },
     confirmed:        { label: "CONFIRMED",         color: "bg-blue-50 text-blue-600 border-blue-200" },
-    processing:       { label: "PROCESSING",        color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
+    packed:           { label: "PACKED",           color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
     shipped:          { label: "SHIPPED",           color: "bg-sky-50 text-sky-600 border-sky-200" },
     out_for_delivery: { label: "OUT FOR DELIVERY",  color: "bg-purple-50 text-purple-600 border-purple-200" },
     failed_delivery:  { label: "FAILED DELIVERY",   color: "bg-red-50 text-red-500 border-red-200" },

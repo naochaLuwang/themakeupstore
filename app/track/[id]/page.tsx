@@ -10,7 +10,7 @@ type tParams = Promise<{ id: string }>
 const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     pending: Clock,
     confirmed: CheckCircle2,
-    processing: Package,
+    packed: Package,
     shipped: Truck,
     out_for_delivery: Truck,
     delivered: CheckCircle2,
@@ -35,8 +35,8 @@ function formatDate(dateStr: string | null | undefined): string | null {
 function getTimelineSteps(order: any): string[] {
     const isPickup = order.order_type === "pickup"
     const baseSteps = isPickup
-        ? ["pending", "confirmed", "processing", "ready_for_pickup", "picked_up"]
-        : ["pending", "confirmed", "processing", "shipped", "out_for_delivery", "delivered"]
+        ? ["pending", "confirmed", "packed", "ready_for_pickup", "picked_up"]
+        : ["pending", "confirmed", "packed", "shipped", "out_for_delivery", "delivered"]
 
     if (order.status === "cancelled") {
         const checkOrder = isPickup
@@ -75,6 +75,7 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
             id, status, created_at, shipping_label, shipping_price,
             shipping_address, total, payment_status, payment_method,
             order_type, promo_code, promo_discount_amount,
+            delivery_partner_id, tracking_number,
             delivered_at, confirmed_at, out_for_delivery_at,
             failed_delivery_at, ready_for_pickup_at, picked_up_at, no_show_at,
             order_items(id, product_name, variant_title, quantity, unit_price, mrp)
@@ -83,6 +84,12 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
         .single()
 
     if (error || !order) return notFound()
+
+    let deliveryPartnerName: string | null = null
+    if (order.delivery_partner_id) {
+        const { data: dp } = await supabase.from('delivery_partners').select('name').eq('id', order.delivery_partner_id).single()
+        deliveryPartnerName = dp?.name || null
+    }
 
     const steps = getTimelineSteps(order)
     const currentIdx = steps.indexOf(order.status)
@@ -287,8 +294,11 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Carrier</p>
                         <div className="flex items-center justify-center gap-2 font-bold text-slate-900">
                             <Truck className="w-4 h-4 text-slate-400" />
-                            {order.shipping_label || "Standard Delivery"}
+                            {deliveryPartnerName || order.shipping_label || "Standard Delivery"}
                         </div>
+                        {order.tracking_number && (
+                            <p className="text-xs text-slate-500 font-mono mt-1">Tracking: {order.tracking_number}</p>
+                        )}
                     </div>
                 </div>
             </div>

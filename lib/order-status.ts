@@ -1,5 +1,5 @@
 export const ALL_STATUSES = [
-    "pending", "confirmed", "processing", "shipped",
+    "pending", "confirmed", "packed", "shipped",
     "out_for_delivery", "failed_delivery",
     "ready_for_pickup", "no_show",
     "delivered", "picked_up", "cancelled",
@@ -10,7 +10,7 @@ export type OrderStatus = typeof ALL_STATUSES[number]
 export const STATUS_LABELS: Record<string, string> = {
     pending: "Pending",
     confirmed: "Confirmed",
-    processing: "Processing",
+    packed: "Packed",
     shipped: "Shipped",
     out_for_delivery: "Out for Delivery",
     failed_delivery: "Failed Delivery",
@@ -24,8 +24,8 @@ export const STATUS_LABELS: Record<string, string> = {
 export const VALID_TRANSITIONS: Record<string, Record<string, string[]>> = {
     delivery: {
         pending: ["confirmed", "cancelled"],
-        confirmed: ["processing", "pending", "cancelled"],
-        processing: ["shipped", "cancelled"],
+        confirmed: ["packed", "pending", "cancelled"],
+        packed: ["shipped", "cancelled"],
         shipped: ["out_for_delivery"],
         out_for_delivery: ["delivered", "failed_delivery"],
         failed_delivery: ["out_for_delivery", "cancelled"],
@@ -34,9 +34,9 @@ export const VALID_TRANSITIONS: Record<string, Record<string, string[]>> = {
     },
     pickup: {
         pending: ["confirmed", "cancelled"],
-        confirmed: ["processing", "pending", "cancelled"],
-        processing: ["ready_for_pickup", "cancelled"],
-        ready_for_pickup: ["picked_up", "no_show", "processing"],
+        confirmed: ["packed", "pending", "cancelled"],
+        packed: ["ready_for_pickup", "cancelled"],
+        ready_for_pickup: ["picked_up", "no_show", "packed"],
         no_show: ["cancelled"],
         picked_up: [],
         cancelled: [],
@@ -72,8 +72,8 @@ export function getTypeStatuses(orderType: string): string[] {
 }
 
 export const PUSH_MESSAGES: Record<string, string> = {
-    confirmed: "Your order has been confirmed! We'll start processing it soon.",
-    processing: "We are now preparing your order! ✨",
+    confirmed: "Your order has been confirmed! We'll start preparing it soon.",
+    packed: "Your order has been packed and is ready for dispatch! 📦",
     shipped: "Great news! Your order has been shipped. 🚚",
     out_for_delivery: "Your order is out for delivery! 📬",
     delivered: "Your package has been delivered! Enjoy. 💖",

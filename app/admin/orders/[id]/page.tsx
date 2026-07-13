@@ -24,6 +24,7 @@ export default function OrderInvoicePage() {
     const [editDiscount, setEditDiscount] = useState(0)
     const [editRemark, setEditRemark] = useState("")
     const [saving, setSaving] = useState(false)
+    const [deliveryPartner, setDeliveryPartner] = useState<any>(null)
 
     useEffect(() => {
         async function fetchOrder() {
@@ -36,6 +37,10 @@ export default function OrderInvoicePage() {
             setEditDiscount(Number(data.promo_discount_amount || 0))
             setEditRemark(data.discount_remark || "")
             setLoading(false)
+            if (data.delivery_partner_id) {
+                const { data: dp } = await supabase.from('delivery_partners').select('name').eq('id', data.delivery_partner_id).single()
+                setDeliveryPartner(dp)
+            }
         }
         fetchOrder()
     }, [id])
@@ -227,7 +232,10 @@ export default function OrderInvoicePage() {
                         <div>
                             <h3 className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Shipping</h3>
                             <p className="text-[9px] text-slate-600 font-medium leading-relaxed">{order.shipping_address?.street}, PIN: {order.shipping_address?.pincode}</p>
-                            <p className="text-[8px] font-black text-slate-900 uppercase mt-1 flex items-center gap-1"><Truck className="w-2.5 h-2.5" /> {order.shipping_label || "Standard"}</p>
+                            <p className="text-[8px] font-black text-slate-900 uppercase mt-1 flex items-center gap-1"><Truck className="w-2.5 h-2.5" /> {deliveryPartner?.name || order.shipping_label || "Standard"}</p>
+                            {order.tracking_number && (
+                                <p className="text-[8px] font-mono text-slate-500 mt-0.5">Tracking: {order.tracking_number}</p>
+                            )}
                         </div>
                     )}
                 </div>

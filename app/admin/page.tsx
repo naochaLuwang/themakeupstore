@@ -179,7 +179,7 @@ export default async function AdminDashboard({ searchParams }: {
         del: o.filter((x: any) => x.status === 'delivered').length,
         full: o.length > 0 ? (o.filter((x: any) => x.status === 'delivered').length / o.length) * 100 : 0,
         cust: new Set(o.map((x: any) => x.user_id).filter(Boolean)).size,
-        pend: o.filter((x: any) => x.status === 'pending' || x.status === 'processing').length,
+        pend: o.filter((x: any) => x.status === 'pending' || x.status === 'packed').length,
         aov: o.length > 0 ? Math.round(sumR(o) / o.length) : 0,
     })
     const c = calc(net), p = calc(prior)
@@ -249,7 +249,7 @@ export default async function AdminDashboard({ searchParams }: {
     // Status breakdown
     const statusBD = [
         { label: "Pending", cnt: orders.filter((o: any) => o.status === 'pending').length, color: "text-amber-600", bg: "bg-amber-400" },
-        { label: "Processing", cnt: orders.filter((o: any) => o.status === 'processing').length, color: "text-blue-600", bg: "bg-blue-400" },
+        { label: "Packed", cnt: orders.filter((o: any) => o.status === 'packed').length, color: "text-blue-600", bg: "bg-blue-400" },
         { label: "Shipped", cnt: orders.filter((o: any) => o.status === 'shipped').length, color: "text-purple-600", bg: "bg-purple-400" },
         { label: "Delivered", cnt: orders.filter((o: any) => o.status === 'delivered').length, color: "text-emerald-600", bg: "bg-emerald-400" },
         { label: "Cancelled", cnt: orders.filter((o: any) => o.status === 'cancelled').length, color: "text-red-600", bg: "bg-red-400" },

@@ -983,7 +983,7 @@ const STATUS_ORDER_TYPE: Record<string, string> = {
     pickup: "pickup",
 }
 
-export async function updateOrderStatus(orderId: string, status: string) {
+export async function updateOrderStatus(orderId: string, status: string, deliveryPartnerId?: string, trackingNumber?: string) {
     await requireAdmin()
     const supabase = await createClient()
 
@@ -1009,6 +1009,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
         const updatePayload: any = {
             status: newStatus,
             updated_at: new Date().toISOString()
+        }
+
+        // Set delivery partner and tracking when shipping
+        if (newStatus === 'shipped') {
+            if (deliveryPartnerId) updatePayload.delivery_partner_id = deliveryPartnerId
+            if (trackingNumber) updatePayload.tracking_number = trackingNumber
         }
 
         // Set timestamp for the new status

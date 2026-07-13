@@ -11,21 +11,21 @@ import { cancelOrderAndRestoreStock } from "@/app/actions/orders"
 
 const STEP_MAP: Record<string, number> = {
   pending: 0, confirmed: 0,
-  processing: 1,
+  packed: 1,
   shipped: 2, out_for_delivery: 2, failed_delivery: 2,
   delivered: 3, picked_up: 3,
 }
 
 const PICKUP_STEP_MAP: Record<string, number> = {
   pending: 0, confirmed: 0,
-  processing: 1,
+  packed: 1,
   ready_for_pickup: 2, no_show: 2,
   picked_up: 3,
 }
 
 const steps = [
     { id: "placed", label: "Placed", icon: Clock },
-    { id: "processing", label: "Processing", icon: Package },
+    { id: "packed", label: "Packed", icon: Package },
     { id: "transit", label: "In Transit", icon: Truck },
     { id: "delivered", label: "Delivered", icon: CheckCircle2 },
 ]
@@ -267,7 +267,7 @@ export default function OrderDetailPage() {
       ? PICKUP_STEP_MAP[order.status?.toLowerCase()] ?? -1
       : STEP_MAP[order.status?.toLowerCase()] ?? -1
     const isCancelled = order.status === "cancelled"
-    const isActive = ["pending", "confirmed", "processing"].includes(order.status?.toLowerCase())
+    const isActive = ["pending", "confirmed", "packed"].includes(order.status?.toLowerCase())
     const isDelivered = ["delivered", "picked_up"].includes(order.status?.toLowerCase())
     const address = order.shipping_address as any
     const discount = Number(order.promo_discount_amount) || 0
