@@ -28,6 +28,7 @@ const GROUP_TABS = [
     { id: "pending", label: "Pending" },
     { id: "active", label: "Active" },
     { id: "completed", label: "Completed" },
+    { id: "cancelled", label: "Cancelled" },
 ]
 
 const DELIVERY_ACTIVE = ["confirmed", "packed", "shipped", "out_for_delivery", "failed_delivery"]
@@ -35,7 +36,7 @@ const PICKUP_ACTIVE = ["confirmed", "packed", "ready_for_pickup", "no_show"]
 
 function getGroupForOrder(order: any): string {
     if (order.status === "pending") return "pending"
-    if (order.status === "cancelled") return "completed"
+    if (order.status === "cancelled") return "cancelled"
     const type = order.order_type || "delivery"
     if (type === "delivery") {
         if (order.status === "delivered") return "completed"
@@ -54,6 +55,7 @@ export default function AdminOrdersPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const [activeTab, setActiveTab] = useState("pending")
     const [paymentFilter, setPaymentFilter] = useState<string>("all")
+    const [partnerFilter, setPartnerFilter] = useState<string>("all")
     const [date, setDate] = useState<DateRange | undefined>({
         from: subDays(new Date(), 30),
         to: new Date(),
@@ -96,13 +98,14 @@ export default function AdminOrdersPage() {
         return orders.filter(order => {
             if (activeTab !== "all" && getGroupForOrder(order) !== activeTab) return false
             if (paymentFilter !== "all" && order.payment_status !== paymentFilter) return false
+            if (partnerFilter !== "all" && order.delivery_partner_id !== partnerFilter) return false
             const q = searchQuery.toLowerCase()
             return !q ||
                 order.shipping_address?.full_name?.toLowerCase().includes(q) ||
                 order.id.toLowerCase().includes(q) ||
                 order.shipping_address?.phone?.includes(q)
         })
-    }, [orders, activeTab, searchQuery, paymentFilter])
+    }, [orders, activeTab, searchQuery, paymentFilter, partnerFilter])
 
     const tabCounts = useMemo(() => {
         const counts: Record<string, number> = {}
@@ -278,6 +281,22 @@ export default function AdminOrdersPage() {
                 ))}
             </div>
 
+            {/* PARTNER FILTER */}
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Partner</span>
+                <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+                    <SelectTrigger className="h-9 w-44 rounded-xl border-slate-200 bg-white text-xs font-medium">
+                        <SelectValue placeholder="All partners" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                        <SelectItem value="all" className="text-xs">All Partners</SelectItem>
+                        {deliveryPartners.filter(p => p.is_active).map(p => (
+                            <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
             {/* SEARCH & DATE FILTER */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <div className="relative flex-1 w-full">
@@ -321,6 +340,7 @@ export default function AdminOrdersPage() {
                             <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Type</TableHead>
                             <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Payment</TableHead>
                             <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Fulfillment</TableHead>
+                            <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Partner</TableHead>
                             <TableHead className="py-4 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider text-right">Total</TableHead>
                             <TableHead className="py-4 px-6 text-right font-bold text-slate-600 text-xs uppercase tracking-wider">Actions</TableHead>
                         </TableRow>
@@ -328,7 +348,7 @@ export default function AdminOrdersPage() {
                     <TableBody>
                         {filteredOrders.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-32 text-center text-slate-400 font-medium">
+                                <TableCell colSpan={8} className="h-32 text-center text-slate-400 font-medium">
                                     {loading ? "Loading..." : "No orders found"}
                                 </TableCell>
                             </TableRow>
@@ -404,6 +424,20 @@ export default function AdminOrdersPage() {
                                                 })}
                                             </SelectContent>
                                         </Select>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-6">
+                                        {order.delivery_partner_id ? (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-semibold text-slate-700">
+                                                    {deliveryPartners.find(p => p.id === order.delivery_partner_id)?.name || "Unknown"}
+                                                </span>
+                                                {order.tracking_number && (
+                                                    <span className="text-[10px] font-mono text-slate-400 mt-0.5">{order.tracking_number}</span>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="text-xs text-slate-300">—</span>
+                                        )}
                                     </TableCell>
                                     <TableCell className="py-4 px-6 text-right font-semibold text-slate-900">
                                         ₹{Number(order.total).toLocaleString()}
@@ -516,6 +550,17 @@ export default function AdminOrdersPage() {
                                         </Button>
                                     )}
                                 </div>
+                                {order.delivery_partner_id && (
+                                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Partner:</span>
+                                        <span className="text-xs font-medium text-slate-700">
+                                            {deliveryPartners.find(p => p.id === order.delivery_partner_id)?.name || "Unknown"}
+                                        </span>
+                                        {order.tracking_number && (
+                                            <span className="text-[10px] font-mono text-slate-400 ml-auto">{order.tracking_number}</span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )

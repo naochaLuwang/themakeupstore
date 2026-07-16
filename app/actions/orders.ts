@@ -667,6 +667,140 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
     }
 }
 
+export async function processPartialRefund(
+    orderId: string,
+    items: { itemId: string; quantity: number }[],
+    reason: string,
+    refundMethod: "razorpay" | "gpay",
+    transactionId?: string
+) {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    try {
+        const { data: order, error: orderErr } = await supabase
+            .from("orders")
+            .select("*, order_items(*)")
+            .eq("id", orderId)
+            .single()
+
+        if (orderErr || !order) throw new Error("Order not found")
+        if (order.payment_status !== "paid") throw new Error("Order must be paid to process refund")
+
+        let totalRefundAmount = 0
+        const refundedItems: any[] = []
+
+        for (const selected of items) {
+            const orderItem = order.order_items.find((oi: any) => oi.id === selected.itemId)
+            if (!orderItem) throw new Error(`Order item ${selected.itemId} not found`)
+
+            const alreadyRefunded = Number(orderItem.refunded_quantity || 0)
+            const available = orderItem.quantity - alreadyRefunded
+
+            if (selected.quantity <= 0) throw new Error(`Invalid quantity for item ${orderItem.product_name}`)
+            if (selected.quantity > available) throw new Error(`Only ${available} units available for refund on ${orderItem.product_name}`)
+
+            const refundAmount = Number(orderItem.unit_price) * selected.quantity
+            totalRefundAmount += refundAmount
+
+            refundedItems.push({
+                ...orderItem,
+                refundQuantity: selected.quantity,
+                refundAmount,
+            })
+        }
+
+        if (totalRefundAmount <= 0) throw new Error("Refund amount must be greater than 0")
+
+        let razorpayRefundId: string | null = null
+
+        if (refundMethod === "razorpay") {
+            if (!order.razorpay_payment_id) throw new Error("No Razorpay payment ID found for this order")
+            try {
+                const { default: Razorpay } = await import("razorpay")
+                const razorpay = new Razorpay({
+                    key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+                    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+                })
+                const refund = await razorpay.payments.refund(order.razorpay_payment_id, {
+                    amount: Math.round(totalRefundAmount * 100),
+                })
+                razorpayRefundId = refund.id || null
+            } catch (refundErr) {
+                console.error("Razorpay refund error:", refundErr)
+                throw new Error("Failed to process Razorpay refund")
+            }
+        }
+
+        const { data: { user } } = await supabase.auth.getUser()
+
+        const allFullyRefunded = order.order_items.every((oi: any) => {
+            const alreadyRefunded = Number(oi.refunded_quantity || 0)
+            const selectedItem = items.find((s: any) => s.itemId === oi.id)
+            const thisRefund = selectedItem ? selectedItem.quantity : 0
+            return (alreadyRefunded + thisRefund) >= oi.quantity
+        })
+
+        await supabase.from("orders").update({
+            payment_status: allFullyRefunded ? "refunded" : "partially_refunded",
+            updated_at: new Date().toISOString(),
+        }).eq("id", orderId)
+
+        for (const ri of refundedItems) {
+            const alreadyRefunded = Number(ri.refunded_quantity || 0)
+            const alreadyAmount = Number(ri.refunded_amount || 0)
+
+            await supabase.from("order_items").update({
+                refunded_quantity: alreadyRefunded + ri.refundQuantity,
+                refunded_amount: alreadyAmount + ri.refundAmount,
+            }).eq("id", ri.id)
+
+            if (ri.product_variant_id) {
+                const { error: rpcErr } = await supabase.rpc("increment_stock", {
+                    row_id: ri.product_variant_id,
+                    amount: ri.refundQuantity,
+                })
+                if (rpcErr) {
+                    const { data: variant } = await supabase
+                        .from("product_variants")
+                        .select("stock")
+                        .eq("id", ri.product_variant_id)
+                        .single()
+                    if (variant) {
+                        await supabase
+                            .from("product_variants")
+                            .update({ stock: variant.stock + ri.refundQuantity })
+                            .eq("id", ri.product_variant_id)
+                    }
+                }
+            }
+        }
+
+        await supabase.from("order_refunds").insert({
+            order_id: orderId,
+            amount: totalRefundAmount,
+            reason: reason || null,
+            refund_method: refundMethod,
+            transaction_id: refundMethod === "razorpay" ? razorpayRefundId : (transactionId || null),
+            processed_by: user?.id,
+        })
+
+        revalidatePath("/admin/orders")
+        revalidatePath(`/admin/orders/${orderId}`)
+
+        return {
+            success: true,
+            amount: totalRefundAmount,
+            refundMethod,
+            transactionId: refundMethod === "razorpay" ? razorpayRefundId : transactionId,
+            paymentStatus: allFullyRefunded ? "refunded" : "partially_refunded",
+        }
+    } catch (error: any) {
+        console.error("PARTIAL_REFUND_ERROR:", error)
+        return { success: false, message: error.message || "Failed to process refund" }
+    }
+}
+
 export async function createWholesaleOrder(data: {
     userId: string,
     total: number,

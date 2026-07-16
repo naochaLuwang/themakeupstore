@@ -6,10 +6,11 @@ import { useParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet } from "lucide-react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
-import { removeOrderItem, updateOrderDiscount } from "@/app/actions/orders"
+import { removeOrderItem, updateOrderDiscount, processPartialRefund } from "@/app/actions/orders"
 import { getTypeStatuses, STATUS_LABELS } from "@/lib/order-status"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -25,6 +26,12 @@ export default function OrderInvoicePage() {
     const [editRemark, setEditRemark] = useState("")
     const [saving, setSaving] = useState(false)
     const [deliveryPartner, setDeliveryPartner] = useState<any>(null)
+    const [showRefundModal, setShowRefundModal] = useState(false)
+    const [refundSelections, setRefundSelections] = useState<Record<string, number>>({})
+    const [refundReason, setRefundReason] = useState("")
+    const [refundMethod, setRefundMethod] = useState<"razorpay" | "gpay">("razorpay")
+    const [refundTransactionId, setRefundTransactionId] = useState("")
+    const [processingRefund, setProcessingRefund] = useState(false)
 
     useEffect(() => {
         async function fetchOrder() {
@@ -140,6 +147,24 @@ export default function OrderInvoicePage() {
                         <Link href={`/admin/orders`}><ArrowLeft className="w-4 h-4 mr-2" /> Back</Link>
                     </Button>
                     <div className="flex gap-3">
+                        {(order.payment_status === "paid" || order.payment_status === "partially_refunded") && (
+                            <button onClick={() => {
+                                const initial: Record<string, number> = {}
+                                order.order_items?.forEach((oi: any) => {
+                                    const remaining = oi.quantity - (oi.refunded_quantity || 0)
+                                    if (remaining > 0) initial[oi.id] = remaining
+                                })
+                                setRefundSelections(initial)
+                                setRefundReason("")
+                                setRefundMethod("razorpay")
+                                setRefundTransactionId("")
+                                setShowRefundModal(true)
+                            }}
+                                className="h-10 px-5 rounded-xl border border-rose-200 text-rose-600 text-xs font-bold uppercase tracking-wider hover:bg-rose-50 transition-all flex items-center gap-2 bg-white shadow-sm"
+                            >
+                                <RotateCcw className="w-3.5 h-3.5" /> Refund Items
+                            </button>
+                        )}
                         {order.status === 'pending' && !isEditing && (
                             <button onClick={() => setIsEditing(true)}
                                 className="h-10 px-5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-2 bg-white shadow-sm"
@@ -432,6 +457,169 @@ export default function OrderInvoicePage() {
                                 <Clock className="w-3 h-3 text-amber-500" />
                                 Changes apply immediately after save
                             </span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* REFUND MODAL */}
+            {showRefundModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-black text-slate-900">Refund Items</h3>
+                            <button onClick={() => setShowRefundModal(false)} className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all">
+                                <X className="w-4 h-4 text-slate-400" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {order.order_items?.map((item: any) => {
+                                const remaining = item.quantity - (item.refunded_quantity || 0)
+                                if (remaining <= 0) return null
+                                return (
+                                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={(refundSelections[item.id] || 0) > 0}
+                                            onChange={(e) => {
+                                                setRefundSelections(prev => ({
+                                                    ...prev,
+                                                    [item.id]: e.target.checked ? remaining : 0,
+                                                }))
+                                            }}
+                                            className="w-4 h-4 rounded border-slate-300 text-rose-500 focus:ring-rose-200"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-slate-900 truncate">{item.product_name}</p>
+                                            <p className="text-xs text-slate-400">{item.variant_title} — ₹{Number(item.unit_price).toLocaleString()} each</p>
+                                            {(item.refunded_quantity || 0) > 0 && (
+                                                <p className="text-[10px] text-amber-600 font-medium">Already refunded: {item.refunded_quantity} of {item.quantity}</p>
+                                            )}
+                                        </div>
+                                        {(refundSelections[item.id] || 0) > 0 && (
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => setRefundSelections(prev => ({ ...prev, [item.id]: Math.max(0, (prev[item.id] || 0) - 1) }))}
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 text-sm font-bold"
+                                                >−</button>
+                                                <span className="w-8 text-center text-sm font-bold text-slate-900">{refundSelections[item.id]}</span>
+                                                <button
+                                                    onClick={() => setRefundSelections(prev => ({ ...prev, [item.id]: Math.min(remaining, (prev[item.id] || 0) + 1) }))}
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 text-sm font-bold"
+                                                >+</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Refund Method</label>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setRefundMethod("razorpay")}
+                                    className={`flex-1 h-10 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
+                                        refundMethod === "razorpay"
+                                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                                            : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                                    }`}
+                                >Razorpay</button>
+                                <button
+                                    onClick={() => setRefundMethod("gpay")}
+                                    className={`flex-1 h-10 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
+                                        refundMethod === "gpay"
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                            : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                                    }`}
+                                ><Wallet className="w-3.5 h-3.5 inline mr-1" /> GPay</button>
+                            </div>
+                        </div>
+
+                        {refundMethod === "gpay" && (
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Transaction ID</label>
+                                <Input
+                                    placeholder="Enter GPay transaction ID..."
+                                    value={refundTransactionId}
+                                    onChange={(e) => setRefundTransactionId(e.target.value)}
+                                    className="h-11 rounded-xl border-slate-200 bg-slate-50 text-sm"
+                                />
+                            </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Reason (optional)</label>
+                            <textarea
+                                placeholder="e.g. Customer requested partial refund for damaged item"
+                                value={refundReason}
+                                onChange={(e) => setRefundReason(e.target.value)}
+                                rows={2}
+                                className="w-full h-20 rounded-xl border border-slate-200 bg-slate-50 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-slate-200 resize-none"
+                            />
+                        </div>
+
+                        {(() => {
+                            const total = order.order_items?.reduce((acc: number, item: any) => {
+                                const qty = refundSelections[item.id] || 0
+                                return acc + (Number(item.unit_price) * qty)
+                            }, 0) || 0
+                            return total > 0 ? (
+                                <div className="flex items-center justify-between p-3 rounded-xl bg-rose-50 border border-rose-200">
+                                    <span className="text-xs font-bold text-rose-700 uppercase tracking-wider">Refund Amount</span>
+                                    <span className="text-lg font-black text-rose-700">₹{total.toLocaleString()}</span>
+                                </div>
+                            ) : null
+                        })()}
+
+                        <div className="flex gap-3 justify-end">
+                            <Button variant="outline" onClick={() => setShowRefundModal(false)} className="rounded-xl h-10 px-6 text-xs font-bold">
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={async () => {
+                                    const selectedItems = Object.entries(refundSelections)
+                                        .filter(([_, qty]) => qty > 0)
+                                        .map(([itemId, quantity]) => ({ itemId, quantity }))
+
+                                    if (selectedItems.length === 0) {
+                                        toast.error("Select at least one item to refund")
+                                        return
+                                    }
+                                    if (refundMethod === "gpay" && !refundTransactionId.trim()) {
+                                        toast.error("Enter the GPay transaction ID")
+                                        return
+                                    }
+
+                                    setProcessingRefund(true)
+                                    const res = await processPartialRefund(
+                                        id as string,
+                                        selectedItems,
+                                        refundReason,
+                                        refundMethod,
+                                        refundMethod === "gpay" ? refundTransactionId.trim() : undefined
+                                    )
+                                    setProcessingRefund(false)
+
+                                    if (res.success) {
+                                        toast.success(`Refund of ₹${res.amount?.toLocaleString()} processed`)
+                                        setShowRefundModal(false)
+                                        const { data } = await supabase
+                                            .from('orders')
+                                            .select('*, order_items(*)')
+                                            .eq('id', id)
+                                            .single()
+                                        if (data) setOrder(data)
+                                    } else {
+                                        toast.error(res.message || "Refund failed")
+                                    }
+                                }}
+                                disabled={processingRefund}
+                                className="rounded-xl h-10 px-6 bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white disabled:opacity-50"
+                            >
+                                {processingRefund ? <Loader2 className="w-4 h-4 animate-spin" /> : "Process Refund"}
+                            </Button>
                         </div>
                     </div>
                 </div>
