@@ -72,7 +72,7 @@ export default function SkincareAccessoriesPage() {
 
         let query = supabase
             .from('products')
-            .select('*, product_variants(id, price, stock)')
+            .select('*, product_variants(id, price, stock, title, image_url)')
             .eq('status', 'active')
             .range(from, to)
             .order('created_at', { ascending: false })

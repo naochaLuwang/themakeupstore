@@ -58,7 +58,7 @@ export function CartSync({ userId }: { userId: string | null }) {
                     product_id, 
                     product_variant_id, 
                     products!inner(name, thumbnail_url, category_id, base_price), 
-                    product_variants!inner(title, stock, price, discount_type, discount_value)
+                    product_variants!inner(title, stock, price, discount_type, discount_value, image_url)
                 `)
                 .eq('cart_id', cart.id)
 
@@ -83,7 +83,7 @@ export function CartSync({ userId }: { userId: string | null }) {
                         price: Math.round(salePrice),
                         mrp: basePrice,
                         originalPrice: basePrice,
-                        image: ci.products.thumbnail_url,
+                        image: variant.image_url || ci.products.thumbnail_url,
                         quantity: ci.quantity,
                         stock: variant.stock
                     }

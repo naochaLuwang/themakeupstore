@@ -77,7 +77,7 @@ export default function ConcernPage() {
                 if (productIds.length > 0) {
                     const { data: productsData } = await supabase
                         .from("products")
-                        .select("*, product_variants(id, price, stock, discount_type, discount_value)")
+                        .select("*, product_variants(id, price, stock, discount_type, discount_value, title, image_url)")
                         .eq("status", "active")
                         .in("id", productIds)
                         .order("created_at", { ascending: false })

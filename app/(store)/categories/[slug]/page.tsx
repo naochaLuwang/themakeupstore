@@ -91,7 +91,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     if (productIds.length > 0) {
         const { data: products } = await supabase
             .from("products")
-            .select("*, product_variants(id, price, stock, discount_type, discount_value), product_concerns(concern_id), product_categories(category_id)")
+            .select("*, product_variants(id, price, stock, discount_type, discount_value, title, image_url), product_concerns(concern_id), product_categories(category_id)")
             .eq("status", "active")
             .in("id", productIds)
             .order("created_at", { ascending: false })

@@ -191,7 +191,7 @@ export default function SearchPage() {
                 // Step 3: build final query
                 let query = supabase
                     .from("products")
-                    .select("*, product_variants(id, price, stock, discount_type, discount_value)")
+                    .select("*, product_variants(id, price, stock, discount_type, discount_value, title, image_url)")
                     .eq("status", "active")
 
                 if (matchIds !== null) {

@@ -110,7 +110,7 @@ export default function ExclusivePage() {
 
             let query = supabase
                 .from("products")
-                .select("*, product_variants(id, price, stock, discount_type, discount_value)")
+                .select("*, product_variants(id, price, stock, discount_type, discount_value, title, image_url)")
                 .eq("status", "active")
 
             if (linkedProductIds.length > 0) {

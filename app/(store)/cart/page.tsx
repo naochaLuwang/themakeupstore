@@ -30,7 +30,7 @@ export default function CartPage() {
             const variantIds = items.map((i: any) => i.variantId)
             const { data: freshVariants, error } = await supabase
                 .from("product_variants")
-                .select("id, price, discount_type, discount_value, stock")
+                .select("id, price, discount_type, discount_value, stock, image_url")
                 .in("id", variantIds)
             if (error) throw error
             const dedupedMap = new Map()
@@ -108,7 +108,7 @@ export default function CartPage() {
             const productIds = [...new Set(items.map((i: any) => i.productId))]
             supabase
                 .from("products")
-                .select("*, product_variants(id, price, stock)")
+                .select("*, product_variants(id, price, stock, title, image_url)")
                 .in("id", productIds)
                 .limit(1)
                 .then(({ data }) => {
@@ -117,7 +117,7 @@ export default function CartPage() {
                         if (brand) {
                             supabase
                                 .from("products")
-                                .select("*, product_variants(id, price, stock)")
+                                .select("*, product_variants(id, price, stock, title, image_url)")
                                 .eq("brand", brand)
                                 .not("id", "in", `(${productIds.join(",")})`)
                                 .limit(6)
