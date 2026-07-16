@@ -532,7 +532,7 @@ export async function placeOrder(
 // }
 
 
-export async function cancelOrderAndRestoreStock(orderId: string) {
+export async function cancelOrderAndRestoreStock(orderId: string, reason?: string) {
     const supabase = await createClient()
 
     try {
@@ -594,6 +594,7 @@ export async function cancelOrderAndRestoreStock(orderId: string) {
         const updatePayload: any = {
             status: 'cancelled',
             cancelled_by: isAdmin ? 'admin' : 'user',
+            cancellation_reason: reason || null,
             updated_at: new Date().toISOString(),
         }
         if (order.payment_method === 'razorpay') {

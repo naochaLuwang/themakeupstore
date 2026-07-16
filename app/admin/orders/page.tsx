@@ -64,6 +64,8 @@ export default function AdminOrdersPage() {
     const [shipModal, setShipModal] = useState<{ orderId: string; orderType: string } | null>(null)
     const [shipPartnerId, setShipPartnerId] = useState("")
     const [shipTracking, setShipTracking] = useState("")
+    const [cancelModal, setCancelModal] = useState<{ orderId: string } | null>(null)
+    const [cancelReason, setCancelReason] = useState("")
 
     useEffect(() => {
         fetchOrders()
@@ -137,20 +139,8 @@ export default function AdminOrdersPage() {
                 return
             }
 
-            const isRazorpay = currentOrder?.payment_method === 'razorpay' && currentOrder?.payment_status === 'paid'
-            const confirmCancel = confirm(
-                isRazorpay
-                    ? "Cancel order and restock items? A Razorpay refund will be processed."
-                    : "Cancel order and restock items?"
-            )
-            if (!confirmCancel) { fetchOrders(); return }
-
-            setLoading(true)
-            const res = await cancelOrderAndRestoreStock(orderId)
-            if (res.success) toast.success("Order cancelled and stock restored")
-            else toast.error(res.message)
-            setLoading(false)
-            fetchOrders()
+            setCancelModal({ orderId })
+            setCancelReason("")
             return
         }
 
@@ -607,6 +597,62 @@ export default function AdminOrdersPage() {
                             </Button>
                             <Button onClick={handleShipConfirm} className="rounded-xl h-10 px-6 bg-sky-600 hover:bg-sky-700 text-xs font-bold">
                                 Confirm Shipped
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CANCEL MODAL */}
+            {cancelModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-5">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-black text-slate-900">Cancel Order</h3>
+                            <button onClick={() => setCancelModal(null)} className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all">
+                                <X className="w-4 h-4 text-slate-400" />
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            {(() => {
+                                const co = orders.find(o => o.id === cancelModal.orderId)
+                                const isRazorpay = co?.payment_method === 'razorpay' && co?.payment_status === 'paid'
+                                return (
+                                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs font-medium text-amber-800">
+                                        {isRazorpay
+                                            ? "This will cancel the order, restore stock, and process a Razorpay refund."
+                                            : "This will cancel the order and restore stock."}
+                                    </div>
+                                )
+                            })()}
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cancellation Reason</label>
+                                <textarea
+                                    placeholder="e.g. Customer requested cancellation, out of stock, etc."
+                                    value={cancelReason}
+                                    onChange={(e) => setCancelReason(e.target.value)}
+                                    rows={3}
+                                    className="w-full rounded-xl border border-slate-200 bg-slate-50 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-slate-200 resize-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 justify-end">
+                            <Button variant="outline" onClick={() => setCancelModal(null)} className="rounded-xl h-10 px-6 text-xs font-bold">
+                                Back
+                            </Button>
+                            <Button
+                                onClick={async () => {
+                                    setLoading(true)
+                                    setCancelModal(null)
+                                    const res = await cancelOrderAndRestoreStock(cancelModal.orderId, cancelReason.trim() || undefined)
+                                    if (res.success) toast.success("Order cancelled and stock restored")
+                                    else toast.error(res.message)
+                                    setLoading(false)
+                                    fetchOrders()
+                                }}
+                                className="rounded-xl h-10 px-6 bg-red-600 hover:bg-red-700 text-xs font-bold text-white"
+                            >
+                                Confirm Cancel
                             </Button>
                         </div>
                     </div>

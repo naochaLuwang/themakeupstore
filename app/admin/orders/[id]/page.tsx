@@ -265,9 +265,16 @@ export default function OrderInvoicePage() {
                     )}
                 </div>
 
-                {order.status === 'cancelled' && order.cancelled_by && (
-                    <div className={`mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-100 bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest`}>
-                        <AlertCircle className="w-3 h-3" /> Cancelled by {order.cancelled_by === 'admin' ? 'Store' : 'Customer'}
+                {order.status === 'cancelled' && (
+                    <div className="mb-4 space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-100 bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest">
+                            <AlertCircle className="w-3 h-3" /> Cancelled by {order.cancelled_by === 'admin' ? 'Store' : 'Customer'}
+                        </div>
+                        {order.cancellation_reason && (
+                            <div className="px-3 py-2 rounded-xl bg-red-50/50 border border-red-100">
+                                <p className="text-[11px] font-medium text-red-700 leading-relaxed">{order.cancellation_reason}</p>
+                            </div>
+                        )}
                     </div>
                 )}
 

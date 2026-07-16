@@ -298,9 +298,14 @@ export default function OrderDetailPage() {
                     {/* Header */}
                     <div className="flex flex-col items-center mb-5">
                         {isCancelled && (
-                            <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1 rounded-full mb-3">
-                                <XCircle className="w-3.5 h-3.5 text-red-500" />
-                                <span className="text-[10px] font-extrabold tracking-wider text-red-500">CANCELLED</span>
+                            <div className="flex flex-col items-center mb-3">
+                                <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1 rounded-full">
+                                    <XCircle className="w-3.5 h-3.5 text-red-500" />
+                                    <span className="text-[10px] font-extrabold tracking-wider text-red-500">CANCELLED</span>
+                                </div>
+                                {order.cancellation_reason && (
+                                    <p className="text-[10px] font-medium text-red-500 mt-1.5 text-center max-w-xs">{order.cancellation_reason}</p>
+                                )}
                             </div>
                         )}
                         <h2 className="text-[22px] font-extrabold tracking-widest text-gray-900">THE MAKEUP STORE</h2>
