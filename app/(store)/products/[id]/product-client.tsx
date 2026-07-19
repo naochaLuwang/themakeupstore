@@ -749,9 +749,10 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
             {product.description && (
                 <div className="px-4 py-4 border-b border-gray-100">
                     <h3 className="text-sm font-semibold text-gray-900 mb-2">Product Details</h3>
-                    <p className={`text-sm text-gray-600 leading-relaxed ${descExpanded ? "" : "line-clamp-3"}`}>
-                        {stripHtml(product.description)}
-                    </p>
+                    <div
+                        className={`text-sm text-gray-600 leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-gray-900 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-gray-900 [&_strong]:font-bold [&_a]:text-rose-500 [&_a]:underline [&_img]:rounded-xl [&_img]:my-4 [&_img]:max-w-full [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-3 [&_br]:mb-2 ${descExpanded ? "" : "line-clamp-3"}`}
+                        dangerouslySetInnerHTML={{ __html: product.description }}
+                    />
                     <button
                         onClick={() => setDescExpanded(!descExpanded)}
                         className="flex items-center gap-1 mt-2 text-[#fc2779] text-xs font-semibold"
@@ -1139,9 +1140,10 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                             {product?.description && (
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-900 mb-2">Product Details</h3>
-                                    <p className={`text-sm text-gray-600 leading-relaxed ${descExpanded ? "" : "line-clamp-3"}`}>
-                                        {stripHtml(product.description)}
-                                    </p>
+                                    <div
+                                        className={`text-sm text-gray-600 leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-gray-900 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-gray-900 [&_strong]:font-bold [&_a]:text-rose-500 [&_a]:underline [&_img]:rounded-xl [&_img]:my-4 [&_img]:max-w-full [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-3 [&_br]:mb-2 ${descExpanded ? "" : "line-clamp-3"}`}
+                                        dangerouslySetInnerHTML={{ __html: product.description }}
+                                    />
                                     <button
                                         onClick={() => setDescExpanded(!descExpanded)}
                                         className="flex items-center gap-1 mt-2 text-[#fc2779] text-xs font-semibold"
