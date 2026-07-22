@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useCart } from "./use-cart"
 import { createClient } from "@/utils/supabase/client"
 import { CART_SYNC_DEBOUNCE_MS } from "@/lib/cart-constants"
+import { applyFlashSaleToPrice } from "@/lib/flash-sale-helper"
 
 export function CartSync({ userId }: { userId: string | null }) {
     const { items, setItems, clearCart } = useCart()
@@ -63,16 +64,46 @@ export function CartSync({ userId }: { userId: string | null }) {
                 .eq('cart_id', cart.id)
 
             if (dbItems && dbItems.length > 0) {
+                // Fetch active flash sales (scope-based)
+                const now = new Date().toISOString()
+                const productIds = [...new Set(dbItems.map((ci: any) => ci.product_id))]
+                const { data: flashRows } = await supabase
+                    .from('flash_sales')
+                    .select('scope, product_id, category_id, brand, discount_type, discount_value')
+                    .eq('is_active', true)
+                    .lte('starts_at', now)
+                    .gte('ends_at', now)
+                const prodMeta = new Map<string, { categoryId?: string; brand?: string | null }>()
+                for (const ci of dbItems as any[]) {
+                    if (!prodMeta.has(ci.product_id)) prodMeta.set(ci.product_id, { categoryId: ci.products?.category_id, brand: ci.products?.brand })
+                }
+                function getFlashForProduct(pid: string, catId?: string, br?: string | null) {
+                    let best: any = null; let bestVal = 0
+                    for (const f of flashRows || []) {
+                        let match = false
+                        if (f.scope === 'all') match = true
+                        else if (f.scope === 'product') match = f.product_id === pid
+                        else if (f.scope === 'category') match = f.category_id === catId
+                        else if (f.scope === 'brand') match = f.brand === br
+                        if (!match) continue
+                        const val = f.discount_type === 'percentage' ? f.discount_value : f.discount_value * 100
+                        if (!best || val > bestVal) { best = f; bestVal = val }
+                    }
+                    return best
+                }
+
                 // Build formatted items using LIVE variant price/stock (not stale unit_price/stock)
                 const formatted = dbItems.map((ci: any) => {
                     const variant = ci.product_variants
                     const basePrice = Number(variant.price)
-                    let salePrice = basePrice
-                    if (variant.discount_type === "percentage") {
-                        salePrice = basePrice - (basePrice * (Number(variant.discount_value) / 100))
-                    } else if (variant.discount_type === "amount") {
-                        salePrice = basePrice - Number(variant.discount_value)
-                    }
+                    const meta = prodMeta.get(ci.product_id)
+                    const flash = getFlashForProduct(ci.product_id, meta?.categoryId, meta?.brand)
+                    const { salePrice } = applyFlashSaleToPrice(
+                        basePrice,
+                        flash ? { discount_type: flash.discount_type, discount_value: flash.discount_value, label: '', ends_at: '' } : null,
+                        variant.discount_type || 'none',
+                        Number(variant.discount_value || 0)
+                    )
                     return {
                         id: ci.product_variant_id,
                         productId: ci.product_id,

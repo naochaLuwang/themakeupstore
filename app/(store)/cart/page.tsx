@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import { ProductCard } from "@/components/store/product-card"
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/cart-constants"
+import { applyFlashSaleToPrice } from "@/lib/flash-sale-helper"
 
 export default function CartPage() {
     const { items, removeItem, updateQuantity, setItems, removeGift, bxgyDiscounts, giftProgress, bxgyProgress } = useCart() as any
@@ -30,12 +31,43 @@ export default function CartPage() {
             const variantIds = items.map((i: any) => i.variantId)
             const { data: freshVariants, error } = await supabase
                 .from("product_variants")
-                .select("id, price, discount_type, discount_value, stock, image_url")
+                .select("id, price, discount_type, discount_value, stock, image_url, product_id")
                 .in("id", variantIds)
             if (error) throw error
+
+            // Fetch active flash sales (scope-based)
+            const now = new Date().toISOString()
+            const productIds = [...new Set(freshVariants?.map((v: any) => v.product_id).filter(Boolean) || [])]
+            const { data: flashRows } = productIds.length > 0 ? await supabase
+                .from('flash_sales')
+                .select('scope, product_id, category_id, brand, discount_type, discount_value')
+                .eq('is_active', true)
+                .lte('starts_at', now)
+                .gte('ends_at', now) : { data: null }
+
+            function getFlashForProduct(pid: string, catId?: string, br?: string | null) {
+                let best: any = null; let bestVal = 0
+                for (const f of flashRows || []) {
+                    let match = false
+                    if (f.scope === 'all') match = true
+                    else if (f.scope === 'product') match = f.product_id === pid
+                    else if (f.scope === 'category') match = f.category_id === catId
+                    else if (f.scope === 'brand') match = f.brand === br
+                    if (!match) continue
+                    const val = f.discount_type === 'percentage' ? f.discount_value : f.discount_value * 100
+                    if (!best || val > bestVal) { best = f; bestVal = val }
+                }
+                return best
+            }
+
+            // Build product category/brand map from cart items
+            const itemMeta = new Map<string, { categoryId?: string; brand?: string | null }>()
+            items.forEach((ci: any) => {
+                if (!itemMeta.has(ci.productId)) itemMeta.set(ci.productId, { categoryId: ci.categoryId, brand: ci.brand })
+            })
+
             const dedupedMap = new Map()
             items.forEach((cartItem: any) => {
-                // Skip gift/BXGY free items — their price must stay at 0
                 if (cartItem.is_gift || cartItem.is_bxgy_free) {
                     dedupedMap.set(cartItem.variantId, { ...cartItem, price: 0 })
                     return
@@ -45,12 +77,15 @@ export default function CartPage() {
                 let msrp = cartItem.originalPrice || cartItem.price
                 if (fresh) {
                     msrp = Number(fresh.price)
-                    sellingPrice = msrp
-                    if (fresh.discount_type === "percentage") {
-                        sellingPrice = msrp - (msrp * (Number(fresh.discount_value) / 100))
-                    } else if (fresh.discount_type === "amount") {
-                        sellingPrice = msrp - Number(fresh.discount_value)
-                    }
+                    const meta = itemMeta.get(cartItem.productId)
+                    const flash = getFlashForProduct(fresh.product_id, meta?.categoryId, meta?.brand)
+                    const { salePrice } = applyFlashSaleToPrice(
+                        msrp,
+                        flash ? { discount_type: flash.discount_type, discount_value: flash.discount_value, label: '', ends_at: '' } : null,
+                        fresh.discount_type || 'none',
+                        Number(fresh.discount_value || 0)
+                    )
+                    sellingPrice = salePrice
                 }
                 const processedItem = { ...cartItem, price: Math.round(sellingPrice), originalPrice: Math.round(msrp), stock: fresh?.stock ?? cartItem.stock ?? 0 }
                 if (dedupedMap.has(cartItem.variantId)) {

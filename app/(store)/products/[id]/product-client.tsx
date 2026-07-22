@@ -44,13 +44,11 @@ function stripHtml(html: string): string {
         .trim()
 }
 
-function getVariantPrice(variant: any, productDiscountType: string, productDiscountValue: number) {
+function getVariantPrice(variant: any, productDiscountType: string, productDiscountValue: number, flashSale?: FlashSaleOverride | null) {
     const base = variant.price || 0
     const dType = variant.discount_type && variant.discount_type !== "none" ? variant.discount_type : productDiscountType
     const dVal = variant.discount_value || productDiscountValue || 0
-    let salePrice = base
-    if (dType === "percentage" && dVal > 0) salePrice = base * (1 - dVal / 100)
-    else if ((dType === "fixed" || dType === "amount") && dVal > 0) salePrice = Math.max(0, base - dVal)
+    const { salePrice } = applyFlashSaleToPrice(base, flashSale || null, dType, dVal)
     return { salePrice, mrp: variant.mrp || variant.price || base }
 }
 
@@ -59,7 +57,9 @@ function calculateDiscountPercentage(finalPrice: number, originalPrice: number):
     return Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
 }
 
-export default function ProductClient({ initialProduct, activeBXGY, activeGift }: { initialProduct: any; activeBXGY?: any; activeGift?: any }) {
+import { applyFlashSaleToPrice, type FlashSaleOverride } from "@/lib/flash-sale-helper"
+
+export default function ProductClient({ initialProduct, activeBXGY, activeGift, activeFlashSale }: { initialProduct: any; activeBXGY?: any; activeGift?: any; activeFlashSale?: FlashSaleOverride | null }) {
     const router = useRouter()
     const supabase = createClient()
     const addItem = useCart((s) => s.addItem)
@@ -205,7 +205,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
     useEffect(() => {
         if (product?.product_variants?.length > 0) {
             const first = product.product_variants.find((v: any) => v.stock > 0) || product.product_variants[0]
-            const vp = getVariantPrice(first, product.discount_type || "none", product.discount_value || 0)
+            const vp = getVariantPrice(first, product.discount_type || "none", product.discount_value || 0, activeFlashSale)
             const variantImages = (first.variant_images || [])
                 .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
                 .map((vi: any) => vi.url)
@@ -488,8 +488,13 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                         </div>
                     )}
                 </div>
+                {activeFlashSale && (
+                    <div className="absolute top-4 left-0 bg-amber-500 text-white text-[9px] font-black px-2 py-1 rounded-r-sm tracking-wider shadow-lg z-10">
+                        {activeFlashSale.label || 'FLASH SALE'}
+                    </div>
+                )}
                 {discountPct > 0 && (
-                    <div className="absolute top-4 left-0 bg-[#fc2779] text-white text-[11px] font-black px-2.5 py-1 rounded-r-sm tracking-wider">
+                    <div className={`absolute ${activeFlashSale ? 'top-10' : 'top-4'} left-0 bg-[#fc2779] text-white text-[11px] font-black px-2.5 py-1 rounded-r-sm tracking-wider`}>
                         {discountPct}% OFF
                     </div>
                 )}
@@ -547,6 +552,11 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                         <span className="text-xl font-black text-gray-900">
                             ₹{Math.round(selectedVariantData?.calculated_price || finalPrice || sellingPrice)}
                         </span>
+                        {activeFlashSale && (
+                            <span className="text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded uppercase tracking-wider">
+                                {activeFlashSale.label || 'FLASH'}
+                            </span>
+                        )}
                         {discountPct > 0 && (
                             <>
                                 <span className="text-sm text-gray-400 line-through">₹{Math.round(sellingPrice)}</span>
@@ -590,7 +600,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                                 <button
                                     key={v.id}
                                     onClick={() => {
-                                        const vp = getVariantPrice(v, discountType, discountValue)
+                                        const vp = getVariantPrice(v, discountType, discountValue, activeFlashSale)
                                         const variantImages = (v.variant_images || [])
                                             .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
                                             .map((vi: any) => vi.url)
@@ -895,8 +905,13 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                                     alt={product?.name}
                                     className="w-full h-full object-contain"
                                 />
+                                {activeFlashSale && (
+                                    <div className="absolute top-4 left-0 bg-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-r-sm tracking-wider shadow-lg z-10">
+                                        {activeFlashSale.label || 'FLASH SALE'}
+                                    </div>
+                                )}
                                 {discountPct > 0 && (
-                                    <div className="absolute top-4 left-0 bg-[#fc2779] text-white text-xs font-black px-3 py-1.5 rounded-r-sm tracking-wider">
+                                    <div className={`absolute ${activeFlashSale ? 'top-12' : 'top-4'} left-0 bg-[#fc2779] text-white text-xs font-black px-3 py-1.5 rounded-r-sm tracking-wider`}>
                                         {discountPct}% OFF
                                     </div>
                                 )}
@@ -957,6 +972,11 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                                 <span className="text-2xl font-black text-gray-900">
                                     ₹{Math.round(selectedVariantData?.calculated_price || finalPrice || sellingPrice)}
                                 </span>
+                                {activeFlashSale && (
+                                    <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded uppercase tracking-wider">
+                                        {activeFlashSale.label || 'FLASH'}
+                                    </span>
+                                )}
                                 {discountPct > 0 && (
                                     <>
                                         <span className="text-base text-gray-400 line-through">₹{Math.round(sellingPrice)}</span>
@@ -983,7 +1003,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                                                 <button
                                                     key={v.id}
                                                     onClick={() => {
-                                                        const vp = getVariantPrice(v, discountType, discountValue)
+                                                        const vp = getVariantPrice(v, discountType, discountValue, activeFlashSale)
                                                         const variantImages = (v.variant_images || [])
                                                             .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
                                                             .map((vi: any) => vi.url)
@@ -1277,7 +1297,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift }
                             {product.product_variants.map((v: any) => {
                                 const isSelected = selectedVariant === v.id
                                 const isOOS = v.stock != null && Number(v.stock) <= 0
-                                const vp = getVariantPrice(v, discountType, discountValue)
+                                const vp = getVariantPrice(v, discountType, discountValue, activeFlashSale)
                                 return (
                                     <button
                                         key={v.id}

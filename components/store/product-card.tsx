@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 import { useProductPromo } from "@/components/store/promotion-badge-context"
+import { applyFlashSaleToPrice, type FlashSaleOverride } from "@/lib/flash-sale-helper"
 
 function RatingStars({ rating, size = 10 }: { rating: number; size?: number }) {
     const full = Math.floor(rating)
@@ -30,7 +31,7 @@ function RatingStars({ rating, size = 10 }: { rating: number; size?: number }) {
     )
 }
 
-function getCheapestVariantPrice(product: any) {
+function getCheapestVariantPrice(product: any, flashSale?: FlashSaleOverride | null) {
     const variants = product.product_variants || []
     if (variants.length > 0) {
         let minSale = Infinity
@@ -43,9 +44,7 @@ function getCheapestVariantPrice(product: any) {
             const mrpVal = Number(v.mrp || base)
             const dType = v.discount_type || product.discount_type || "none"
             const dVal = Number(v.discount_value || product.discount_value || 0)
-            let sale = base
-            if (dType === "percentage" && dVal > 0) sale = base - base * (dVal / 100)
-            else if ((dType === "fixed" || dType === "amount") && dVal > 0) sale = Math.max(0, base - dVal)
+            const { salePrice: sale } = applyFlashSaleToPrice(base, flashSale || null, dType, dVal)
             const discAmt = Math.max(0, mrpVal - sale)
             if (discAmt > 0) hasDisc = true
             if (sale < minSale) {
@@ -57,21 +56,20 @@ function getCheapestVariantPrice(product: any) {
                 bestDiscPct = dType !== "none" && dVal > 0 ? (dType === "percentage" ? dVal : (mrpVal > 0 ? Math.round((discAmt / mrpVal) * 100) : 0)) : 0
             }
         }
+        if (flashSale && !hasDisc) hasDisc = true
         return { salePrice: minSale, mrp: minMrp, discountPercentage: bestDiscPct, discountAmount: bestDiscAmount, hasDiscount: hasDisc }
     }
     const base = product.base_price || 0
     const mrpVal = product.mrp || base
     const dType = product.discount_type || "none"
     const dVal = Number(product.discount_value || 0)
-    let sale = base
-    if (dType === "percentage" && dVal > 0) sale = base - base * (dVal / 100)
-    else if ((dType === "fixed" || dType === "amount") && dVal > 0) sale = Math.max(0, base - dVal)
+    const { salePrice: sale, isFlashSale } = applyFlashSaleToPrice(base, flashSale || null, dType, dVal)
     const discountAmount = Math.max(0, mrpVal - sale)
     const discountPercentage = mrpVal > 0 ? Math.round((discountAmount / mrpVal) * 100) : 0
-    return { salePrice: sale, mrp: mrpVal, discountPercentage, discountAmount, hasDiscount: discountAmount > 0 }
+    return { salePrice: sale, mrp: mrpVal, discountPercentage, discountAmount, hasDiscount: discountAmount > 0 || isFlashSale }
 }
 
-export function ProductCard({ product, priority }: { product: any; priority?: boolean }) {
+export function ProductCard({ product, priority, activeFlashSale }: { product: any; priority?: boolean; activeFlashSale?: FlashSaleOverride | null }) {
     const [isWishlisted, setIsWishlisted] = useState(false)
     const [isPending, setIsPending] = useState(false)
     const [showVariantSelector, setShowVariantSelector] = useState(false)
@@ -110,7 +108,7 @@ export function ProductCard({ product, priority }: { product: any; priority?: bo
 
     const variants = product.product_variants || []
     const hasVariants = product.has_variants && variants.length > 0
-    const pricing = getCheapestVariantPrice(product)
+    const pricing = getCheapestVariantPrice(product, activeFlashSale)
     const { salePrice, mrp, discountPercentage, discountAmount, hasDiscount } = pricing
 
     const productIsOutOfStock = variants.length > 0
@@ -209,8 +207,15 @@ export function ProductCard({ product, priority }: { product: any; priority?: bo
                         <span className="text-[8px] font-bold uppercase tracking-wider">NEW</span>
                     </div>
                 )}
+                {activeFlashSale && (
+                    <div className="absolute top-3 left-3 z-10">
+                        <div className="bg-amber-500 text-white text-[7px] font-black uppercase tracking-wider px-2 py-1 shadow-sm rounded-sm">
+                            {activeFlashSale.label || 'FLASH'}
+                        </div>
+                    </div>
+                )}
                 {hasDiscount && !product.is_new && (
-                    <div className="absolute top-3 left-3 z-10 flex items-center">
+                    <div className={`absolute ${activeFlashSale ? 'top-9' : 'top-3'} left-3 z-10 flex items-center`}>
                         <div className="bg-slate-900 text-white text-[8px] font-bold uppercase tracking-wider px-3 py-1.5 shadow-sm"
                              style={{ clipPath: 'polygon(0 0, 100% 0, 92% 50%, 100% 100%, 0 100%)' }}>
                             {discountPercentage > 0 ? `${discountPercentage}% OFF` : `-₹${Math.round(discountAmount).toLocaleString()}`}

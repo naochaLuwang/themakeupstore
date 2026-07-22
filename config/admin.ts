@@ -70,6 +70,7 @@ export const adminConfig = {
                 { title: "Buy X Get Y", href: "/admin/bxgy", icon: Zap },
                 { title: "Gift Cards", href: "/admin/gift-cards", icon: Gift },
                 { title: "Rewards", href: "/admin/rewards", icon: Award },
+                { title: "Flash Sales", href: "/admin/flash-sales", icon: Zap },
                 { title: "Hero Banners", href: "/admin/hero-banners", icon: Image },
                 { title: "Showcase", href: "/admin/showcase", icon: Sparkles },
                 { title: "Broadcast", href: "/admin/broadcast", icon: Radio },

@@ -89,15 +89,9 @@ interface Props {
 
 export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts, showcaseItems }: Props) {
   const [mounted, setMounted] = useState(false)
-  const [showDiorPopup, setShowDiorPopup] = useState(false)
   const [showAppBanner, setShowAppBanner] = useState(false)
   const recentlyViewed = useRecentlyViewed(s => s.items)
   useEffect(() => { setMounted(true) }, [])
-
-  useEffect(() => {
-    const seen = sessionStorage.getItem("dior-launch-seen")
-    if (!seen) setShowDiorPopup(true)
-  }, [])
 
   useEffect(() => {
     const hidden = localStorage.getItem("app-banner-hidden")
@@ -107,11 +101,6 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
   const dismissAppBanner = () => {
     localStorage.setItem("app-banner-hidden", "1")
     setShowAppBanner(false)
-  }
-
-  const dismissDiorPopup = () => {
-    sessionStorage.setItem("dior-launch-seen", "1")
-    setShowDiorPopup(false)
   }
 
   if (!mounted) return null
@@ -391,19 +380,6 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
           <button onClick={dismissAppBanner} className="shrink-0 w-8 h-8 flex items-center justify-center">
             <X className="w-4 h-4 text-gray-400" />
           </button>
-        </div>
-      )}
-
-      {/* Dior Launch Popup */}
-      {showDiorPopup && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={dismissDiorPopup} />
-          <div className="relative w-full h-[50vh] animate-slide-up mb-[4.5rem] px-4">
-            <img src="/dior.webp" alt="Dior" className="w-full h-full object-cover rounded-t-3xl" />
-            <button onClick={dismissDiorPopup} className="absolute top-4 right-8 z-10 rounded-full h-8 w-8 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-              <X className="w-4 h-4 text-slate-700" />
-            </button>
-          </div>
         </div>
       )}
     </div>

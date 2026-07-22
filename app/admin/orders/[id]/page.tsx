@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet } from "lucide-react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
-import { removeOrderItem, updateOrderDiscount, processPartialRefund } from "@/app/actions/orders"
+import { removeOrderItem, updateOrderDiscount, processPartialRefund, updateOrderDeliveryPartner } from "@/app/actions/orders"
 import { getTypeStatuses, STATUS_LABELS } from "@/lib/order-status"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -26,6 +26,9 @@ export default function OrderInvoicePage() {
     const [editRemark, setEditRemark] = useState("")
     const [saving, setSaving] = useState(false)
     const [deliveryPartner, setDeliveryPartner] = useState<any>(null)
+    const [deliveryPartners, setDeliveryPartners] = useState<any[]>([])
+    const [editingPartner, setEditingPartner] = useState(false)
+    const [selectedPartnerId, setSelectedPartnerId] = useState("")
     const [showRefundModal, setShowRefundModal] = useState(false)
     const [refundSelections, setRefundSelections] = useState<Record<string, number>>({})
     const [refundReason, setRefundReason] = useState("")
@@ -47,7 +50,10 @@ export default function OrderInvoicePage() {
             if (data.delivery_partner_id) {
                 const { data: dp } = await supabase.from('delivery_partners').select('name').eq('id', data.delivery_partner_id).single()
                 setDeliveryPartner(dp)
+                setSelectedPartnerId(data.delivery_partner_id)
             }
+            const { data: partners } = await supabase.from('delivery_partners').select('*').order('name', { ascending: true })
+            setDeliveryPartners(partners || [])
         }
         fetchOrder()
     }, [id])
@@ -257,7 +263,55 @@ export default function OrderInvoicePage() {
                         <div>
                             <h3 className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Shipping</h3>
                             <p className="text-[9px] text-slate-600 font-medium leading-relaxed">{order.shipping_address?.street}, PIN: {order.shipping_address?.pincode}</p>
-                            <p className="text-[8px] font-black text-slate-900 uppercase mt-1 flex items-center gap-1"><Truck className="w-2.5 h-2.5" /> {deliveryPartner?.name || order.shipping_label || "Standard"}</p>
+                            <p className="text-[8px] font-black text-slate-900 uppercase mt-1 flex items-center gap-1">
+                                <Truck className="w-2.5 h-2.5" />
+                                {editingPartner ? (
+                                    <span className="flex items-center gap-2">
+                                        <select
+                                            value={selectedPartnerId}
+                                            onChange={(e) => setSelectedPartnerId(e.target.value)}
+                                            className="text-[10px] border border-slate-200 rounded-lg px-2 py-1 uppercase font-bold"
+                                        >
+                                            <option value="">Standard</option>
+                                            {deliveryPartners.map((p: any) => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            onClick={async () => {
+                                                const res = await updateOrderDeliveryPartner(id as string, selectedPartnerId || null)
+                                                if (res.success) {
+                                                    const dp = selectedPartnerId ? deliveryPartners.find((p: any) => p.id === selectedPartnerId) : null
+                                                    setDeliveryPartner(dp || null)
+                                                    setEditingPartner(false)
+                                                    toast.success("Delivery partner updated")
+                                                } else {
+                                                    toast.error(res.message || "Failed to update")
+                                                }
+                                            }}
+                                            className="text-[9px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-wider"
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setEditingPartner(false)
+                                                setSelectedPartnerId(order.delivery_partner_id || "")
+                                            }}
+                                            className="text-[9px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-wider"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-1">
+                                        {deliveryPartner?.name || order.shipping_label || "Standard"}
+                                        <button onClick={() => setEditingPartner(true)} className="ml-1 hover:text-rose-500 transition-colors">
+                                            <Pencil className="w-2.5 h-2.5" />
+                                        </button>
+                                    </span>
+                                )}
+                            </p>
                             {order.tracking_number && (
                                 <p className="text-[8px] font-mono text-slate-500 mt-0.5">Tracking: {order.tracking_number}</p>
                             )}

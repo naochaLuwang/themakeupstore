@@ -1246,3 +1246,24 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
         return { success: false, message: error.message }
     }
 }
+
+export async function updateOrderDeliveryPartner(orderId: string, deliveryPartnerId: string | null) {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    try {
+        const { error } = await supabase
+            .from('orders')
+            .update({ delivery_partner_id: deliveryPartnerId, updated_at: new Date().toISOString() })
+            .eq('id', orderId)
+
+        if (error) throw error
+
+        revalidatePath('/admin/orders')
+        revalidatePath(`/admin/orders/${orderId}`)
+        return { success: true }
+    } catch (error: any) {
+        console.error("UPDATE_DELIVERY_PARTNER_ERROR:", error)
+        return { success: false, message: error.message }
+    }
+}
