@@ -5,8 +5,9 @@ import { FreeGiftForm } from "../free-gift-form"
 
 export default async function AdminFreeGiftNewPage() {
     const supabase = await createClient()
-    const [productsRes, categoriesRes] = await Promise.all([
+    const [productsRes, giftProductsRes, categoriesRes] = await Promise.all([
         supabase.from('products').select('id, name').order('name'),
+        (async () => { try { return await supabase.from('gift_products').select('id, name').eq('is_active', true).order('name') } catch { return { data: [] } } })(),
         supabase.from('categories').select('id, name').order('name'),
     ])
 
@@ -23,7 +24,7 @@ export default async function AdminFreeGiftNewPage() {
             </div>
 
             <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm max-w-2xl">
-                <FreeGiftForm products={productsRes.data || []} categories={categoriesRes.data || []} />
+                <FreeGiftForm products={productsRes.data || []} giftProducts={giftProductsRes.data || []} categories={categoriesRes.data || []} />
             </div>
         </div>
     )

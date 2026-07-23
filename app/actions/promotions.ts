@@ -492,6 +492,7 @@ export async function createFreeGift(formData: {
     description?: string
     gift_product_id: string
     gift_variant_id?: string
+    gift_product_ref_id?: string
     gift_quantity: number
     trigger_type: string
     trigger_threshold?: number
@@ -517,6 +518,7 @@ export async function createFreeGift(formData: {
             ...ruleData,
             description: ruleData.description || null,
             gift_variant_id: ruleData.gift_variant_id || null,
+            gift_product_ref_id: ruleData.gift_product_ref_id || null,
             trigger_threshold: ruleData.trigger_threshold || 0,
             min_cart_amount: ruleData.min_cart_amount || null,
             usage_limit: ruleData.usage_limit || null,
@@ -564,6 +566,7 @@ export async function updateFreeGift(id: string, formData: {
     description?: string
     gift_product_id: string
     gift_variant_id?: string
+    gift_product_ref_id?: string
     gift_quantity: number
     trigger_type: string
     trigger_threshold?: number
@@ -589,6 +592,7 @@ export async function updateFreeGift(id: string, formData: {
             ...ruleData,
             description: ruleData.description || null,
             gift_variant_id: ruleData.gift_variant_id || null,
+            gift_product_ref_id: ruleData.gift_product_ref_id || null,
             trigger_threshold: ruleData.trigger_threshold || 0,
             min_cart_amount: ruleData.min_cart_amount || null,
             usage_limit: ruleData.usage_limit || null,

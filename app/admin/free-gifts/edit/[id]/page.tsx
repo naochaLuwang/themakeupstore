@@ -8,13 +8,14 @@ export default async function AdminFreeGiftEditPage({ params }: { params: Promis
     const { id } = await params
     const supabase = await createClient()
 
-    const [ruleRes, productsRes, categoriesRes] = await Promise.all([
+    const [ruleRes, productsRes, giftProductsRes, categoriesRes] = await Promise.all([
         supabase
             .from('free_gifts')
             .select('*, qualifying_products:free_gift_products(product_id), qualifying_categories:free_gift_categories(category_id), qualifying_brands:free_gift_brands(brand)')
             .eq('id', id)
             .single(),
         supabase.from('products').select('id, name').order('name'),
+        (async () => { try { return await supabase.from('gift_products').select('id, name').eq('is_active', true).order('name') } catch { return { data: [] } } })(),
         supabase.from('categories').select('id, name').order('name'),
     ])
 
@@ -42,6 +43,7 @@ export default async function AdminFreeGiftEditPage({ params }: { params: Promis
             <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm max-w-2xl">
                 <FreeGiftForm
                     products={productsRes.data || []}
+                    giftProducts={giftProductsRes.data || []}
                     categories={categoriesRes.data || []}
                     initialData={rule}
                     initialSelectedIds={initialSelectedIds}

@@ -8,6 +8,7 @@ import { createFreeGift, updateFreeGift } from "@/app/actions/promotions"
 
 interface FreeGiftFormProps {
     products: any[]
+    giftProducts: any[]
     categories: any[]
     initialData?: any
     initialSelectedIds?: {
@@ -17,7 +18,7 @@ interface FreeGiftFormProps {
     }
 }
 
-export function FreeGiftForm({ products, categories, initialData, initialSelectedIds }: FreeGiftFormProps) {
+export function FreeGiftForm({ products, giftProducts, categories, initialData, initialSelectedIds }: FreeGiftFormProps) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [triggerType, setTriggerType] = useState(initialData?.trigger_type || 'cart_total')
@@ -50,6 +51,7 @@ export function FreeGiftForm({ products, categories, initialData, initialSelecte
                 description: formData.get('description') as string || undefined,
                 gift_product_id: formData.get('gift_product_id') as string,
                 gift_variant_id: formData.get('gift_variant_id') as string || undefined,
+                gift_product_ref_id: formData.get('gift_product_ref_id') as string || undefined,
                 gift_quantity: Number(formData.get('gift_quantity')) || 1,
                 trigger_type: triggerType,
                 trigger_threshold: triggerType === 'cart_total'
@@ -70,7 +72,7 @@ export function FreeGiftForm({ products, categories, initialData, initialSelecte
                 is_active: formData.get('is_active') !== 'off',
             }
 
-            if (!data.name || !data.gift_product_id) {
+            if (!data.name || (!data.gift_product_id && !data.gift_product_ref_id)) {
                 toast.error("Name and gift product are required")
                 setLoading(false)
                 return
@@ -114,12 +116,23 @@ export function FreeGiftForm({ products, categories, initialData, initialSelecte
 
             {/* Gift Product */}
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Product</label>
-                <select name="gift_product_id" defaultValue={initialData?.gift_product_id} required
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Product <span className="text-slate-300 font-normal normal-case">(store product)</span></label>
+                <select name="gift_product_id" defaultValue={initialData?.gift_product_id}
                     className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none">
-                    <option value="">Select a product</option>
+                    <option value="">None — use gift product below</option>
                     {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+            </div>
+
+            {/* Gift Product (New Table) */}
+            <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Product <span className="text-slate-300 font-normal normal-case">(dedicated gift inventory)</span></label>
+                <select name="gift_product_ref_id" defaultValue={initialData?.gift_product_ref_id}
+                    className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none">
+                    <option value="">None — use store product above</option>
+                    {giftProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <p className="text-[11px] text-slate-400">Prefer selecting from dedicated gift inventory. Leave both as "None" if you need to go back.</p>
             </div>
 
             {/* Gift Quantity */}

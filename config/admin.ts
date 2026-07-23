@@ -24,9 +24,19 @@ import {
     AlertTriangle,
     Sparkles,
     Gift,
-    Zap,
     Award,
     MessageSquare,
+    Package,
+    Timer,
+    Percent,
+    Clock,
+    CreditCard,
+    Bell,
+    UserCheck,
+    MapPin,
+    Activity,
+    Wallet,
+    Megaphone,
 } from "lucide-react"
 
 export interface SidebarGroup {
@@ -49,7 +59,7 @@ export const adminConfig = {
                 { title: "Return Requests", href: "/admin/return-requests", icon: RotateCcw },
                 { title: "Concerns", href: "/admin/concerns", icon: AlertTriangle },
                 { title: "Live Carts", href: "/admin/live-carts", icon: ShoppingCart },
-                { title: "Abandoned Carts", href: "/admin/abandoned-carts", icon: ShoppingCart },
+                { title: "Abandoned Carts", href: "/admin/abandoned-carts", icon: Timer },
             ],
         },
         {
@@ -63,17 +73,24 @@ export const adminConfig = {
             ],
         },
         {
-            label: "Promotions",
+            label: "Marketing",
             items: [
                 { title: "Promos", href: "/admin/promos", icon: Tag },
                 { title: "Free Gifts", href: "/admin/free-gifts", icon: Gift },
-                { title: "Buy X Get Y", href: "/admin/bxgy", icon: Zap },
-                { title: "Gift Cards", href: "/admin/gift-cards", icon: Gift },
-                { title: "Rewards", href: "/admin/rewards", icon: Award },
-                { title: "Flash Sales", href: "/admin/flash-sales", icon: Zap },
+                { title: "Gift Products", href: "/admin/gift-products", icon: Package },
+                { title: "Buy X Get Y", href: "/admin/bxgy", icon: Percent },
+                { title: "Flash Sales", href: "/admin/flash-sales", icon: Clock },
                 { title: "Hero Banners", href: "/admin/hero-banners", icon: Image },
                 { title: "Showcase", href: "/admin/showcase", icon: Sparkles },
-                { title: "Broadcast", href: "/admin/broadcast", icon: Radio },
+                { title: "Broadcast", href: "/admin/broadcast", icon: Megaphone },
+            ],
+        },
+        {
+            label: "Loyalty & Rewards",
+            items: [
+                { title: "Rewards", href: "/admin/rewards", icon: Award },
+                { title: "Reward Users", href: "/admin/rewards/users", icon: Users },
+                { title: "Gift Cards", href: "/admin/gift-cards", icon: CreditCard },
             ],
         },
         {
@@ -81,7 +98,7 @@ export const adminConfig = {
             items: [
                 { title: "Messages", href: "/admin/messages", icon: Mail },
                 { title: "Reviews", href: "/admin/reviews", icon: Star },
-                { title: "Back in Stock", href: "/admin/inventory/demand", icon: TrendingUp },
+                { title: "Back in Stock", href: "/admin/inventory/demand", icon: Bell },
             ],
         },
         {
@@ -92,14 +109,19 @@ export const adminConfig = {
             ],
         },
         {
-            label: "Admin",
+            label: "Finance",
             items: [
-                { title: "Customers", href: "/admin/customers", icon: Users },
-                { title: "Shipping", href: "/admin/shipping", icon: Truck },
-                { title: "Delivery Partners", href: "/admin/delivery-partners", icon: Truck },
                 { title: "Purchase", href: "/admin/purchase", icon: Receipt },
                 { title: "Purchase History", href: "/admin/purchase/list", icon: History },
-                { title: "Visitor History", href: "/admin/visitor-history", icon: History },
+            ],
+        },
+        {
+            label: "Admin",
+            items: [
+                { title: "Customers", href: "/admin/customers", icon: UserCheck },
+                { title: "Shipping", href: "/admin/shipping", icon: MapPin },
+                { title: "Delivery Partners", href: "/admin/delivery-partners", icon: Truck },
+                { title: "Visitor History", href: "/admin/visitor-history", icon: Activity },
                 { title: "Wholesale", href: "/admin/wholesale", icon: Store },
                 { title: "Legal Settings", href: "/admin/settings/legal", icon: Settings },
             ],

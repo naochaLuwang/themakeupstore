@@ -9,12 +9,14 @@ interface FreeGiftRule {
     name: string
     gift_product_id: string
     gift_variant_id: string | null
+    gift_product_ref_id: string | null
     gift_quantity: number
     trigger_type: string
     trigger_threshold: number
     min_cart_amount: number | null
     apply_to: string
     gift_product?: { name: string; thumbnail_url: string | null; base_price: number }
+    gift_product_ref?: { name: string; image_url: string | null; price: number }
     gift_variant?: { title: string; price: number; stock: number; image_url: string | null }
     qualifying_products?: { product_id: string }[]
     qualifying_categories?: { category_id: string }[]
@@ -175,26 +177,33 @@ export function usePromotions() {
 
                 qualifyingGiftRuleIds.add(rule.id)
 
+                // Use ref product id when gift_product_ref_id is set
+                const giftId = rule.gift_product_ref_id || rule.gift_product_id
+
                 // Check if already in cart
-                const alreadyInCart = items.some(i => i.is_gift && i.productId === rule.gift_product_id)
+                const alreadyInCart = items.some(i => i.is_gift && i.productId === giftId)
                 if (alreadyInCart) continue
 
-                // Check stock
-                if (rule.gift_variant && rule.gift_variant.stock < rule.gift_quantity) continue
+                // Check stock (only for old product variant path)
+                if (!rule.gift_product_ref_id && rule.gift_variant && rule.gift_variant.stock < rule.gift_quantity) continue
+
+                const giftName = rule.gift_product_ref?.name || rule.gift_product?.name || "Free Gift"
+                const giftMRP = rule.gift_product_ref?.price || rule.gift_variant?.price || rule.gift_product?.base_price || 0
+                const giftImage = rule.gift_product_ref?.image_url || rule.gift_variant?.image_url || rule.gift_product?.thumbnail_url || ""
 
                 giftsToAdd.push({
-                    id: rule.gift_variant_id || rule.gift_product_id,
-                    productId: rule.gift_product_id,
+                    id: rule.gift_variant_id || giftId,
+                    productId: giftId,
                     categoryId: "",
-                    variantId: rule.gift_variant_id || rule.gift_product_id,
-                    name: rule.gift_product?.name || "Free Gift",
-                    variantTitle: rule.gift_variant?.title || "Gift",
+                    variantId: rule.gift_variant_id || giftId,
+                    name: giftName,
+                    variantTitle: rule.gift_variant?.title || (rule.gift_product_ref_id ? "Gift" : "Gift"),
                     price: 0,
-                    mrp: rule.gift_variant?.price || rule.gift_product?.base_price || 0,
-                    originalPrice: rule.gift_variant?.price || rule.gift_product?.base_price || 0,
-                    image: rule.gift_variant?.image_url || rule.gift_product?.thumbnail_url || "",
+                    mrp: giftMRP,
+                    originalPrice: giftMRP,
+                    image: giftImage,
                     quantity: rule.gift_quantity,
-                    stock: rule.gift_variant?.stock || 999,
+                    stock: 999,
                     is_gift: true,
                     gift_rule_id: rule.id,
                 })
@@ -237,8 +246,8 @@ export function usePromotions() {
                     newGiftProgress.push({
                         ruleId: rule.id,
                         ruleName: rule.name,
-                        giftProductName: rule.gift_product?.name || "Free Gift",
-                        giftProductImage: rule.gift_product?.thumbnail_url || "",
+                        giftProductName: rule.gift_product_ref?.name || rule.gift_product?.name || "Free Gift",
+                        giftProductImage: rule.gift_product_ref?.image_url || rule.gift_product?.thumbnail_url || "",
                         qualifies,
                         qualifyingVariantIds: realItems.map(i => i.variantId),
                         qualifyingLabel: "your cart",
@@ -258,8 +267,8 @@ export function usePromotions() {
                     newGiftProgress.push({
                         ruleId: rule.id,
                         ruleName: rule.name,
-                        giftProductName: rule.gift_product?.name || "Free Gift",
-                        giftProductImage: rule.gift_product?.thumbnail_url || "",
+                        giftProductName: rule.gift_product_ref?.name || rule.gift_product?.name || "Free Gift",
+                        giftProductImage: rule.gift_product_ref?.image_url || rule.gift_product?.thumbnail_url || "",
                         qualifies,
                         qualifyingVariantIds: qualifying.map(i => i.variantId),
                         qualifyingLabel: [...new Set(qualifying.map(i => i.name))].join(", "),
@@ -283,8 +292,8 @@ export function usePromotions() {
                     newGiftProgress.push({
                         ruleId: rule.id,
                         ruleName: rule.name,
-                        giftProductName: rule.gift_product?.name || "Free Gift",
-                        giftProductImage: rule.gift_product?.thumbnail_url || "",
+                        giftProductName: rule.gift_product_ref?.name || rule.gift_product?.name || "Free Gift",
+                        giftProductImage: rule.gift_product_ref?.image_url || rule.gift_product?.thumbnail_url || "",
                         qualifies,
                         qualifyingVariantIds: qualifying.map(i => i.variantId),
                         qualifyingLabel: catLabel,
@@ -309,8 +318,8 @@ export function usePromotions() {
                     newGiftProgress.push({
                         ruleId: rule.id,
                         ruleName: rule.name,
-                        giftProductName: rule.gift_product?.name || "Free Gift",
-                        giftProductImage: rule.gift_product?.thumbnail_url || "",
+                        giftProductName: rule.gift_product_ref?.name || rule.gift_product?.name || "Free Gift",
+                        giftProductImage: rule.gift_product_ref?.image_url || rule.gift_product?.thumbnail_url || "",
                         qualifies,
                         qualifyingVariantIds: qualifying.map(i => i.variantId),
                         qualifyingLabel: [...brands].join(", "),

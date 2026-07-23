@@ -47,7 +47,8 @@ export default async function AdminFreeGiftsPage() {
                                         <div className="text-xs text-slate-400 mt-0.5">Qty: {rule.gift_quantity}</div>
                                     </td>
                                     <td className="py-4 px-6">
-                                        <span className="text-sm text-slate-700">{rule.gift_product?.name || 'N/A'}</span>
+                                        <span className="text-sm text-slate-700">{rule.gift_product_ref?.name || rule.gift_product?.name || 'N/A'}</span>
+                                        {rule.gift_product_ref_id && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-semibold uppercase">gift</span>}
                                     </td>
                                     <td className="py-4 px-6">
                                         <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">

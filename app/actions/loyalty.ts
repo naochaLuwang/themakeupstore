@@ -450,3 +450,137 @@ export async function getTransactionHistory() {
     },
   }
 }
+
+// ─── Admin: get all users' points ───
+export async function adminGetAllUsersPoints() {
+  await requireAdmin()
+  const supabase = await createAdminClient()
+
+  // Get all users who have loyalty transactions (most reliable source)
+  const { data: allTx } = await supabase
+    .from("loyalty_transactions")
+    .select("user_id, type, amount, status, created_at")
+    .order("created_at", { ascending: false })
+
+  // Also fetch loyalty_points table
+  const { data: pointsData } = await supabase
+    .from("loyalty_points")
+    .select("*")
+
+  const pointsMap = new Map((pointsData || []).map((p: any) => [p.user_id, p]))
+
+  // Build user aggregates from transactions
+  const userTxMap = new Map<string, { earned: number; spent: number; pending: number; lastActivity: string | null }>()
+  for (const tx of allTx || []) {
+    const existing = userTxMap.get(tx.user_id) || { earned: 0, spent: 0, pending: 0, lastActivity: null }
+    if (tx.type === "earn" || tx.type === "bonus") {
+      if (tx.status === "available") existing.earned += tx.amount
+      if (tx.status === "pending") existing.pending += tx.amount
+    }
+    if (tx.type === "spend") existing.spent += tx.amount
+    if (!existing.lastActivity) existing.lastActivity = tx.created_at
+    userTxMap.set(tx.user_id, existing)
+  }
+
+  const userIds = [...new Set([
+    ...(pointsData || []).map((p: any) => p.user_id),
+    ...(allTx || []).map(t => t.user_id),
+  ])]
+
+  // Fetch profiles
+  const { data: profiles } = userIds.length > 0
+    ? await supabase.from("profiles").select("id, full_name, phone").in("id", userIds)
+    : { data: [] }
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+
+  const result = userIds.map(userId => {
+    const p = pointsMap.get(userId)
+    const tx = userTxMap.get(userId) || { earned: 0, spent: 0, pending: 0, lastActivity: null }
+    const profile = profileMap.get(userId)
+    return {
+      user_id: userId,
+      balance: p?.balance ?? 0,
+      lifetime_earned: p?.lifetime_earned ?? tx.earned,
+      lifetime_spent: tx.spent,
+      pending: tx.pending,
+      tier: p?.tier ?? "bronze",
+      full_name: profile?.full_name || "—",
+      phone: profile?.phone || "—",
+      last_activity: tx.lastActivity,
+    }
+  })
+
+  result.sort((a, b) => b.balance - a.balance)
+  return result
+}
+
+// ─── Admin: get a single user's transactions ───
+export async function adminGetUserTransactions(userId: string) {
+  await requireAdmin()
+  const supabase = await createAdminClient()
+
+  const [pointsRes, txRes, profileRes] = await Promise.all([
+    supabase.from("loyalty_points").select("*").eq("user_id", userId).maybeSingle(),
+    supabase.from("loyalty_transactions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase.from("profiles").select("id, full_name, phone").eq("id", userId).maybeSingle(),
+  ])
+
+  return {
+    points: pointsRes.data || { balance: 0, lifetime_earned: 0, tier: "bronze" },
+    transactions: txRes.data || [],
+    profile: profileRes.data || null,
+  }
+}
+
+// ─── Admin: adjust a user's points ───
+export async function adminAdjustPoints(userId: string, amount: number, note: string) {
+  await requireAdmin()
+  const supabase = await createAdminClient()
+
+  if (amount === 0) return { success: false, message: "Amount must be non-zero" }
+
+  // Get current balance
+  const { data: points } = await supabase
+    .from("loyalty_points")
+    .select("balance")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  const currentBalance = points?.balance || 0
+
+  // Prevent negative balance on deduction
+  if (amount < 0 && currentBalance + amount < 0) {
+    return { success: false, message: `User only has ${currentBalance} coins — cannot deduct ${Math.abs(amount)}` }
+  }
+
+  // Ensure loyalty_points row exists
+  if (!points) {
+    await supabase.from("loyalty_points").insert({
+      user_id: userId,
+      balance: 0,
+      lifetime_earned: 0,
+      tier: "bronze",
+    })
+  }
+
+  // DB triggers auto-update balance_before/balance_after and loyalty_points.balance
+  // For credits: use type='bonus' (trigger does balance += amount, lifetime_earned += amount)
+  // For debits: use type='spend' (trigger does balance -= amount)
+  const { error: txErr } = await supabase.from("loyalty_transactions").insert({
+    user_id: userId,
+    type: amount > 0 ? "bonus" : "spend",
+    amount: Math.abs(amount),
+    reference_type: "admin",
+    status: "available",
+    note: `Admin ${amount > 0 ? "credited" : "deducted"}: ${note}`,
+  })
+
+  if (txErr) return { success: false, message: txErr.message }
+
+  revalidatePath("/admin/rewards/users")
+  return { success: true }
+}
