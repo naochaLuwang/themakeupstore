@@ -192,7 +192,7 @@ export default function VariantSelector({ product, variants = [], onVariantChang
                                                     ${isSelected ? 'bg-[#fc2779] scale-110 shadow-lg shadow-pink-200' : 'bg-slate-50 hover:bg-pink-50'}
                                                     ${isOutOfStock ? 'opacity-30' : ''}
                                                 `}>
-                                                    <div className="w-full h-full rounded-xl border-2 border-white shadow-inner" style={{ backgroundColor: v.hex_code }}>
+                                                    <div className="w-full h-full rounded-xl border-2 border-white shadow-inner" style={{ backgroundColor: v.hex_code || '#F1F5F9' }}>
                                                         {isOutOfStock && <div className="absolute inset-0 flex items-center justify-center rotate-45"><div className="w-full h-[1px] bg-slate-500" /></div>}
                                                     </div>
                                                 </div>

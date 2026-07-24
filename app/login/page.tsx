@@ -3,7 +3,7 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -35,13 +35,33 @@ export default function AuthPage() {
         return () => subscription.unsubscribe()
     }, [supabase, router])
 
-    const handleGoogleLogin = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: `${window.location.origin}/auth/callback` },
-        })
-        if (error) toast.error(error.message)
-    }
+    const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()
+
+    const handleGoogleLogin = useCallback(async () => {
+        if (isCapacitor) {
+            try {
+                const { nativeGoogleSignIn } = await import('@/lib/capacitor-google-auth')
+                const result = await nativeGoogleSignIn()
+                if (!result) {
+                    toast.error('Google sign-in cancelled or failed')
+                    return
+                }
+                const { error } = await supabase.auth.signInWithIdToken({
+                    provider: 'google',
+                    token: result.idToken,
+                })
+                if (error) toast.error(error.message)
+            } catch (err: any) {
+                toast.error(err?.message || 'Google sign-in failed')
+            }
+        } else {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: `${window.location.origin}/auth/callback` },
+            })
+            if (error) toast.error(error.message)
+        }
+    }, [isCapacitor, supabase])
 
     const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()

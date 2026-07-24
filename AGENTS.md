@@ -100,3 +100,21 @@
 - `components/admin/product-search.tsx`: replaced `text-muted-foreground` with `text-slate-400`
 - `components/admin/product-form.tsx`: replaced `text-muted-foreground` with `text-slate-400`
 - `components/admin/product-edit-form.tsx`: replaced `text-muted-foreground` with `text-slate-400`
+
+## Capacitor
+- Android project lives in `android/`, ignored by git
+- JDK 21 (`openjdk@21`) is required — set `JAVA_HOME=/opt/homebrew/opt/openjdk@21` before builds (JDK 25 causes Gradle "Unsupported class file major version 69" error)
+- Google Sign-In uses `capacitor-native-google-one-tap-signin` (Google One Tap / Credential Manager) — initialized in `lib/capacitor-google-auth.ts`, called from `app/login/page.tsx` when `Capacitor.isNativePlatform()` is true
+- Web client ID: `127502531027-mqjrtvqavbgaf28dneq8uf2rjpvrqhuj.apps.googleusercontent.com` (passed to `GoogleOneTapAuth.initialize()`)
+- An Android OAuth client ID must also exist in Google Cloud Console (links package name `com.themakeupstorewangkhei.twa` + SHA-1 `DB:BC:1C:46:C6:18:29:31:86:89:C3:02:D8:A3:DF:27:59:6B:B5:16`)
+- Plugin's `compileSdk` must be 36 — if `npx cap sync` resets the plugin's `build.gradle`, re-apply: edit `node_modules/capacitor-native-google-one-tap-signin/android/googleauth-plugin/build.gradle` → `compileSdk 36`
+- Debug APK: `npm run cap:debug` → `android/app/build/outputs/apk/debug/app-debug.apk`
+- Release AAB: `npm run cap:release` → `android/app/build/outputs/bundle/release/app-release.aab`
+- Keystore: `makeup-store.keystore` (password: `Autodesk@9749`, alias: `makeup-alias`)
+- **Plugins installed**: `@capacitor/status-bar`, `@capacitor/haptics`, `@capacitor/push-notifications`, `capacitor-native-google-one-tap-signin`
+- **Safe area**: `StatusBar.setOverlaysWebView({ overlay: false })` via `capacitor.config.ts` — WebView renders below status bar; Android theme uses white status bar + navigation bar with `windowTranslucentStatus=false`
+- **App icon**: Custom store logo (from `public/icon-192x192-v2.png`) set at all mipmap densities, white adaptive icon background
+- **Splash screen**: White background with `launchShowDuration: 2000` via SplashScreen plugin; `splash.png` in drawable for launch theme; plugin is `@capacitor/splash-screen`
+- **Firebase Push Notifications**: Uses `@capacitor-firebase/messaging` (v8.3.0) for FCM via service account auth (v1 API); requires `google-services.json` at `android/app/` and `FIREBASE_SERVICE_ACCOUNT_KEY` env var server-side (the full JSON from Firebase Admin SDK service account, set as a multiline env var on Hostinger)
+- **Push token storage**: `push_subscriptions` table now has `fcm_token` + `platform` columns; `PushInitializer` detects Capacitor vs browser and registers accordingly (FCM or Web Push)
+- **Dual push sending**: `/api/admin/broadcast` and order notifications send via both Web Push (for PWA) and FCM v1 API (for Capacitor); invalid tokens cleaned up automatically

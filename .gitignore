@@ -40,6 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Capacitor / Android
+/android/
+/.capacitor/
+
 # PWA files
 **/public/sw.js
 **/public/sw.js.map

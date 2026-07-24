@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
     const { data: subs, error: subError } = await supabase
         .from('push_subscriptions')
-        .select('id, user_id, subscription_json');
+        .select('*');
 
     if (subError || !subs) {
         return NextResponse.json({ success: false, error: "Database unreachable" }, { status: 500 });
@@ -41,24 +41,45 @@ export async function POST(req: Request) {
     });
 
     let totalDevicesReached = 0;
+    let fcmTokens: string[] = [];
 
-    const results = await Promise.allSettled(
-        subs.map(async (row) => {
+    // Separate Web Push and FCM subscriptions
+    for (const row of subs) {
+        if (row.fcm_token) {
+            fcmTokens.push(row.fcm_token);
+        } else if (row.subscription_json) {
             try {
                 const subObj = typeof row.subscription_json === 'string'
                     ? JSON.parse(row.subscription_json)
                     : row.subscription_json;
 
                 await webpush.sendNotification(subObj, payload);
-
                 totalDevicesReached++;
             } catch (err: any) {
                 if (err.statusCode === 410 || err.statusCode === 404) {
                     await supabase.from('push_subscriptions').delete().eq('id', row.id);
                 }
             }
-        })
-    );
+        }
+    }
+
+    // Send FCM notifications
+    if (fcmTokens.length > 0) {
+        try {
+            const { sendFcmMulticast } = await import('@/lib/fcm-send')
+            const result = await sendFcmMulticast(fcmTokens, title || "Broadcast", body || "New Message", url || "/")
+            totalDevicesReached += result.sentCount
+
+            // Clean up invalid FCM tokens
+            if (result.invalidTokens.length > 0) {
+                for (const token of result.invalidTokens) {
+                    await supabase.from('push_subscriptions').delete().eq('fcm_token', token);
+                }
+            }
+        } catch (err) {
+            console.error('FCM broadcast error:', err)
+        }
+    }
 
     return NextResponse.json({
         success: true,
