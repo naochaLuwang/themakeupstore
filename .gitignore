@@ -20,8 +20,14 @@
 # production
 /build
 
-# misc
+# OS files
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# misc
 *.pem
 
 # debug
@@ -43,6 +49,22 @@ next-env.d.ts
 # Capacitor / Android
 /android/
 /.capacitor/
+
+# APK builds
+*.apk
+*.aab
+
+# Keystore / signing
+*.keystore
+*.jks
+
+# Supabase temp files
+supabase/.temp/
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
 
 # PWA files
 **/public/sw.js
