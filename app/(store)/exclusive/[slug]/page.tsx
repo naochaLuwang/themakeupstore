@@ -231,50 +231,8 @@ export default function ExclusiveCategoryPage() {
         setSelectedPriceRange(null)
     }
 
-    const isKylie = slug === "kylie-cosmetics"
-    const kylieBanners = ["/banners/KYLIE.webp", "/banners/KYLIE1.webp"]
-    const [kylieSlide, setKylieSlide] = React.useState(0)
-
-    React.useEffect(() => {
-        if (!isKylie) return
-        const timer = setInterval(() => {
-            setKylieSlide((prev) => (prev + 1) % kylieBanners.length)
-        }, 4000)
-        return () => clearInterval(timer)
-    }, [isKylie])
-
     return (
         <div className="min-h-screen bg-white pb-24">
-            {/* KYLIE COSMETICS CAROUSEL */}
-            {isKylie && (
-                <div className="relative w-full overflow-hidden">
-                    <div
-                        className="flex transition-transform duration-500 ease-in-out"
-                        style={{ transform: `translateX(-${kylieSlide * 100}%)` }}
-                    >
-                        {kylieBanners.map((src, i) => (
-                            <img
-                                key={i}
-                                src={src}
-                                alt={"Banner"}
-                                className="w-full h-auto object-cover shrink-0"
-                            />
-                        ))}
-                    </div>
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-                        {kylieBanners.map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => setKylieSlide(i)}
-                                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                                    i === kylieSlide ? "bg-white w-3" : "bg-white/50"
-                                }`}
-                            />
-                        ))}
-                    </div>
-                </div>
-            )}
-
             {/* HEADER */}
             <div className="bg-white border-b border-slate-100">
                 <div className="max-w-7xl mx-auto px-6 pt-4 pb-2">

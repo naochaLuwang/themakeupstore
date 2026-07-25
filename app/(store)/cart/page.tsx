@@ -1,7 +1,6 @@
 "use client"
 
 import { useCart } from "@/components/store/use-cart"
-import { Button } from "@/components/ui/button"
 import { Minus, Plus, ShoppingBag, X, Gift, Tag, Zap } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -14,9 +13,8 @@ import { FREE_SHIPPING_THRESHOLD } from "@/lib/cart-constants"
 import { applyFlashSaleToPrice } from "@/lib/flash-sale-helper"
 
 export default function CartPage() {
-    const { items, removeItem, updateQuantity, setItems, removeGift, bxgyDiscounts, giftProgress, bxgyProgress } = useCart() as any
+    const { items, removeItem, updateQuantity, setItems, bxgyDiscounts, giftProgress, bxgyProgress } = useCart() as any
     const [mounted, setMounted] = useState(false)
-    const [pendingItem, setPendingItem] = useState<any | null>(null)
     const [isSyncing, setIsSyncing] = useState(false)
     const [recommendations, setRecommendations] = useState<any[]>([])
     const supabase = createClient()
@@ -108,7 +106,6 @@ export default function CartPage() {
     const handleRemove = async (variantId: string) => {
         removeItem(variantId)
         toast.success("Item removed from bag")
-        setPendingItem(null)
         // DB sync handled by CartSync's debounced push
     }
 
@@ -125,7 +122,6 @@ export default function CartPage() {
     const outOfStockVariants = useMemo(() => items.filter((i: any) => (i.stock ?? 1) <= 0 && !i.is_gift && !i.is_bxgy_free), [items])
     const hasOutOfStock = outOfStockVariants.length > 0
     const giftItems = useMemo(() => items.filter((i: any) => i.is_gift), [items])
-    const bxgyFreeItems = useMemo(() => items.filter((i: any) => i.is_bxgy_free), [items])
     const totalBXGYDiscount = useMemo(() => (bxgyDiscounts || []).reduce((sum: number, d: any) => sum + d.discount_amount, 0), [bxgyDiscounts])
     const discountMap = useMemo(() => {
         const map: Record<string, { amount: number; freeQty: number }> = {}

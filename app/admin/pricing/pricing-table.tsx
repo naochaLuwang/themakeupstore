@@ -25,6 +25,7 @@ export default function PricingTable({
     const [selectedCategory, setSelectedCategory] = useState<string>("all")
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+    const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 })
     const [bulkOpen, setBulkOpen] = useState(false)
     const [bulkType, setBulkType] = useState<"percentage" | "amount">("percentage")
     const [bulkValue, setBulkValue] = useState("10")
@@ -129,8 +130,12 @@ export default function PricingTable({
 
         setIsBulkUpdating(true)
         let successCount = 0
+        const ids = Array.from(selectedIds)
+        setBulkProgress({ current: 0, total: ids.length })
 
-        for (const id of selectedIds) {
+        for (let i = 0; i < ids.length; i++) {
+            const id = ids[i]
+            setBulkProgress({ current: i + 1, total: ids.length })
             let item: any = null
             let type: 'product' | 'variant' = 'product'
 
@@ -150,6 +155,7 @@ export default function PricingTable({
             }
         }
         setIsBulkUpdating(false)
+        setBulkProgress({ current: 0, total: 0 })
         setSelectedIds(new Set())
         setBulkOpen(false)
         toast.success(`Updated ${successCount} items`)
@@ -293,14 +299,35 @@ export default function PricingTable({
                                 placeholder={bulkType === "percentage" ? "e.g. 10" : "e.g. 100"}
                             />
                         </div>
-                        <p className="text-xs text-slate-400">
-                            Apply to <strong className="text-slate-700">{selectedIds.size} items</strong>
-                        </p>
+                        {isBulkUpdating ? (
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between text-xs text-slate-500">
+                                    <span className="flex items-center gap-2">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        Saving {bulkProgress.current} of {bulkProgress.total}
+                                    </span>
+                                    <span className="font-mono text-slate-400">
+                                        {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
+                                    </span>
+                                </div>
+                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-slate-900 rounded-full transition-all duration-300"
+                                        style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-slate-400">
+                                Apply to <strong className="text-slate-700">{selectedIds.size} items</strong>
+                            </p>
+                        )}
                     </div>
                     <DialogFooter className="sm:justify-end gap-2">
                         <button
                             onClick={() => setBulkOpen(false)}
-                            className="h-9 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                            disabled={isBulkUpdating}
+                            className="h-9 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40"
                         >
                             Cancel
                         </button>
@@ -310,7 +337,7 @@ export default function PricingTable({
                             className="h-9 px-5 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2"
                         >
                             {isBulkUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                            Apply
+                            {isBulkUpdating ? "Saving..." : "Apply"}
                         </button>
                     </DialogFooter>
                 </DialogContent>

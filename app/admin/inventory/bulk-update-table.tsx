@@ -7,11 +7,12 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { Save, RotateCcw, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { Save, RotateCcw, Loader2 } from "lucide-react"
 
 export function BulkUpdateTable({ inventory }: { inventory: any[] }) {
     const [pendingChanges, setPendingChanges] = useState<{ [key: string]: number }>({})
     const [isSaving, setIsSaving] = useState(false)
+    const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0 })
     const supabase = createClient()
     const router = useRouter()
 
@@ -31,19 +32,21 @@ export function BulkUpdateTable({ inventory }: { inventory: any[] }) {
 
     const saveChanges = async () => {
         setIsSaving(true)
+        const entries = Object.entries(pendingChanges)
+        setSaveProgress({ current: 0, total: entries.length })
         try {
-            const updates = Object.entries(pendingChanges).map(([id, stock]) => ({
-                id,
-                stock
-            }))
+            for (let i = 0; i < entries.length; i++) {
+                const [id, stock] = entries[i]
+                setSaveProgress({ current: i + 1, total: entries.length })
 
-            const { error } = await supabase
-                .from('product_variants')
-                .upsert(updates)
+                const { error } = await supabase
+                    .from('product_variants')
+                    .upsert({ id, stock })
 
-            if (error) throw error
+                if (error) throw error
+            }
 
-            toast.success(`Updated ${updates.length} items successfully`)
+            toast.success(`Updated ${entries.length} items successfully`)
             setPendingChanges({})
             router.refresh()
         } catch (error: any) {
@@ -56,30 +59,51 @@ export function BulkUpdateTable({ inventory }: { inventory: any[] }) {
     return (
         <div className="space-y-4">
             {/* Floating Action Bar */}
-            {hasChanges && (
+            {(hasChanges || isSaving) && (
                 <div className="sticky top-20 z-20 flex items-center justify-between bg-slate-900 text-white p-4 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-top-4">
                     <div className="flex items-center gap-4 ml-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">
-                            {Object.keys(pendingChanges).length} Variants modified
-                        </p>
+                        {isSaving ? (
+                            <div className="flex items-center gap-3">
+                                <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest">
+                                        Saving {saveProgress.current} of {saveProgress.total}
+                                    </p>
+                                    <div className="w-32 h-1 bg-white/10 rounded-full mt-1.5 overflow-hidden">
+                                        <div
+                                            className="h-full bg-white rounded-full transition-all duration-300"
+                                            style={{ width: `${(saveProgress.current / saveProgress.total) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">
+                                    {Object.keys(pendingChanges).length} Variants modified
+                                </p>
+                            </>
+                        )}
                     </div>
                     <div className="flex gap-2">
-                        <Button
-                            variant="ghost"
-                            onClick={resetChanges}
-                            className="text-white hover:bg-white/10 text-[10px] font-black uppercase tracking-widest h-9"
-                        >
-                            <RotateCcw className="w-3.5 h-3.5 mr-2" /> Discard
-                        </Button>
-                        <Button
-                            onClick={saveChanges}
-                            disabled={isSaving}
-                            className="bg-white text-slate-900 hover:bg-slate-100 text-[10px] font-black uppercase tracking-widest h-9 px-6"
-                        >
-                            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-2" />}
-                            Publish Changes
-                        </Button>
+                        {!isSaving && (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    onClick={resetChanges}
+                                    className="text-white hover:bg-white/10 text-[10px] font-black uppercase tracking-widest h-9"
+                                >
+                                    <RotateCcw className="w-3.5 h-3.5 mr-2" /> Discard
+                                </Button>
+                                <Button
+                                    onClick={saveChanges}
+                                    className="bg-white text-slate-900 hover:bg-slate-100 text-[10px] font-black uppercase tracking-widest h-9 px-6"
+                                >
+                                    <Save className="w-3.5 h-3.5 mr-2" /> Publish Changes
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
