@@ -1,11 +1,12 @@
 "use client"
 
+import { Suspense } from "react"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useDebouncedCallback } from "use-debounce"
 
-export function CustomerFilters() {
+function CustomerFiltersInner() {
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -48,5 +49,13 @@ export function CustomerFilters() {
                 />
             </div>
         </div>
+    )
+}
+
+export function CustomerFilters() {
+    return (
+        <Suspense fallback={<div className="h-11 w-full bg-slate-100 rounded-xl animate-pulse" />}>
+            <CustomerFiltersInner />
+        </Suspense>
     )
 }

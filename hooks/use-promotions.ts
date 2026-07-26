@@ -15,8 +15,12 @@ interface FreeGiftRule {
     trigger_threshold: number
     min_cart_amount: number | null
     apply_to: string
+    usage_limit: number | null
+    used_count: number
+    once_per_user: boolean
+    max_per_order: number
     gift_product?: { name: string; thumbnail_url: string | null; base_price: number }
-    gift_product_ref?: { name: string; image_url: string | null; price: number }
+    gift_product_ref?: { name: string; image_url: string | null; price: number; stock: number }
     gift_variant?: { title: string; price: number; stock: number; image_url: string | null }
     qualifying_products?: { product_id: string }[]
     qualifying_categories?: { category_id: string }[]
@@ -34,6 +38,10 @@ interface BXGYRule {
     get_discount_type: string
     get_discount_value: number
     apply_to: string
+    usage_limit: number | null
+    used_count: number
+    once_per_user: boolean
+    max_per_order: number | null
     buy_products?: { product_id: string }[]
     buy_categories?: { category_id: string }[]
     buy_brands?: { brand: string }[]
@@ -58,6 +66,7 @@ export function usePromotions() {
     const supabase = createClient()
     const prevItemsRef = useRef<string>("")
     const evalPendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const claimedGiftProductIdsRef = useRef<Set<string> | null>(null)
 
     const fetchAndEvaluate = useCallback(async () => {
         // Get non-gift items for evaluation
@@ -79,6 +88,7 @@ export function usePromotions() {
                     *,
                     gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url, base_price),
                     gift_variant:product_variants!free_gifts_gift_variant_id_fkey(title, price, stock, image_url),
+                    gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock),
                     qualifying_products:free_gift_products(product_id),
                     qualifying_categories:free_gift_categories(category_id),
                     qualifying_brands:free_gift_brands(brand)
@@ -170,6 +180,34 @@ export function usePromotions() {
 
                 if (!qualifies) continue
 
+                // Check usage limit
+                if (rule.usage_limit && rule.used_count >= rule.usage_limit) continue
+
+                // Check once_per_user (query user orders — cached per session)
+                if (rule.once_per_user) {
+                    if (claimedGiftProductIdsRef.current === null) {
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (user) {
+                            const { data: userOrders } = await supabase.from("orders").select("id").eq("user_id", user.id)
+                            const orderIds = (userOrders || []).map(o => o.id)
+                            const claimed = new Set<string>()
+                            if (orderIds.length > 0) {
+                                const { data: existingGifts } = await supabase
+                                    .from("order_items")
+                                    .select("product_id")
+                                    .in("order_id", orderIds)
+                                    .eq("is_gift", true)
+                                for (const g of (existingGifts || [])) claimed.add(g.product_id)
+                            }
+                            claimedGiftProductIdsRef.current = claimed
+                        } else {
+                            claimedGiftProductIdsRef.current = new Set()
+                        }
+                    }
+                    // Match on store product ID — ref items store gift_product_id in product_id
+                    if (claimedGiftProductIdsRef.current.has(rule.gift_product_id)) continue
+                }
+
                 // Also check optional minimum cart amount (uses qualifying items subtotal for targeted triggers, full cart for cart_total)
                 if (rule.min_cart_amount && rule.min_cart_amount > 0) {
                     if (qualifyingSubtotal < rule.min_cart_amount) continue
@@ -184,8 +222,10 @@ export function usePromotions() {
                 const alreadyInCart = items.some(i => i.is_gift && i.productId === giftId)
                 if (alreadyInCart) continue
 
-                // Check stock (only for old product variant path)
-                if (!rule.gift_product_ref_id && rule.gift_variant && rule.gift_variant.stock < rule.gift_quantity) continue
+                // Check stock
+                if (rule.gift_product_ref_id) {
+                    if (!rule.gift_product_ref || rule.gift_product_ref.stock < rule.gift_quantity) continue
+                } else if (rule.gift_variant && rule.gift_variant.stock < rule.gift_quantity) continue
 
                 const giftName = rule.gift_product_ref?.name || rule.gift_product?.name || "Free Gift"
                 const giftMRP = rule.gift_product_ref?.price || rule.gift_variant?.price || rule.gift_product?.base_price || 0
@@ -407,7 +447,7 @@ export function usePromotions() {
                 const minForFree = rule.buy_quantity + 1
                 if (totalQualifying < minForFree) continue
 
-                const timesApplicable = 1
+                const timesApplicable = rule.max_per_order || 1
 
                 if (rule.get_type === "cheapest_free") {
                     const sorted = [...qualifyingItems].sort((a, b) => a.price - b.price)

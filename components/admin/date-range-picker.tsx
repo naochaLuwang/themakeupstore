@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { format, subDays } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export function DateRangePicker() {
+function DateRangePickerInner() {
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -59,5 +60,13 @@ export function DateRangePicker() {
                 </PopoverContent>
             </Popover>
         </div>
+    )
+}
+
+export function DateRangePicker() {
+    return (
+        <Suspense fallback={<div className="h-10 w-[300px] bg-slate-100 rounded-lg animate-pulse" />}>
+            <DateRangePickerInner />
+        </Suspense>
     )
 }

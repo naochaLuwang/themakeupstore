@@ -8,31 +8,32 @@ const privateKey = process.env.VAPID_PRIVATE_KEY?.trim() || "";
 webpush.setVapidDetails('mailto:admin@yourstore.com', publicKey, privateKey);
 
 export async function POST(req: Request) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-        return NextResponse.json({ error: "Authentication required" }, { status: 401 })
-    }
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+        }
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single()
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .single()
 
-    if (!profile?.is_admin) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
+        if (!profile?.is_admin) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+        }
 
-    const { title, body, url } = await req.json()
+        const { title, body, url } = await req.json()
 
-    const { data: subs, error: subError } = await supabase
-        .from('push_subscriptions')
-        .select('*');
+        const { data: subs, error: subError } = await supabase
+            .from('push_subscriptions')
+            .select('*');
 
-    if (subError || !subs) {
-        return NextResponse.json({ success: false, error: "Database unreachable" }, { status: 500 });
-    }
+        if (subError || !subs) {
+            return NextResponse.json({ success: false, error: "Database unreachable" }, { status: 500 });
+        }
 
     const payload = JSON.stringify({
         title: title || "Broadcast",
@@ -86,4 +87,8 @@ export async function POST(req: Request) {
         totalDevices: totalDevicesReached,
         details: `SUCCESS: ${totalDevicesReached} DEVICES`
     });
+    } catch (err) {
+        console.error('Broadcast error:', err)
+        return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    }
 }

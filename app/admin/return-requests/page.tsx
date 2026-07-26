@@ -5,8 +5,7 @@ import {
     AlertTriangle,
     Banknote,
     ExternalLink,
-    Search,
-    Filter,
+    Search
 } from "lucide-react"
 import { updateReturnStatus, markRefunded } from "./actions"
 import Link from "next/link"

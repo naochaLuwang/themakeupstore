@@ -1,11 +1,12 @@
 "use client"
 
+import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar as CalendarIcon, Check } from "lucide-react"
 import { useState } from "react"
 
-export function SalesFilter() {
+function SalesFilterInner() {
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -59,5 +60,13 @@ export function SalesFilter() {
                 </div>
             )}
         </div>
+    )
+}
+
+export function SalesFilter() {
+    return (
+        <Suspense fallback={<div className="h-9 w-[130px] bg-slate-100 rounded-lg animate-pulse" />}>
+            <SalesFilterInner />
+        </Suspense>
     )
 }

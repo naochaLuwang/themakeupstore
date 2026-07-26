@@ -29,7 +29,7 @@ export async function markNotified(variantId: string) {
                 userName: n.user_name,
                 productName: (n.products as any).name,
                 variantName: (n.product_variants as any).title,
-                productUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://themakeupstore.com"}/products/${(n.products as any).slug}`,
+                productUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://themakeupstorewangkhei.com"}/products/${(n.products as any).slug}`,
             })
         )
     )

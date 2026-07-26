@@ -5,12 +5,12 @@ import { Suspense } from "react"
 import dynamic from "next/dynamic"
 import {
     Loader2, TrendingUp, AlertCircle, CheckCircle2,
-    PackagePlus, Send, Tag, MessageSquare, UserPlus, BarChart3,
-    ShoppingBag, Clock, ArrowUpRight, Box, ShoppingCart,
+    MessageSquare, UserPlus, BarChart3,
+    ShoppingBag, ArrowUpRight, Box, ShoppingCart,
     Users, CircleDollarSign, Activity, Sparkles, Zap, Bell,
-    ArrowUp, ArrowDown, DollarSign, Hourglass, Layers, Globe,
-    Eye, CreditCard, RefreshCw, Target, Percent, Flame, CalendarDays,
-    Phone, Mail, User, Wallet, Banknote, BadgePercent
+    ArrowUp, ArrowDown, Hourglass, Layers,
+    Eye, CreditCard, RefreshCw, Target, Flame, CalendarDays,
+    Mail, User, BadgePercent, PackagePlus, Send, Tag
 } from "lucide-react"
 import { format, startOfDay, endOfDay, subDays, parseISO, differenceInDays, getDay } from "date-fns"
 import Link from "next/link"

@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, parseISO } from "date-fns"
-import { DollarSign, CreditCard, TrendingUp, Clock, CheckCircle, Truck, FileDown } from "lucide-react"
+import { DollarSign, CreditCard, TrendingUp, Clock, CheckCircle, Truck } from "lucide-react"
 import { SalesFilter } from "@/components/admin/sales-filter"
 import { ReportExportButtons } from "@/components/admin/report-export-buttons"
 import { ReceiptButton } from "@/components/admin/receipt-button"

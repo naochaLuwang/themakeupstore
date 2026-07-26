@@ -85,7 +85,7 @@ export async function placeOrder(
     if (!user) throw new Error("User not authenticated")
 
     // Hoisted for catch rollback access
-    const stockDecremented: { variantId: string; quantity: number }[] = []
+    const stockDecremented: { variantId: string; quantity: number; table?: string }[] = []
     let createdOrderId: string | null = null
 
     try {
@@ -188,14 +188,36 @@ export async function placeOrder(
             }
         }
 
-        // ── 2b. RE-VALIDATE BXGY DISCOUNT (batched) ──
+        // ── 2b. RE-VALIDATE BXGY DISCOUNT (comprehensive) ──
         let verifiedBXGYDiscount = 0;
         if (bxgyDetails?.discount && bxgyDetails.discount > 0 && bxgyDetails.freeItems?.length) {
+            const paidItems = cartItems.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
+
+            // Fetch full rule data for re-validation
+            const bxgyRuleIds = [...new Set(bxgyDetails.freeItems.map((f: any) => f.ruleId).filter(Boolean))]
+            let bxgyRuleMap = new Map<string, any>()
+            if (bxgyRuleIds.length > 0) {
+                const { data: rules } = await supabase
+                    .from("buy_x_get_y")
+                    .select(`
+                        id, buy_type, buy_quantity, get_type, get_product_id, get_variant_id,
+                        get_discount_type, get_discount_value,
+                        usage_limit, used_count, once_per_user, max_per_order,
+                        is_active, starts_at, expires_at,
+                        buy_products:bxgy_buy_products(product_id),
+                        buy_categories:bxgy_buy_categories(category_id),
+                        buy_brands:bxgy_buy_brands(brand),
+                        get_product:products!buy_x_get_y_get_product_id_fkey(name),
+                        get_variant:product_variants!buy_x_get_y_get_variant_id_fkey(stock, price)
+                    `)
+                    .in("id", bxgyRuleIds)
+                if (rules) for (const r of rules) bxgyRuleMap.set(r.id, r)
+            }
+
             const bxgyVariantIds = bxgyDetails.freeItems.map((f: any) => f.variantId)
             const bxgyVariants = await batchSimpleVariants(bxgyVariantIds)
             const bxgyVariantMap = new Map(bxgyVariants.map((v: any) => [v.id, v]))
 
-            // Fallback: for items not found by variantId, look up by productId default variant
             const productIds = bxgyDetails.freeItems
                 .filter((f: any) => !bxgyVariantMap.has(f.variantId))
                 .map((f: any) => f.productId)
@@ -211,8 +233,58 @@ export async function placeOrder(
                 }
             }
 
+            // Build product→category map for category-based re-validation
+            const cartProductIds = [...new Set(paidItems.map((i: any) => i.productId))]
+            const { data: prodCats } = await supabase
+                .from("product_categories")
+                .select("product_id, category_id")
+                .in("product_id", cartProductIds)
+            const catMap = new Map<string, Set<string>>()
+            for (const row of (prodCats || [])) {
+                const s = catMap.get(row.product_id) || new Set()
+                s.add(row.category_id)
+                catMap.set(row.product_id, s)
+            }
+
             const resolvedBXGYFreeItems = [];
             for (const freeItem of bxgyDetails.freeItems) {
+                // Re-validate rule conditions
+                if (freeItem.ruleId) {
+                    const rule = bxgyRuleMap.get(freeItem.ruleId)
+                    if (!rule || !rule.is_active) throw new Error("BXGY rule is no longer active")
+                    if (rule.usage_limit && rule.used_count >= rule.usage_limit) throw new Error("BXGY usage limit reached")
+
+                    let qualifyingItems = paidItems
+                    if (rule.buy_type === "specific_products") {
+                        const ids = new Set((rule.buy_products || []).map((p: any) => p.product_id))
+                        qualifyingItems = paidItems.filter((i: any) => ids.has(i.productId))
+                    } else if (rule.buy_type === "specific_categories") {
+                        const catIds = new Set((rule.buy_categories || []).map((c: any) => c.category_id))
+                        qualifyingItems = paidItems.filter((i: any) => {
+                            const itemCats = catMap.get(i.productId)
+                            return itemCats && [...itemCats].some((cid: string) => catIds.has(cid))
+                        })
+                    } else if (rule.buy_type === "specific_brands") {
+                        const { data: prods } = await supabase
+                            .from("products")
+                            .select("id, brand")
+                            .in("id", cartProductIds)
+                        const brands = new Set((rule.buy_brands || []).map((b: any) => b.brand))
+                        qualifyingItems = paidItems.filter((i: any) => {
+                            const p = prods?.find((pr: any) => pr.id === i.productId)
+                            return p && brands.has(p.brand)
+                        })
+                    }
+
+                    const totalQualifying = qualifyingItems.reduce((s: number, i: any) => s + i.quantity, 0)
+                    if (totalQualifying < rule.buy_quantity + 1) throw new Error("BXGY conditions are no longer met")
+
+                    // Verify the free item matches what the rule promises
+                    if (rule.get_type === "specific_product" && rule.get_product_id) {
+                        if (freeItem.productId !== rule.get_product_id) throw new Error("BXGY free item mismatch")
+                    }
+                }
+
                 let variant = bxgyVariantMap.get(freeItem.variantId)
                 if (!variant) variant = defaultFallbackMap.get(freeItem.productId)
                 if (!variant || variant.stock < freeItem.quantity) {
@@ -224,16 +296,25 @@ export async function placeOrder(
             verifiedBXGYDiscount = bxgyDetails.discount
         }
 
-        // ── 2c. VALIDATE FREE GIFTS (batched) ──
+        // ── 2c. VALIDATE FREE GIFTS (comprehensive) ──
         let verifiedGiftItems: any[] = [];
         if (giftDetails && giftDetails.length > 0) {
-            // Verify gift rules (batched)
             const ruleIds = giftDetails.map((g: any) => g.ruleId).filter(Boolean)
             let ruleMap = new Map<string, any>()
             if (ruleIds.length > 0) {
                 const { data: rules } = await supabase
                     .from("free_gifts")
-                    .select("id, min_cart_amount, is_active, starts_at, expires_at")
+                    .select(`
+                        id, gift_product_id, gift_product_ref_id, gift_variant_id, gift_quantity,
+                        trigger_type, trigger_threshold, min_cart_amount,
+                        usage_limit, used_count, once_per_user,
+                        is_active, starts_at, expires_at,
+                        gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(stock),
+                        gift_variant:product_variants!free_gifts_gift_variant_id_fkey(stock, price),
+                        qualifying_products:free_gift_products(product_id),
+                        qualifying_categories:free_gift_categories(category_id),
+                        qualifying_brands:free_gift_brands(brand)
+                    `)
                     .in("id", ruleIds)
                 if (rules) for (const r of rules) ruleMap.set(r.id, r)
             }
@@ -258,25 +339,108 @@ export async function placeOrder(
             }
 
             for (const gift of giftDetails) {
-                if (gift.ruleId) {
-                    const rule = ruleMap.get(gift.ruleId)
-                    if (!rule || !rule.is_active) throw new Error("Free gift rule is no longer active")
-                    if (rule.min_cart_amount && rule.min_cart_amount > 0) {
-                        const paidSubtotal = cartItems
-                            .filter((i: any) => !i.is_gift && !i.is_bxgy_free)
-                            .reduce((s: number, i: any) => s + i.price * i.quantity, 0)
-                        if (paidSubtotal < rule.min_cart_amount) {
-                            throw new Error(`Free gift requires minimum cart of ₹${rule.min_cart_amount}`)
-                        }
+                if (!gift.ruleId) throw new Error("Free gift rule ID is required")
+                const rule = ruleMap.get(gift.ruleId)
+                if (!rule || !rule.is_active) throw new Error("Free gift rule is no longer active")
+                if (rule.usage_limit && rule.used_count >= rule.usage_limit) throw new Error("Free gift usage limit reached")
+
+                // Check once_per_user
+                if (rule.once_per_user) {
+                    const { data: userOrders } = await supabase
+                        .from("orders")
+                        .select("id")
+                        .eq("user_id", user.id)
+                    const orderIds = (userOrders || []).map(o => o.id)
+                    if (orderIds.length > 0) {
+                        const { data: existingGift } = await supabase
+                            .from("order_items")
+                            .select("id")
+                            .in("order_id", orderIds)
+                            .eq("is_gift", true)
+                            // Match on store product ID — ref items store gift_product_id in product_id
+                            .eq("product_id", rule.gift_product_id)
+                            .limit(1)
+                        if (existingGift && existingGift.length > 0) throw new Error("Free gift already claimed")
                     }
                 }
 
-                let variant = giftVariantMap.get(gift.variantId)
-                if (!variant) variant = giftDefaultMap.get(gift.productId)
-                if (!variant || variant.stock < gift.quantity) {
-                    throw new Error("Free gift is no longer available")
+                // Re-validate trigger condition against current cart
+                const paidItems = cartItems.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
+                let conditionMet = false
+                if (rule.trigger_type === "cart_total") {
+                    const subtotal = paidItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
+                    conditionMet = subtotal >= rule.trigger_threshold
+                    if (conditionMet && rule.min_cart_amount && rule.min_cart_amount > 0) {
+                        conditionMet = subtotal >= rule.min_cart_amount
+                    }
+                } else if (rule.trigger_type === "specific_products") {
+                    const ids = new Set((rule.qualifying_products || []).map((p: any) => p.product_id))
+                    const matching = paidItems.filter((i: any) => ids.has(i.productId))
+                    const qty = matching.reduce((s: number, i: any) => s + i.quantity, 0)
+                    conditionMet = qty >= rule.trigger_threshold
+                    if (conditionMet && rule.min_cart_amount && rule.min_cart_amount > 0) {
+                        conditionMet = matching.reduce((s: number, i: any) => s + i.price * i.quantity, 0) >= rule.min_cart_amount
+                    }
+                } else if (rule.trigger_type === "specific_categories") {
+                    const catIds = new Set((rule.qualifying_categories || []).map((c: any) => c.category_id))
+                    const cartProductIds = [...new Set(paidItems.map((i: any) => i.productId))]
+                    const { data: prodCats } = await supabase
+                        .from("product_categories")
+                        .select("product_id, category_id")
+                        .in("product_id", cartProductIds)
+                    const catMap = new Map<string, Set<string>>()
+                    for (const row of (prodCats || [])) {
+                        const s = catMap.get(row.product_id) || new Set()
+                        s.add(row.category_id)
+                        catMap.set(row.product_id, s)
+                    }
+                    const matching = paidItems.filter((i: any) => {
+                        const itemCats = catMap.get(i.productId)
+                        return itemCats && [...itemCats].some((cid: string) => catIds.has(cid))
+                    })
+                    const qty = matching.reduce((s: number, i: any) => s + i.quantity, 0)
+                    conditionMet = qty >= rule.trigger_threshold
+                    if (conditionMet && rule.min_cart_amount && rule.min_cart_amount > 0) {
+                        conditionMet = matching.reduce((s: number, i: any) => s + i.price * i.quantity, 0) >= rule.min_cart_amount
+                    }
+                } else if (rule.trigger_type === "specific_brands") {
+                    const brands = new Set((rule.qualifying_brands || []).map((b: any) => b.brand))
+                    const cartProductIds = [...new Set(paidItems.map((i: any) => i.productId))]
+                    const { data: prods } = await supabase
+                        .from("products")
+                        .select("id, brand")
+                        .in("id", cartProductIds)
+                    const matching = paidItems.filter((i: any) => {
+                        const p = prods?.find((pr: any) => pr.id === i.productId)
+                        return p && brands.has(p.brand)
+                    })
+                    const qty = matching.reduce((s: number, i: any) => s + i.quantity, 0)
+                    conditionMet = qty >= rule.trigger_threshold
+                    if (conditionMet && rule.min_cart_amount && rule.min_cart_amount > 0) {
+                        conditionMet = matching.reduce((s: number, i: any) => s + i.price * i.quantity, 0) >= rule.min_cart_amount
+                    }
                 }
-                verifiedGiftItems.push({ ...gift, variantId: variant.id, verifiedPrice: 0 })
+                if (!conditionMet) throw new Error("Free gift conditions are no longer met")
+
+                // Verify gift product matches rule
+                const expectedId = rule.gift_product_ref_id || rule.gift_product_id
+                if (gift.productId !== expectedId) throw new Error("Free gift product mismatch")
+
+                // Check stock and mark source for later decrement
+                let giftSource: 'ref' | 'variant' = 'variant'
+                if (rule.gift_product_ref_id) {
+                    giftSource = 'ref'
+                    if (!rule.gift_product_ref || rule.gift_product_ref.stock < gift.quantity) {
+                        throw new Error("Free gift is out of stock")
+                    }
+                } else {
+                    let variant = giftVariantMap.get(gift.variantId)
+                    if (!variant) variant = giftDefaultMap.get(gift.productId)
+                    if (!variant || variant.stock < gift.quantity) {
+                        throw new Error("Free gift is no longer available")
+                    }
+                }
+                verifiedGiftItems.push({ ...gift, giftSource, giftStoreProductId: rule.gift_product_id, verifiedPrice: 0 })
             }
         }
 
@@ -312,16 +476,30 @@ export async function placeOrder(
         }))
 
         for (const gift of verifiedGiftItems) {
-            orderItems.push({
-                product_id: gift.productId,
-                product_variant_id: gift.variantId,
-                product_name: gift.product_name || 'Free Gift',
-                variant_title: null,
-                quantity: gift.quantity,
-                unit_price: 0,
-                mrp: 0,
-                is_gift: true,
-            })
+            if (gift.giftSource === 'ref') {
+                if (!gift.giftStoreProductId) throw new Error("Free gift missing linked store product")
+                orderItems.push({
+                    product_id: gift.giftStoreProductId,
+                    product_variant_id: null,
+                    product_name: gift.product_name || 'Free Gift',
+                    variant_title: null,
+                    quantity: gift.quantity,
+                    unit_price: 0,
+                    mrp: 0,
+                    is_gift: true,
+                })
+            } else {
+                orderItems.push({
+                    product_id: gift.productId,
+                    product_variant_id: gift.variantId,
+                    product_name: gift.product_name || 'Free Gift',
+                    variant_title: null,
+                    quantity: gift.quantity,
+                    unit_price: 0,
+                    mrp: 0,
+                    is_gift: true,
+                })
+            }
         }
 
         if (bxgyDetails?.freeItems) {
@@ -400,12 +578,45 @@ export async function placeOrder(
             stockDecremented.push({ variantId: item.variantId, quantity: item.quantity })
         }
         for (const gift of verifiedGiftItems) {
-            const ok = await atomicDecrementStock(supabase, gift.variantId, gift.quantity)
-            if (!ok) throw new Error(`Free gift is no longer available`)
-            stockDecremented.push({ variantId: gift.variantId, quantity: gift.quantity })
+            if (gift.giftSource === 'ref') {
+                const { data: gp } = await supabase.from('gift_products').select('stock').eq('id', gift.variantId).single()
+                if (!gp || gp.stock < gift.quantity) throw new Error('Free gift is no longer available')
+                const { error: gpErr } = await supabase
+                    .from('gift_products')
+                    .update({ stock: Math.max(0, gp.stock - gift.quantity) })
+                    .eq('id', gift.variantId)
+                if (gpErr) throw new Error('Failed to decrement gift stock')
+                stockDecremented.push({ variantId: gift.variantId, quantity: gift.quantity, table: 'gift_products' })
+            } else {
+                const ok = await atomicDecrementStock(supabase, gift.variantId, gift.quantity)
+                if (!ok) throw new Error(`Free gift is no longer available`)
+                stockDecremented.push({ variantId: gift.variantId, quantity: gift.quantity })
+            }
         }
 
         // Non-critical follow-up (fire-and-forget, won't fail order)
+        // Increment used_count for free gift rules
+        if (verifiedGiftItems.length > 0) {
+            const giftRuleIds = [...new Set(verifiedGiftItems.map((g: any) => g.ruleId).filter(Boolean))]
+            for (const ruleId of giftRuleIds) {
+                try {
+                    const { data: gr } = await supabase.from('free_gifts').select('used_count').eq('id', ruleId).single()
+                    if (gr) await supabase.from('free_gifts').update({ used_count: (gr.used_count || 0) + 1 }).eq('id', ruleId)
+                } catch {}
+            }
+        }
+
+        // Increment used_count for BXGY rules
+        if (bxgyDetails?.freeItems && bxgyDetails.freeItems.length > 0) {
+            const bxgyRuleIds = [...new Set(bxgyDetails.freeItems.map((f: any) => f.ruleId).filter(Boolean))]
+            for (const ruleId of bxgyRuleIds) {
+                try {
+                    const { data: br } = await supabase.from('buy_x_get_y').select('used_count').eq('id', ruleId).single()
+                    if (br) await supabase.from('buy_x_get_y').update({ used_count: (br.used_count || 0) + 1 }).eq('id', ruleId)
+                } catch {}
+            }
+        }
+
         if (promoDetails?.code) {
             try {
                 const { data: promoRecord } = await supabase
@@ -440,8 +651,15 @@ export async function placeOrder(
     } catch (error: any) {
         console.error("ORDER_PLACEMENT_ERROR:", error)
         // Rollback stock that was decremented (will be partial if crash occurred mid-decrement)
-        for (const { variantId, quantity } of stockDecremented) {
-            try { await supabase.rpc('increment_stock', { row_id: variantId, amount: quantity }) } catch {}
+        for (const { variantId, quantity, table } of stockDecremented) {
+            if (table === 'gift_products') {
+                try {
+                    const { data: gp } = await supabase.from('gift_products').select('stock').eq('id', variantId).single()
+                    if (gp) await supabase.from('gift_products').update({ stock: gp.stock + quantity }).eq('id', variantId)
+                } catch {}
+            } else {
+                try { await supabase.rpc('increment_stock', { row_id: variantId, amount: quantity }) } catch {}
+            }
         }
         // Delete order if it was created (stock was decremented after order, so this prevents partial orders)
         if (createdOrderId) {

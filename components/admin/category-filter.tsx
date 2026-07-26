@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import {
     Select,
     SelectContent,
@@ -9,7 +10,7 @@ import {
 } from "@/components/ui/select"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 
-export function CategoryFilter({ categories }: { categories: any[] }) {
+function CategoryFilterInner({ categories }: { categories: { id: string; name: string }[] }) {
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const { replace } = useRouter()
@@ -21,7 +22,6 @@ export function CategoryFilter({ categories }: { categories: any[] }) {
         } else {
             params.delete("category")
         }
-        // Reset page if you have pagination
         params.delete("page")
         replace(`${pathname}?${params.toString()}`)
     }
@@ -43,5 +43,13 @@ export function CategoryFilter({ categories }: { categories: any[] }) {
                 ))}
             </SelectContent>
         </Select>
+    )
+}
+
+export function CategoryFilter({ categories }: { categories: { id: string; name: string }[] }) {
+    return (
+        <Suspense fallback={<div className="h-9 w-[180px] bg-slate-100 rounded-lg animate-pulse" />}>
+            <CategoryFilterInner categories={categories} />
+        </Suspense>
     )
 }

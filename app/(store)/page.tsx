@@ -22,9 +22,9 @@ const BRAND_BLACKLIST = [
 export default async function GatewayPage() {
   const supabase = await createClient()
 
-  let bannersRes: any, catDataRes: any, prodDataRes: any, forever52ProdDataRes: any, parentCatDataRes: any, showcaseItemsRes: any, childrenDataRes: any, heroProductDataRes: any
+  let bannersRes: any, catDataRes: any, prodDataRes: any, forever52ProdDataRes: any, parentCatDataRes: any, showcaseItemsRes: any, childrenDataRes: any, fentyProdDataRes: any
   try {
-    [bannersRes, catDataRes, prodDataRes, forever52ProdDataRes, parentCatDataRes, showcaseItemsRes, childrenDataRes, heroProductDataRes] = await Promise.all([
+    [bannersRes, catDataRes, prodDataRes, forever52ProdDataRes, parentCatDataRes, showcaseItemsRes, childrenDataRes, fentyProdDataRes] = await Promise.all([
       supabase.from("hero_banners").select("image_url, subtitle, title, description, route").eq("is_active", true).order("position").limit(5),
       supabase.from("categories").select("id, name, slug, image_url, parent:parent_id(slug)").not("parent_id", "is", null).order("name"),
       supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").order("created_at", { ascending: false }).limit(50),
@@ -32,7 +32,7 @@ export default async function GatewayPage() {
       supabase.from("categories").select("id, name, slug, image_url").is("parent_id", null).order("name"),
       supabase.from("showcase_items").select("id, title, subtitle, image_url, link_url").eq("is_active", true).order("position", { ascending: true }),
       supabase.from("categories").select("id, parent_id").not("parent_id", "is", null),
-      supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("id", "e12ac9bb-564e-474c-ac80-e3ebdd281401").maybeSingle(),
+      supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("brand", "Fenty Beauty").not("thumbnail_url", "is", null).order("created_at", { ascending: false }),
     ])
   } catch {
     bannersRes = { data: null }
@@ -42,7 +42,7 @@ export default async function GatewayPage() {
     parentCatDataRes = { data: null }
     showcaseItemsRes = { data: null }
     childrenDataRes = { data: null }
-    heroProductDataRes = { data: null }
+    fentyProdDataRes = { data: null }
   }
   const banners = bannersRes.data
   const catData = catDataRes.data
@@ -51,12 +51,17 @@ export default async function GatewayPage() {
   const parentCatData = parentCatDataRes.data
   const showcaseItems = showcaseItemsRes.data
   const childrenData = childrenDataRes.data
-  const heroProductData = heroProductDataRes.data
+  const fentyProducts = (fentyProdDataRes.data || []).filter((p: any) => {
+    const variants = p.product_variants || []
+    return variants.length === 0 || variants.some((v: any) => Number(v.stock) > 0)
+  })
 
   const inStockProducts = (prodData || []).filter((p: any) => {
     const variants = p.product_variants || []
     return variants.length === 0 || variants.some((v: any) => Number(v.stock) > 0)
   }).slice(0, 12)
+
+  const heroProduct = fentyProducts[0] || inStockProducts.find((p: any) => p.thumbnail_url || p.product_variants?.[0]?.image_url)
 
   const categories = (catData || []).filter((b: any) =>
     !BRAND_BLACKLIST.some(name => b.name.toLowerCase() === name.toLowerCase())
@@ -143,8 +148,6 @@ export default async function GatewayPage() {
 
   const allBrands: string[] = [...new Set((prodData || []).map((p: any) => p.brand).filter(Boolean))].slice(0, 12) as string[]
 
-  const heroProd = heroProductData || inStockProducts.find((p: any) => p.thumbnail_url || p.product_variants?.[0]?.image_url)
-
   const faceCat = parents.find((c: any) => c.name.toLowerCase() === "face")
   const lipsCat = parents.find((c: any) => c.name.toLowerCase() === "lips")
   const skincareCat = parents.find((c: any) => c.name.toLowerCase() === "skincare")
@@ -154,21 +157,6 @@ export default async function GatewayPage() {
     return n !== "face" && n !== "lips" && n !== "skincare"
   })
   const displayCats = [faceCat, lipsCat, ...otherCats].filter(Boolean).slice(0, 9) as any[]
-
-  const price = (p: any) => {
-    const v = p.product_variants?.[0]
-    if (v?.price) return Number(v.price)
-    return Number(p.base_price) || 0
-  }
-
-  const discountLabel = (p: any) => {
-    const v = p.product_variants?.[0]
-    const dt = v?.discount_type || p.discount_type || "none"
-    const dv = Number(v?.discount_value || p.discount_value || 0)
-    if (dt === "percentage" && dv > 0) return `${dv}% OFF`
-    if ((dt === "fixed" || dt === "amount") && dv > 0) return `₹${dv} OFF`
-    return ""
-  }
 
   return (
     <>
@@ -186,27 +174,30 @@ export default async function GatewayPage() {
         <div className="max-w-7xl mx-auto px-12 pb-14">
           <div className="grid grid-cols-6 gap-3 auto-rows-[minmax(0,auto)]">
 
-            {/* ROW 1: Hero (3col) + Cat Face (2col) + New In (1col) */}
-            {heroProd && (() => {
-              const img = heroProd.thumbnail_url || heroProd.product_variants?.[0]?.image_url || ""
+            {/* ROW 1: Fenty Beauty hero (3col) + Cat Face (2col) + New In (1col) */}
+            {heroProduct && (() => {
+              const v = heroProduct.product_variants?.[0]
+              const img = heroProduct.thumbnail_url || v?.image_url || ""
+              const productPrice = Number(v?.price || heroProduct.base_price || 0)
+              const dt = v?.discount_type || heroProduct.discount_type || "none"
+              const dv = Number(v?.discount_value || heroProduct.discount_value || 0)
+              const label = dt === "percentage" && dv > 0 ? `${dv}% OFF` : (dt === "fixed" || dt === "amount") && dv > 0 ? `₹${dv} OFF` : ""
               return (
-                <Link href={`/products/${heroProd.id}`} className="col-span-3 row-span-2 relative rounded-3xl overflow-hidden bg-slate-100 group">
+                <Link href={`/products/${heroProduct.id}`} className="col-span-3 row-span-2 relative rounded-3xl overflow-hidden bg-slate-100 group">
                   {img ? (
-                    <img src={img} alt={heroProd.name} className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105" />
+                    <img src={img} alt={heroProduct.name} className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-100 to-rose-200">
-                      <span className="text-6xl font-black text-white/40 tracking-tight">{heroProd.name[0]}</span>
+                      <span className="text-6xl font-black text-white/40 tracking-tight">{heroProduct.name[0]}</span>
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">{heroProd.brand || "Featured"}</p>
-                    <p className="text-white text-lg font-black tracking-tight leading-tight">{heroProd.name}</p>
+                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">{heroProduct.brand || "Featured"}</p>
+                    <p className="text-white text-lg font-black tracking-tight leading-tight">{heroProduct.name}</p>
                     <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-white text-base font-bold">₹{price(heroProd).toLocaleString("en-IN")}</span>
-                      {discountLabel(heroProd) && (
-                        <span className="text-[10px] font-bold text-emerald-300 bg-emerald-900/30 px-2 py-0.5 rounded-full">{discountLabel(heroProd)}</span>
-                      )}
+                      <span className="text-white text-base font-bold">₹{productPrice.toLocaleString("en-IN")}</span>
+                      {label && <span className="text-[10px] font-bold text-emerald-300 bg-emerald-900/30 px-2 py-0.5 rounded-full">{label}</span>}
                     </div>
                   </div>
                 </Link>

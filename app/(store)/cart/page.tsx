@@ -1,7 +1,7 @@
 "use client"
 
 import { useCart } from "@/components/store/use-cart"
-import { Minus, Plus, ShoppingBag, X, Gift, Tag, Zap } from "lucide-react"
+import { Minus, Plus, ShoppingBag, X, Gift, Tag, Zap, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useState, useMemo, useCallback } from "react"
@@ -11,12 +11,17 @@ import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import { ProductCard } from "@/components/store/product-card"
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/cart-constants"
 import { applyFlashSaleToPrice } from "@/lib/flash-sale-helper"
+import { validatePromoCode } from "@/app/actions/promo"
+import { usePromotions } from "@/hooks/use-promotions"
 
 export default function CartPage() {
+    usePromotions()
     const { items, removeItem, updateQuantity, setItems, bxgyDiscounts, giftProgress, bxgyProgress } = useCart() as any
     const [mounted, setMounted] = useState(false)
     const [isSyncing, setIsSyncing] = useState(false)
     const [recommendations, setRecommendations] = useState<any[]>([])
+    const [couponCode, setCouponCode] = useState("")
+    const [applyingCoupon, setApplyingCoupon] = useState(false)
     const supabase = createClient()
     const recentlyViewed = useRecentlyViewed((s) => s.items)
     const clearRecentlyViewed = useRecentlyViewed((s) => s.clear)
@@ -401,9 +406,32 @@ export default function CartPage() {
                                 <input
                                     type="text"
                                     placeholder="Enter coupon code"
+                                    value={couponCode}
+                                    onChange={e => setCouponCode(e.target.value.toUpperCase())}
                                     className="flex-1 max-w-xs h-10 px-4 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300"
                                 />
-                                <button className="h-10 px-5 text-xs font-semibold uppercase tracking-wider text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors">
+                                <button
+                                    onClick={async () => {
+                                        if (!couponCode.trim()) return
+                                        setApplyingCoupon(true)
+                                        try {
+                                            const res = await validatePromoCode(couponCode.trim(), items)
+                                            if (res.success) {
+                                                toast.success(`Coupon ${couponCode} applied! Proceed to checkout to see discount.`)
+                                                setCouponCode("")
+                                            } else {
+                                                toast.error(res.message || "Invalid coupon")
+                                            }
+                                        } catch {
+                                            toast.error("Failed to apply coupon")
+                                        } finally {
+                                            setApplyingCoupon(false)
+                                        }
+                                    }}
+                                    disabled={applyingCoupon || !couponCode.trim()}
+                                    className="h-10 px-5 text-xs font-semibold uppercase tracking-wider text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                                >
+                                    {applyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                                     Apply
                                 </button>
                             </div>

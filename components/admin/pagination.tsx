@@ -1,10 +1,11 @@
 "use client"
 
+import { Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 
-export function Pagination({ currentPage, totalPages }: { currentPage: number; totalPages: number }) {
+function PaginationInner({ currentPage, totalPages }: { currentPage: number; totalPages: number }) {
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -38,5 +39,13 @@ export function Pagination({ currentPage, totalPages }: { currentPage: number; t
                 Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
         </div>
+    )
+}
+
+export function Pagination(props: { currentPage: number; totalPages: number }) {
+    return (
+        <Suspense fallback={<div className="h-9 w-48 bg-slate-100 rounded-lg animate-pulse mx-auto" />}>
+            <PaginationInner {...props} />
+        </Suspense>
     )
 }

@@ -1,11 +1,12 @@
 "use client"
 
+import { Suspense } from "react"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useDebouncedCallback } from "use-debounce"
 
-export function ProductSearch() {
+function ProductSearchInner() {
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const { replace } = useRouter()
@@ -31,5 +32,13 @@ export function ProductSearch() {
                 onChange={(e) => handleSearch(e.target.value)}
             />
         </div>
+    )
+}
+
+export function ProductSearch() {
+    return (
+        <Suspense fallback={<div className="h-9 w-full max-w-sm bg-slate-100 rounded-lg animate-pulse" />}>
+            <ProductSearchInner />
+        </Suspense>
     )
 }

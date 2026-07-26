@@ -1,9 +1,10 @@
 "use client"
 
+import { Suspense } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 
-export function StockStatusFilter() {
+function StockStatusFilterInner() {
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const { replace } = useRouter()
@@ -12,7 +13,7 @@ export function StockStatusFilter() {
         const params = new URLSearchParams(searchParams)
         if (value && value !== "all") params.set("status", value)
         else params.delete("status")
-        params.delete("page") // Reset to page 1 on filter change
+        params.delete("page")
         replace(`${pathname}?${params.toString()}`)
     }
 
@@ -28,5 +29,13 @@ export function StockStatusFilter() {
                 <SelectItem value="in">In Stock (&gt;10)</SelectItem>
             </SelectContent>
         </Select>
+    )
+}
+
+export function StockStatusFilter() {
+    return (
+        <Suspense fallback={<div className="h-9 w-[160px] bg-slate-100 rounded-lg animate-pulse" />}>
+            <StockStatusFilterInner />
+        </Suspense>
     )
 }

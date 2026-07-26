@@ -1,11 +1,12 @@
 "use client"
 
+import { Suspense } from "react"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useTransition } from "react"
 
-export function SearchInput({ placeholder }: { placeholder: string }) {
+function SearchInputInner({ placeholder }: { placeholder: string }) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -39,5 +40,13 @@ export function SearchInput({ placeholder }: { placeholder: string }) {
                 </div>
             )}
         </div>
+    )
+}
+
+export function SearchInput({ placeholder }: { placeholder: string }) {
+    return (
+        <Suspense fallback={<div className="h-9 w-full bg-slate-100 rounded-lg animate-pulse" />}>
+            <SearchInputInner placeholder={placeholder} />
+        </Suspense>
     )
 }

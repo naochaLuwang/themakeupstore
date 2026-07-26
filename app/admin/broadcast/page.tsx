@@ -9,9 +9,7 @@ import {
     Type,
     Activity,
     Users,
-    Monitor,
     RefreshCw,
-    Circle,
     CheckCircle2,
     Smartphone,
     Bell

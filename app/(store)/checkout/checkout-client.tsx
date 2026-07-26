@@ -13,6 +13,7 @@ import {
     MapPin, ShoppingBag, Ticket, X, Sparkles, Gift, Tag,
 } from "lucide-react"
 import { checkPromoEligibility } from "@/lib/promo-helper"
+import { usePromotions } from "@/hooks/use-promotions"
 
 import { createClient } from "@/utils/supabase/client"
 import { AddressForm } from "@/components/store/address-form"
@@ -28,6 +29,7 @@ interface CheckoutClientProps {
 }
 
 export default function CheckoutClient({ profile, initialAddresses, allPromos = [] }: CheckoutClientProps) {
+    usePromotions()
     const supabase = createClient()
     const router = useRouter()
     const {
@@ -62,7 +64,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
     useEffect(() => { setMounted(true) }, [])
 
-    // Load Razorpay checkout script (disabled for now, no live keys)
+    // Load Razorpay checkout script
     useEffect(() => {
         const script = document.createElement("script")
         script.src = "https://checkout.razorpay.com/v1/checkout.js"

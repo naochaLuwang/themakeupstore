@@ -6,7 +6,7 @@ import { getLiveCarts, sendLiveCartEmail } from "@/app/actions/admin-carts"
 import {
     ShoppingCart, RefreshCw, User, Package, Clock,
     ChevronDown, ChevronUp, Search, IndianRupee,
-    Mail, MessageCircle, Smartphone, Eye
+    Mail, MessageCircle
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
