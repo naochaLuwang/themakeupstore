@@ -25,6 +25,8 @@ export default function AdminBroadcastForm() {
     const [loading, setLoading] = useState(false)
     const [recipients, setRecipients] = useState<string[]>([])
     const [status, setStatus] = useState<string | null>(null)
+    const [testStatus, setTestStatus] = useState<string | null>(null)
+    const [testLoading, setTestLoading] = useState(false)
     const [stats, setStats] = useState({ devices: 0, users: 0 })
 
     const fetchNetworkStats = async () => {
@@ -74,6 +76,29 @@ export default function AdminBroadcastForm() {
             }
         } catch (e) { setStatus("Dispatch failed."); }
         finally { setLoading(false); }
+    }
+
+    const sendTest = async () => {
+        if (!form.title || !form.body) return;
+        setTestLoading(true);
+        setTestStatus("Sending test notification...");
+        try {
+            const res = await fetch('/api/admin/broadcast/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form)
+            });
+            const data = await res.json();
+            if (data.success) {
+                setTestStatus(`Test sent to ${data.sent} device${data.sent !== 1 ? 's' : ''}`);
+            } else {
+                setTestStatus(data.error || "Test failed.");
+            }
+        } catch {
+            setTestStatus("Test failed.");
+        } finally {
+            setTestLoading(false);
+        }
     }
 
     return (
@@ -155,6 +180,19 @@ export default function AdminBroadcastForm() {
                             {loading ? <Activity className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                             {loading ? "TRANSMITTING..." : "PUBLISH BROADCAST"}
                         </button>
+                        <button
+                            onClick={sendTest}
+                            disabled={testLoading || !form.title || !form.body}
+                            className="w-full py-3 bg-white border border-zinc-200 text-zinc-600 rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-zinc-50 transition-all active:scale-[0.99] disabled:opacity-30"
+                        >
+                            {testLoading ? <Activity className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                            {testLoading ? "SENDING..." : "SEND TEST TO MY DEVICE"}
+                        </button>
+                        {testStatus && (
+                            <p className={`text-[11px] font-medium text-center ${testStatus.includes('sent') ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {testStatus}
+                            </p>
+                        )}
                     </div>
                 </div>
 

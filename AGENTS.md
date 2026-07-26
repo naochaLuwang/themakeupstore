@@ -36,6 +36,18 @@
 ### Blocked
 - (none)
 
+## Session 2026-07-25 — Production Audit & APK Fixes
+- **Bulk progress indicators**: Added "Saving 1 of N" progress bar to both inventory (`inventory-registry-wrapper.tsx`) and pricing (`pricing-table.tsx`)
+- **Production audit**: fixed `.gitignore` (`fallback-*.js`, `swe-worker-*.js`), removed ~8.5MB unreferenced public images, fixed `offline.html` brand name, removed unused imports in `cart/page.tsx`, added security headers in `next.config.ts`, updated npm packages, removed tracked PWA build artifacts
+- **Push test button**: created `/api/admin/broadcast/test/route.ts` + "SEND TEST TO MY DEVICE" button on broadcast page
+- **Google Sign-In nonce fix**: added `crypto.randomUUID()` in `initGoogleAuth()` to fix "passed nonce and nonce_id should both both exist or not" error in Capacitor
+- **Safe area**: created `CapacitorSafeArea` component — queries `StatusBar.getInfo().height`, sets `--safe-area-top` CSS var; CSS `.is-capacitor #app-scroller { padding-top: var(--safe-area-top, 28px) }`
+- **AndroidManifest**: added `POST_NOTIFICATIONS` permission, `AppTheme.NoActionBar` theme, `usesCleartextTraffic=false`, deep link intent filter (`https://themakeupstorewangkhei.com`), `adjustResize` soft input mode
+- **ProGuard**: wrote rules from scratch (was empty — would crash release builds)
+- **Build pipeline**: created `build:cap` script that strips `.next/cache` (1GB), `.next/dev` (214MB), `.next/server` (20MB) before `cap sync` → assets dropped from 1.2GB → 7MB
+- **`capacitor.config.ts`**: added `allowNavigation` for `wa.me`, `instagram.com`, `facebook.com`, `api.whatsapp.com`
+- **Build commands**: `npm run cap:debug` to build debug APK, `npm run cap:release` for signed release AAB
+
 ## Abandoned Cart Recovery
 - Two Edge Functions exist:
   - `send-abandoned-cart` — on-demand, called by admin "Send Recovery Emails" button
@@ -108,8 +120,10 @@
 - Web client ID: `127502531027-mqjrtvqavbgaf28dneq8uf2rjpvrqhuj.apps.googleusercontent.com` (passed to `GoogleOneTapAuth.initialize()`)
 - An Android OAuth client ID must also exist in Google Cloud Console (links package name `com.themakeupstorewangkhei.twa` + SHA-1 `DB:BC:1C:46:C6:18:29:31:86:89:C3:02:D8:A3:DF:27:59:6B:B5:16`)
 - Plugin's `compileSdk` must be 36 — if `npx cap sync` resets the plugin's `build.gradle`, re-apply: edit `node_modules/capacitor-native-google-one-tap-signin/android/googleauth-plugin/build.gradle` → `compileSdk 36`
-- Debug APK: `npm run cap:debug` → `android/app/build/outputs/apk/debug/app-debug.apk`
-- Release AAB: `npm run cap:release` → `android/app/build/outputs/bundle/release/app-release.aab`
+- Build pipeline: `build:cap` script (`next build --webpack && rm -rf .next/cache .next/dev .next/server .next/types .next/trace`) + `cap sync` — strips 1.2GB of unnecessary Next.js output, bundles only 7MB
+- Commands: `npm run cap:debug` (build + debug APK), `npm run cap:release` (build + signed AAB)
+- Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+- Release AAB: `android/app/build/outputs/bundle/release/app-release.aab`
 - Keystore: `makeup-store.keystore` (password: `Autodesk@9749`, alias: `makeup-alias`)
 - **Plugins installed**: `@capacitor/status-bar`, `@capacitor/haptics`, `@capacitor/push-notifications`, `capacitor-native-google-one-tap-signin`
 - **Safe area**: `StatusBar.setOverlaysWebView({ overlay: false })` via `capacitor.config.ts` — WebView renders below status bar; Android theme uses white status bar + navigation bar with `windowTranslucentStatus=false`

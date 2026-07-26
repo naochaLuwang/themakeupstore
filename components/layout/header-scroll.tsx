@@ -19,6 +19,7 @@ export function HeaderScroll({ children }: { children: React.ReactNode }) {
 
     return (
         <div
+            id="store-header"
             ref={ref}
             className={`sticky top-0 z-[200] w-full transition-all duration-300 ${
                 scrolled ? "bg-white shadow-sm" : "bg-transparent"

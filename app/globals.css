@@ -23,7 +23,6 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  /* Keeps scrolling smooth */
 
   /* Hide standard scrollbars */
   scrollbar-width: none !important;
@@ -343,4 +342,9 @@ body::-webkit-scrollbar {
     -ms-overflow-style: none !important;
     scrollbar-width: none !important;
   }
+}
+
+/* Android status bar safe area — env() supported in Chrome WebView 85+ */
+#store-header {
+  padding-top: env(safe-area-inset-top, 0px);
 }

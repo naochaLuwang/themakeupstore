@@ -9,6 +9,12 @@ const config: CapacitorConfig = {
     cleartext: false,
     hostname: 'themakeupstorewangkhei.com',
     androidScheme: 'https',
+    allowNavigation: [
+      'wa.me',
+      'instagram.com',
+      'facebook.com',
+      'api.whatsapp.com',
+    ],
   },
   plugins: {
     SplashScreen: {

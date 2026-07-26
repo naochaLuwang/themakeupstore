@@ -5,17 +5,18 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "build:cap": "next build --webpack && rm -rf .next/cache .next/dev .next/server .next/types .next/trace",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "cap:sync": "npx cap sync",
-    "cap:open": "npx cap open android",
     "cap:sync": "JAVA_HOME=/opt/homebrew/opt/openjdk@21 npx cap sync",
-    "cap:debug": "JAVA_HOME=/opt/homebrew/opt/openjdk@21 npx cap sync && cd android && ./gradlew assembleDebug",
-    "cap:release": "JAVA_HOME=/opt/homebrew/opt/openjdk@21 npx cap sync && cd android && ./gradlew assembleRelease -Pandroid.injected.signing.store.file=../makeup-store.keystore -Pandroid.injected.signing.store.password=Autodesk@9749 -Pandroid.injected.signing.key.alias=makeup-alias -Pandroid.injected.signing.key.password=Autodesk@9749"
+    "cap:open": "npx cap open android",
+    "cap:build": "npm run build:cap && npx cap sync",
+    "cap:debug": "npm run cap:build && cd android && JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug",
+    "cap:release": "npm run cap:build && cd android && JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleRelease -Pandroid.injected.signing.store.file=../makeup-store.keystore -Pandroid.injected.signing.store.password=Autodesk@9749 -Pandroid.injected.signing.key.alias=makeup-alias -Pandroid.injected.signing.key.password=Autodesk@9749"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.3.0",
