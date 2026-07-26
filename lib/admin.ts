@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 
 export async function requireAdmin() {
     const supabase = await createClient()
@@ -17,5 +18,6 @@ export async function requireAdmin() {
         throw new Error("Unauthorized: Administrative access required")
     }
 
-    return { user, supabase }
+    const adminClient = await createAdminClient()
+    return { user, supabase: adminClient }
 }
