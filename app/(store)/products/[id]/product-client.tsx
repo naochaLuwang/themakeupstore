@@ -76,6 +76,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
         name: activePromo.ruleName,
         min_cart_amount: activePromo.minCartAmount,
         gift_product: activePromo.giftProduct,
+        gift_product_ref: null,
         gift_quantity: activePromo.giftQuantity || 1,
     } : null)
 
@@ -666,20 +667,24 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                     {resolvedGift && (
                         <div className={`flex items-center gap-4 p-3 border rounded-xl ${giftQualified ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50'}`}>
                             <div className="relative shrink-0">
-                                {resolvedGift.gift_product?.thumbnail_url ? (
-                                    <img src={resolvedGift.gift_product.thumbnail_url} alt={resolvedGift.gift_product.name} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
-                                ) : (
-                                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
-                                        <Gift className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
-                                    </div>
-                                )}
+                                {(() => {
+                                    const giftImg = resolvedGift.gift_product_ref?.image_url || resolvedGift.gift_product?.thumbnail_url
+                                    const giftName = resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name
+                                    return giftImg ? (
+                                        <img src={giftImg} alt={giftName} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
+                                    ) : (
+                                        <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
+                                            <Gift className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
+                                        </div>
+                                    )
+                                })()}
                                 <span className={`absolute -top-1.5 -right-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${giftQualified ? 'bg-purple-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
                                     {giftQualified ? 'FREE' : 'GIFT'}
                                 </span>
                             </div>
                             <div className="min-w-0 flex-1">
                                 <p className={`text-sm font-semibold truncate ${giftQualified ? 'text-gray-900' : 'text-slate-400'}`}>
-                                    {resolvedGift.gift_product?.name || resolvedGift.name}
+                                    {resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name}
                                 </p>
                                 <p className={`text-xs mt-0.5 ${giftQualified ? 'text-slate-500' : 'text-slate-400'}`}>
                                     {giftQualified ? 'Free Gift with Purchase' : `Add ₹${giftRemaining.toLocaleString()} more to get free gift`}
@@ -1069,20 +1074,24 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                     {resolvedGift && (
                                         <div className={`flex items-center gap-4 p-3 border rounded-xl ${giftQualified ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50'}`}>
                                             <div className="relative shrink-0">
-                                                {resolvedGift.gift_product?.thumbnail_url ? (
-                                                    <img src={resolvedGift.gift_product.thumbnail_url} alt={resolvedGift.gift_product.name} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
-                                                ) : (
-                                                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
-                                                        <Gift className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
-                                                    </div>
-                                                )}
+                                                {(() => {
+                                                    const giftImg = resolvedGift.gift_product_ref?.image_url || resolvedGift.gift_product?.thumbnail_url
+                                                    const giftName = resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name
+                                                    return giftImg ? (
+                                                        <img src={giftImg} alt={giftName} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
+                                                    ) : (
+                                                        <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
+                                                            <Gift className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
+                                                        </div>
+                                                    )
+                                                })()}
                                                 <span className={`absolute -top-1.5 -right-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${giftQualified ? 'bg-purple-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
                                                     {giftQualified ? 'FREE' : 'GIFT'}
                                                 </span>
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <p className={`text-sm font-semibold truncate ${giftQualified ? 'text-gray-900' : 'text-slate-400'}`}>
-                                                    {resolvedGift.gift_product?.name || resolvedGift.name}
+                                                    {resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name}
                                                 </p>
                                                 <p className={`text-xs mt-0.5 ${giftQualified ? 'text-slate-500' : 'text-slate-400'}`}>
                                                     {giftQualified ? 'Free Gift with Purchase' : `Add ₹${giftRemaining.toLocaleString()} more to get free gift`}

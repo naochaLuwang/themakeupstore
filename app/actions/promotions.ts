@@ -126,17 +126,45 @@ export async function getActiveFreeGiftRules(): Promise<FreeGiftRule[]> {
             *,
             gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url, base_price),
             gift_variant:product_variants!free_gifts_gift_variant_id_fkey(title, price, stock, image_url),
-            gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock),
-            qualifying_products:free_gift_products(product_id),
-            qualifying_categories:free_gift_categories(category_id),
-            qualifying_brands:free_gift_brands(brand)
+            gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock)
         `)
         .eq("is_active", true)
         .lte("starts_at", now)
         .or(`expires_at.is.null,expires_at.gt.${now}`)
 
     if (error || !rules) return []
-    return rules as FreeGiftRule[]
+
+    const ids = rules.map(r => r.id)
+    const [[qualifyingProducts, qualifyingCategories, qualifyingBrands]] = await Promise.all([
+        Promise.all([
+            ids.length ? supabase.from('free_gift_products').select('free_gift_id, product_id').in('free_gift_id', ids).then(r => r.data ?? []) : [],
+            ids.length ? supabase.from('free_gift_categories').select('free_gift_id, category_id').in('free_gift_id', ids).then(r => r.data ?? []) : [],
+            ids.length ? supabase.from('free_gift_brands').select('free_gift_id, brand').in('free_gift_id', ids).then(r => r.data ?? []) : [],
+        ])
+    ])
+
+    const productMap = new Map<string, { product_id: string }[]>()
+    const categoryMap = new Map<string, { category_id: string }[]>()
+    const brandMap = new Map<string, { brand: string }[]>()
+    for (const r of qualifyingProducts) {
+        if (!productMap.has(r.free_gift_id)) productMap.set(r.free_gift_id, [])
+        productMap.get(r.free_gift_id)!.push({ product_id: r.product_id })
+    }
+    for (const r of qualifyingCategories) {
+        if (!categoryMap.has(r.free_gift_id)) categoryMap.set(r.free_gift_id, [])
+        categoryMap.get(r.free_gift_id)!.push({ category_id: r.category_id })
+    }
+    for (const r of qualifyingBrands) {
+        if (!brandMap.has(r.free_gift_id)) brandMap.set(r.free_gift_id, [])
+        brandMap.get(r.free_gift_id)!.push({ brand: r.brand })
+    }
+
+    return rules.map(r => ({
+        ...r,
+        qualifying_products: productMap.get(r.id) || [],
+        qualifying_categories: categoryMap.get(r.id) || [],
+        qualifying_brands: brandMap.get(r.id) || [],
+    })) as FreeGiftRule[]
 }
 
 // ============================================================
@@ -304,10 +332,6 @@ export async function getActiveBXGYRules(): Promise<BXGYRule[]> {
         .from("buy_x_get_y")
         .select(`
             *,
-            buy_products:bxgy_buy_products(product_id),
-            buy_categories:bxgy_buy_categories(category_id),
-            buy_brands:bxgy_buy_brands(brand),
-            get_products:bxgy_get_products(product_id),
             get_product:products!buy_x_get_y_get_product_id_fkey(name, thumbnail_url, base_price),
             get_variant:product_variants!buy_x_get_y_get_variant_id_fkey(title, price, stock)
         `)
@@ -316,7 +340,45 @@ export async function getActiveBXGYRules(): Promise<BXGYRule[]> {
         .or(`expires_at.is.null,expires_at.gt.${now}`)
 
     if (error || !rules) return []
-    return rules as BXGYRule[]
+
+    const ids = rules.map(r => r.id)
+    const [[buyProducts, buyCategories, buyBrands, getProducts]] = await Promise.all([
+        Promise.all([
+            ids.length ? supabase.from('bxgy_buy_products').select('bxgy_id, product_id').in('bxgy_id', ids).then(r => r.data ?? []) : [],
+            ids.length ? supabase.from('bxgy_buy_categories').select('bxgy_id, category_id').in('bxgy_id', ids).then(r => r.data ?? []) : [],
+            ids.length ? supabase.from('bxgy_buy_brands').select('bxgy_id, brand').in('bxgy_id', ids).then(r => r.data ?? []) : [],
+            ids.length ? supabase.from('bxgy_get_products').select('bxgy_id, product_id').in('bxgy_id', ids).then(r => r.data ?? []) : [],
+        ])
+    ])
+
+    const buyProductMap = new Map<string, { product_id: string }[]>()
+    const buyCategoryMap = new Map<string, { category_id: string }[]>()
+    const buyBrandMap = new Map<string, { brand: string }[]>()
+    const getProductMap = new Map<string, { product_id: string }[]>()
+    for (const r of buyProducts) {
+        if (!buyProductMap.has(r.bxgy_id)) buyProductMap.set(r.bxgy_id, [])
+        buyProductMap.get(r.bxgy_id)!.push({ product_id: r.product_id })
+    }
+    for (const r of buyCategories) {
+        if (!buyCategoryMap.has(r.bxgy_id)) buyCategoryMap.set(r.bxgy_id, [])
+        buyCategoryMap.get(r.bxgy_id)!.push({ category_id: r.category_id })
+    }
+    for (const r of buyBrands) {
+        if (!buyBrandMap.has(r.bxgy_id)) buyBrandMap.set(r.bxgy_id, [])
+        buyBrandMap.get(r.bxgy_id)!.push({ brand: r.brand })
+    }
+    for (const r of getProducts) {
+        if (!getProductMap.has(r.bxgy_id)) getProductMap.set(r.bxgy_id, [])
+        getProductMap.get(r.bxgy_id)!.push({ product_id: r.product_id })
+    }
+
+    return rules.map(r => ({
+        ...r,
+        buy_products: buyProductMap.get(r.id) || [],
+        buy_categories: buyCategoryMap.get(r.id) || [],
+        buy_brands: buyBrandMap.get(r.id) || [],
+        get_products: getProductMap.get(r.id) || [],
+    })) as BXGYRule[]
 }
 
 // ============================================================

@@ -32,13 +32,14 @@ export default async function AdminGiftProductsPage() {
             <tr className="text-xs font-bold text-slate-600 uppercase tracking-wider">
               <th className="py-4 px-6 text-left">Product</th>
               <th className="py-4 px-6 text-left">Price</th>
+              <th className="py-4 px-6 text-left">Stock</th>
               <th className="py-4 px-6 text-left">Status</th>
               <th className="py-4 px-6 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {!items?.length ? (
-              <tr><td colSpan={4} className="p-12 text-center text-slate-400 font-medium">No gift products yet.</td></tr>
+              <tr><td colSpan={5} className="p-12 text-center text-slate-400 font-medium">No gift products yet.</td></tr>
             ) : (
               items.map((item: any) => (
                 <tr key={item.id} className="hover:bg-slate-50/30 transition-all">
@@ -56,6 +57,7 @@ export default async function AdminGiftProductsPage() {
                     </div>
                   </td>
                   <td className="py-4 px-6 font-semibold text-slate-900">₹{item.price}</td>
+                  <td className="py-4 px-6"><span className={`font-bold text-sm ${item.stock <= 0 ? 'text-rose-500' : 'text-slate-900'}`}>{item.stock}</span></td>
                   <td className="py-4 px-6">
                     <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[8px] font-black ${item.is_active ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
                       {item.is_active ? 'Active' : 'Inactive'}

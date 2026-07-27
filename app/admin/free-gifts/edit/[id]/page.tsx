@@ -8,24 +8,27 @@ export default async function AdminFreeGiftEditPage({ params }: { params: Promis
     const { id } = await params
     const supabase = await createClient()
 
-    const [ruleRes, productsRes, giftProductsRes, categoriesRes] = await Promise.all([
+    const [ruleRes, productsRes, giftProductsRes, categoriesRes, qualifyingProductsRes, qualifyingCategoriesRes, qualifyingBrandsRes] = await Promise.all([
         supabase
             .from('free_gifts')
-            .select('*, qualifying_products:free_gift_products(product_id), qualifying_categories:free_gift_categories(category_id), qualifying_brands:free_gift_brands(brand)')
+            .select('*')
             .eq('id', id)
             .single(),
         supabase.from('products').select('id, name').order('name'),
         (async () => { try { return await supabase.from('gift_products').select('id, name').eq('is_active', true).order('name') } catch { return { data: [] } } })(),
         supabase.from('categories').select('id, name').order('name'),
+        supabase.from('free_gift_products').select('product_id').eq('free_gift_id', id),
+        supabase.from('free_gift_categories').select('category_id').eq('free_gift_id', id),
+        supabase.from('free_gift_brands').select('brand').eq('free_gift_id', id),
     ])
 
     if (!ruleRes.data) notFound()
     const rule = ruleRes.data
 
     const initialSelectedIds = {
-        product_ids: rule.qualifying_products?.map((r: any) => r.product_id) || [],
-        category_ids: rule.qualifying_categories?.map((r: any) => r.category_id) || [],
-        brands: rule.qualifying_brands?.map((r: any) => r.brand) || [],
+        product_ids: qualifyingProductsRes.data?.map((r: any) => r.product_id) || [],
+        category_ids: qualifyingCategoriesRes.data?.map((r: any) => r.category_id) || [],
+        brands: qualifyingBrandsRes.data?.map((r: any) => r.brand) || [],
     }
 
     return (

@@ -540,30 +540,33 @@ export function ProfileContent({
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setShowConfirm(false)}
-                            className="fixed inset-0 bg-slate-950/40 backdrop-blur-md z-[60]"
+                            className="fixed inset-0 bg-rose-950/20 backdrop-blur-sm z-[60]"
                         />
                         <motion.div
                             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed bottom-12 left-0 right-0 bg-white z-[70] rounded-t-[3rem] p-10 shadow-2xl max-w-lg mx-auto"
+                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
+                            className="fixed bottom-0 left-0 right-0 bg-white z-[70] rounded-t-[2.5rem] p-8 pb-10 shadow-2xl max-w-lg mx-auto mb-16"
                         >
-                            <div className="text-center space-y-4 mb-10">
-                                <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto">
-                                    <LogOut className="w-6 h-6 text-red-400" />
-                                </div>
-                                <h3 className="text-3xl font-serif italic text-slate-900">Sign Out?</h3>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">We will keep your wishlist safe.</p>
+                            <div className="flex justify-center mb-6">
+                                <div className="w-0.5 h-8 rounded-full bg-rose-200" />
                             </div>
-                            <div className="flex flex-col gap-3">
+                            <div className="text-center space-y-3 mb-8">
+                                <div className="w-16 h-16 rounded-2xl bg-[#fc2779]/5 flex items-center justify-center mx-auto rotate-12">
+                                    <LogOut className="w-7 h-7 text-[#fc2779] -rotate-12" />
+                                </div>
+                                <h3 className="text-2xl font-daciana text-slate-900 leading-tight">Leaving so soon?</h3>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em]">You'll be back for more beauty</p>
+                            </div>
+                            <div className="flex flex-col gap-2.5">
                                 <button onClick={handleSignOut}
-                                    className="w-full py-5 rounded-3xl bg-[#fc2779] text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-pink-200 active:scale-95 transition-all"
+                                    className="w-full py-4 rounded-2xl bg-[#fc2779] text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-rose-200/60 active:scale-[0.97] transition-all"
                                 >
-                                    Confirm Logout
+                                    Yes, Sign Out
                                 </button>
                                 <button onClick={() => setShowConfirm(false)}
-                                    className="w-full py-5 rounded-3xl bg-slate-50 text-slate-400 text-[11px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                                    className="w-full py-4 rounded-2xl bg-rose-50 text-[#fc2779] text-[10px] font-black uppercase tracking-[0.2em] active:scale-[0.97] transition-all"
                                 >
-                                    Cancel
+                                    Stay Logged In
                                 </button>
                             </div>
                         </motion.div>

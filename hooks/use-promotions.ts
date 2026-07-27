@@ -80,41 +80,80 @@ export function usePromotions() {
         }
 
         try {
-            // Fetch active free gift rules
             const now = new Date().toISOString()
-            const { data: giftRules, error: giftErr } = await supabase
-                .from("free_gifts")
-                .select(`
+            const supabaseClient = supabase
+
+            // Fetch rules + junction data separately (avoids schema cache FK issues)
+            const [giftRes, bxgyRes, giftProducts, giftCategories, giftBrands, bxgyBuyProducts, bxgyBuyCategories, bxgyBuyBrands] = await Promise.all([
+                supabaseClient.from("free_gifts").select(`
                     *,
                     gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url, base_price),
                     gift_variant:product_variants!free_gifts_gift_variant_id_fkey(title, price, stock, image_url),
-                    gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock),
-                    qualifying_products:free_gift_products(product_id),
-                    qualifying_categories:free_gift_categories(category_id),
-                    qualifying_brands:free_gift_brands(brand)
-                `)
-                .eq("is_active", true)
-                .lte("starts_at", now)
-                .or(`expires_at.is.null,expires_at.gt.${now}`)
-
-            if (giftErr) console.error('Free gift fetch error:', giftErr)
-
-            // Fetch active BXGY rules
-            const { data: bxgyRules, error: bxgyErr } = await supabase
-                .from("buy_x_get_y")
-                .select(`
+                    gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock)
+                `).eq("is_active", true).lte("starts_at", now).or(`expires_at.is.null,expires_at.gt.${now}`),
+                supabaseClient.from("buy_x_get_y").select(`
                     *,
-                    buy_products:bxgy_buy_products(product_id),
-                    buy_categories:bxgy_buy_categories(category_id),
-                    buy_brands:bxgy_buy_brands(brand),
                     get_product:products!buy_x_get_y_get_product_id_fkey(name, thumbnail_url, base_price),
                     get_variant:product_variants!buy_x_get_y_get_variant_id_fkey(title, price, stock)
-                `)
-                .eq("is_active", true)
-                .lte("starts_at", now)
-                .or(`expires_at.is.null,expires_at.gt.${now}`)
+                `).eq("is_active", true).lte("starts_at", now).or(`expires_at.is.null,expires_at.gt.${now}`),
+                supabaseClient.from('free_gift_products').select('free_gift_id, product_id'),
+                supabaseClient.from('free_gift_categories').select('free_gift_id, category_id'),
+                supabaseClient.from('free_gift_brands').select('free_gift_id, brand'),
+                supabaseClient.from('bxgy_buy_products').select('bxgy_id, product_id'),
+                supabaseClient.from('bxgy_buy_categories').select('bxgy_id, category_id'),
+                supabaseClient.from('bxgy_buy_brands').select('bxgy_id, brand'),
+            ])
 
-            if (bxgyErr) console.error('BXGY fetch error:', bxgyErr)
+            // Build gift junction maps
+            const giftProductMap = new Map<string, { product_id: string }[]>()
+            const giftCategoryMap = new Map<string, { category_id: string }[]>()
+            const giftBrandMap = new Map<string, { brand: string }[]>()
+            for (const r of giftProducts.data ?? []) {
+                if (!giftProductMap.has(r.free_gift_id)) giftProductMap.set(r.free_gift_id, [])
+                giftProductMap.get(r.free_gift_id)!.push({ product_id: r.product_id })
+            }
+            for (const r of giftCategories.data ?? []) {
+                if (!giftCategoryMap.has(r.free_gift_id)) giftCategoryMap.set(r.free_gift_id, [])
+                giftCategoryMap.get(r.free_gift_id)!.push({ category_id: r.category_id })
+            }
+            for (const r of giftBrands.data ?? []) {
+                if (!giftBrandMap.has(r.free_gift_id)) giftBrandMap.set(r.free_gift_id, [])
+                giftBrandMap.get(r.free_gift_id)!.push({ brand: r.brand })
+            }
+
+            // Build BXGY junction maps
+            const bxgyBuyProductMap = new Map<string, { product_id: string }[]>()
+            const bxgyBuyCategoryMap = new Map<string, { category_id: string }[]>()
+            const bxgyBuyBrandMap = new Map<string, { brand: string }[]>()
+            for (const r of bxgyBuyProducts.data ?? []) {
+                if (!bxgyBuyProductMap.has(r.bxgy_id)) bxgyBuyProductMap.set(r.bxgy_id, [])
+                bxgyBuyProductMap.get(r.bxgy_id)!.push({ product_id: r.product_id })
+            }
+            for (const r of bxgyBuyCategories.data ?? []) {
+                if (!bxgyBuyCategoryMap.has(r.bxgy_id)) bxgyBuyCategoryMap.set(r.bxgy_id, [])
+                bxgyBuyCategoryMap.get(r.bxgy_id)!.push({ category_id: r.category_id })
+            }
+            for (const r of bxgyBuyBrands.data ?? []) {
+                if (!bxgyBuyBrandMap.has(r.bxgy_id)) bxgyBuyBrandMap.set(r.bxgy_id, [])
+                bxgyBuyBrandMap.get(r.bxgy_id)!.push({ brand: r.brand })
+            }
+
+            // Attach junction arrays to rules
+            const giftRules = (giftRes.data || []).map((r: any) => ({
+                ...r,
+                qualifying_products: giftProductMap.get(r.id) || [],
+                qualifying_categories: giftCategoryMap.get(r.id) || [],
+                qualifying_brands: giftBrandMap.get(r.id) || [],
+            }))
+            const bxgyRules = (bxgyRes.data || []).map((r: any) => ({
+                ...r,
+                buy_products: bxgyBuyProductMap.get(r.id) || [],
+                buy_categories: bxgyBuyCategoryMap.get(r.id) || [],
+                buy_brands: bxgyBuyBrandMap.get(r.id) || [],
+            }))
+
+            if (giftRes.error) console.error('Free gift fetch error:', giftRes.error)
+            if (bxgyRes.error) console.error('BXGY fetch error:', bxgyRes.error)
 
             // --- EVALUATE FREE GIFTS ---
             // Build product → category map from junction table (direct category_id is often NULL)
@@ -197,15 +236,17 @@ export function usePromotions() {
                                     .select("product_id")
                                     .in("order_id", orderIds)
                                     .eq("is_gift", true)
-                                for (const g of (existingGifts || [])) claimed.add(g.product_id)
+                                for (const g of (existingGifts || [])) {
+                                    if (g.product_id) claimed.add(g.product_id)
+                                }
                             }
                             claimedGiftProductIdsRef.current = claimed
                         } else {
                             claimedGiftProductIdsRef.current = new Set()
                         }
                     }
-                    // Match on store product ID — ref items store gift_product_id in product_id
-                    if (claimedGiftProductIdsRef.current.has(rule.gift_product_id)) continue
+                    const claimedKey = rule.gift_product_id || rule.gift_product_ref_id
+                    if (claimedKey && claimedGiftProductIdsRef.current.has(claimedKey)) continue
                 }
 
                 // Also check optional minimum cart amount (uses qualifying items subtotal for targeted triggers, full cart for cart_total)

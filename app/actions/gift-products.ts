@@ -51,6 +51,7 @@ export async function createGiftProduct(formData: FormData) {
       description: payload.description || null,
       image_url,
       price: Number(payload.price) || 0,
+      stock: Number(payload.stock) || 0,
     })
     if (error) throw error
     revalidatePath('/admin/gift-products')
@@ -85,6 +86,7 @@ export async function updateGiftProduct(id: string, formData: FormData) {
       name: payload.name,
       description: payload.description || null,
       price: Number(payload.price) || 0,
+      stock: Number(payload.stock) || 0,
       is_active: payload.is_active,
       updated_at: new Date().toISOString(),
     }

@@ -197,21 +197,44 @@ export async function placeOrder(
             const bxgyRuleIds = [...new Set(bxgyDetails.freeItems.map((f: any) => f.ruleId).filter(Boolean))]
             let bxgyRuleMap = new Map<string, any>()
             if (bxgyRuleIds.length > 0) {
-                const { data: rules } = await supabase
-                    .from("buy_x_get_y")
-                    .select(`
-                        id, buy_type, buy_quantity, get_type, get_product_id, get_variant_id,
-                        get_discount_type, get_discount_value,
-                        usage_limit, used_count, once_per_user, max_per_order,
-                        is_active, starts_at, expires_at,
-                        buy_products:bxgy_buy_products(product_id),
-                        buy_categories:bxgy_buy_categories(category_id),
-                        buy_brands:bxgy_buy_brands(brand),
-                        get_product:products!buy_x_get_y_get_product_id_fkey(name),
-                        get_variant:product_variants!buy_x_get_y_get_variant_id_fkey(stock, price)
-                    `)
-                    .in("id", bxgyRuleIds)
-                if (rules) for (const r of rules) bxgyRuleMap.set(r.id, r)
+                const [rulesRes, buyProductsRes, buyCategoriesRes, buyBrandsRes] = await Promise.all([
+                    supabase
+                        .from("buy_x_get_y")
+                        .select(`
+                            id, buy_type, buy_quantity, get_type, get_product_id, get_variant_id,
+                            get_discount_type, get_discount_value,
+                            usage_limit, used_count, once_per_user, max_per_order,
+                            is_active, starts_at, expires_at,
+                            get_product:products!buy_x_get_y_get_product_id_fkey(name),
+                            get_variant:product_variants!buy_x_get_y_get_variant_id_fkey(stock, price)
+                        `)
+                        .in("id", bxgyRuleIds),
+                    supabase.from('bxgy_buy_products').select('bxgy_id, product_id').in('bxgy_id', bxgyRuleIds),
+                    supabase.from('bxgy_buy_categories').select('bxgy_id, category_id').in('bxgy_id', bxgyRuleIds),
+                    supabase.from('bxgy_buy_brands').select('bxgy_id, brand').in('bxgy_id', bxgyRuleIds),
+                ])
+                const buyProductMap = new Map<string, { product_id: string }[]>()
+                const buyCategoryMap = new Map<string, { category_id: string }[]>()
+                const buyBrandMap = new Map<string, { brand: string }[]>()
+                for (const r of buyProductsRes.data ?? []) {
+                    if (!buyProductMap.has(r.bxgy_id)) buyProductMap.set(r.bxgy_id, [])
+                    buyProductMap.get(r.bxgy_id)!.push({ product_id: r.product_id })
+                }
+                for (const r of buyCategoriesRes.data ?? []) {
+                    if (!buyCategoryMap.has(r.bxgy_id)) buyCategoryMap.set(r.bxgy_id, [])
+                    buyCategoryMap.get(r.bxgy_id)!.push({ category_id: r.category_id })
+                }
+                for (const r of buyBrandsRes.data ?? []) {
+                    if (!buyBrandMap.has(r.bxgy_id)) buyBrandMap.set(r.bxgy_id, [])
+                    buyBrandMap.get(r.bxgy_id)!.push({ brand: r.brand })
+                }
+                const rules = (rulesRes.data || []).map((r: any) => ({
+                    ...r,
+                    buy_products: buyProductMap.get(r.id) || [],
+                    buy_categories: buyCategoryMap.get(r.id) || [],
+                    buy_brands: buyBrandMap.get(r.id) || [],
+                }))
+                for (const r of rules) bxgyRuleMap.set(r.id, r)
             }
 
             const bxgyVariantIds = bxgyDetails.freeItems.map((f: any) => f.variantId)
@@ -302,21 +325,44 @@ export async function placeOrder(
             const ruleIds = giftDetails.map((g: any) => g.ruleId).filter(Boolean)
             let ruleMap = new Map<string, any>()
             if (ruleIds.length > 0) {
-                const { data: rules } = await supabase
-                    .from("free_gifts")
-                    .select(`
-                        id, gift_product_id, gift_product_ref_id, gift_variant_id, gift_quantity,
-                        trigger_type, trigger_threshold, min_cart_amount,
-                        usage_limit, used_count, once_per_user,
-                        is_active, starts_at, expires_at,
-                        gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(stock),
-                        gift_variant:product_variants!free_gifts_gift_variant_id_fkey(stock, price),
-                        qualifying_products:free_gift_products(product_id),
-                        qualifying_categories:free_gift_categories(category_id),
-                        qualifying_brands:free_gift_brands(brand)
-                    `)
-                    .in("id", ruleIds)
-                if (rules) for (const r of rules) ruleMap.set(r.id, r)
+                const [rulesRes, qualProductsRes, qualCategoriesRes, qualBrandsRes] = await Promise.all([
+                    supabase
+                        .from("free_gifts")
+                        .select(`
+                            id, gift_product_id, gift_product_ref_id, gift_variant_id, gift_quantity,
+                            trigger_type, trigger_threshold, min_cart_amount,
+                            usage_limit, used_count, once_per_user,
+                            is_active, starts_at, expires_at,
+                            gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(stock),
+                            gift_variant:product_variants!free_gifts_gift_variant_id_fkey(stock, price)
+                        `)
+                        .in("id", ruleIds),
+                    supabase.from('free_gift_products').select('free_gift_id, product_id').in('free_gift_id', ruleIds),
+                    supabase.from('free_gift_categories').select('free_gift_id, category_id').in('free_gift_id', ruleIds),
+                    supabase.from('free_gift_brands').select('free_gift_id, brand').in('free_gift_id', ruleIds),
+                ])
+                const qualProductMap = new Map<string, { product_id: string }[]>()
+                const qualCategoryMap = new Map<string, { category_id: string }[]>()
+                const qualBrandMap = new Map<string, { brand: string }[]>()
+                for (const r of qualProductsRes.data ?? []) {
+                    if (!qualProductMap.has(r.free_gift_id)) qualProductMap.set(r.free_gift_id, [])
+                    qualProductMap.get(r.free_gift_id)!.push({ product_id: r.product_id })
+                }
+                for (const r of qualCategoriesRes.data ?? []) {
+                    if (!qualCategoryMap.has(r.free_gift_id)) qualCategoryMap.set(r.free_gift_id, [])
+                    qualCategoryMap.get(r.free_gift_id)!.push({ category_id: r.category_id })
+                }
+                for (const r of qualBrandsRes.data ?? []) {
+                    if (!qualBrandMap.has(r.free_gift_id)) qualBrandMap.set(r.free_gift_id, [])
+                    qualBrandMap.get(r.free_gift_id)!.push({ brand: r.brand })
+                }
+                const rules = (rulesRes.data || []).map((r: any) => ({
+                    ...r,
+                    qualifying_products: qualProductMap.get(r.id) || [],
+                    qualifying_categories: qualCategoryMap.get(r.id) || [],
+                    qualifying_brands: qualBrandMap.get(r.id) || [],
+                }))
+                for (const r of rules) ruleMap.set(r.id, r)
             }
 
             const giftVariantIds = giftDetails.map((g: any) => g.variantId)
@@ -358,7 +404,7 @@ export async function placeOrder(
                             .in("order_id", orderIds)
                             .eq("is_gift", true)
                             // Match on store product ID — ref items store gift_product_id in product_id
-                            .eq("product_id", rule.gift_product_id)
+                            .eq("product_id", rule.gift_product_ref_id || rule.gift_product_id)
                             .limit(1)
                         if (existingGift && existingGift.length > 0) throw new Error("Free gift already claimed")
                     }

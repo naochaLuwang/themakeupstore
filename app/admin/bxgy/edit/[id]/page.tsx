@@ -8,24 +8,28 @@ export default async function AdminBXGYEditPage({ params }: { params: Promise<{ 
     const { id } = await params
     const supabase = await createClient()
 
-    const [ruleRes, productsRes, categoriesRes] = await Promise.all([
+    const [ruleRes, productsRes, categoriesRes, buyProductsRes, buyCategoriesRes, buyBrandsRes, getProductsRes] = await Promise.all([
         supabase
             .from('buy_x_get_y')
-            .select('*, buy_products:bxgy_buy_products(product_id), buy_categories:bxgy_buy_categories(category_id), buy_brands:bxgy_buy_brands(brand), get_products:bxgy_get_products(product_id)')
+            .select('*')
             .eq('id', id)
             .single(),
         supabase.from('products').select('id, name').order('name'),
         supabase.from('categories').select('id, name').order('name'),
+        supabase.from('bxgy_buy_products').select('product_id').eq('bxgy_id', id),
+        supabase.from('bxgy_buy_categories').select('category_id').eq('bxgy_id', id),
+        supabase.from('bxgy_buy_brands').select('brand').eq('bxgy_id', id),
+        supabase.from('bxgy_get_products').select('product_id').eq('bxgy_id', id),
     ])
 
     if (!ruleRes.data) notFound()
     const rule = ruleRes.data
 
     const initialSelectedIds = {
-        buy_product_ids: rule.buy_products?.map((r: any) => r.product_id) || [],
-        buy_category_ids: rule.buy_categories?.map((r: any) => r.category_id) || [],
-        buy_brands: rule.buy_brands?.map((r: any) => r.brand) || [],
-        get_product_ids: rule.get_products?.map((r: any) => r.product_id) || [],
+        buy_product_ids: buyProductsRes.data?.map((r: any) => r.product_id) || [],
+        buy_category_ids: buyCategoriesRes.data?.map((r: any) => r.category_id) || [],
+        buy_brands: buyBrandsRes.data?.map((r: any) => r.brand) || [],
+        get_product_ids: getProductsRes.data?.map((r: any) => r.product_id) || [],
     }
 
     return (

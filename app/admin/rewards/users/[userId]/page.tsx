@@ -1,5 +1,5 @@
 import { adminGetUserTransactions } from "@/app/actions/loyalty"
-import { ChevronLeft, Coins, Award, TrendingUp, TrendingDown } from "lucide-react"
+import { ChevronLeft, Coins, Award, TrendingUp, TrendingDown, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AdjustPointsForm } from "./adjust-points-form"
@@ -107,6 +107,11 @@ export default async function AdminRewardsUserDetailPage(props: { params: Promis
                             <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded font-mono">{tx.reference_type}</span>
                           </div>
                           <div className="text-xs text-slate-400 mt-0.5">{tx.note || "—"}</div>
+                          {tx.reference_type === "order" && tx.reference_id && (
+                            <Link href={`/admin/orders/${tx.reference_id}`} className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-rose-500 hover:text-rose-600 transition-colors">
+                              <ExternalLink className="w-3 h-3" /> View Order
+                            </Link>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">

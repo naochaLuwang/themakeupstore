@@ -61,15 +61,12 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     ]
     const productBrand = data.brand
 
-    const [bxgyRes, giftRes] = await Promise.all([
+    const [bxgyRes, giftRes, bxgyBuyProducts, bxgyBuyCategories, bxgyBuyBrands, giftQualProducts, giftQualCategories, giftQualBrands] = await Promise.all([
         supabase
             .from('buy_x_get_y')
             .select(`
                 id, name, description, buy_quantity, get_type, get_discount_type, get_discount_value, is_active, starts_at, expires_at,
-                get_product:products!buy_x_get_y_get_product_id_fkey(name, thumbnail_url),
-                buy_products:bxgy_buy_products(product_id),
-                buy_categories:bxgy_buy_categories(category_id),
-                buy_brands:bxgy_buy_brands(brand)
+                get_product:products!buy_x_get_y_get_product_id_fkey(name, thumbnail_url)
             `)
             .eq('is_active', true)
             .or(`expires_at.is.null,expires_at.gt.${now}`),
@@ -77,25 +74,79 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             .from('free_gifts')
             .select(`
                 id, name, description, gift_quantity, trigger_type, trigger_threshold, min_cart_amount, is_active, starts_at, expires_at,
-                gift_product_id,
+                gift_product_id, gift_product_ref_id,
                 gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url),
-                qualifying_products:free_gift_products(product_id),
-                qualifying_categories:free_gift_categories(category_id),
-                qualifying_brands:free_gift_brands(brand)
+                gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock)
             `)
             .eq('is_active', true)
+            .lte('starts_at', now)
             .or(`expires_at.is.null,expires_at.gt.${now}`),
+        supabase.from('bxgy_buy_products').select('bxgy_id, product_id'),
+        supabase.from('bxgy_buy_categories').select('bxgy_id, category_id'),
+        supabase.from('bxgy_buy_brands').select('bxgy_id, brand'),
+        supabase.from('free_gift_products').select('free_gift_id, product_id'),
+        supabase.from('free_gift_categories').select('free_gift_id, category_id'),
+        supabase.from('free_gift_brands').select('free_gift_id, brand'),
     ])
 
     if (bxgyRes.error) console.error('BXGY query error:', bxgyRes.error)
     if (giftRes.error) console.error('Gift query error:', giftRes.error)
 
+    // Build junction maps for BXGY
+    const bxgyBuyProductMap = new Map<string, string[]>()
+    const bxgyBuyCategoryMap = new Map<string, string[]>()
+    const bxgyBuyBrandMap = new Map<string, string[]>()
+    for (const r of bxgyBuyProducts.data ?? []) {
+        if (!bxgyBuyProductMap.has(r.bxgy_id)) bxgyBuyProductMap.set(r.bxgy_id, [])
+        bxgyBuyProductMap.get(r.bxgy_id)!.push(r.product_id)
+    }
+    for (const r of bxgyBuyCategories.data ?? []) {
+        if (!bxgyBuyCategoryMap.has(r.bxgy_id)) bxgyBuyCategoryMap.set(r.bxgy_id, [])
+        bxgyBuyCategoryMap.get(r.bxgy_id)!.push(r.category_id)
+    }
+    for (const r of bxgyBuyBrands.data ?? []) {
+        if (!bxgyBuyBrandMap.has(r.bxgy_id)) bxgyBuyBrandMap.set(r.bxgy_id, [])
+        bxgyBuyBrandMap.get(r.bxgy_id)!.push(r.brand)
+    }
+
+    // Build junction maps for free gifts
+    const giftProductMap = new Map<string, string[]>()
+    const giftCategoryMap = new Map<string, string[]>()
+    const giftBrandMap = new Map<string, string[]>()
+    for (const r of giftQualProducts.data ?? []) {
+        if (!giftProductMap.has(r.free_gift_id)) giftProductMap.set(r.free_gift_id, [])
+        giftProductMap.get(r.free_gift_id)!.push(r.product_id)
+    }
+    for (const r of giftQualCategories.data ?? []) {
+        if (!giftCategoryMap.has(r.free_gift_id)) giftCategoryMap.set(r.free_gift_id, [])
+        giftCategoryMap.get(r.free_gift_id)!.push(r.category_id)
+    }
+    for (const r of giftQualBrands.data ?? []) {
+        if (!giftBrandMap.has(r.free_gift_id)) giftBrandMap.set(r.free_gift_id, [])
+        giftBrandMap.get(r.free_gift_id)!.push(r.brand)
+    }
+
+    // Attach junction data to rules
+    const bxgyRules = (bxgyRes.data || []).map((rule: any) => ({
+        ...rule,
+        buy_products: (bxgyBuyProductMap.get(rule.id) || []).map((product_id: string) => ({ product_id })),
+        buy_categories: (bxgyBuyCategoryMap.get(rule.id) || []).map((category_id: string) => ({ category_id })),
+        buy_brands: (bxgyBuyBrandMap.get(rule.id) || []).map((brand: string) => ({ brand })),
+    }))
+
+    const giftRules = (giftRes.data || []).map((rule: any) => ({
+        ...rule,
+        qualifying_products: (giftProductMap.get(rule.id) || []).map((product_id: string) => ({ product_id })),
+        qualifying_categories: (giftCategoryMap.get(rule.id) || []).map((category_id: string) => ({ category_id })),
+        qualifying_brands: (giftBrandMap.get(rule.id) || []).map((brand: string) => ({ brand })),
+    }))
+
     // Find BXGY rule that matches this product
     let activeBXGY: any = null
-    for (const rule of (bxgyRes.data || []) as any[]) {
-        const matchByProduct = (rule.buy_products || []).some((p: any) => p.product_id === productId)
-        const matchByCategory = productCategoryIds.length > 0 && (rule.buy_categories || []).some((c: any) => productCategoryIds.includes(c.category_id))
-        const matchByBrand = productBrand && (rule.buy_brands || []).some((b: any) => b.brand === productBrand)
+    for (const rule of bxgyRules) {
+        const matchByProduct = rule.buy_products?.some((p: any) => p.product_id === productId)
+        const matchByCategory = productCategoryIds.length > 0 && rule.buy_categories?.some((c: any) => productCategoryIds.includes(c.category_id))
+        const matchByBrand = productBrand && rule.buy_brands?.some((b: any) => b.brand === productBrand)
         if (matchByProduct || matchByCategory || matchByBrand) {
             activeBXGY = rule
             break
@@ -104,15 +155,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
     // Find Free Gift rule that matches this product
     let activeGift: any = null
-    for (const rule of (giftRes.data || []) as any[]) {
-        // cart_total rules apply to ALL products
+    for (const rule of giftRules) {
         if (rule.trigger_type === 'cart_total') {
             activeGift = rule
             break
         }
-        const matchByProduct = (rule.qualifying_products || []).some((p: any) => p.product_id === productId)
-        const matchByCategory = productCategoryIds.length > 0 && (rule.qualifying_categories || []).some((c: any) => productCategoryIds.includes(c.category_id))
-        const matchByBrand = productBrand && (rule.qualifying_brands || []).some((b: any) => b.brand === productBrand)
+        const matchByProduct = rule.qualifying_products?.some((p: any) => p.product_id === productId)
+        const matchByCategory = productCategoryIds.length > 0 && rule.qualifying_categories?.some((c: any) => productCategoryIds.includes(c.category_id))
+        const matchByBrand = productBrand && rule.qualifying_brands?.some((b: any) => b.brand === productBrand)
         if (matchByProduct || matchByCategory || matchByBrand) {
             activeGift = rule
             break

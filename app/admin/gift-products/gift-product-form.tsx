@@ -16,6 +16,7 @@ export function GiftProductForm({ initialData, isEdit = false }: GiftProductForm
   const [name, setName] = useState(initialData?.name || "")
   const [description, setDescription] = useState(initialData?.description || "")
   const [price, setPrice] = useState(initialData?.price || "")
+  const [stock, setStock] = useState(initialData?.stock ?? "")
   const [isActive, setIsActive] = useState(initialData?.is_active ?? true)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image_url || null)
@@ -32,6 +33,7 @@ export function GiftProductForm({ initialData, isEdit = false }: GiftProductForm
       name: name.trim(),
       description: description.trim() || null,
       price: Number(price) || 0,
+      stock: Number(stock) || 0,
       image_url: initialData?.image_url || null,
       ...(isEdit ? { is_active: isActive } : {}),
     })
@@ -65,13 +67,17 @@ export function GiftProductForm({ initialData, isEdit = false }: GiftProductForm
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" rows={3} className="w-full px-4 py-3 mt-2 rounded-xl bg-slate-50 border-none font-medium text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 resize-none" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Price <span className="text-slate-300 font-normal normal-case tracking-normal">(display/insurance value)</span></label>
             <div className="relative mt-2">
               <span className="absolute left-3 top-3 text-slate-400 font-bold text-sm">₹</span>
               <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} min="0" className="w-full h-11 pl-8 pr-4 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" />
             </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Stock</label>
+            <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} min="0" className="w-full h-11 px-4 mt-2 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" placeholder="0" />
           </div>
           {isEdit && (
             <div>

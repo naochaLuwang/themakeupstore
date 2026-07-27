@@ -139,14 +139,15 @@ export async function releasePendingPoints(orderId: string) {
     order_delivered_at: new Date().toISOString(),
   }).eq("id", tx.id)
 
+  // Trigger already set loyalty_points.balance = balance_after on INSERT
+  // Only need to bump lifetime_earned now that status is 'available'
   const { data: lp } = await supabase
     .from("loyalty_points")
-    .select("balance, lifetime_earned")
+    .select("lifetime_earned")
     .eq("user_id", tx.user_id)
     .maybeSingle()
 
   await supabase.from("loyalty_points").update({
-    balance: (lp?.balance || 0) + tx.amount,
     lifetime_earned: (lp?.lifetime_earned || 0) + tx.amount,
     updated_at: new Date().toISOString(),
   }).eq("user_id", tx.user_id)
