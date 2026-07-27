@@ -297,7 +297,7 @@ export async function evaluateFreeGifts(
 
         // Check if gift is already in cart
         const alreadyInCart = cartItems.some(
-            item => item.is_gift && item.productId === rule.gift_product_id
+            item => item.is_gift && item.productId === (rule.gift_product_ref_id || rule.gift_product_id)
         )
         if (alreadyInCart) continue
 

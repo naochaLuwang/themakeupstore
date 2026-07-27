@@ -9,7 +9,7 @@ import { ProductCard } from "@/components/store/product-card"
 import {
     Heart, ShoppingBag, Star, Share2, Store, MapPin,
     ShieldCheck, RotateCcw, ChevronDown, ChevronUp, ChevronRight, Check, X, Plus, Minus, Bell,
-    ScanLine, Palette, Gift, Tag, Search
+    ScanLine, Palette, Tag, Search
 } from "lucide-react"
 import { toast } from "sonner"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
@@ -674,7 +674,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                         <img src={giftImg} alt={giftName} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
                                     ) : (
                                         <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
-                                            <Gift className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
+                                            <ShoppingBag className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
                                         </div>
                                     )
                                 })()}
@@ -1081,7 +1081,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                                         <img src={giftImg} alt={giftName} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
                                                     ) : (
                                                         <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
-                                                            <Gift className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
+                                                            <ShoppingBag className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
                                                         </div>
                                                     )
                                                 })()}

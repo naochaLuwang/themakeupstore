@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
-import { Plus, Edit3, Trash2, Gift } from "lucide-react"
+import { Plus, Edit3, Trash2, ShoppingBag } from "lucide-react"
 import Link from "next/link"
 import { deleteGiftProduct } from "@/app/actions/gift-products"
 import { GiftProductDeleteButton } from "@/components/admin/gift-product-controls"
@@ -48,7 +48,7 @@ export default async function AdminGiftProductsPage() {
                       {item.image_url ? (
                         <img src={item.image_url} className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><Gift className="w-4 h-4 text-slate-400" /></div>
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><ShoppingBag className="w-4 h-4 text-slate-400" /></div>
                       )}
                       <div>
                         <div className="font-semibold text-slate-900 text-sm">{item.name}</div>

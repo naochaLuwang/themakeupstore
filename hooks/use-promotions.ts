@@ -521,7 +521,7 @@ export function usePromotions() {
                     }
                 } else if (rule.get_type === "specific_product" && rule.get_product_id) {
                     const alreadyInCart = items.some(i => i.is_bxgy_free && i.productId === rule.get_product_id)
-                    if (!alreadyInCart && rule.get_variant && rule.get_variant.stock >= timesApplicable) {
+                    if (!alreadyInCart && rule.get_product) {
                         addItem({
                             id: rule.get_variant_id || rule.get_product_id,
                             productId: rule.get_product_id,
@@ -534,7 +534,7 @@ export function usePromotions() {
                             originalPrice: rule.get_variant?.price || rule.get_product?.base_price || 0,
                             image: rule.get_product?.thumbnail_url || "",
                             quantity: timesApplicable,
-                            stock: rule.get_variant?.stock || 999,
+                            stock: 999,
                             is_bxgy_free: true,
                             bxgy_rule_id: rule.id,
                         })

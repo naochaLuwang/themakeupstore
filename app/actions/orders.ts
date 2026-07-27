@@ -486,7 +486,7 @@ export async function placeOrder(
                         throw new Error("Free gift is no longer available")
                     }
                 }
-                verifiedGiftItems.push({ ...gift, giftSource, giftStoreProductId: rule.gift_product_id, verifiedPrice: 0 })
+                verifiedGiftItems.push({ ...gift, giftSource, giftStoreProductId: rule.gift_product_id || rule.gift_product_ref_id, verifiedPrice: 0 })
             }
         }
 
