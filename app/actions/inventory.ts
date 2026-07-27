@@ -1,6 +1,5 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { requireAdmin } from "@/lib/admin"
 import { revalidatePath } from "next/cache"
 
@@ -9,8 +8,7 @@ export async function updateStock(
     stock: number
 ) {
     try {
-        await requireAdmin()
-        const supabase = await createClient()
+        const { supabase } = await requireAdmin()
         const stockVal = Number(stock)
         if (isNaN(stockVal) || stockVal < 0 || !Number.isInteger(stockVal)) throw new Error("Invalid stock value")
         const { error } = await supabase

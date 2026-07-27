@@ -1,12 +1,10 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 
 export async function updateSku(variantId: string, sku: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const sanitized = sku.trim().toUpperCase() || null
 

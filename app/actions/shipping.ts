@@ -1,11 +1,9 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { requireAdmin } from "@/lib/admin"
 
 export async function getZones() {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data, error } = await supabase
         .from('shipping_zones')
         .select('*, shipping_methods(*)')
@@ -15,22 +13,19 @@ export async function getZones() {
 }
 
 export async function createZone(payload: { name: string; pincode: string; description: string | null }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('shipping_zones').insert([payload])
     if (error) throw new Error(error.message)
 }
 
 export async function updateZone(id: string, payload: { name: string; pincode: string }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('shipping_zones').update(payload).eq('id', id)
     if (error) throw new Error(error.message)
 }
 
 export async function deleteZone(id: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     // Get all method IDs for this zone first
     const { data: methods } = await supabase
         .from('shipping_methods')
@@ -57,22 +52,19 @@ export async function deleteZone(id: string) {
 }
 
 export async function createMethod(payload: { zone_id: string; name: string; price: number; delivery_time_label: string }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('shipping_methods').insert([payload])
     if (error) throw new Error(error.message)
 }
 
 export async function updateMethod(id: string, payload: { name: string; price: number; delivery_time_label: string }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('shipping_methods').update(payload).eq('id', id)
     if (error) throw new Error(error.message)
 }
 
 export async function deleteMethod(id: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error: nullErr } = await supabase
         .from('orders')
         .update({ shipping_method_id: null })

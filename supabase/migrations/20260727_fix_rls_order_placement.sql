@@ -160,3 +160,42 @@ DROP POLICY IF EXISTS "Anyone can insert gift card redemptions" ON public.gift_c
 CREATE POLICY "Anyone can insert gift card redemptions"
     ON public.gift_card_redemptions FOR INSERT
     WITH CHECK (true);
+
+-- ============================================================
+-- PART 6: Create missing get_or_create_cart function
+-- Called by CartSync (cart-sync.tsx:189) — returned 500 because
+-- it was never defined in any migration. Creates a cart row for
+-- the user if one doesn't already exist, then returns the ID.
+-- Uses SECURITY DEFINER so cart operations bypass RLS (the
+-- calling user is already authenticated by the app).
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.get_or_create_cart(p_user_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  existing_id uuid;
+  new_id uuid;
+BEGIN
+  SELECT id INTO existing_id
+  FROM public.carts
+  WHERE user_id = p_user_id
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  IF existing_id IS NOT NULL THEN
+    UPDATE public.carts
+    SET updated_at = now()
+    WHERE id = existing_id;
+    RETURN existing_id;
+  END IF;
+
+  INSERT INTO public.carts (user_id)
+  VALUES (p_user_id)
+  RETURNING id INTO new_id;
+
+  RETURN new_id;
+END;
+$$;

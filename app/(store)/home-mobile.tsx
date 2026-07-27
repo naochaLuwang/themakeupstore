@@ -272,45 +272,6 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
         </Section>
       )}
 
-      {/* STEAL THE SHOW */}
-      {showcaseItems.length > 0 && (
-        <div className="mx-3 mb-10 rounded-2xl bg-white shadow-[0_-4px_20px_-3px_rgba(0,0,0,0.08)]">
-          <div className="pt-6 pb-3 px-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">STEAL THE SHOW</p>
-            <h3 className="text-[26px] font-light text-slate-900 tracking-tight leading-none mt-0.5">Editor's Pick</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-3 px-4 pb-6">
-            {showcaseItems.map((item) => {
-              return item.link_url ? (
-                <Link key={item.id} href={item.link_url} className="group">
-                  <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[4/5]">
-                    <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                  </div>
-                  <div className="mt-2.5">
-                    <p className="text-sm font-bold text-slate-900 leading-tight">{item.title}</p>
-                    {item.subtitle && (
-                      <p className="text-[11px] text-slate-500 mt-0.5">{item.subtitle}</p>
-                    )}
-                  </div>
-                </Link>
-              ) : (
-                <div key={item.id} className="group">
-                  <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[4/5]">
-                    <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                  </div>
-                  <div className="mt-2.5">
-                    <p className="text-sm font-bold text-slate-900 leading-tight">{item.title}</p>
-                    {item.subtitle && (
-                      <p className="text-[11px] text-slate-500 mt-0.5">{item.subtitle}</p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* FOREVER52 PRODUCTS */}
       {forever52Products.length > 0 && (
         <Section label="FEATURED BRAND" title="FOREVER52">

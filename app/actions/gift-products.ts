@@ -1,12 +1,10 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 
 export async function getGiftProducts() {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { data, error } = await supabase
     .from('gift_products')
     .select('*')
@@ -16,8 +14,7 @@ export async function getGiftProducts() {
 }
 
 export async function getGiftProduct(id: string) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { data, error } = await supabase
     .from('gift_products')
     .select('*')
@@ -28,8 +25,7 @@ export async function getGiftProduct(id: string) {
 }
 
 export async function createGiftProduct(formData: FormData) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const payload = JSON.parse(formData.get("payload") as string)
 
   let image_url = payload.image_url || null
@@ -65,8 +61,7 @@ export async function createGiftProduct(formData: FormData) {
 }
 
 export async function updateGiftProduct(id: string, formData: FormData) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const payload = JSON.parse(formData.get("payload") as string)
 
   let image_url = payload.image_url || null
@@ -105,8 +100,7 @@ export async function updateGiftProduct(id: string, formData: FormData) {
 }
 
 export async function deleteGiftProduct(id: string) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { error } = await supabase.from('gift_products').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/gift-products')

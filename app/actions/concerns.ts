@@ -1,7 +1,6 @@
 "use server"
 
 import { v2 as cloudinary } from 'cloudinary'
-import { createClient } from "@/utils/supabase/server"
 import { concernSchema } from "@/lib/validations/concern"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
@@ -13,8 +12,7 @@ cloudinary.config({
 })
 
 export async function createConcern(formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const payloadRaw = formData.get("payload")
     if (!payloadRaw) return { error: "No data provided" }
@@ -74,8 +72,7 @@ export async function createConcern(formData: FormData) {
 }
 
 export async function updateConcern(concernId: string, formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const payloadRaw = formData.get("payload")
     if (!payloadRaw) return { error: "No data provided" }
@@ -136,8 +133,7 @@ export async function updateConcern(concernId: string, formData: FormData) {
 }
 
 export async function deleteConcern(id: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase.from("concerns").delete().eq("id", id)
 

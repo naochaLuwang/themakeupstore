@@ -1,6 +1,5 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 
@@ -11,8 +10,7 @@ export async function updatePricing(updates: {
     discount_type: 'none' | 'percentage' | 'amount';
     discount_value: number;
 }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     if (updates.price < 0) throw new Error("Price cannot be negative")
     if (updates.discount_value < 0) throw new Error("Discount value cannot be negative")

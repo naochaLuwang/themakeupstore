@@ -1,16 +1,13 @@
 "use server"
-import { createClient } from "@/utils/supabase/server"
 import { requireAdmin } from "@/lib/admin"
 
 export async function sendLiveCartEmail(cartId: string) {
-  await requireAdmin()
+  const { supabase } = await requireAdmin()
 
   const EDGE_FUNCTION_URL =
     (process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") || "") +
     "/functions/v1/send-abandoned-cart"
   const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  const supabase = await createClient()
 
   const { data: cart } = await supabase
     .from("carts")
@@ -69,8 +66,7 @@ export async function sendLiveCartEmail(cartId: string) {
 }
 
 export async function getLiveCarts() {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { data, error } = await supabase
         .from('carts')

@@ -1,13 +1,11 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 
 export async function approveReview(formData: FormData) {
-    await requireAdmin()
+    const { supabase } = await requireAdmin()
     const id = formData.get("id") as string
-    const supabase = await createClient();
 
     const { error } = await supabase
         .from("product_reviews")
@@ -26,8 +24,7 @@ export async function approveReview(formData: FormData) {
 }
 
 export async function toggleVerification(reviewId: string, currentStatus: boolean) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     await supabase
         .from("product_reviews")
         .update({ is_verified: !currentStatus })
@@ -37,8 +34,7 @@ export async function toggleVerification(reviewId: string, currentStatus: boolea
 }
 
 export async function deleteReview(reviewId: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     await supabase.from("product_reviews").delete().eq("id", reviewId)
 
     revalidatePath("/admin/reviews")

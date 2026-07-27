@@ -9,8 +9,7 @@ import { rateLimit } from "@/lib/rate-limit"
 const promoLimiter = rateLimit("promo-validate", { windowMs: 60_000, max: 20 })
 
 export async function createPromoCode(formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const rawData = {
         code: (formData.get('code') as string).toUpperCase(),
@@ -201,8 +200,7 @@ export async function validatePromoCode(code: string, cartItems: any[]) {
 }
 
 export async function deletePromoCode(id: string) {
-    await requireAdmin()
-    const supabase = await createClient();
+    const { supabase } = await requireAdmin();
 
     // We try to select to confirm actual deletion (RLS might prevent it otherwise)
     const { data, error } = await supabase
@@ -219,8 +217,7 @@ export async function deletePromoCode(id: string) {
 }
 
 export async function togglePromoStatus(id: string, currentStatus: boolean) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('promo_codes').update({ is_active: !currentStatus }).eq('id', id)
     if (error) return { success: false, message: error.message }
     revalidatePath('/admin/promos')
@@ -267,8 +264,7 @@ export async function getActivePromos() {
 
 
 export async function updatePromoCode(id: string, formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const rawData = {
         code: (formData.get('code') as string).toUpperCase(),
@@ -311,8 +307,7 @@ export async function updatePromoCode(id: string, formData: FormData) {
 }
 
 export async function getPromoUsageHistory(promoId: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data, error } = await supabase
         .from('promo_usage_details')
         .select('*')

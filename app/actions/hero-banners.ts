@@ -1,12 +1,10 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 
 export async function createHeroBanner(formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const title = formData.get("title")
     const subtitle = formData.get("subtitle")
@@ -28,8 +26,7 @@ export async function createHeroBanner(formData: FormData) {
 }
 
 export async function updateHeroBanner(id: string, formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase.from("hero_banners").update({
         title: formData.get("title") as string,
@@ -48,8 +45,7 @@ export async function updateHeroBanner(id: string, formData: FormData) {
 }
 
 export async function deleteHeroBanner(id: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase.from("hero_banners").delete().eq("id", id)
     if (error) return { success: false, message: error.message }
@@ -58,8 +54,7 @@ export async function deleteHeroBanner(id: string) {
 }
 
 export async function toggleHeroBanner(id: string, current: boolean) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase.from("hero_banners").update({
         is_active: !current,

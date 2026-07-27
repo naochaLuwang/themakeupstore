@@ -893,8 +893,7 @@ export async function processPartialRefund(
     refundMethod: "razorpay" | "gpay",
     transactionId?: string
 ) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     try {
         const { data: order, error: orderErr } = await supabase
@@ -1025,8 +1024,7 @@ export async function createWholesaleOrder(data: {
     total: number,
     items: any[]
 }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     try {
         // 1. Re-verify variant prices and wholesale discounts server-side
@@ -1137,8 +1135,7 @@ export async function updateOrderPOS(
     additionalCharges: number = 0,
     additionalChargesLabel: string = 'Extra Charges'
 ) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { success, data, error: validationError } = OrderPOSSchema.safeParse({
         orderId, items, globalDiscount, additionalCharges, additionalChargesLabel
@@ -1228,8 +1225,7 @@ export async function updateOrderPOS(
 }
 
 export async function removeOrderItem(itemId: string, orderId: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     try {
         const { data: item, error: fetchErr } = await supabase
@@ -1295,8 +1291,7 @@ export async function removeOrderItem(itemId: string, orderId: string) {
 }
 
 export async function updateOrderDiscount(orderId: string, discountAmount: number, discountRemark: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     try {
         const { data: order } = await supabase
@@ -1337,8 +1332,7 @@ const STATUS_ORDER_TYPE: Record<string, string> = {
 }
 
 export async function updateOrderStatus(orderId: string, status: string, deliveryPartnerId?: string, trackingNumber?: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     try {
         const { data: order, error: fetchErr } = await supabase
@@ -1487,8 +1481,7 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
 }
 
 export async function updateOrderDeliveryPartner(orderId: string, deliveryPartnerId: string | null) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     try {
         const { error } = await supabase

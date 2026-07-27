@@ -1,12 +1,10 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 
 export async function getFlashSales() {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { data, error } = await supabase
     .from('flash_sales')
     .select('*, products(name, thumbnail_url), categories(name)')
@@ -17,8 +15,7 @@ export async function getFlashSales() {
 }
 
 export async function getFlashSale(id: string) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { data, error } = await supabase
     .from('flash_sales')
     .select('*')
@@ -29,8 +26,7 @@ export async function getFlashSale(id: string) {
 }
 
 export async function createFlashSale(formData: FormData) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const payload = JSON.parse(formData.get("payload") as string)
 
   try {
@@ -56,8 +52,7 @@ export async function createFlashSale(formData: FormData) {
 }
 
 export async function updateFlashSale(id: string, formData: FormData) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const payload = JSON.parse(formData.get("payload") as string)
 
   try {
@@ -86,16 +81,14 @@ export async function updateFlashSale(id: string, formData: FormData) {
 }
 
 export async function deleteFlashSale(id: string) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { error } = await supabase.from('flash_sales').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/flash-sales')
 }
 
 export async function toggleFlashSale(id: string, isActive: boolean) {
-  await requireAdmin()
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { error } = await supabase
     .from('flash_sales')
     .update({ is_active: isActive, updated_at: new Date().toISOString() })

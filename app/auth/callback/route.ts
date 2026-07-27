@@ -37,10 +37,10 @@ export async function GET(request: Request) {
     // 1. DYNAMICALLY DETECT THE REAL DOMAIN
     // Hostinger's proxy tells us the real domain in these headers
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host')
-    const protocol = request.headers.get('x-forwarded-proto') || 'https'
+    const forwardedProto = request.headers.get('x-forwarded-proto')
+    const protocol = forwardedProto || (host?.includes('localhost') ? 'http' : 'https')
 
-    // Fallback to your hardcoded domain if the headers are missing for any reason
-    const cleanOrigin = host ? `${protocol}://${host}` : 'https://themakeupstorewangkhei.com'
+    const cleanOrigin = host ? `${protocol}://${host}` : requestUrl.origin
 
     if (code) {
         const supabase = await createClient()

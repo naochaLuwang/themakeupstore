@@ -1,7 +1,6 @@
 "use server"
 
 import { v2 as cloudinary } from 'cloudinary'
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 
@@ -23,8 +22,7 @@ async function uploadToCloudinary(file: File): Promise<string> {
 }
 
 export async function createShowcaseItem(formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const file = formData.get("image") as File | null
     let image_url = formData.get("image_url") as string | null
@@ -51,8 +49,7 @@ export async function createShowcaseItem(formData: FormData) {
 }
 
 export async function updateShowcaseItem(id: string, formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const file = formData.get("image") as File | null
     let image_url = formData.get("image_url") as string | null
@@ -81,8 +78,7 @@ export async function updateShowcaseItem(id: string, formData: FormData) {
 }
 
 export async function deleteShowcaseItem(id: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase.from("showcase_items").delete().eq("id", id)
     if (error) return { success: false, message: error.message }
@@ -92,8 +88,7 @@ export async function deleteShowcaseItem(id: string) {
 }
 
 export async function toggleShowcaseItem(id: string, current: boolean) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase.from("showcase_items").update({
         is_active: !current,

@@ -519,8 +519,7 @@ export async function createFreeGift(formData: {
     expires_at?: string
     is_active?: boolean
 }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { qualifying_product_ids, qualifying_category_ids, qualifying_brands, ...ruleData } = formData
 
     const { data: rule, error } = await supabase
@@ -594,8 +593,7 @@ export async function updateFreeGift(id: string, formData: {
     expires_at?: string
     is_active?: boolean
 }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { qualifying_product_ids, qualifying_category_ids, qualifying_brands, ...ruleData } = formData
 
     const { error } = await supabase
@@ -658,15 +656,13 @@ export async function updateFreeGift(id: string, formData: {
 }
 
 export async function deleteFreeGift(id: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('free_gifts').delete().eq('id', id)
     if (error) throw error
 }
 
 export async function toggleFreeGiftStatus(id: string, currentStatus: boolean) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase
         .from('free_gifts')
         .update({ is_active: !currentStatus })
@@ -700,8 +696,7 @@ export async function createBXGY(formData: {
     expires_at?: string
     is_active?: boolean
 }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { buy_product_ids, buy_category_ids, buy_brands, get_product_ids, ...ruleData } = formData
 
     const { data: rule, error } = await supabase
@@ -769,8 +764,7 @@ export async function updateBXGY(id: string, formData: {
     expires_at?: string
     is_active?: boolean
 }) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { buy_product_ids, buy_category_ids, buy_brands, get_product_ids, ...ruleData } = formData
 
     const { error } = await supabase
@@ -826,15 +820,13 @@ export async function updateBXGY(id: string, formData: {
 }
 
 export async function deleteBXGY(id: string) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('buy_x_get_y').delete().eq('id', id)
     if (error) throw error
 }
 
 export async function toggleBXGYStatus(id: string, currentStatus: boolean) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase
         .from('buy_x_get_y')
         .update({ is_active: !currentStatus })

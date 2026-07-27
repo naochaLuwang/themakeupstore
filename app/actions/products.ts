@@ -1,7 +1,6 @@
 "use server"
 
 import { v2 as cloudinary } from 'cloudinary'
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 
@@ -15,8 +14,7 @@ cloudinary.config({
  * CREATE PRODUCT
  */
 export async function createProduct(formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const payload = JSON.parse(formData.get("payload") as string)
     if (!payload || typeof payload !== 'object') throw new Error("Invalid product payload")
     if (!payload.name || typeof payload.name !== 'string') throw new Error("Product name is required")
@@ -130,8 +128,7 @@ export async function createProduct(formData: FormData) {
  * UPDATE PRODUCT
  */
 export async function updateProduct(productId: string, formData: FormData) {
-    await requireAdmin()
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const payload = JSON.parse(formData.get("payload") as string)
     const files = formData.getAll("files") as File[]
 

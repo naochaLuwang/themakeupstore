@@ -1,14 +1,12 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 import { variantOptionSchema, type VariantFormValues } from "@/lib/validations/variants"
 
 export async function createVariantWithValues(data: VariantFormValues) {
     try {
-        await requireAdmin()
-        const supabase = await createClient()
+        const { supabase } = await requireAdmin()
 
         if (!data.name || typeof data.name !== 'string') throw new Error("Variant name is required")
 
