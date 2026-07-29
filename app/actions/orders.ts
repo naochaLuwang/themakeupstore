@@ -12,7 +12,6 @@ import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from "@/lib/cart-cons
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 async function atomicDecrementStock(supabase: Awaited<ReturnType<typeof createClient>>, variantId: string, quantity: number) {
-    // Try the RPC first (atomic).
     const { error: rpcErr } = await supabase.rpc('decrement_stock', {
         row_id: variantId,
         amount: quantity
@@ -22,10 +21,7 @@ async function atomicDecrementStock(supabase: Awaited<ReturnType<typeof createCl
 
     console.warn("RPC decrement_stock failed, falling back to optimistic-lock decrement")
 
-    // Retry loop with optimistic locking to ensure atomicity.
-    // Reads current stock, computes new stock, applies UPDATE only if the
-    // row's stock still matches the read value (prevents concurrent oversell).
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
         const { data: variant } = await supabase
             .from('product_variants')
             .select('stock')
@@ -48,14 +44,15 @@ async function atomicDecrementStock(supabase: Awaited<ReturnType<typeof createCl
             .from('product_variants')
             .update({ stock: newStock })
             .eq('id', variantId)
-            .eq('stock', currentStock) // optimistic lock: only update if stock hasn't changed
+            .eq('stock', currentStock)
             .select('id')
             .single()
 
-        if (!updateErr && updated) {
-            return true // successfully decremented
+        if (!updateErr && updated) return true
+
+        if (attempt < 4) {
+            await new Promise(r => setTimeout(r, Math.min(50 * Math.pow(2, attempt) + Math.random() * 50, 1000)))
         }
-        // Update didn't match — concurrent modification, retry
     }
     console.error("All stock decrement attempts failed for", variantId)
     return false
@@ -87,8 +84,17 @@ export async function placeOrder(
     // Hoisted for catch rollback access
     const stockDecremented: { variantId: string; quantity: number; table?: string }[] = []
     let createdOrderId: string | null = null
+    let capturedCartId: string | null = null
 
     try {
+        // ── CAPTURE CART ID AT PLACEMENT TIME (before any async work) ──
+        const { data: existingCart } = await supabase
+            .from("carts")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle()
+        capturedCartId = existingCart?.id || null
+
         // ── HELPER: batch fetch variants ──
         async function batchVariants(ids: string[]) {
             const unique = [...new Set(ids)]
@@ -504,10 +510,44 @@ export async function placeOrder(
             }
         }
 
+        // ── 3b. RE-VERIFY GIFT CARD ──
+        let verifiedGiftCardAmount = 0;
+        if (giftCardDetails?.code && giftCardDetails?.amount > 0) {
+            const { data: gc } = await supabase
+                .from('gift_cards')
+                .select('remaining_balance, status, expires_at')
+                .eq('code', giftCardDetails.code)
+                .single()
+            if (!gc) throw new Error("Gift card not found")
+            if (gc.status !== 'active') throw new Error("Gift card is no longer active")
+            if (gc.expires_at && new Date(gc.expires_at) < new Date()) throw new Error("Gift card has expired")
+            if (Number(gc.remaining_balance) <= 0) throw new Error("Gift card has no remaining balance")
+            const maxApplicable = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount + verifiedShippingPrice))
+            verifiedGiftCardAmount = Math.min(Number(gc.remaining_balance), maxApplicable)
+        }
+
+        // ── 3c. RE-VERIFY REWARD COUPON ──
+        let verifiedRewardCouponDiscount = 0;
+        if (rewardCoupon?.id) {
+            const { data: rc } = await supabase
+                .from('reward_coupons')
+                .select('discount_amount, min_order_value, used')
+                .eq('id', rewardCoupon.id)
+                .eq('user_id', user.id)
+                .single()
+            if (!rc || rc.used) throw new Error("Reward coupon is no longer valid")
+            const subtotalAfterDiscounts = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - verifiedGiftCardAmount + verifiedShippingPrice))
+            if (rc.min_order_value && subtotalAfterDiscounts < Number(rc.min_order_value)) throw new Error("Minimum order value not met for reward coupon")
+            verifiedRewardCouponDiscount = Math.min(Number(rc.discount_amount), subtotalAfterDiscounts)
+        }
+
+        // ── 3d. SHIPPING METHOD REQUIRED ──
+        if (!shippingDetails.shipping_method_id) {
+            throw new Error("Please select a delivery address with a valid shipping option")
+        }
+
         // ── 4. FINAL TOTAL CALCULATION ──
-        const giftCardAmount = giftCardDetails?.amount || 0
-        const rewardCouponDiscount = rewardCoupon?.discount || 0
-        const finalTotal = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - giftCardAmount - rewardCouponDiscount + verifiedShippingPrice))
+        const finalTotal = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - verifiedGiftCardAmount - verifiedRewardCouponDiscount + verifiedShippingPrice))
 
         // ── 5. Build order items array ──
         const orderItems: any[] = verifiedItems.map(item => ({
@@ -601,7 +641,7 @@ export async function placeOrder(
                 promo_code: promoDetails?.code || null,
                 promo_discount_amount: verifiedDiscount,
                 bxgy_discount_amount: verifiedBXGYDiscount || 0,
-                gift_card_discount: giftCardAmount,
+                gift_card_discount: verifiedGiftCardAmount,
             }])
             .select()
             .single()
@@ -616,28 +656,60 @@ export async function placeOrder(
 
         if (itemsError) throw itemsError
 
-        // STOCK DECREMENT AFTER ORDER COMMIT (crash leaves orphaned order, not lost stock)
+        // STOCK DECREMENT AFTER ORDER COMMIT (parallel, all-or-nothing via Promise.allSettled)
+        const decrementOps: { variantId: string; quantity: number; source: 'variant' | 'gift_products'; label?: string }[] = []
+
         for (const item of cartItems) {
             if (item.is_gift || item.is_bxgy_free) continue
-            const ok = await atomicDecrementStock(supabase, item.variantId, item.quantity)
-            if (!ok) throw new Error(`Insufficient stock for ${item.name}`)
-            stockDecremented.push({ variantId: item.variantId, quantity: item.quantity })
+            decrementOps.push({ variantId: item.variantId, quantity: item.quantity, source: 'variant', label: item.name })
         }
         for (const gift of verifiedGiftItems) {
-            if (gift.giftSource === 'ref') {
-                const { data: gp } = await supabase.from('gift_products').select('stock').eq('id', gift.variantId).single()
-                if (!gp || gp.stock < gift.quantity) throw new Error('Free gift is no longer available')
+            decrementOps.push({
+                variantId: gift.variantId,
+                quantity: gift.quantity,
+                source: gift.giftSource === 'ref' ? 'gift_products' : 'variant',
+                label: gift.product_name || 'Free Gift',
+            })
+        }
+
+        const decResults = await Promise.allSettled(decrementOps.map(async (op) => {
+            if (op.source === 'gift_products') {
+                const { data: gp } = await supabase.from('gift_products').select('stock').eq('id', op.variantId).single()
+                if (!gp || gp.stock < op.quantity) throw new Error(`Free gift is no longer available`)
                 const { error: gpErr } = await supabase
                     .from('gift_products')
-                    .update({ stock: Math.max(0, gp.stock - gift.quantity) })
-                    .eq('id', gift.variantId)
+                    .update({ stock: Math.max(0, gp.stock - op.quantity) })
+                    .eq('id', op.variantId)
                 if (gpErr) throw new Error('Failed to decrement gift stock')
-                stockDecremented.push({ variantId: gift.variantId, quantity: gift.quantity, table: 'gift_products' })
             } else {
-                const ok = await atomicDecrementStock(supabase, gift.variantId, gift.quantity)
-                if (!ok) throw new Error(`Free gift is no longer available`)
-                stockDecremented.push({ variantId: gift.variantId, quantity: gift.quantity })
+                const ok = await atomicDecrementStock(supabase, op.variantId, op.quantity)
+                if (!ok) throw new Error(`Insufficient stock for ${op.label || op.variantId}`)
             }
+        }))
+
+        const failedDec = decResults.filter(r => r.status === 'rejected')
+        if (failedDec.length > 0) {
+            // Track only the ones that succeeded for rollback
+            decResults.forEach((r, i) => {
+                if (r.status === 'fulfilled') {
+                    const op = decrementOps[i]
+                    stockDecremented.push({
+                        variantId: op.variantId,
+                        quantity: op.quantity,
+                        table: op.source === 'gift_products' ? 'gift_products' : undefined,
+                    })
+                }
+            })
+            throw new Error(`Stock decrement failed for ${failedDec.length} item(s)`)
+        }
+
+        // All succeeded — track for potential rollback
+        for (const op of decrementOps) {
+            stockDecremented.push({
+                variantId: op.variantId,
+                quantity: op.quantity,
+                table: op.source === 'gift_products' ? 'gift_products' : undefined,
+            })
         }
 
         // Non-critical follow-up (fire-and-forget, won't fail order)
@@ -680,7 +752,7 @@ export async function placeOrder(
         if (giftCardDetails) {
             try {
                 const { data: gc } = await supabase.from('gift_cards').select('id').eq('code', giftCardDetails.code).single()
-                if (gc) await supabase.from('gift_card_redemptions').insert({ gift_card_id: gc.id, order_id: order.id, amount: giftCardDetails.amount })
+                if (gc) await supabase.from('gift_card_redemptions').insert({ gift_card_id: gc.id, order_id: order.id, amount: verifiedGiftCardAmount })
             } catch {}
         }
 
@@ -689,6 +761,14 @@ export async function placeOrder(
         }
 
         try { const { earnOrderPoints } = await import("./loyalty"); await earnOrderPoints(user.id, order.id, finalTotal) } catch {}
+
+        // ── CLEAN UP DB CART (only the cart that existed at order placement) ──
+        if (capturedCartId) {
+            try {
+                await supabase.from("cart_items").delete().eq("cart_id", capturedCartId)
+                await supabase.from("carts").delete().eq("id", capturedCartId)
+            } catch {}
+        }
 
         revalidatePath("/admin/orders")
         revalidatePath("/profile")
@@ -1178,6 +1258,7 @@ export async function updateOrderPOS(
     orderId: string, 
     items: any[], 
     globalDiscount: number = 0,
+    shippingPrice: number = 0,
     additionalCharges: number = 0,
     additionalChargesLabel: string = 'Extra Charges'
 ) {
@@ -1251,12 +1332,13 @@ export async function updateOrderPOS(
 
     // 4. UPDATE ORDER TOTALS
     const itemsTotal = data.items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0);
-    const finalTotal = Math.round(itemsTotal - data.globalDiscount + data.additionalCharges);
+    const finalTotal = Math.round(itemsTotal - data.globalDiscount + shippingPrice + data.additionalCharges);
 
     const { error: orderUpdateError } = await supabase
         .from('orders')
         .update({
             total: finalTotal,
+            shipping_price: shippingPrice,
             promo_discount_amount: data.globalDiscount,
             additional_charges: data.additionalCharges,
             additional_charges_label: data.additionalChargesLabel,

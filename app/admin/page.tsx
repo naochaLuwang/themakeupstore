@@ -122,10 +122,12 @@ export default async function AdminDashboard({ searchParams }: {
     ]
 
     let ordersRes: any, priorRes: any, todayRes: any, msgsRes: any, wlRes: any, invRes: any, refundRes: any,
-        trafficRes: any, catRes: any, newCustRes: any
+        trafficRes: any, catRes: any, newCustRes: any,
+        sessions24hRes: any, orders24hRes: any
+    const since24h = toIso(subDays(now, 1))
     try {
         [ordersRes, priorRes, todayRes, msgsRes, wlRes, invRes, refundRes,
-            trafficRes, catRes, newCustRes] = await Promise.all([
+            trafficRes, catRes, newCustRes, sessions24hRes, orders24hRes] = await Promise.all([
             supabase.from("orders").select(`id,total,status,payment_status,payment_method,promo_code,created_at,user_id,
                 order_items(quantity,product_name,product_id,unit_price),profiles!orders_user_id_fkey(full_name)`)
                 .gte("created_at", startDate).lte("created_at", endDate).order("created_at", { ascending: false }),
@@ -138,10 +140,13 @@ export default async function AdminDashboard({ searchParams }: {
             supabase.from("product_variants").select("id,stock"),
             supabase.from("orders").select("id", { count: "exact" }).eq("payment_status", "refunded")
                 .gte("created_at", startDate).lte("created_at", endDate),
-            supabase.from("traffic_log").select("id", { count: "exact", head: true }).gte("created_at", toIso(subDays(now, 1))),
+            supabase.from("traffic_log").select("id", { count: "exact", head: true }).gte("created_at", since24h),
             supabase.from("product_categories").select("product_id,categories!inner(name)"),
             supabase.from("orders").select("user_id")
                 .lt("created_at", startDate).not("user_id", "is", null),
+            supabase.from("traffic_log").select("session_id").gte("created_at", since24h),
+            supabase.from("orders").select("id", { count: "exact" })
+                .gte("created_at", since24h).not("status", "eq", "cancelled"),
         ])
     } catch {
         ordersRes = { data: [], count: 0 }
@@ -154,6 +159,8 @@ export default async function AdminDashboard({ searchParams }: {
         trafficRes = { count: 0 }
         catRes = { data: [] }
         newCustRes = { data: [] }
+        sessions24hRes = { data: [] }
+        orders24hRes = { count: 0 }
     }
 
     // ── Derived ──
@@ -194,7 +201,9 @@ export default async function AdminDashboard({ searchParams }: {
     const unreadMsg = msgsRes.count || 0
     const pendingWl = wlRes.count || 0
     const traffic24h = trafficRes.count || 0
-    const conversion = traffic24h > 0 ? ((todayCnt / traffic24h) * 100) : 0
+    const uniqueSessions24h = new Set((sessions24hRes.data || []).map((s: any) => s.session_id)).size
+    const orders24h = orders24hRes.count || 0
+    const conversion = uniqueSessions24h > 0 ? ((orders24h / uniqueSessions24h) * 100) : 0
 
     // New vs returning customers
     const returningIds = new Set((newCustRes.data || []).map((r: any) => r.user_id).filter(Boolean))

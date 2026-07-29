@@ -121,15 +121,14 @@ export default function InventoryRegistryWrapper({
         if (newStock === currentStock) return
 
         setSavingId(id)
-        try {
-            await updateStock(id, newStock)
+        const result = await updateStock(id, newStock)
+        if (result.success) {
             toast.success("Stock updated")
             router.refresh()
-        } catch (err: any) {
-            toast.error(err.message || "Error updating stock")
-        } finally {
-            setSavingId(null)
+        } else {
+            toast.error(result.message || "Error updating stock")
         }
+        setSavingId(null)
     }
 
     const handleBulkApply = async () => {
@@ -155,11 +154,7 @@ export default function InventoryRegistryWrapper({
             else if (bulkAction === "add") newStock = currentStock + val
             else if (bulkAction === "subtract") newStock = Math.max(0, currentStock - val)
 
-            try {
-                await updateStock(id, newStock)
-            } catch {
-                // continue with next
-            }
+            await updateStock(id, newStock)
         }
         setIsBulkUpdating(false)
         setBulkProgress({ current: 0, total: 0 })

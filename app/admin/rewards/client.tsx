@@ -15,9 +15,13 @@ function RewardsTable({ rewards, onEdit }: { rewards: any[]; onEdit: (r: any) =>
     const [deleting, setDeleting] = useState<string | null>(null)
 
     const handleToggle = async (id: string, active: boolean) => {
-        await toggleRewardProduct(id, active)
-        toast.success(active ? "Reward disabled" : "Reward enabled")
-        router.refresh()
+        const res = await toggleRewardProduct(id, active)
+        if (res?.success) {
+            toast.success(active ? "Reward disabled" : "Reward enabled")
+            router.refresh()
+        } else {
+            toast.error(res?.message || "Failed to update reward")
+        }
     }
 
     const handleDelete = async (id: string) => {

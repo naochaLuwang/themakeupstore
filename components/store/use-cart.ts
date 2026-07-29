@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from '@/lib/cart-constants';
-import { saveCart } from '@/app/actions/cart';
 
 export interface CartItem {
     id: string;
@@ -377,22 +376,3 @@ export const useCart = create<CartStore>()(
     )
 );
 
-// Debounced server-side cart sync for logged-in users
-let syncTimer: ReturnType<typeof setTimeout> | null = null;
-useCart.subscribe((state, prev) => {
-    if (state.items === prev.items) return;
-    if (syncTimer) clearTimeout(syncTimer);
-    syncTimer = setTimeout(() => {
-        saveCart(state.items.map(item => ({
-            productId: item.productId,
-            variantId: item.variantId,
-            name: item.name,
-            variantTitle: item.variantTitle,
-            price: item.price,
-            mrp: item.mrp,
-            image: item.image,
-            quantity: item.quantity,
-            stock: item.stock,
-        })));
-    }, 10000);
-});

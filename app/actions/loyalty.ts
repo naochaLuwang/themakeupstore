@@ -381,11 +381,13 @@ export async function updateRewardProduct(id: string, formData: FormData) {
 export async function toggleRewardProduct(id: string, currentActive: boolean) {
   await requireAdmin()
   const supabase = await createAdminClient()
-  await supabase.from("reward_products").update({
+  const { error } = await supabase.from("reward_products").update({
     active: !currentActive,
     updated_at: new Date().toISOString(),
   }).eq("id", id)
+  if (error) return { success: false, message: error.message }
   revalidatePath("/admin/rewards")
+  return { success: true }
 }
 
 // ─── Admin: delete reward product ───

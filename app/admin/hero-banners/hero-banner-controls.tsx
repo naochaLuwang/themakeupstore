@@ -9,11 +9,14 @@ export function HeroBannerToggle({ id, isActive }: { id: string, isActive: boole
     const [loading, setLoading] = useState(false)
     const handleToggle = async () => {
         setLoading(true)
-        try {
-            await toggleHeroBanner(id, isActive)
+        const res = await toggleHeroBanner(id, isActive)
+        if (res?.success) {
             toast.success("Status updated")
-        } catch (err) { toast.error("Failed to update status") }
-        finally { setLoading(false) }
+            window.location.reload()
+        } else {
+            toast.error(res?.message || "Failed to update status")
+        }
+        setLoading(false)
     }
     return (
         <button onClick={handleToggle} disabled={loading} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${isActive ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>

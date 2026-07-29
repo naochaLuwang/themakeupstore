@@ -13,6 +13,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
     const { id: orderId } = use(params)
     const [items, setItems] = useState<any[]>([])
     const [globalDiscount, setGlobalDiscount] = useState(0)
+    const [shippingPrice, setShippingPrice] = useState(0)
     const [additionalCharges, setAdditionalCharges] = useState(0)
     const [additionalChargesLabel, setAdditionalChargesLabel] = useState("Extra Charges")
     const [searchQuery, setSearchQuery] = useState("")
@@ -30,6 +31,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
             if (orderItems) setItems(orderItems)
             if (order) {
                 setGlobalDiscount(Number(order.promo_discount_amount || 0))
+                setShippingPrice(Number(order.shipping_price || 0))
                 setAdditionalCharges(Number(order.additional_charges || 0))
                 setAdditionalChargesLabel(order.additional_charges_label || "Extra Charges")
             }
@@ -92,7 +94,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
 
     const handleSave = async () => {
         setLoading(true)
-        const res = await updateOrderPOS(orderId, items, globalDiscount, additionalCharges, additionalChargesLabel)
+        const res = await updateOrderPOS(orderId, items, globalDiscount, shippingPrice, additionalCharges, additionalChargesLabel)
         if (res.success) {
             toast.success("Order Synced Successfully")
             router.push('/admin/orders')
@@ -104,7 +106,7 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
 
     // --- TOTALS ---
     const subtotal = items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
-    const finalTotal = Math.round(subtotal - globalDiscount + additionalCharges);
+    const finalTotal = Math.round(subtotal + shippingPrice - globalDiscount + additionalCharges);
 
     if (loading) return <div className="p-20 text-center font-black animate-pulse">BOOTING POS...</div>
 
@@ -238,7 +240,12 @@ export default function OrderPOSPage({ params }: { params: Promise<{ id: string 
                                 <span className="text-slate-400 font-bold uppercase text-[10px]">Subtotal</span>
                                 <span className="font-bold">₹{subtotal.toLocaleString()}</span>
                             </div>
-
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-400 font-bold uppercase text-[10px] flex items-center gap-2">
+                                    <Truck className="w-3 h-3" /> Shipping
+                                </span>
+                                <span className="font-bold">₹{shippingPrice.toLocaleString()}</span>
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-3">
                                     <label className="text-slate-400 font-bold uppercase text-[10px] flex items-center gap-2">

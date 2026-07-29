@@ -9,6 +9,7 @@ import { createClient } from "@/utils/supabase/server";
 import localFont from "next/font/local";
 import NextTopLoader from "nextjs-toploader";
 import PushInitializer from "@/components/PushInitializer"
+import { PageTracker } from "@/components/store/page-tracker"
 import { Suspense } from "react"
 
 const myBrandFont = localFont({
@@ -112,6 +113,7 @@ export default async function RootLayout({
             <AuthCartSync />
           </Suspense>
           <PushInitializer />
+          <PageTracker />
 
           <main>
             {children}

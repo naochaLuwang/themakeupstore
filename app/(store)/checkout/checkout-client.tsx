@@ -202,8 +202,11 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     }
 
     const handlePlaceOrder = async () => {
-        if (!selectedAddress || !selectedShippingId) {
+        if (!selectedAddress) {
             return toast.error("Please select a delivery address")
+        }
+        if (!selectedShippingId) {
+            return toast.error("Sorry, we don't deliver to your pincode yet")
         }
         setLoading(true)
         try {

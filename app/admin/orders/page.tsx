@@ -434,11 +434,6 @@ export default function AdminOrdersPage() {
                                     </TableCell>
                                     <TableCell className="py-4 px-6 text-right">
                                         <div className="flex justify-end items-center gap-2">
-                                            {order.status === 'pending' && (
-                                                <Button variant="outline" size="sm" asChild className="rounded-lg h-9 px-3 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white text-xs font-semibold">
-                                                    <Link href={`/admin/orders/${order.id}/edit`}>Edit</Link>
-                                                </Button>
-                                            )}
                                             <Button variant="outline" size="icon" asChild className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400">
                                                 <Link href={`/admin/orders/${order.id}`}>
                                                     <Eye className="w-4 h-4" />
@@ -534,11 +529,6 @@ export default function AdminOrdersPage() {
                                             })}
                                         </SelectContent>
                                     </Select>
-                                    {order.status === 'pending' && (
-                                        <Button variant="outline" size="sm" asChild className="rounded-lg h-8 px-3 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white text-[10px] font-semibold">
-                                            <Link href={`/admin/orders/${order.id}/edit`}>Edit</Link>
-                                        </Button>
-                                    )}
                                 </div>
                                 {order.delivery_partner_id && (
                                     <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
