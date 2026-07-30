@@ -29,6 +29,7 @@ export function AddressForm({
     const [phone, setPhone] = useState(initialData?.phone ?? "")
     const [pincode, setPincode] = useState(initialData?.pincode ?? "")
     const [street, setStreet] = useState(initialData?.street ?? "")
+    const [landmark, setLandmark] = useState(initialData?.landmark ?? "")
     const [areaName, setAreaName] = useState(initialData?.area_name ?? "")
     const [city, setCity] = useState(initialData?.city ?? "")
     const [state, setState] = useState(initialData?.state ?? "")
@@ -120,6 +121,7 @@ export function AddressForm({
                 full_name: fullName,
                 phone,
                 street,
+                landmark,
                 city,
                 state,
                 pincode,
@@ -285,9 +287,15 @@ export function AddressForm({
                         <textarea
                             value={street}
                             onChange={e => setStreet(e.target.value)}
-                            placeholder="Street Address, House No, Landmark"
+                            placeholder="Street Address, House No"
                             className="w-full min-h-[100px] pl-12 pt-4 pr-4 rounded-2xl border-2 border-slate-100 focus:border-slate-900 focus:outline-none text-sm"
                         />
+                    </div>
+                    <div className="relative">
+                        <Input value={landmark} onChange={e => setLandmark(e.target.value)} placeholder="Landmark *" className="h-14 rounded-2xl pl-4" />
+                        {landmark.length > 0 && landmark.length < 2 && (
+                            <p className="text-[11px] text-red-500 ml-1">Landmark is required</p>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <Input value={city} onChange={e => setCity(e.target.value)} placeholder="City" className="h-14 rounded-2xl" />
@@ -297,7 +305,7 @@ export function AddressForm({
                     <div className="flex gap-2 pt-4">
                         <Button variant="ghost" onClick={() => setStep(2)} className="h-14 w-14 rounded-2xl"><ArrowLeft className="w-4 h-4" /></Button>
                         <Button
-                            disabled={loading || !street || !city}
+                            disabled={loading || !street || !landmark || !city}
                             onClick={handleSubmit}
                             className="flex-1 h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-slate-200"
                         >

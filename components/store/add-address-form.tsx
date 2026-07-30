@@ -21,6 +21,7 @@ export function AddAddressForm({ userId, onSuccess }: { userId: string, onSucces
             full_name: formData.get("full_name"),
             phone: formData.get("phone"),
             street: formData.get("street"),
+            landmark: formData.get("landmark") || "",
             city: formData.get("city"),
             state: formData.get("state"),
             pincode: formData.get("pincode"),
@@ -49,6 +50,7 @@ export function AddAddressForm({ userId, onSuccess }: { userId: string, onSucces
             <Input name="phone" placeholder="Phone Number" required />
             <Input name="label" placeholder="Label (e.g. Office)" />
             <Input name="street" placeholder="Street / House No." required className="md:col-span-2" />
+            <Input name="landmark" placeholder="Landmark" required className="md:col-span-2" />
             <Input name="city" placeholder="City" required />
             <Input name="state" placeholder="State" required />
             <Input name="pincode" placeholder="Pincode" required />

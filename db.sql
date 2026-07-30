@@ -380,6 +380,7 @@ CREATE TABLE public.user_addresses (
   full_name text NOT NULL,
   phone text NOT NULL,
   street text NOT NULL,
+  landmark text NOT NULL DEFAULT '',
   city text NOT NULL,
   state text NOT NULL,
   pincode text NOT NULL,

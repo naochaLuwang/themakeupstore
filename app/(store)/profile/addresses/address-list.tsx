@@ -81,7 +81,7 @@ export function AddressList({ initialAddresses, userId }: { initialAddresses: an
                                     )}
                                 </div>
                                 <p className="text-xs text-gray-600 leading-relaxed">
-                                    {addr.street}
+                                    {addr.street}{addr.landmark ? `, ${addr.landmark}` : ""}
                                 </p>
                                 <p className="text-xs text-gray-600">
                                     {addr.city}, {addr.state} &mdash; {addr.pincode}

@@ -370,7 +370,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             Deliver to: <span className="font-semibold">{selectedAddress.full_name}</span>
                         </p>
                         <p className="text-xs text-gray-400 truncate mt-0.5">
-                            {selectedAddress.street}, {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}
+                            {selectedAddress.street}{selectedAddress.landmark ? `, ${selectedAddress.landmark}` : ""}, {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}
                         </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -832,7 +832,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                                 <span className="text-sm font-semibold text-gray-900">{addr.full_name}</span>
                                             </div>
                                             <p className="text-xs text-gray-500 leading-relaxed">
-                                                {addr.street}{addr.area_name ? `, ${addr.area_name}` : ""}, {addr.city}, {addr.state} - {addr.pincode}
+                                                {addr.street}{addr.landmark ? `, ${addr.landmark}` : ""}{addr.area_name ? `, ${addr.area_name}` : ""}, {addr.city}, {addr.state} - {addr.pincode}
                                             </p>
                                             <p className="text-xs text-gray-400 mt-1">{addr.phone}</p>
                                         </div>

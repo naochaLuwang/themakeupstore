@@ -35,7 +35,7 @@ export function AddressCard({ addr, isSelected, onSelect, onEdit, onDelete }: Ad
                         </span>
                         <p className="text-sm font-bold text-slate-900 leading-none">{addr.full_name}</p>
                         <p className="text-[11px] text-slate-500 leading-snug">
-                            {addr.street}, {addr.city}
+                            {addr.street}{addr.landmark ? `, ${addr.landmark}` : ""}, {addr.city}
                         </p>
                     </div>
                 </div>
