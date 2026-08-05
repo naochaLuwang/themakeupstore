@@ -30,14 +30,20 @@ export async function initGoogleAuth() {
 export async function nativeGoogleSignIn(): Promise<{ idToken: string; email: string; name?: string; nonce: string } | null> {
   await initGoogleAuth()
 
-  const result = await GoogleOneTapAuth.signInWithGoogleButtonFlowForNativePlatform()
-  if (result.isSuccess && result.success) {
-    return {
-      idToken: result.success.idToken,
-      email: result.success.email,
-      name: result.success.decodedIdToken?.name,
-      nonce: rawNonce!,
+  try {
+    const result = await GoogleOneTapAuth.signInWithGoogleButtonFlowForNativePlatform()
+    console.log('Google sign-in result:', JSON.stringify(result))
+    if (result.isSuccess && result.success) {
+      return {
+        idToken: result.success.idToken,
+        email: result.success.email,
+        name: result.success.decodedIdToken?.name,
+        nonce: rawNonce!,
+      }
     }
+    console.error('Google sign-in not successful:', JSON.stringify(result))
+  } catch (err: any) {
+    console.error('Google sign-in error:', err?.message || err)
   }
 
   return null
