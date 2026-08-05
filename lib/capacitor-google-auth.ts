@@ -2,12 +2,15 @@ import { GoogleOneTapAuth } from 'capacitor-native-google-one-tap-signin'
 
 const WEB_CLIENT_ID = '127502531027-mqjrtvqavbgaf28dneq8uf2rjpvrqhuj.apps.googleusercontent.com'
 
-let currentNonce: string | null = null
+let rawNonce: string | null = null
 
 function generateNonce(): string {
   const bytes = new Uint8Array(32)
   crypto.getRandomValues(bytes)
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
 }
 
 async function hashNonce(nonce: string): Promise<string> {
@@ -19,8 +22,9 @@ async function hashNonce(nonce: string): Promise<string> {
 }
 
 export async function initGoogleAuth() {
-  currentNonce = generateNonce()
-  await GoogleOneTapAuth.initialize({ clientId: WEB_CLIENT_ID, nonce: currentNonce })
+  rawNonce = generateNonce()
+  const hashedNonce = await hashNonce(rawNonce)
+  await GoogleOneTapAuth.initialize({ clientId: WEB_CLIENT_ID, nonce: hashedNonce })
 }
 
 export async function nativeGoogleSignIn(): Promise<{ idToken: string; email: string; name?: string; nonce: string } | null> {
@@ -32,7 +36,7 @@ export async function nativeGoogleSignIn(): Promise<{ idToken: string; email: st
       idToken: result.success.idToken,
       email: result.success.email,
       name: result.success.decodedIdToken?.name,
-      nonce: await hashNonce(currentNonce!),
+      nonce: rawNonce!,
     }
   }
 
