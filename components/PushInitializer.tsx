@@ -16,9 +16,26 @@ export default function PushInitializer() {
       if (!session) return;
 
       if (isCapacitor()) {
-        const { registerForFCM, setupFCMListeners } = await import('@/lib/capacitor-push')
-        await registerForFCM()
-        setupFCMListeners()
+        try {
+          const { registerForFCM, setupFCMListeners } = await import('@/lib/capacitor-push')
+          await registerForFCM()
+          setupFCMListeners()
+        } catch (err) {
+          console.error('Push registration failed:', err)
+        }
+
+        try {
+          const { App } = await import('@capacitor/app')
+          App.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
+            if (canGoBack) {
+              window.history.back()
+            } else {
+              App.exitApp()
+            }
+          })
+        } catch (err) {
+          console.error('Back button handler failed:', err)
+        }
       } else if ('serviceWorker' in navigator && 'PushManager' in window) {
         registerWebPush(session.user.id);
       }

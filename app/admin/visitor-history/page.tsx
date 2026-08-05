@@ -19,7 +19,7 @@ export default function VisitorHistoryPage() {
     useEffect(() => {
         const fetchAll = async () => {
             const { data } = await supabase
-                .from('visitor_history')
+                .from('traffic_log')
                 .select('*')
                 .order('created_at', { ascending: false })
                 .limit(500)
@@ -28,7 +28,7 @@ export default function VisitorHistoryPage() {
         fetchAll()
 
         const channel = supabase.channel('history-realtime')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'visitor_history' },
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'traffic_log' },
                 (p) => setLogs(prev => [p.new, ...prev]))
             .subscribe()
 
@@ -38,19 +38,18 @@ export default function VisitorHistoryPage() {
     const visitors = useMemo(() => {
         const groups: Record<string, any> = {}
         logs.forEach(log => {
-            if (!groups[log.visitor_id]) {
-                groups[log.visitor_id] = { ...log, totalHits: 0, history: [] }
+            if (!groups[log.session_id]) {
+                groups[log.session_id] = { ...log, totalHits: 0, history: [] }
             }
-            groups[log.visitor_id].totalHits++
-            groups[log.visitor_id].history.push(log)
+            groups[log.session_id].totalHits++
+            groups[log.session_id].history.push(log)
         })
         return Object.values(groups)
             .filter((v: any) =>
                 !searchQuery ||
                 v.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                v.visitor_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                v.path?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                v.session_id?.toLowerCase().includes(searchQuery.toLowerCase())
+                v.session_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                v.path?.toLowerCase().includes(searchQuery.toLowerCase())
             )
             .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     }, [logs, searchQuery])
@@ -96,7 +95,7 @@ export default function VisitorHistoryPage() {
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                     <Input
-                        placeholder="Search visitor, ID, or path..."
+                        placeholder="Search user, session, or path..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 rounded-lg"
@@ -117,11 +116,11 @@ export default function VisitorHistoryPage() {
                     <div className="py-12 text-center text-xs text-slate-400 italic">No visitor data found.</div>
                 ) : (
                     visitors.map((v: any) => {
-                        const isExpanded = expandedVisitor === v.visitor_id
+                        const isExpanded = expandedVisitor === v.session_id
                         return (
-                            <div key={v.visitor_id} className="border-b border-slate-50 last:border-0">
+                            <div key={v.session_id} className="border-b border-slate-50 last:border-0">
                                 <div
-                                    onClick={() => setExpandedVisitor(isExpanded ? null : v.visitor_id)}
+                                    onClick={() => setExpandedVisitor(isExpanded ? null : v.session_id)}
                                     className={`grid grid-cols-12 gap-2 px-4 py-3 items-center cursor-pointer transition-colors hover:bg-slate-50/50 ${isExpanded ? 'bg-blue-50/20' : ''}`}
                                 >
                                     <div className="col-span-4 flex items-center gap-3 min-w-0">
@@ -130,7 +129,7 @@ export default function VisitorHistoryPage() {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-sm font-semibold text-slate-800 truncate">{v.user_name}</p>
-                                            <p className="text-[10px] font-mono text-slate-400 truncate">ID: {v.visitor_id.slice(-8)}</p>
+                                            <p className="text-[10px] font-mono text-slate-400 truncate">ID: {v.session_id.slice(-8)}</p>
                                         </div>
                                     </div>
                                     <div className="col-span-3 min-w-0">
@@ -167,12 +166,6 @@ export default function VisitorHistoryPage() {
                                                         <div className="bg-white px-3 py-2 rounded-lg border border-slate-100 inline-flex items-center gap-2">
                                                             <ExternalLink className="w-3 h-3 text-slate-300" />
                                                             <span className="text-xs font-medium text-slate-700">{step.path}</span>
-                                                            {step.referrer && (
-                                                                <>
-                                                                    <span className="text-slate-200">|</span>
-                                                                    <span className="text-[10px] text-slate-400">via {step.referrer}</span>
-                                                                </>
-                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

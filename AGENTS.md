@@ -55,6 +55,20 @@
 - Migration `20260708_abandoned_cart_cron.sql` sets up pg_cron + pg_net schedule
 - `app.actions.cart.sendRecoveryEmails()` now checks `resp.ok` before marking carts as sent
 
+## WhatsApp Integration
+- **No separate hosting needed** — webhook lives at `app/api/whatsapp/webhook/route.ts` as part of the Next.js app
+- **Core library** (`lib/whatsapp/`): `meta-api.ts` (Meta Cloud API v21.0 client: sendTemplateMessage, sendTextMessage, subscribeToWebhook, registerPhoneNumber, fetchTemplateList), `encryption.ts` (AES-256-GCM token storage), `webhook-verify.ts` (HMAC-SHA256 with timing-safe compare), `phone-utils.ts` (E.164 normalization, IN +91 prefix), `template-builder.ts` (variable substitution for body/header/button params)
+- **Webhook** (`app/api/whatsapp/webhook/route.ts`): GET = Meta challenge-response (checks verify_token against DB config), POST = signature verification → status updates (delivery/read/failed) mirror to `notification_log` → inbound message logging
+- **Send API** (`app/api/whatsapp/send/route.ts`): Admin-only POST endpoint — decrypts token from DB, builds template components, calls Meta API, logs result to `notification_log`
+- **Server action** (`app/actions/whatsapp.ts`): `saveWhatsAppConfig()` (encrypts + stores), `getWhatsAppConfig()` (decrypts for admin), `getMessageTemplates/saveMessageTemplate/deleteMessageTemplate()`, `sendOrderNotification()` (looks up order + customer name, maps status→templateName, builds body with order_number/status/items/trackUrl, sends via Meta API, logs)
+- **Admin page** (`app/admin/whatsapp/`): 3-tab layout (Configuration, Templates, Notification Log); webhook URL display with copy; config form for phone_number_id, waba_id, access_token, verify_token, webhook_secret (all stored encrypted except token decrypted in-memory for admin); template CRUD with body variable hints; live notification log with status icons
+- **Order integration**: `updateOrderStatus()` in `app/actions/orders.ts` auto-sends WhatsApp after push notification (fetches phone via `profiles!orders_user_id_fkey` join, maps status→template_name); `placeOrder()` sends `confirmed` notification on placement (reads phone from `profiles` or `shipping_address.phone`)
+- **Required env var**: `WHATSAPP_ENCRYPTION_KEY` = 64 hex chars (32 bytes) for AES-256-GCM
+- **Setup steps**: (1) Set `WHATSAPP_ENCRYPTION_KEY` in `.env.local`, (2) Run migration `20260801_whatsapp_integration.sql`, (3) Configure WhatsApp Business API credentials in admin panel, (4) Create message templates matching Meta-approved ones, (5) Set webhook URL in Meta Developer App Dashboard
+- **DB tables**: `whatsapp_config` (encrypted credentials), `message_templates` (cached Meta templates), `notification_log` (delivery tracking with status updates from webhook)
+- **Default template name mapping**: confirmed→`order_confirmed`, processing→`order_processing`, shipped→`order_shipped`, delivered→`order_delivered`, cancelled→`order_cancelled` — create these templates (or change the mapping in `sendOrderNotification`)
+- **Phone format**: Indian numbers auto-prefixed with `+91`; standard E.164 expected by Meta
+
 ## Key Decisions
 - Stock for all products (including non-variant) lives in `product_variants` via a default variant with `is_default: true` — never check `products.stock` column
 - Admin layout already provides `bg-slate-50/50` background and `max-w-7xl mx-auto` wrapper — individual pages should NOT add their own bg/wrapper, just use `space-y-6`

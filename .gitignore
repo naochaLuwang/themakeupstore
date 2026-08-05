@@ -66,6 +66,9 @@ supabase/.temp/
 .vscode/
 *.sublime-*
 
+# Local setup guides (not for production)
+WHATSAPP_SETUP_GUIDE.md
+
 # PWA files
 **/public/sw.js
 **/public/sw.js.map
@@ -75,3 +78,11 @@ supabase/.temp/
 **/public/worker-*.js.map
 **/public/fallback-*.js
 **/public/swe-worker-*.js
+
+# Local / temp files
+/tmp/
+/local_manifest.json
+/db.sql
+
+# Dev-only debug scripts (load secrets from .env.local)
+/scripts/

@@ -123,6 +123,7 @@ export const adminConfig = {
                 { title: "Delivery Partners", href: "/admin/delivery-partners", icon: Truck },
                 { title: "Visitor History", href: "/admin/visitor-history", icon: Activity },
                 { title: "Wholesale", href: "/admin/wholesale", icon: Store },
+                { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
                 { title: "Legal Settings", href: "/admin/settings/legal", icon: Settings },
             ],
         },

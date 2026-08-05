@@ -770,6 +770,21 @@ export async function placeOrder(
             } catch {}
         }
 
+        // WhatsApp order confirmation
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('phone, full_name')
+                .eq('id', user.id)
+                .single()
+            const addr = order.shipping_address as Record<string, any> | null
+            const phone = addr?.phone || profile?.phone
+            if (phone) {
+                const { sendOrderNotification } = await import('./whatsapp')
+                sendOrderNotification(order.id, phone, 'confirmed', profile?.full_name || 'Valued Customer')
+            }
+        } catch {}
+
         revalidatePath("/admin/orders")
         revalidatePath("/profile")
         return { success: true, orderId: order.id }
@@ -1465,7 +1480,7 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
     try {
         const { data: order, error: fetchErr } = await supabase
             .from('orders')
-            .select('*, order_items(*)')
+            .select('*, order_items(*), profiles!orders_user_id_fkey(phone, full_name)')
             .eq('id', orderId)
             .single()
 
@@ -1597,6 +1612,25 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
                     } catch {}
                 }
             }
+        }
+
+        // WhatsApp notification
+        if (newStatus !== oldStatus) {
+            try {
+                const customerPhone = order.customer_phone || order.profiles?.phone
+                if (customerPhone) {
+                    const { sendOrderNotification } = await import('./whatsapp')
+                    const result = await sendOrderNotification(
+                        orderId,
+                        customerPhone,
+                        newStatus,
+                        order.profiles?.full_name || 'Valued Customer'
+                    )
+                    if (!result.sent) {
+                        console.warn('WhatsApp notification not sent:', result.reason || result.error)
+                    }
+                }
+            } catch {}
         }
 
         revalidatePath('/admin/orders')

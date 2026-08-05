@@ -114,5 +114,10 @@ export async function sendFcmMulticast(tokens: string[], title: string, body: st
     }
   }
 
-  return { sentCount: results.filter(r => r.status === 'fulfilled').length, invalidTokens }
+  return {
+    sentCount: results.filter(r =>
+      r.status === 'fulfilled' && r.value && 'ok' in r.value
+    ).length,
+    invalidTokens
+  }
 }

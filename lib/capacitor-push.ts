@@ -15,13 +15,20 @@ export async function registerForFCM() {
   const { token } = await FirebaseMessaging.getToken()
   if (!token) return
 
+  // Delete any existing subscription for this user first, then insert new one
+  // This avoids needing a unique constraint on user_id for upsert
   await supabase
     .from('push_subscriptions')
-    .upsert({
+    .delete()
+    .eq('user_id', session.user.id)
+
+  await supabase
+    .from('push_subscriptions')
+    .insert({
       user_id: session.user.id,
       fcm_token: token,
       platform: 'android',
-    }, { onConflict: 'user_id' })
+    })
 }
 
 export async function unregisterFCM() {

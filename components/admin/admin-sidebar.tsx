@@ -15,14 +15,12 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 import Link from "next/link"
-import { LogOut, Sparkles } from "lucide-react"
+import { LogOut, Sparkles, ExternalLink } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 export function AdminSidebar() {
     const supabase = createClient()
-    const router = useRouter()
     const { state } = useSidebar()
     const collapsed = state === "collapsed"
 
@@ -32,8 +30,7 @@ export function AdminSidebar() {
             toast.error("Error signing out")
         } else {
             toast.success("Signed out successfully")
-            router.push("/login")
-            router.refresh()
+            window.location.href = "/login"
         }
     }
 
@@ -42,17 +39,29 @@ export function AdminSidebar() {
             <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
                 {collapsed ? (
                     <div className="flex items-center justify-center">
-                        <Sparkles className="h-5 w-5 text-rose-500" />
+                        <Link href="/" target="_blank" className="flex items-center justify-center">
+                            <Sparkles className="h-5 w-5 text-rose-500" />
+                        </Link>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-400 to-purple-500 flex items-center justify-center shrink-0">
-                            <Sparkles className="w-3.5 h-3.5 text-white" />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-400 to-purple-500 flex items-center justify-center shrink-0">
+                                <Sparkles className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <div className="min-w-0">
+                                <div className="font-bold text-sm text-sidebar-foreground truncate">The Makeup Store</div>
+                                <div className="text-[10px] font-medium text-sidebar-foreground/40 uppercase tracking-wider">Admin Panel</div>
+                            </div>
                         </div>
-                        <div className="min-w-0">
-                            <div className="font-bold text-sm text-sidebar-foreground truncate">The Makeup Store</div>
-                            <div className="text-[10px] font-medium text-sidebar-foreground/40 uppercase tracking-wider">Admin Panel</div>
-                        </div>
+                        <Link
+                            href="/"
+                            target="_blank"
+                            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
+                        >
+                            Visit Store
+                            <ExternalLink className="h-3 w-3" />
+                        </Link>
                     </div>
                 )}
             </SidebarHeader>

@@ -2,7 +2,6 @@ import { GoogleOneTapAuth } from 'capacitor-native-google-one-tap-signin'
 
 const WEB_CLIENT_ID = '127502531027-mqjrtvqavbgaf28dneq8uf2rjpvrqhuj.apps.googleusercontent.com'
 
-let initialized = false
 let currentNonce: string | null = null
 
 function generateNonce(): string {
@@ -11,11 +10,17 @@ function generateNonce(): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+async function hashNonce(nonce: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(nonce)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 export async function initGoogleAuth() {
-  if (initialized) return
   currentNonce = generateNonce()
   await GoogleOneTapAuth.initialize({ clientId: WEB_CLIENT_ID, nonce: currentNonce })
-  initialized = true
 }
 
 export async function nativeGoogleSignIn(): Promise<{ idToken: string; email: string; name?: string; nonce: string } | null> {
@@ -27,7 +32,7 @@ export async function nativeGoogleSignIn(): Promise<{ idToken: string; email: st
       idToken: result.success.idToken,
       email: result.success.email,
       name: result.success.decodedIdToken?.name,
-      nonce: currentNonce!,
+      nonce: await hashNonce(currentNonce!),
     }
   }
 
