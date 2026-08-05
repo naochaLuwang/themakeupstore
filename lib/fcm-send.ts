@@ -2,8 +2,12 @@ const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging'
 const FCM_ENDPOINT = 'https://fcm.googleapis.com/v1/projects/the-makeup-store-7dad3/messages:send'
 
 async function getAccessToken(): Promise<string> {
-  const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+  let keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
   if (!keyJson) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not set')
+
+  keyJson = keyJson.trim()
+  if (keyJson.startsWith('"') && keyJson.endsWith('"')) keyJson = keyJson.slice(1, -1)
+  keyJson = keyJson.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
 
   const key = JSON.parse(keyJson)
   const { private_key, client_email } = key

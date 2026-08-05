@@ -277,7 +277,20 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 const orderRes = await fetch("/api/create-order", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ amount: amountPaise, cartItems: items }),
+                    body: JSON.stringify({
+                        amount: amountPaise,
+                        cartItems: items,
+                        shippingPrice: isFreeShipping ? 0 : shippingPrice,
+                        shippingMethodId: selectedShippingId,
+                        pincode: selectedAddress?.pincode || null,
+                        promoDiscount: discountAmount,
+                        promoCode: appliedPromo?.code || null,
+                        bxgyDiscount,
+                        giftCardCode: giftCard?.code || null,
+                        giftCardDiscount,
+                        rewardCouponId: rewardCoupon?.id || null,
+                        rewardCouponDiscount,
+                    }),
                 })
                 if (!orderRes.ok) {
                     const errData = await orderRes.json()

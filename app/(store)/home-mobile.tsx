@@ -94,6 +94,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) return
     const hidden = localStorage.getItem("app-banner-hidden")
     if (!hidden) setShowAppBanner(true)
   }, [])
