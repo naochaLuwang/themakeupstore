@@ -41,12 +41,13 @@ export async function nativeGoogleSignIn(): Promise<{ idToken: string; email: st
         nonce: rawNonce!,
       }
     }
-    console.error('Google sign-in not successful:', JSON.stringify(result))
+    const errorDetail = JSON.stringify(result)
+    console.error('Google sign-in not successful:', errorDetail)
+    throw new Error(errorDetail)
   } catch (err: any) {
     console.error('Google sign-in error:', err?.message || err)
+    throw err
   }
-
-  return null
 }
 
 export async function nativeGoogleSignOut() {

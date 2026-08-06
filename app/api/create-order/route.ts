@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import { rateLimit } from "@/lib/rate-limit"
 import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from "@/lib/cart-constants"
 import { checkPromoEligibility } from "@/lib/promo-helper"
+import { calculateDiscountedPrice } from "@/lib/price-helper"
 
 const orderLimiter = rateLimit("create-order", { windowMs: 60_000, max: 10 })
 
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
         const variantIds = [...new Set(paidItems.map((i: any) => i.variantId))]
         const { data: variants } = await supabase
             .from("product_variants")
-            .select("id, price, stock")
+            .select("id, price, stock, discount_type, discount_value, product_id, products(name, discount_type, discount_value)")
             .in("id", variantIds)
 
         if (!variants) {
@@ -65,7 +66,16 @@ export async function POST(req: NextRequest) {
             if (db.stock < item.quantity) {
                 return NextResponse.json({ error: `Insufficient stock for ${item.name || item.variantId}` }, { status: 409 })
             }
-            calculatedSubtotal += Math.round(Number(db.price) * item.quantity)
+            const basePrice = Number(db.price)
+            const variantDiscountType: string = (db as any).discount_type || "none"
+            const variantDiscountValue: number = Number((db as any).discount_value) || 0
+            const prod = (db as any).products as any
+            const productDiscountType: string = prod?.discount_type || "none"
+            const productDiscountValue: number = Number(prod?.discount_value) || 0
+            const effectiveDiscountType = variantDiscountType !== "none" ? variantDiscountType : productDiscountType
+            const effectiveDiscountValue = variantDiscountType !== "none" ? variantDiscountValue : productDiscountValue
+            const salePrice = calculateDiscountedPrice(basePrice, effectiveDiscountType as 'percentage' | 'amount' | 'none', effectiveDiscountValue)
+            calculatedSubtotal += salePrice * item.quantity
         }
 
         // ── 2. Verify shipping price from DB ──
@@ -140,15 +150,17 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // ── 7. Compute expected total and compare ──
-        const expectedTotal = Math.max(0, Math.round(
-            calculatedSubtotal - verifiedPromoDiscount - verifiedBxgyDiscount - verifiedGiftCardAmount - verifiedRewardCouponDiscount + verifiedShippingPrice
+        // ── 7. Compute expected total in paise and compare ──
+        // All values above are in rupees; convert to paise for comparison with client amount
+        const expectedTotalPaise = Math.max(0, Math.round(
+            (calculatedSubtotal - verifiedPromoDiscount - verifiedBxgyDiscount - verifiedGiftCardAmount - verifiedRewardCouponDiscount + verifiedShippingPrice) * 100
         ))
 
         // Allow 1% tolerance for rounding differences
-        const minExpected = Math.floor(expectedTotal * 0.99)
-        const maxExpected = Math.ceil(expectedTotal * 1.01)
+        const minExpected = Math.floor(expectedTotalPaise * 0.99)
+        const maxExpected = Math.ceil(expectedTotalPaise * 1.01)
         if (amount < minExpected || amount > maxExpected) {
+            console.error("AMOUNT_MISMATCH:", { amount, expectedTotalPaise, calculatedSubtotal, verifiedPromoDiscount, verifiedBxgyDiscount, verifiedGiftCardAmount, verifiedRewardCouponDiscount, verifiedShippingPrice })
             return NextResponse.json({ error: "Amount mismatch — please refresh and try again" }, { status: 409 })
         }
 

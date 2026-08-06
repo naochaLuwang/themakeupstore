@@ -43,7 +43,7 @@ export default function AuthPage() {
                 const { nativeGoogleSignIn } = await import('@/lib/capacitor-google-auth')
                 const result = await nativeGoogleSignIn()
                 if (!result) {
-                    toast.error('Google sign-in failed — check device logs (Logcat) for details')
+                    toast.error('Google sign-in cancelled')
                     return
                 }
                 const { error } = await supabase.auth.signInWithIdToken({
@@ -51,7 +51,7 @@ export default function AuthPage() {
                     token: result.idToken,
                     nonce: result.nonce,
                 })
-                if (error) toast.error(error.message)
+                if (error) toast.error('Supabase error: ' + error.message)
             } catch (err: any) {
                 toast.error(err?.message || 'Google sign-in failed')
             }
