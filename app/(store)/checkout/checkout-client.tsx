@@ -297,6 +297,8 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     return
                 }
 
+                const isCapacitor = typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.()
+
                 const razorpay = new (window as any).Razorpay({
                     key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
                     order_id,
@@ -304,6 +306,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     currency: "INR",
                     name: "THE MAKE UP STORE WANGKHEI",
                     description: `Order ${selectedAddress?.full_name}`,
+                    ...(isCapacitor ? { webview_intent: true } : {}),
                     prefill: {
                         name: selectedAddress?.full_name,
                         email: profile?.email,
