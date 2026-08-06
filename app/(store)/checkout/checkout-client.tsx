@@ -64,7 +64,6 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
     useEffect(() => { setMounted(true) }, [])
 
-    // Load Razorpay checkout script
     useEffect(() => {
         const script = document.createElement("script")
         script.src = "https://checkout.razorpay.com/v1/checkout.js"
@@ -262,12 +261,6 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
             // Razorpay flow
             try {
-                if (!(window as any).Razorpay) {
-                    toast.error("Payment gateway loading. Please try again.")
-                    setLoading(false)
-                    return
-                }
-
                 const amountPaise = Math.round(adjustedTotal * 100)
                 if (amountPaise < 100) {
                     toast.error("Minimum order amount is ₹1")
@@ -297,6 +290,12 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     throw new Error(errData.error || "Failed to create payment order")
                 }
                 const { order_id, amount } = await orderRes.json()
+
+                if (!(window as any).Razorpay) {
+                    toast.error("Payment gateway loading. Please try again.")
+                    setLoading(false)
+                    return
+                }
 
                 const razorpay = new (window as any).Razorpay({
                     key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,

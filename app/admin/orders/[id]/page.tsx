@@ -256,13 +256,13 @@ export default function OrderInvoicePage() {
                     {isThermal && (
                         <div className="flex flex-col border-t border-dotted border-slate-100 mt-1 pt-1">
                             <span className="font-bold uppercase text-slate-500 text-[8px]">Address:</span>
-                            <p className="leading-tight text-slate-700">{order.shipping_address?.street}, {order.shipping_address?.area_name || ''}{order.shipping_address?.pincode ? ` - ${order.shipping_address.pincode}` : ''}</p>
+                            <p className="leading-tight text-slate-700">{order.shipping_address?.street}{order.shipping_address?.landmark ? `, ${order.shipping_address.landmark}` : ''}, {order.shipping_address?.area_name || ''}{order.shipping_address?.pincode ? ` - ${order.shipping_address.pincode}` : ''}</p>
                         </div>
                     )}
                     {!isThermal && (
                         <div>
                             <h3 className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Shipping</h3>
-                            <p className="text-[9px] text-slate-600 font-medium leading-relaxed">{order.shipping_address?.street}, PIN: {order.shipping_address?.pincode}</p>
+                            <p className="text-[9px] text-slate-600 font-medium leading-relaxed">{order.shipping_address?.street}{order.shipping_address?.landmark ? `, ${order.shipping_address.landmark}` : ''}, PIN: {order.shipping_address?.pincode}</p>
                             <p className="text-[8px] font-black text-slate-900 uppercase mt-1 flex items-center gap-1">
                                 <Truck className="w-2.5 h-2.5" />
                                 {editingPartner ? (
