@@ -17,11 +17,17 @@ export default function LiveCartsPage() {
     const [loading, setLoading] = useState(true)
     const [expandedId, setExpandedId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
+    const [debug, setDebug] = useState<string>("")
     const supabase = createClient()
 
     const load = async () => {
-        const data = await getLiveCarts()
-        setCarts(data)
+        try {
+            const data = await getLiveCarts()
+            setCarts(data)
+            setDebug(`Loaded ${data.length} carts at ${new Date().toLocaleTimeString()}`)
+        } catch (e: any) {
+            setDebug(`Error: ${e.message}`)
+        }
         setLoading(false)
     }
 
@@ -251,6 +257,7 @@ export default function LiveCartsPage() {
 
             <p className="text-[11px] text-slate-400 text-center">
                 Auto-refreshes every 30s · {carts.length} active · {totalItems} items · ₹{totalValue.toLocaleString('en-IN')} total
+                {debug && <span className="ml-2 text-slate-300">| {debug}</span>}
             </p>
         </div>
     )

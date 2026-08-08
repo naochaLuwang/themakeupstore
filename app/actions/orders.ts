@@ -8,6 +8,7 @@ import { checkPromoEligibility } from "@/lib/promo-helper"
 import { VALID_TRANSITIONS, STATUS_TIMESTAMPS, PUSH_MESSAGES } from "@/lib/order-status"
 import { calculateDiscountedPrice } from "@/lib/price-helper"
 import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from "@/lib/cart-constants"
+import { notifyBackInStock } from "./back-in-stock-notify"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
@@ -56,6 +57,39 @@ async function atomicDecrementStock(supabase: Awaited<ReturnType<typeof createCl
     }
     console.error("All stock decrement attempts failed for", variantId)
     return false
+}
+
+async function incrementAndCheckRestock(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    variantId: string,
+    amount: number
+) {
+    const { data: before } = await supabase
+        .from("product_variants")
+        .select("stock")
+        .eq("id", variantId)
+        .single()
+    const stockBefore = before?.stock ?? 0
+
+    const { error: rpcErr } = await supabase.rpc("increment_stock", {
+        row_id: variantId,
+        amount,
+    })
+
+    if (rpcErr) {
+        if (before) {
+            await supabase
+                .from("product_variants")
+                .update({ stock: stockBefore + amount })
+                .eq("id", variantId)
+        }
+    }
+
+    if (stockBefore <= 0 && stockBefore + amount > 0) {
+        notifyBackInStock(variantId).catch(err =>
+            console.error("[BackInStock] Auto-notify failed:", err)
+        )
+    }
 }
 
 
@@ -972,28 +1006,7 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
         for (const item of items) {
             if (!item.product_variant_id) continue;
 
-            // Try the database function first (Cleanest way)
-            const { error: rpcErr } = await supabase.rpc('increment_stock', {
-                row_id: item.product_variant_id,
-                amount: item.quantity
-            })
-
-            // Fallback: Manual update if RPC is missing
-            if (rpcErr) {
-                console.warn("RPC increment_stock failed, falling back to manual update")
-                const { data: variant } = await supabase
-                    .from('product_variants')
-                    .select('stock')
-                    .eq('id', item.product_variant_id)
-                    .single()
-
-                if (variant) {
-                    await supabase
-                        .from("product_variants")
-                        .update({ stock: variant.stock + item.quantity })
-                        .eq("id", item.product_variant_id)
-                }
-            }
+            await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
         }
 
         // 7. Void pending loyalty points for this order
@@ -1115,23 +1128,7 @@ export async function processPartialRefund(
             }).eq("id", ri.id)
 
             if (ri.product_variant_id) {
-                const { error: rpcErr } = await supabase.rpc("increment_stock", {
-                    row_id: ri.product_variant_id,
-                    amount: ri.refundQuantity,
-                })
-                if (rpcErr) {
-                    const { data: variant } = await supabase
-                        .from("product_variants")
-                        .select("stock")
-                        .eq("id", ri.product_variant_id)
-                        .single()
-                    if (variant) {
-                        await supabase
-                            .from("product_variants")
-                            .update({ stock: variant.stock + ri.refundQuantity })
-                            .eq("id", ri.product_variant_id)
-                    }
-                }
+                await incrementAndCheckRestock(supabase, ri.product_variant_id, ri.refundQuantity)
             }
         }
 
@@ -1293,10 +1290,7 @@ export async function updateOrderPOS(
     if (currentItems) {
         for (const item of currentItems) {
             if (item.product_variant_id) {
-                await supabase.rpc('increment_stock', {
-                    row_id: item.product_variant_id,
-                    amount: item.quantity
-                })
+                await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
             }
         }
     }
@@ -1380,11 +1374,7 @@ export async function removeOrderItem(itemId: string, orderId: string) {
         if (fetchErr || !item) throw new Error("Order item not found")
 
         if (item.product_variant_id) {
-            const { error: stockErr } = await supabase.rpc('increment_stock', {
-                row_id: item.product_variant_id,
-                amount: item.quantity
-            })
-            if (stockErr) console.warn("Stock restore failed:", stockErr)
+            await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
         }
 
         const { error: deleteErr, data: deleted } = await supabase
@@ -1659,5 +1649,42 @@ export async function updateOrderDeliveryPartner(orderId: string, deliveryPartne
     } catch (error: any) {
         console.error("UPDATE_DELIVERY_PARTNER_ERROR:", error)
         return { success: false, message: error.message }
+    }
+}
+
+export async function deleteOrder(orderId: string) {
+    const supabase = await createClient()
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error("Authentication required")
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .single()
+
+        if (!profile?.is_admin) throw new Error("Admin access required")
+
+        const { error: itemsErr } = await supabase
+            .from('order_items')
+            .delete()
+            .eq('order_id', orderId)
+
+        if (itemsErr) throw itemsErr
+
+        const { error: orderErr } = await supabase
+            .from('orders')
+            .delete()
+            .eq('id', orderId)
+
+        if (orderErr) throw orderErr
+
+        revalidatePath('/admin/orders')
+        return { success: true }
+    } catch (error: any) {
+        console.error("DELETE_ORDER_ERROR:", error)
+        return { success: false, error: error.message }
     }
 }

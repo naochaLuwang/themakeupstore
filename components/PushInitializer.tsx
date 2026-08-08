@@ -14,15 +14,16 @@ export default function PushInitializer() {
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) { console.log('[Push] No session'); return; }
 
       if (isCapacitor()) {
+        console.log('[Push] Capacitor detected, registering FCM...')
         try {
           const { registerForFCM, setupFCMListeners } = await import('@/lib/capacitor-push')
           await registerForFCM()
           setupFCMListeners()
         } catch (err) {
-          console.error('Push registration failed:', err)
+          console.error('[Push] Capacitor registration failed:', err)
         }
 
         try {
@@ -58,6 +59,7 @@ export default function PushInitializer() {
           console.error('Network listener failed:', err)
         }
       } else if ('serviceWorker' in navigator && 'PushManager' in window) {
+        console.log('[Push] Browser detected, registering web push...')
         registerWebPush(session.user.id);
       }
     }

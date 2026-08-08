@@ -7,7 +7,10 @@ async function getAccessToken(): Promise<string> {
 
   keyJson = keyJson.trim()
   if (keyJson.startsWith('"') && keyJson.endsWith('"')) keyJson = keyJson.slice(1, -1)
-  keyJson = keyJson.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
+  // Hostinger may convert \n inside the private_key value to actual newlines.
+  // JSON does not allow literal newlines inside strings — convert them to the
+  // \n escape sequence so JSON.parse can handle them.
+  keyJson = keyJson.replace(/\n/g, '\\n')
 
   const key = JSON.parse(keyJson)
   const { private_key, client_email } = key

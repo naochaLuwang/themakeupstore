@@ -4,31 +4,36 @@ import { createClient } from '@/utils/supabase/client'
 export async function registerForFCM() {
   const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return
+  if (!session) { console.log('[FCM] No session, skipping'); return }
 
+  console.log('[FCM] Checking permissions...')
   const permResult = await FirebaseMessaging.checkPermissions()
   if (permResult.receive !== 'granted') {
+    console.log('[FCM] Requesting permissions...')
     const { receive } = await FirebaseMessaging.requestPermissions()
-    if (receive !== 'granted') return
+    if (receive !== 'granted') { console.log('[FCM] Permission denied'); return }
   }
 
+  console.log('[FCM] Getting token...')
   const { token } = await FirebaseMessaging.getToken()
-  if (!token) return
+  if (!token) { console.log('[FCM] No token returned'); return }
+  console.log('[FCM] Got token:', token.substring(0, 30) + '...')
 
-  // Delete any existing subscription for this user first, then insert new one
-  // This avoids needing a unique constraint on user_id for upsert
   await supabase
     .from('push_subscriptions')
     .delete()
     .eq('user_id', session.user.id)
 
-  await supabase
+  const { error } = await supabase
     .from('push_subscriptions')
     .insert({
       user_id: session.user.id,
       fcm_token: token,
       platform: 'android',
     })
+
+  if (error) console.error('[FCM] DB insert failed:', error.message)
+  else console.log('[FCM] Registered successfully')
 }
 
 export async function unregisterFCM() {

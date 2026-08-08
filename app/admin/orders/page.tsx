@@ -1,6 +1,6 @@
 "use client"
 
-import { cancelOrderAndRestoreStock, updateOrderStatus } from "@/app/actions/orders"
+import { cancelOrderAndRestoreStock, updateOrderStatus, deleteOrder } from "@/app/actions/orders"
 import { getDeliveryPartners } from "@/app/actions/delivery-partners"
 import { STATUS_LABELS, getValidNextStatuses, getTypeStatuses } from "@/lib/order-status"
 import { useState, useEffect, useMemo } from "react"
@@ -16,7 +16,7 @@ import { toast } from "sonner"
 import { format, startOfDay, endOfDay, subDays } from "date-fns"
 import {
     Eye, Clock, Calendar as CalendarIcon, FilterX, Search, ChevronDown,
-    ShoppingBag, PackageCheck, X
+    ShoppingBag, PackageCheck, X, Trash2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -176,6 +176,16 @@ export default function AdminOrdersPage() {
         else toast.success("Order marked as shipped")
         setLoading(false)
         setShipModal(null)
+        fetchOrders()
+    }
+
+    async function handleDelete(orderId: string) {
+        if (!window.confirm("Permanently delete this order? This cannot be undone.")) return
+        setLoading(true)
+        const res = await deleteOrder(orderId)
+        if (!res.success) toast.error(res.error || "Failed to delete order")
+        else toast.success("Order deleted")
+        setLoading(false)
         fetchOrders()
     }
 
@@ -438,6 +448,14 @@ export default function AdminOrdersPage() {
                                                 <Link href={`/admin/orders/${order.id}`}>
                                                     <Eye className="w-4 h-4" />
                                                 </Link>
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all text-slate-400"
+                                                onClick={() => handleDelete(order.id)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
                                             </Button>
                                         </div>
                                     </TableCell>

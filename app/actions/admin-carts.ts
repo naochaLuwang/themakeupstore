@@ -73,28 +73,31 @@ export async function getLiveCarts() {
         .select(`
             id,
             updated_at,
-            profiles ( 
-                full_name, 
+            user_id,
+            profiles (
+                full_name,
                 phone
             ),
             cart_items (
                 quantity,
                 unit_price,
-                products ( 
-                    name, 
-                    thumbnail_url 
+                products (
+                    name,
+                    thumbnail_url
                 ),
-                product_variants ( 
-                    title 
+                product_variants (
+                    title
                 )
             )
         `)
         .order('updated_at', { ascending: false })
 
     if (error) {
-        console.error("Join Error:", error.message)
+        console.error("[LiveCarts] Query error:", error.message, error.details, error.hint)
         return []
     }
+
+    console.log("[LiveCarts] Raw carts:", data?.length ?? 0)
 
     // Filter for carts that actually have items
     const activeCarts = data?.filter(c => c.cart_items && c.cart_items.length > 0) || []
@@ -104,13 +107,13 @@ export async function getLiveCarts() {
         return {
             id: cart.id,
             updatedAt: cart.updated_at,
-            customer: cart.profiles || { full_name: "Guest User", phone: "No Contact" },
+            customer: (cart.profiles as any) || { full_name: "Guest User", phone: "No Contact" },
             totalValue: items.reduce((acc: number, item: any) => acc + (Number(item.unit_price) * item.quantity), 0),
             totalItems: items.reduce((acc: number, item: any) => acc + item.quantity, 0),
             items: items.map((item: any) => ({
-                name: item.products?.name || "Unknown Product",
-                image: item.products?.thumbnail_url,
-                variant: item.product_variants?.title,
+                name: (item.products as any)?.name || "Unknown Product",
+                image: (item.products as any)?.thumbnail_url,
+                variant: (item.product_variants as any)?.title,
                 qty: item.quantity
             }))
         }
