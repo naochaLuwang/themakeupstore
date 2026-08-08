@@ -11,8 +11,42 @@ export function ProductImages({ images }: { images: { url: string }[] }) {
     const [isLightboxOpen, setIsLightboxOpen] = useState(false)
     const [scale, setScale] = useState(1)
     const scrollRef = useRef<HTMLDivElement>(null)
+    const pinchRef = useRef<{ initialDist: number; initialScale: number } | null>(null)
 
     useEffect(() => { setScale(1) }, [activeIndex, isLightboxOpen])
+
+    const getDistance = (t1: any, t2: any) => {
+        const dx = t1.clientX - t2.clientX
+        const dy = t1.clientY - t2.clientY
+        return Math.sqrt(dx * dx + dy * dy)
+    }
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            e.preventDefault()
+            pinchRef.current = { initialDist: getDistance(e.touches[0], e.touches[1]), initialScale: scale }
+        }
+    }
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && pinchRef.current) {
+            e.preventDefault()
+            const dist = getDistance(e.touches[0], e.touches[1])
+            const ratio = dist / pinchRef.current.initialDist
+            const newScale = Math.min(Math.max(pinchRef.current.initialScale * ratio, 1), 4)
+            setScale(newScale)
+        }
+    }
+
+    const onTouchEnd = () => { pinchRef.current = null }
+
+    const onWheel = (e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            const delta = e.deltaY > 0 ? -0.2 : 0.2
+            setScale(s => Math.min(Math.max(s + delta, 1), 4))
+        }
+    }
 
     const handleScroll = () => {
         if (scrollRef.current) {
@@ -78,7 +112,13 @@ export function ProductImages({ images }: { images: { url: string }[] }) {
                             </button>
                         </div>
 
-                        <div className="flex-1 relative overflow-hidden flex items-center justify-center bg-slate-50">
+                        <div
+                            className="flex-1 relative overflow-hidden flex items-center justify-center bg-slate-50"
+                            onTouchStart={onTouchStart}
+                            onTouchMove={onTouchMove}
+                            onTouchEnd={onTouchEnd}
+                            onWheel={onWheel}
+                        >
                             <motion.div
                                 className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
                                 style={{ touchAction: "none" }}

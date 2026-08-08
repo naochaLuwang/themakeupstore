@@ -9,12 +9,12 @@ import { ProductCard } from "@/components/store/product-card"
 import {
     Heart, ShoppingBag, Star, Share2, Store, MapPin,
     ShieldCheck, RotateCcw, ChevronDown, ChevronUp, ChevronRight, Check, X, Plus, Minus, Bell,
-    ScanLine, Palette, Tag, Search
+    Tag, Search
 } from "lucide-react"
 import { toast } from "sonner"
+import { Capacitor } from "@capacitor/core"
+import { Share } from "@capacitor/share"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
-import VirtualTryOn from "@/components/store/virtual-try-on"
-import FoundationShadeFinder from "@/components/store/foundation-shade-finder"
 import { ReviewModal } from "@/components/store/review-modal"
 import { ReviewCard } from "@/components/store/review-card"
 import { useProductPromo } from "@/components/store/promotion-badge-context"
@@ -99,8 +99,6 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
     const [variantModalVisible, setVariantModalVisible] = useState(false)
     const [showAddedToast, setShowAddedToast] = useState(false)
     const [notifyModalVisible, setNotifyModalVisible] = useState(false)
-    const [tryOnOpen, setTryOnOpen] = useState(false)
-    const [shadeFinderOpen, setShadeFinderOpen] = useState(false)
     const [similarProducts, setSimilarProducts] = useState<any[]>([])
     const [brandProducts, setBrandProducts] = useState<any[]>([])
     const [reviewsModalVisible, setReviewsModalVisible] = useState(false)
@@ -229,18 +227,6 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
         setActiveImage(0)
         if (scrollRef.current) scrollRef.current.scrollLeft = 0
     }, [selectedVariant])
-
-    const lipSlugs = new Set(["lips", "lipstick", "lip-liner", "liquid-lipstick", "lip-gloss", "lip-balm", "lip-tint"])
-    const isLipProduct = useMemo(() => {
-        if (!product?.product_categories) return false
-        return product.product_categories.some((pc: any) => lipSlugs.has(pc.category?.slug))
-    }, [product])
-
-    const foundationSlugs = new Set(["foundation"])
-    const isFoundationProduct = useMemo(() => {
-        if (!product?.product_categories) return false
-        return product.product_categories.some((pc: any) => foundationSlugs.has(pc.category?.slug))
-    }, [product])
 
     const sellingPrice = useMemo(() => {
         if (!product) return 0
@@ -499,15 +485,6 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         {discountPct}% OFF
                     </div>
                 )}
-                {(isLipProduct || isFoundationProduct) && (
-                    <button
-                        onClick={() => isLipProduct ? setTryOnOpen(true) : setShadeFinderOpen(true)}
-                        className="absolute top-4 right-4 w-14 h-14 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/30 flex flex-col items-center justify-center gap-0.5 shadow-lg hover:bg-black/60 active:scale-95 transition-all"
-                    >
-                        {isLipProduct ? <ScanLine className="w-5 h-5 text-white" /> : <Palette className="w-5 h-5 text-white" />}
-                        <span className="text-[7px] text-white/90 font-black uppercase tracking-wider">{isLipProduct ? "Try On" : "Match"}</span>
-                    </button>
-                )}
             </div>
             {imageList.length > 1 && (
                 <div className="flex justify-center gap-1.5 mt-2">
@@ -566,9 +543,11 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         )}
                     </div>
                     <button
-                        onClick={() => {
+                        onClick={async () => {
                             const url = window.location.href
-                            if (navigator.share) {
+                            if (Capacitor.isNativePlatform()) {
+                                await Share.share({ title: document.title, url })
+                            } else if (navigator.share) {
                                 navigator.share({ title: document.title, url }).catch(() => {})
                             } else {
                                 navigator.clipboard.writeText(url)
@@ -919,15 +898,6 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                     <div className={`absolute ${activeFlashSale ? 'top-12' : 'top-4'} left-0 bg-[#fc2779] text-white text-xs font-black px-3 py-1.5 rounded-r-sm tracking-wider`}>
                                         {discountPct}% OFF
                                     </div>
-                                )}
-                                {(isLipProduct || isFoundationProduct) && (
-                                    <button
-                                        onClick={() => isLipProduct ? setTryOnOpen(true) : setShadeFinderOpen(true)}
-                                        className="absolute top-4 right-4 w-14 h-14 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/30 flex flex-col items-center justify-center gap-0.5 shadow-lg hover:bg-black/60 active:scale-95 transition-all"
-                                    >
-                                        {isLipProduct ? <ScanLine className="w-5 h-5 text-white" /> : <Palette className="w-5 h-5 text-white" />}
-                                        <span className="text-[7px] text-white/90 font-black uppercase tracking-wider">{isLipProduct ? "Try On" : "Match"}</span>
-                                    </button>
                                 )}
                             </div>
                             {imageList.length > 1 && (
@@ -1353,20 +1323,6 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                     </div>
                 </div>
             )}
-            {/* Virtual Try-On */}
-            <VirtualTryOn
-                open={tryOnOpen}
-                onClose={() => setTryOnOpen(false)}
-                variants={(product?.product_variants || []).filter((v: any) => v.hex_code && v.hex_code !== "#cbd5e1").map((v: any) => ({ id: v.id, title: v.title, hex_code: v.hex_code }))}
-                initialHexCode={selectedVariantData?.hex_code || "#fc2779"}
-            />
-
-            {/* Foundation Shade Finder */}
-            <FoundationShadeFinder
-                open={shadeFinderOpen}
-                onClose={() => setShadeFinderOpen(false)}
-                variants={(product?.product_variants || []).filter((v: any) => v.hex_code && v.hex_code !== "#cbd5e1").map((v: any) => ({ id: v.id, title: v.title, hex_code: v.hex_code }))}
-            />
 
             {/* Review Modal */}
             <ReviewModal

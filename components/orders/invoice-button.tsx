@@ -5,6 +5,9 @@ import { FileDown, Loader2 } from "lucide-react"
 import { useState } from "react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { Capacitor } from "@capacitor/core"
+import { Filesystem, Directory } from "@capacitor/filesystem"
+import { Share } from "@capacitor/share"
 
 export function InvoiceButton({ order }: { order: any }) {
     const [loading, setLoading] = useState(false)
@@ -139,6 +142,22 @@ export function InvoiceButton({ order }: { order: any }) {
         doc.text("Authorized computer generated invoice. No signature required.", 105, 284, { align: 'center' })
 
         doc.save(`Invoice_TMS_${order.id.slice(0, 8).toUpperCase()}.pdf`)
+
+        if (Capacitor.isNativePlatform()) {
+            const fileName = `Invoice_TMS_${order.id.slice(0, 8).toUpperCase()}.pdf`
+            const pdfBase64 = doc.output("datauristring").split(",")[1]
+            try {
+                await Filesystem.writeFile({
+                    path: `Download/${fileName}`,
+                    data: pdfBase64,
+                    directory: Directory.External,
+                })
+                await Share.share({ title: fileName, url: `file://${fileName}`, dialogTitle: "Save Invoice" })
+            } catch (e) {
+                console.error("File save error:", e)
+            }
+        }
+
         setLoading(false)
     }
 

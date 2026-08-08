@@ -7,6 +7,8 @@ import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
 import { useCart } from "@/components/store/use-cart"
 import Link from "next/link"
+import { Capacitor } from "@capacitor/core"
+import { Share } from "@capacitor/share"
 
 export default function WishlistPage() {
     const [items, setItems] = React.useState<any[]>([])
@@ -68,7 +70,9 @@ export default function WishlistPage() {
             .map((item, i) => `${i + 1}. ${item.name}${item.brand ? ` by ${item.brand}` : ''} — ₹${Math.round(Number(item.base_price || item.product_variants?.[0]?.price || 0))}`)
             .join('\n')
 
-        if (navigator.share) {
+        if (Capacitor.isNativePlatform()) {
+            await Share.share({ title: 'My Makeup Store Wishlist', text })
+        } else if (navigator.share) {
             navigator.share({ title: 'My Makeup Store Wishlist', text })
         } else {
             navigator.clipboard.writeText(text)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 
 function isCapacitor() {
@@ -9,6 +9,7 @@ function isCapacitor() {
 
 export default function PushInitializer() {
   const supabase = createClient();
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -35,6 +36,26 @@ export default function PushInitializer() {
           })
         } catch (err) {
           console.error('Back button handler failed:', err)
+        }
+
+        try {
+          const { Device } = await import('@capacitor/device')
+          const info = await Device.getInfo()
+          console.log('[Device]', info.model, info.operatingSystem, info.osVersion)
+        } catch (err) {
+          console.error('Device info failed:', err)
+        }
+
+        try {
+          const { Network } = await import('@capacitor/network')
+          const status = await Network.getStatus()
+          setIsOffline(!status.connected)
+
+          Network.addListener('networkStatusChange', (status) => {
+            setIsOffline(!status.connected)
+          })
+        } catch (err) {
+          console.error('Network listener failed:', err)
         }
       } else if ('serviceWorker' in navigator && 'PushManager' in window) {
         registerWebPush(session.user.id);
@@ -69,7 +90,11 @@ export default function PushInitializer() {
     }
   }
 
-  return null;
+  return isOffline ? (
+    <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-white text-center text-xs font-bold py-2 px-4 tracking-wide uppercase">
+      You're offline — some features may not work
+    </div>
+  ) : null;
 }
 
 function urlBase64ToUint8Array(base64String: string) {

@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Upload, Camera, Check, Sparkles, ChevronRight, ArrowLeft } from "lucide-react"
+import { Capacitor } from "@capacitor/core"
+import { Camera as CapCamera } from "@capacitor/camera"
 
 interface ShadeVariant {
     id: string
@@ -183,6 +185,13 @@ export default function FoundationShadeFinder({ open, onClose, variants }: Props
     const startCamera = useCallback(async () => {
         setCamError(null)
         try {
+            if (Capacitor.isNativePlatform()) {
+                const perm = await CapCamera.requestPermissions()
+                if (perm.camera !== "granted") {
+                    setCamError("Camera permission denied")
+                    return
+                }
+            }
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } })
             if (videoRef.current) {
                 videoRef.current.srcObject = stream

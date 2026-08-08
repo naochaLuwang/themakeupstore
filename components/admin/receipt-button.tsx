@@ -3,6 +3,9 @@
 import { FileDown } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { Capacitor } from "@capacitor/core"
+import { Filesystem, Directory } from "@capacitor/filesystem"
+import { Share } from "@capacitor/share"
 
 interface ReceiptProps {
     order: {
@@ -16,7 +19,7 @@ interface ReceiptProps {
 }
 
 export function ReceiptButton({ order }: ReceiptProps) {
-    const generateReceipt = () => {
+    const generateReceipt = async () => {
         const doc = new jsPDF();
         const profile = Array.isArray(order.profiles) ? order.profiles[0] : order.profiles;
         const customerName = profile?.full_name || "Guest User";
@@ -55,6 +58,21 @@ export function ReceiptButton({ order }: ReceiptProps) {
         doc.text(`Payment Status: ${order.payment_status.toUpperCase()}`, 14, finalY + 7);
 
         doc.save(`Receipt-${order.id.slice(0, 8)}.pdf`);
+
+        if (Capacitor.isNativePlatform()) {
+            const fileName = `Receipt-${order.id.slice(0, 8)}.pdf`
+            const pdfBase64 = doc.output("datauristring").split(",")[1]
+            try {
+                await Filesystem.writeFile({
+                    path: `Download/${fileName}`,
+                    data: pdfBase64,
+                    directory: Directory.External,
+                })
+                await Share.share({ title: fileName, url: `file://${fileName}`, dialogTitle: "Save Receipt" })
+            } catch (e) {
+                console.error("File save error:", e)
+            }
+        }
     };
 
     return (

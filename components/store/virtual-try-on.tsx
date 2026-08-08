@@ -4,6 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Sparkles } from "lucide-react"
+import { Capacitor } from "@capacitor/core"
+import { Camera } from "@capacitor/camera"
 
 interface LipVariant {
     id: string
@@ -86,6 +88,13 @@ export default function VirtualTryOn({ open, onClose, variants, initialHexCode }
         let cancelled = false
         async function start() {
             try {
+                if (Capacitor.isNativePlatform()) {
+                    const perm = await Camera.requestPermissions()
+                    if (perm.camera !== "granted") {
+                        if (!cancelled) setCamError("Camera permission denied")
+                        return
+                    }
+                }
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
                 })
