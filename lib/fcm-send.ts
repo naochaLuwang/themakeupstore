@@ -35,6 +35,21 @@ export function parseServiceAccountKey(rawValue: string | undefined | null): any
     if (c.includes('\n')) cands.add(c.replace(/\n/g, '\\n'))
   }
 
+  // E) Strip \{ and \} wrappers (env vars set via shell escaping)
+  for (const c of [...cands]) {
+    let trimmed = c
+    if (trimmed.startsWith('\\{')) trimmed = trimmed.slice(1)
+    if (trimmed.endsWith('\\}')) trimmed = trimmed.slice(0, -1)
+    if (trimmed !== c) cands.add(trimmed)
+  }
+
+  // F) Unescape remaining escaped characters within the string
+  for (const c of [...cands]) {
+    if (c.includes('\\')) {
+      cands.add(c.replace(/\\{/g, '{').replace(/\\}/g, '}').replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t'))
+    }
+  }
+
   // Try each candidate; pick the one yielding a valid key with most newlines in pk
   let best: any = null
   for (const c of cands) {

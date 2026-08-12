@@ -108,7 +108,7 @@ export async function POST(req: Request) {
                 message: {
                     token: fcmTokens[0],
                     notification: { title: "Test Notification", body: "FCM is working!" },
-                    android: { priority: 'high' },
+                    android: { priority: 'high', notification: { sound: 'default', channelId: 'push-notifications' } },
                 }
             }
             const fcmRes = await fetch(FCM_ENDPOINT_URL, {
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
             results.fcmStatus = fcmRes.status
             results.fcmResponse = fcmBody.substring(0, 300)
             if (!fcmRes.ok) {
-                return NextResponse.json({ ...results, error: "FCM send failed", step: "fcm_send_failed" }, { status: 500 })
+                return NextResponse.json({ ...results, error: "FCM send failed", detail: fcmBody.substring(0, 500), step: "fcm_send_failed" }, { status: 200 })
             }
             return NextResponse.json({ ...results, success: true, step: "fcm_sent", message: `Test sent via FCM to ${fcmTokens.length} device(s)` })
         }
