@@ -28,8 +28,8 @@ export async function createGiftProduct(formData: FormData) {
   const { supabase } = await requireAdmin()
   const payload = JSON.parse(formData.get("payload") as string)
 
-  let image_url = payload.image_url || null
-  // Handle file upload if provided
+  let images: string[] = []
+  // Handle multiple file uploads
   const files = formData.getAll("files") as File[]
   if (files.length > 0) {
     const { v2: cloudinary } = await import('cloudinary')
@@ -38,18 +38,25 @@ export async function createGiftProduct(formData: FormData) {
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET,
     })
-    const buffer = Buffer.from(await files[0].arrayBuffer())
-    const upload: any = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream({ folder: 'gift-products' }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
+    
+    // Upload all files in parallel
+    const uploadPromises = files.map(async (file) => {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const upload: any = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream({ folder: 'gift-products' }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
+      })
+      return upload.secure_url
     })
-    image_url = upload.secure_url
+    
+    images = await Promise.all(uploadPromises)
   }
 
   try {
     const { error } = await supabase.from('gift_products').insert({
       name: payload.name,
+      brand_name: payload.brand_name || null,
       description: payload.description || null,
-      image_url,
+      images,
       price: Number(payload.price) || 0,
       stock: Number(payload.stock) || 0,
     })
@@ -65,7 +72,10 @@ export async function updateGiftProduct(id: string, formData: FormData) {
   const { supabase } = await requireAdmin()
   const payload = JSON.parse(formData.get("payload") as string)
 
-  let image_url = payload.image_url || null
+  // Start with existing images or empty array
+  let images: string[] = payload.existing_images || []
+  
+  // Handle new file uploads
   const files = formData.getAll("files") as File[]
   if (files.length > 0) {
     const { v2: cloudinary } = await import('cloudinary')
@@ -74,23 +84,31 @@ export async function updateGiftProduct(id: string, formData: FormData) {
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET,
     })
-    const buffer = Buffer.from(await files[0].arrayBuffer())
-    const upload: any = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream({ folder: 'gift-products' }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
+    
+    // Upload all new files in parallel
+    const uploadPromises = files.map(async (file) => {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const upload: any = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream({ folder: 'gift-products' }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
+      })
+      return upload.secure_url
     })
-    image_url = upload.secure_url
+    
+    const newUrls = await Promise.all(uploadPromises)
+    images = [...images, ...newUrls]
   }
 
   try {
     const update: any = {
       name: payload.name,
+      brand_name: payload.brand_name || null,
       description: payload.description || null,
+      images,
       price: Number(payload.price) || 0,
       stock: Number(payload.stock) || 0,
       is_active: payload.is_active,
       updated_at: new Date().toISOString(),
     }
-    if (image_url) update.image_url = image_url
 
     const { error } = await supabase.from('gift_products').update(update).eq('id', id)
     if (error) throw error

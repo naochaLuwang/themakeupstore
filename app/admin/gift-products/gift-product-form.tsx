@@ -14,14 +14,37 @@ interface GiftProductFormProps {
 export function GiftProductForm({ initialData, isEdit = false }: GiftProductFormProps) {
   const router = useRouter()
   const [name, setName] = useState(initialData?.name || "")
+  const [brandName, setBrandName] = useState(initialData?.brand_name || "")
   const [description, setDescription] = useState(initialData?.description || "")
   const [price, setPrice] = useState(initialData?.price || "")
   const [stock, setStock] = useState(initialData?.stock ?? "")
   const [isActive, setIsActive] = useState(initialData?.is_active ?? true)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image_url || null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [existingImages, setExistingImages] = useState<string[]>(initialData?.images || [])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [isPending, setIsPending] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length > 0) {
+      setImageFiles(prev => [...prev, ...files])
+      const newPreviews = files.map(f => URL.createObjectURL(f))
+      setImagePreviews(prev => [...prev, ...newPreviews])
+    }
+  }
+
+  const removeExistingImage = (index: number) => {
+    setExistingImages(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const removeNewImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index))
+    setImagePreviews(prev => {
+      URL.revokeObjectURL(prev[index])
+      return prev.filter((_, i) => i !== index)
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,14 +54,15 @@ export function GiftProductForm({ initialData, isEdit = false }: GiftProductForm
     const formData = new FormData()
     const payload = JSON.stringify({
       name: name.trim(),
+      brand_name: brandName.trim() || null,
       description: description.trim() || null,
       price: Number(price) || 0,
       stock: Number(stock) || 0,
-      image_url: initialData?.image_url || null,
+      existing_images: existingImages,
       ...(isEdit ? { is_active: isActive } : {}),
     })
     formData.append("payload", payload)
-    if (imageFile) formData.append("files", imageFile)
+    imageFiles.forEach(file => formData.append("files", file))
 
     const res = isEdit
       ? await updateGiftProduct(initialData.id, formData)
@@ -60,6 +84,11 @@ export function GiftProductForm({ initialData, isEdit = false }: GiftProductForm
         <div>
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Name</label>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Free Lipstick" className="w-full h-11 px-4 mt-2 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" required />
+        </div>
+
+        <div>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Brand Name</label>
+          <input type="text" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="e.g. FOREVER52" className="w-full h-11 px-4 mt-2 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" />
         </div>
 
         <div>
@@ -95,27 +124,37 @@ export function GiftProductForm({ initialData, isEdit = false }: GiftProductForm
           )}
         </div>
 
-        {/* Image Upload */}
+        {/* Multiple Images Upload */}
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Image</label>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)) }
-          }} />
-          <div className="mt-2 flex items-center gap-4">
-            {imagePreview ? (
-              <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200">
-                <img src={imagePreview} className="w-full h-full object-cover" />
-                <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); if (fileRef.current) fileRef.current.value = '' }} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Images</label>
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+          
+          <div className="mt-2 flex flex-wrap gap-4">
+            {/* Existing images from database */}
+            {existingImages.map((url, idx) => (
+              <div key={`existing-${idx}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200">
+                <img src={url} className="w-full h-full object-cover" alt={`Existing ${idx + 1}`} />
+                <button type="button" onClick={() => removeExistingImage(idx)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center hover:bg-red-500 transition-colors">
                   <X className="w-3 h-3 text-white" />
                 </button>
               </div>
-            ) : (
-              <button type="button" onClick={() => fileRef.current?.click()} className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-1 hover:bg-slate-50 transition-colors">
-                <Upload className="w-5 h-5 text-slate-400" />
-                <span className="text-[8px] font-bold text-slate-400 uppercase">Upload</span>
-              </button>
-            )}
+            ))}
+            
+            {/* New image previews */}
+            {imagePreviews.map((preview, idx) => (
+              <div key={`preview-${idx}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-rose-200">
+                <img src={preview} className="w-full h-full object-cover" alt={`New ${idx + 1}`} />
+                <button type="button" onClick={() => removeNewImage(idx)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center hover:bg-red-500 transition-colors">
+                  <X className="w-3 h-3 text-white" />
+                </button>
+              </div>
+            ))}
+            
+            {/* Upload button */}
+            <button type="button" onClick={() => fileRef.current?.click()} className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-1 hover:bg-slate-50 transition-colors">
+              <Upload className="w-5 h-5 text-slate-400" />
+              <span className="text-[8px] font-bold text-slate-400 uppercase">Add Image</span>
+            </button>
           </div>
         </div>
       </div>

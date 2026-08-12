@@ -1,18 +1,60 @@
 const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging'
 const FCM_ENDPOINT = 'https://fcm.googleapis.com/v1/projects/the-makeup-store-7dad3/messages:send'
 
+export function parseServiceAccountKey(rawValue: string | undefined | null): any {
+  if (!rawValue) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not set')
+
+  let s = String(rawValue).trim()
+
+  const cands = new Set<string>()
+  cands.add(s)
+
+  // A) Strip JSON.stringify wrapper layers (outer "..." quotes)
+  let inner = s
+  for (let i = 0; i < 3; i++) {
+    if (inner.startsWith('"') && inner.endsWith('"')) {
+      inner = inner.slice(1, -1)
+      cands.add(inner)
+    } else break
+  }
+
+  // B) Strip escaped-quote wrapper \"...\" if present
+  if (s.startsWith('\\"') && s.endsWith('\\"')) {
+    cands.add(s.slice(2, -2))
+  }
+
+  // C) Unescape \" -> " (one layer)
+  let un = s.replace(/\\"/g, '"')
+  cands.add(un)
+  // strip resulting surrounding quotes
+  if (un.startsWith('"') && un.endsWith('"')) cands.add(un.slice(1, -1))
+  if (un.startsWith('\\"') && un.endsWith('\\"')) cands.add(un.slice(2, -2))
+
+  // D) For any candidate containing raw newline chars, add escaped variant
+  for (const c of [...cands]) {
+    if (c.includes('\n')) cands.add(c.replace(/\n/g, '\\n'))
+  }
+
+  // Try each candidate; pick the one yielding a valid key with most newlines in pk
+  let best: any = null
+  for (const c of cands) {
+    try {
+      let parsed = JSON.parse(c)
+      while (typeof parsed === 'string') parsed = JSON.parse(parsed)
+      const pk = parsed && parsed.private_key
+      if (typeof pk === 'string' && pk.includes('BEGIN PRIVATE KEY')) {
+        const nl = (pk.match(/\n/g) || []).length
+        if (!best || nl > best.nl) best = { parsed, nl }
+      }
+    } catch {}
+  }
+  if (best) return best.parsed
+
+  throw new Error('Could not parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON')
+}
+
 async function getAccessToken(): Promise<string> {
-  let keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-  if (!keyJson) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not set')
-
-  keyJson = keyJson.trim()
-  if (keyJson.startsWith('"') && keyJson.endsWith('"')) keyJson = keyJson.slice(1, -1)
-  // Hostinger may convert \n inside the private_key value to actual newlines.
-  // JSON does not allow literal newlines inside strings — convert them to the
-  // \n escape sequence so JSON.parse can handle them.
-  keyJson = keyJson.replace(/\n/g, '\\n')
-
-  const key = JSON.parse(keyJson)
+  const key = parseServiceAccountKey(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
   const { private_key, client_email } = key
 
   const header = { alg: 'RS256', typ: 'JWT' }
@@ -56,7 +98,7 @@ export async function sendFcmNotification(token: string, title: string, body: st
     message: {
       token,
       notification: { title, body },
-      android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true } },
+      android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true, channel_id: 'push-notifications' } },
     },
   }
 
@@ -87,7 +129,7 @@ export async function sendFcmMulticast(tokens: string[], title: string, body: st
   const message: any = {
     message: {
       notification: { title, body },
-      android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true } },
+      android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true, channel_id: 'push-notifications' } },
     },
   }
 

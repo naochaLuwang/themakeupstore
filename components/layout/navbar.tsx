@@ -35,7 +35,7 @@ export default async function Navbar() {
 
     return (
         <HeaderScroll>
-            <header className="w-full md:border-b md:border-charcoal/5 md:bg-white/90 md:backdrop-blur-md">
+            <header className="w-full md:border-b md:border-transparent">
                 <div className="max-w-[1440px] mx-auto px-4 md:px-12">
                     <div className="h-16 md:h-24 flex items-center justify-between gap-4 md:gap-8">
 

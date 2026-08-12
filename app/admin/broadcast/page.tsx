@@ -191,12 +191,16 @@ export default function AdminBroadcastForm() {
         try {
             const res = await fetch('/api/admin/broadcast/test-fcm', { method: 'POST' })
             const data = await res.json()
+            const meta = data.results
+            const diag = meta
+                ? `[v${meta.parserVersion ?? '?'} len=${meta.envVarLength} start="${meta.envVarStartsWith}" end="${meta.envVarEndsWith}"]`
+                : ''
             if (data.success) {
-                setFcmTestResult(`OK — key valid, token obtained, test sent to ${data.fcmTokens} device(s)`)
+                setFcmTestResult(`OK — key valid, token obtained, test sent to ${data.fcmTokens} device(s) ${diag}`)
             } else if (data.warning) {
-                setFcmTestResult(`Key valid but: ${data.warning}`)
+                setFcmTestResult(`Key valid but: ${data.warning} ${diag}`)
             } else {
-                setFcmTestResult(`FAIL at step "${data.step}": ${data.error} ${data.detail ? JSON.stringify(data.detail) : ''}`)
+                setFcmTestResult(`FAIL at step "${data.step || 'unknown'}": ${data.error}${data.detail ? ` — ${typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)}` : ''} ${diag}`)
             }
         } catch (e: any) {
             setFcmTestResult(`Network error: ${e.message}`)

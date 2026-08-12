@@ -31,6 +31,7 @@ export default async function AdminGiftProductsPage() {
           <thead className="bg-slate-50/50">
             <tr className="text-xs font-bold text-slate-600 uppercase tracking-wider">
               <th className="py-4 px-6 text-left">Product</th>
+              <th className="py-4 px-6 text-left">Brand</th>
               <th className="py-4 px-6 text-left">Price</th>
               <th className="py-4 px-6 text-left">Stock</th>
               <th className="py-4 px-6 text-left">Status</th>
@@ -39,40 +40,57 @@ export default async function AdminGiftProductsPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {!items?.length ? (
-              <tr><td colSpan={5} className="p-12 text-center text-slate-400 font-medium">No gift products yet.</td></tr>
+              <tr><td colSpan={6} className="p-12 text-center text-slate-400 font-medium">No gift products yet.</td></tr>
             ) : (
-              items.map((item: any) => (
-                <tr key={item.id} className="hover:bg-slate-50/30 transition-all">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      {item.image_url ? (
-                        <img src={item.image_url} className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><ShoppingBag className="w-4 h-4 text-slate-400" /></div>
-                      )}
-                      <div>
-                        <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
-                        {item.description && <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{item.description}</div>}
+              items.map((item: any) => {
+                const firstImage = item.images?.[0] || null
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50/30 transition-all">
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        {firstImage ? (
+                          <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-100">
+                            <img src={firstImage} className="w-full h-full object-cover" alt={item.name} />
+                            {item.images?.length > 1 && (
+                              <div className="absolute bottom-0 right-0 bg-slate-900/80 text-white text-[8px] font-bold px-1 py-0.5 rounded-tl">
+                                +{item.images.length - 1}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><ShoppingBag className="w-4 h-4 text-slate-400" /></div>
+                        )}
+                        <div>
+                          <div className="font-semibold text-slate-900 text-sm">{item.name}</div>
+                          {item.description && <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{item.description}</div>}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 font-semibold text-slate-900">₹{item.price}</td>
-                  <td className="py-4 px-6"><span className={`font-bold text-sm ${item.stock <= 0 ? 'text-rose-500' : 'text-slate-900'}`}>{item.stock}</span></td>
-                  <td className="py-4 px-6">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[8px] font-black ${item.is_active ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                      {item.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/admin/gift-products/edit/${item.id}`} className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400 inline-flex items-center justify-center">
-                        <Edit3 className="w-4 h-4" />
-                      </Link>
-                      <GiftProductDeleteButton id={item.id} />
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="py-4 px-6">
+                      {item.brand_name ? (
+                        <span className="text-xs font-semibold text-slate-700">{item.brand_name}</span>
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 font-semibold text-slate-900">₹{item.price}</td>
+                    <td className="py-4 px-6"><span className={`font-bold text-sm ${item.stock <= 0 ? 'text-rose-500' : 'text-slate-900'}`}>{item.stock}</span></td>
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[8px] font-black ${item.is_active ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                        {item.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/admin/gift-products/edit/${item.id}`} className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400 inline-flex items-center justify-center">
+                          <Edit3 className="w-4 h-4" />
+                        </Link>
+                        <GiftProductDeleteButton id={item.id} />
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>

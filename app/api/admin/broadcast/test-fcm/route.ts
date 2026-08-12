@@ -10,30 +10,33 @@ export async function POST(req: Request) {
         const results: any = {}
 
         // Step 1: Check env var exists
-        let keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-        if (!keyJson) {
+        const keyRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+        if (!keyRaw) {
             return NextResponse.json({ error: "FIREBASE_SERVICE_ACCOUNT_KEY not set in environment" }, { status: 500 })
         }
-        results.envVarLength = keyJson.length
-        results.envVarStartsWith = keyJson.trim().substring(0, 20)
+        results.envVarLength = keyRaw.length
+        results.envVarStartsWith = keyRaw.trim().substring(0, 30)
+        results.envVarEndsWith = keyRaw.trim().substring(keyRaw.trim().length - 30)
+        results.parserVersion = 2
 
-        // Step 2: Parse the key
-        keyJson = keyJson.trim()
-        if (keyJson.startsWith('"') && keyJson.endsWith('"')) keyJson = keyJson.slice(1, -1)
-        keyJson = keyJson.replace(/\n/g, '\\n')
-
+        // Step 2: Parse the key robustly
         let key: any
         try {
-            key = JSON.parse(keyJson)
+            const { parseServiceAccountKey } = await import("@/lib/fcm-send")
+            key = parseServiceAccountKey(keyRaw)
             results.parsed = true
             results.projectId = key.project_id
             results.clientEmail = key.client_email
             results.hasPrivateKey = !!key.private_key
-            results.privateKeyStartsWith = key.private_key?.substring(0, 30)
-            results.privateKeyEndsWith = key.private_key?.substring(key.private_key.length - 30)
+            results.privateKeyLength = key.private_key?.length
             results.newlineCount = (key.private_key.match(/\n/g) || []).length
         } catch (e: any) {
-            return NextResponse.json({ error: "JSON parse failed", detail: e.message }, { status: 500 })
+            return NextResponse.json({
+                error: "JSON parse failed",
+                step: "json_parse",
+                detail: e.message,
+                results,
+            }, { status: 200 })
         }
 
         // Step 3: Try to sign JWT and get access token

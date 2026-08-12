@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import {
-    ShieldCheck, Lock, Instagram, Facebook, MessageCircle
+    Lock, Instagram, Facebook, MessageCircle, MapPin
 } from "lucide-react"
 
 export function Footer() {
@@ -27,117 +27,175 @@ export function Footer() {
     }, [supabase])
 
     return (
-        <footer className="bg-white border-t border-slate-100 pt-16 pb-12 antialiased">
-            <div className="container mx-auto px-6">
+        <footer className="bg-white border-t border-slate-100 antialiased">
+            <div className="max-w-[1600px] mx-auto px-16 pt-16 pb-8">
 
-                {/* --- DESKTOP VIEW GRID --- 
-                    Only visible on Large Screens ( > 1280px )
-                */}
-                <div className="hidden xl:grid grid-cols-4 gap-12 mb-16">
-                    <div className="space-y-6">
-                        <Link href="/" className="flex flex-col items-start group">
-                            <span className="text-2xl font-black tracking-[0.15em] leading-none text-slate-900">
+                {/* DESKTOP (xl+) */}
+                <div className="hidden xl:grid grid-cols-5 gap-12 mb-14">
+                    {/* Brand */}
+                    <div className="col-span-1">
+                        <Link href="/" className="inline-flex flex-col">
+                            <span className="text-lg font-black tracking-[0.1em] leading-none text-slate-900">
                                 THE MAKEUP STORE
                             </span>
-                            <span className="text-[8px] font-bold tracking-[0.3em] text-slate-400 uppercase mt-1">
+                            <span className="text-[7px] font-bold tracking-[0.3em] text-slate-300 uppercase mt-1">
                                 WANGKHEI
                             </span>
                         </Link>
-                        <p className="text-slate-500 text-sm max-w-xs italic font-serif leading-relaxed">
-                            One Stop Destination for All Your Makeup Needs.
+                        <p className="text-slate-400 text-[13px] leading-relaxed mt-4">
+                            Luxury Makeup, Skin Care from the worlds most coveted brand
                         </p>
-                    </div>
-
-                    <div>
-                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] mb-6 text-slate-300">Shop & Info</h4>
-                        <ul className="space-y-4 text-xs font-bold uppercase tracking-widest text-slate-600">
-                            <li><Link href="/shop" className="hover:text-[#fc2779] transition-colors">All Products</Link></li>
-                            <li><Link href="/rewards" className="hover:text-[#fc2779] transition-colors">Rewards</Link></li>
-                            <li><Link href="/contact" className="hover:text-[#fc2779] transition-colors">Contact Us</Link></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] mb-6 text-slate-300">Legal</h4>
-                        <ul className="space-y-4 text-xs font-bold uppercase tracking-widest text-slate-600">
-                            <li><Link href="/legal/terms_and_conditions" className="hover:text-[#fc2779] transition-colors">Terms of Use</Link></li>
-                            <li><Link href="/legal/privacy_policy" className="hover:text-[#fc2779] transition-colors">Privacy Policy</Link></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] mb-6 text-slate-300">Visit Us</h4>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500 leading-loose">
-                            Michael Plaza 1st Floor,<br />Wangkhei Angom Leikai, Imphal
-                        </p>
-                    </div>
-                </div>
-
-                {/* --- MOBILE & TABLET VIEW (Up to 1280px) --- 
-                    Optimized for 7" and High-Resolution 10" Tablets
-                */}
-                <div className="xl:hidden flex flex-col items-center text-center space-y-12 py-4">
-                    {/* Brand Branding */}
-                    <div className="space-y-3">
-                        <h2 className="text-xl md:text-3xl font-daciana font-black tracking-[0.3em] text-zinc-900 uppercase">
-                            THE MAKEUP STORE
-                        </h2>
-                        <div className="flex items-center justify-center gap-4">
-                            <div className="h-[1px] w-8 md:w-12 bg-zinc-200" />
-                            <p className="text-[10px] md:text-[11px] tracking-[0.5em] text-zinc-400 uppercase font-bold">Wangkhei</p>
-                            <div className="h-[1px] w-8 md:w-12 bg-zinc-200" />
+                        <div className="flex items-center gap-3 mt-6">
+                            <a href="https://www.instagram.com/the_makeup_store.wangkhei/" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#fc2779]/5 hover:text-[#fc2779] transition-all">
+                                <Instagram className="w-4 h-4" />
+                            </a>
+                            <a href="https://wa.me/8794833630" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#25D366]/5 hover:text-[#25D366] transition-all">
+                                <MessageCircle className="w-4 h-4" />
+                            </a>
+                            <a href="https://facebook.com/" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#1877F2]/5 hover:text-[#1877F2] transition-all">
+                                <Facebook className="w-4 h-4" />
+                            </a>
                         </div>
                     </div>
 
-                    {/* Social Row - Larger touch targets for tablet users */}
-                    <div className="flex items-center gap-12 md:gap-16">
-                        <a href="https://wa.me/8794833630" className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#25D366] transition-all active:scale-90">
-                            <MessageCircle className="w-6 h-6 stroke-[1.5]" />
+                    {/* Shop */}
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 mb-5">Shop</h4>
+                        <ul className="space-y-3">
+                            {[
+                                { label: "All Products", href: "/shop" },
+                                { label: "New Arrivals", href: "/new-arrivals" },
+                                { label: "Brands", href: "/brands" },
+                                { label: "Best Sellers", href: "/shop" },
+                                { label: "Offers", href: "/offers" },
+                            ].map((item) => (
+                                <li key={item.label}>
+                                    <Link href={item.href} className="text-[13px] text-slate-400 hover:text-[#fc2779] transition-colors">{item.label}</Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Categories */}
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 mb-5">Categories</h4>
+                        <ul className="space-y-3">
+                            {[
+                                { label: "Lips", href: "/categories/lips" },
+                                { label: "Face", href: "/categories/face" },
+                                { label: "Eyes", href: "/categories/eyes" },
+                                { label: "Skincare", href: "/categories/skincare" },
+                                { label: "Accessories", href: "/categories/accessories" },
+                            ].map((item) => (
+                                <li key={item.label}>
+                                    <Link href={item.href} className="text-[13px] text-slate-400 hover:text-[#fc2779] transition-colors">{item.label}</Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Help */}
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 mb-5">Help</h4>
+                        <ul className="space-y-3">
+                            {[
+                                { label: "Contact Us", href: "/contact" },
+                                { label: "Track Order", href: "/contact" },
+                                { label: "Rewards", href: "/rewards" },
+                                { label: "Return Policy", href: "/legal/return_policy" },
+                            ].map((item) => (
+                                <li key={item.label}>
+                                    <Link href={item.href} className="text-[13px] text-slate-400 hover:text-[#fc2779] transition-colors">{item.label}</Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Legal */}
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 mb-5">Legal</h4>
+                        <ul className="space-y-3">
+                            {[
+                                { label: "Terms of Use", href: "/legal/terms_and_conditions" },
+                                { label: "Privacy Policy", href: "/legal/privacy_policy" },
+                                { label: "Disclaimer", href: "/legal/terms_and_conditions" },
+                            ].map((item) => (
+                                <li key={item.label}>
+                                    <Link href={item.href} className="text-[13px] text-slate-400 hover:text-[#fc2779] transition-colors">{item.label}</Link>
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="mt-6">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 mb-2">Visit Us</h4>
+                            <p className="text-[12px] text-slate-400 leading-relaxed">
+                                Michael Plaza 1st Floor,<br />Wangkhei Angom Leikai, Imphal
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* MOBILE & TABLET */}
+                <div className="xl:hidden text-center space-y-8">
+                    <Link href="/" className="inline-flex flex-col">
+                        <span className="text-lg font-black tracking-[0.1em] leading-none text-slate-900">
+                            THE MAKEUP STORE
+                        </span>
+                        <span className="text-[7px] font-bold tracking-[0.3em] text-slate-300 uppercase mt-1">
+                            WANGKHEI
+                        </span>
+                    </Link>
+
+                    {/* Social */}
+                    <div className="flex items-center justify-center gap-3">
+                        <a href="https://www.instagram.com/the_makeup_store.wangkhei/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#fc2779]/5 hover:text-[#fc2779] transition-all">
+                            <Instagram className="w-4 h-4" />
                         </a>
-                        <a href="https://www.instagram.com/the_makeup_store.wangkhei/" className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#fc2779] transition-all active:scale-90">
-                            <Instagram className="w-6 h-6 stroke-[1.5]" />
+                        <a href="https://wa.me/8794833630" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#25D366]/5 hover:text-[#25D366] transition-all">
+                            <MessageCircle className="w-4 h-4" />
                         </a>
-                        <a href="https://facebook.com/..." className="p-4 bg-zinc-50 rounded-full text-zinc-400 hover:text-[#1877F2] transition-all active:scale-90">
-                            <Facebook className="w-6 h-6 stroke-[1.5]" />
+                        <a href="https://facebook.com/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#1877F2]/5 hover:text-[#1877F2] transition-all">
+                            <Facebook className="w-4 h-4" />
                         </a>
                     </div>
 
-                    {/* Tablet Friendly Link Grid - Wider spacing for large tablets */}
-                    <div className=" hidden md:flex flex-wrap justify-center gap-x-10 gap-y-6 px-4 text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                        <Link href="/shop" className="hover:text-zinc-900">Shop All</Link>
-                        <Link href="/rewards" className="hover:text-zinc-900">Rewards</Link>
-                        <Link href="/legal/privacy_policy" className="hover:text-zinc-900">Privacy</Link>
-                        <Link href="/legal/terms_and_conditions" className="hover:text-zinc-900">Terms</Link>
-                        <Link href="/contact" className="hover:text-zinc-900">Contact Us</Link>
-                        <Link href="/legal/return_policy" className="hover:text-zinc-900">Returns</Link>
+                    {/* Links grid */}
+                    <div className="grid grid-cols-2 gap-y-8 gap-x-12 text-left max-w-md mx-auto">
+                        <div>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 mb-4">Shop</h4>
+                            <ul className="space-y-2.5">
+                                <li><Link href="/shop" className="text-[13px] text-slate-400 hover:text-[#fc2779]">All Products</Link></li>
+                                <li><Link href="/new-arrivals" className="text-[13px] text-slate-400 hover:text-[#fc2779]">New Arrivals</Link></li>
+                                <li><Link href="/brands" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Brands</Link></li>
+                                <li><Link href="/offers" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Offers</Link></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 mb-4">Help</h4>
+                            <ul className="space-y-2.5">
+                                <li><Link href="/contact" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Contact Us</Link></li>
+                                <li><Link href="/rewards" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Rewards</Link></li>
+                                <li><Link href="/legal/privacy_policy" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Privacy</Link></li>
+                                <li><Link href="/legal/terms_and_conditions" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Terms</Link></li>
+                            </ul>
+                        </div>
                     </div>
 
-                    {/* Footer Info */}
-                    <div className="space-y-6">
-                        <p className="text-[9px] md:text-[10px] text-zinc-300 font-bold uppercase tracking-[0.3em]">
-                            © 2026 THE MAKEUP STORE WANGKHEI
-                        </p>
+                    <p className="text-[12px] text-slate-400 leading-relaxed">
+                        Michael Plaza 1st Floor, Wangkhei Angom Leikai, Imphal
+                    </p>
+                </div>
+
+                {/* Bottom Bar */}
+                <div className="border-t border-slate-100 pt-6 mt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+                    <p className="text-[10px] text-slate-300 uppercase tracking-[0.15em]">
+                        © 2026 THE MAKEUP STORE WANGKHEI
+                    </p>
+                    <div className="flex items-center gap-4">
                         {isAdmin && (
-                            <Link
-                                href="/admin"
-                                className="inline-flex items-center gap-2 px-8 py-4 bg-zinc-900 text-white rounded-full text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
-                            >
-                                <Lock className="w-3.5 h-3.5" /> Staff Dashboard
+                            <Link href="/admin" className="inline-flex items-center gap-1.5 px-5 py-2 bg-slate-50 border border-slate-100 text-slate-400 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-[#fc2779]/5 hover:border-[#fc2779]/20 hover:text-[#fc2779] transition-all">
+                                <Lock className="w-3 h-3" /> Staff
                             </Link>
                         )}
-                    </div>
-                </div>
-
-                {/* Bottom Secure Bar (Desktop Only) */}
-                <div className="hidden xl:flex pt-10 border-t border-slate-50 justify-between items-center">
-                    <p className="text-slate-300 text-[9px] font-black uppercase tracking-[0.4em]">
-                        Authenticated Boutique Experience
-                    </p>
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2 text-slate-200">
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            <span className="text-[9px] uppercase font-black tracking-widest">SSL Secured Maison</span>
-                        </div>
                     </div>
                 </div>
             </div>

@@ -17,6 +17,9 @@ const config: CapacitorConfig = {
     ],
   },
   plugins: {
+    FirebaseMessaging: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
     SplashScreen: {
       launchShowDuration: 2000,
       backgroundColor: '#FFFFFF',
