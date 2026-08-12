@@ -104,85 +104,24 @@ export default function AdminBroadcastForm() {
     const [regLoading, setRegLoading] = useState(false)
     const [regStatus, setRegStatus] = useState<string | null>(null)
 
-    const registerBrowserPush = async () => {
+    const registerFCM = async () => {
         setRegLoading(true)
         setRegStatus(null)
         try {
-            const isCapacitor = !!(window as any).Capacitor?.isNativePlatform()
-
-            if (isCapacitor) {
-                const { FirebaseMessaging } = await import('@capacitor-firebase/messaging')
-                const permResult = await FirebaseMessaging.checkPermissions()
-                if (permResult.receive !== 'granted') {
-                    const { receive } = await FirebaseMessaging.requestPermissions()
-                    if (receive !== 'granted') { setRegStatus("Notification permission denied"); return }
-                }
-                const { token } = await FirebaseMessaging.getToken()
-                if (!token) { setRegStatus("Failed to get FCM token"); return }
-                const { data: { session } } = await supabase.auth.getSession()
-                if (!session) { setRegStatus("Not logged in"); return }
-                await supabase.from('push_subscriptions').delete().eq('user_id', session.user.id)
-                await supabase.from('push_subscriptions').insert({
-                    user_id: session.user.id,
-                    fcm_token: token,
-                    platform: 'android',
-                })
-                setRegStatus(`Registered! FCM token saved (${token.substring(0, 20)}...)`)
-                fetchNetworkStats()
+            const isCap = !!(window as any).Capacitor?.isNativePlatform()
+            if (!isCap) {
+                setRegStatus("FCM registration requires the Capacitor app — install the app to register.")
                 return
             }
-
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                setRegStatus("Push not supported in this browser")
-                return
-            }
-            const permission = await Notification.requestPermission()
-            if (permission !== 'granted') {
-                setRegStatus("Notification permission denied")
-                return
-            }
-            const registration = await navigator.serviceWorker.ready
-            const existing = await registration.pushManager.getSubscription()
-            if (existing) {
-                const { data: { session } } = await supabase.auth.getSession()
-                if (!session) { setRegStatus("Not logged in"); return }
-                await supabase.from('push_subscriptions').upsert({
-                    user_id: session.user.id,
-                    endpoint: existing.endpoint,
-                    subscription_json: existing.toJSON(),
-                }, { onConflict: 'endpoint' })
-                setRegStatus("Already subscribed — saved to DB")
-                fetchNetworkStats()
-                return
-            }
-            const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidKey),
-            })
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session) { setRegStatus("Not logged in"); return }
-            await supabase.from('push_subscriptions').upsert({
-                user_id: session.user.id,
-                endpoint: subscription.endpoint,
-                subscription_json: subscription.toJSON(),
-            }, { onConflict: 'endpoint' })
-            setRegStatus("Registered! You can now receive push notifications.")
+            const { registerForFCM } = await import('@/lib/capacitor-push')
+            await registerForFCM()
+            setRegStatus("FCM registered successfully!")
             fetchNetworkStats()
         } catch (e: any) {
             setRegStatus(`Failed: ${e.message}`)
         } finally {
             setRegLoading(false)
         }
-    }
-
-    function urlBase64ToUint8Array(base64String: string) {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-        const rawData = window.atob(base64)
-        const outputArray = new Uint8Array(rawData.length)
-        for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i)
-        return outputArray
     }
 
     const testFcmKey = async () => {
@@ -315,12 +254,12 @@ export default function AdminBroadcastForm() {
                             </p>
                         )}
                         <button
-                            onClick={registerBrowserPush}
+                            onClick={registerFCM}
                             disabled={regLoading}
                             className="w-full py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-emerald-100 transition-all active:scale-[0.99] disabled:opacity-30"
                         >
                             {regLoading ? <Activity className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
-                            {regLoading ? "REGISTERING..." : "REGISTER FOR PUSH NOTIFICATIONS"}
+                            {regLoading ? "REGISTERING..." : "REGISTER FOR FCM (CAPACITOR APP)"}
                         </button>
                         {regStatus && (
                             <p className={`text-[11px] font-medium text-center px-2 ${regStatus.includes('Failed') || regStatus.includes('denied') || regStatus.includes('not') ? 'text-amber-600' : 'text-emerald-600'}`}>
