@@ -95,7 +95,10 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
     const [activeImage, setActiveImage] = useState(0)
     const [showLightbox, setShowLightbox] = useState(false)
     const [lightboxScale, setLightboxScale] = useState(1)
+    const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 })
+    const [dragging, setDragging] = useState(false)
     const pinchRef = useRef<{ initialDist: number; initialScale: number } | null>(null)
+    const dragRef = useRef<{ startX: number; startY: number; startPanX: number; startPanY: number } | null>(null)
     const [selectedVariant, setSelectedVariant] = useState<any>(null)
     const [selectedVariantData, setSelectedVariantData] = useState<any>(null)
     const [descExpanded, setDescExpanded] = useState(false)
@@ -342,18 +345,21 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
 
     const openLightbox = () => {
         setLightboxScale(1)
+        setLightboxPan({ x: 0, y: 0 })
         setShowLightbox(true)
     }
 
     const closeLightbox = () => {
         setShowLightbox(false)
         setLightboxScale(1)
+        setLightboxPan({ x: 0, y: 0 })
     }
 
     const lightboxPaginate = (dir: number) => {
         const next = (activeImage + dir + imageList.length) % imageList.length
         setActiveImage(next)
         setLightboxScale(1)
+        setLightboxPan({ x: 0, y: 0 })
     }
 
     const getTouchDistance = (t1: React.Touch, t2: React.Touch) => {
@@ -366,6 +372,10 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
         if (e.touches.length === 2) {
             e.preventDefault()
             pinchRef.current = { initialDist: getTouchDistance(e.touches[0], e.touches[1]), initialScale: lightboxScale }
+        } else if (e.touches.length === 1 && lightboxScale > 1) {
+            const t = e.touches[0]
+            dragRef.current = { startX: t.clientX, startY: t.clientY, startPanX: lightboxPan.x, startPanY: lightboxPan.y }
+            setDragging(true)
         }
     }
 
@@ -375,16 +385,48 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
             const dist = getTouchDistance(e.touches[0], e.touches[1])
             const ratio = dist / pinchRef.current.initialDist
             setLightboxScale(Math.min(Math.max(pinchRef.current.initialScale * ratio, 1), 4))
+        } else if (e.touches.length === 1 && dragRef.current) {
+            e.preventDefault()
+            const t = e.touches[0]
+            const dx = t.clientX - dragRef.current.startX
+            const dy = t.clientY - dragRef.current.startY
+            const maxPan = lightboxScale * 120
+            const nx = Math.min(Math.max(dragRef.current.startPanX + dx, -maxPan), maxPan)
+            const ny = Math.min(Math.max(dragRef.current.startPanY + dy, -maxPan), maxPan)
+            setLightboxPan({ x: nx, y: ny })
         }
     }
 
-    const onLightboxTouchEnd = () => { pinchRef.current = null }
+    const onLightboxTouchEnd = () => { pinchRef.current = null; dragRef.current = null; setDragging(false) }
+
+    const onLightboxMouseDown = (e: React.MouseEvent) => {
+        if (lightboxScale > 1) {
+            e.preventDefault()
+            dragRef.current = { startX: e.clientX, startY: e.clientY, startPanX: lightboxPan.x, startPanY: lightboxPan.y }
+            setDragging(true)
+        }
+    }
+
+    const onLightboxMouseMove = (e: React.MouseEvent) => {
+        if (dragRef.current) {
+            const dx = e.clientX - dragRef.current.startX
+            const dy = e.clientY - dragRef.current.startY
+            const maxPan = lightboxScale * 120
+            const nx = Math.min(Math.max(dragRef.current.startPanX + dx, -maxPan), maxPan)
+            const ny = Math.min(Math.max(dragRef.current.startPanY + dy, -maxPan), maxPan)
+            setLightboxPan({ x: nx, y: ny })
+        }
+    }
+
+    const onLightboxMouseUp = () => { dragRef.current = null; setDragging(false) }
 
     const onLightboxWheel = (e: React.WheelEvent) => {
         if (e.ctrlKey || e.metaKey) {
             e.preventDefault()
             const delta = e.deltaY > 0 ? -0.2 : 0.2
-            setLightboxScale(s => Math.min(Math.max(s + delta, 1), 4))
+            const next = Math.min(Math.max(lightboxScale + delta, 1), 4)
+            setLightboxScale(next)
+            if (next === 1) setLightboxPan({ x: 0, y: 0 })
         }
     }
 
@@ -1446,14 +1488,21 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         onTouchStart={onLightboxTouchStart}
                         onTouchMove={onLightboxTouchMove}
                         onTouchEnd={onLightboxTouchEnd}
+                        onMouseDown={onLightboxMouseDown}
+                        onMouseMove={onLightboxMouseMove}
+                        onMouseUp={onLightboxMouseUp}
+                        onMouseLeave={onLightboxMouseUp}
                         onWheel={onLightboxWheel}
                     >
                         <img
                             src={imageList[activeImage] || imageList[0] || "/placeholder.png"}
                             alt={product.name}
-                            onDoubleClick={() => setLightboxScale(s => s === 1 ? 2.5 : 1)}
-                            style={{ transform: `scale(${lightboxScale})`, transition: "transform 0.25s ease-out" }}
-                            className="max-w-[95%] max-h-[85vh] object-contain select-none"
+                            onDoubleClick={() => {
+                                if (lightboxScale === 1) { setLightboxScale(2.5); setLightboxPan({ x: 0, y: 0 }) }
+                                else { setLightboxScale(1); setLightboxPan({ x: 0, y: 0 }) }
+                            }}
+                            style={{ transform: `scale(${lightboxScale}) translate(${lightboxPan.x / lightboxScale}px, ${lightboxPan.y / lightboxScale}px)`, transition: dragging ? "none" : "transform 0.25s ease-out" }}
+                            className={`max-w-[95%] max-h-[85vh] object-contain select-none ${lightboxScale > 1 ? (dragging ? "cursor-grabbing" : "cursor-grab") : ""}`}
                             draggable={false}
                         />
                         {imageList.length > 1 && (
@@ -1470,7 +1519,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
 
                     <div className="p-5 bg-white border-t border-slate-100 flex items-center justify-center">
                         <div className="flex items-center gap-5 bg-slate-100 p-2 rounded-2xl">
-                            <button onClick={() => setLightboxScale(s => Math.max(s - 0.5, 1))} aria-label="Zoom out" className="p-2 hover:bg-white rounded-xl shadow-sm">
+                            <button onClick={() => { const n = Math.max(lightboxScale - 0.5, 1); setLightboxScale(n); if (n === 1) setLightboxPan({ x: 0, y: 0 }) }} aria-label="Zoom out" className="p-2 hover:bg-white rounded-xl shadow-sm">
                                 <ZoomOut className="w-5 h-5" />
                             </button>
                             <span className="text-[11px] font-black w-12 text-center tracking-widest">{Math.round(lightboxScale * 100)}%</span>
@@ -1478,7 +1527,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                 <ZoomIn className="w-5 h-5" />
                             </button>
                             <div className="w-[1px] h-4 bg-slate-200 mx-1" />
-                            <button onClick={() => setLightboxScale(1)} aria-label="Reset zoom" className="p-2 hover:bg-white rounded-xl shadow-sm text-slate-400">
+                            <button onClick={() => { setLightboxScale(1); setLightboxPan({ x: 0, y: 0 }) }} aria-label="Reset zoom" className="p-2 hover:bg-white rounded-xl shadow-sm text-slate-400">
                                 <RotateCcw className="w-4 h-4" />
                             </button>
                         </div>
