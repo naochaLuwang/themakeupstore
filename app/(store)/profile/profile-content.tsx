@@ -104,6 +104,316 @@ export function ProfileContent({
 
     return (
         <div className="min-h-screen bg-[#F8F8F8] antialiased selection:bg-pink-100">
+
+            {/* ===== DESKTOP LAYOUT (lg+) ===== */}
+            <div className="hidden lg:block">
+                <div className="max-w-[1600px] mx-auto px-16 pt-12 pb-20">
+                    {/* Page header */}
+                    <div className="flex items-center justify-between mb-10">
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight text-slate-900">My Account</h1>
+                            <p className="text-sm text-slate-500 mt-1.5">
+                                Welcome back, {profile?.full_name?.split(" ")[0] || "friend"} — manage your orders, rewards and settings.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {profile?.is_admin && (
+                                <Link href="/admin"
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-950 text-white text-xs font-black uppercase tracking-widest hover:opacity-90 transition-opacity"
+                                >
+                                    <ShieldCheck className="w-4 h-4" /> Admin
+                                </Link>
+                            )}
+                            <button onClick={() => setShowConfirm(true)}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-xs font-black uppercase tracking-widest hover:border-rose-300 hover:text-rose-500 transition-colors"
+                            >
+                                <LogOut className="w-4 h-4" /> Sign Out
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-[280px_1fr] gap-10 items-start">
+                        {/* Sidebar */}
+                        <aside className="space-y-6 sticky top-28">
+                            {/* Profile card */}
+                            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-[#fc2779] flex items-center justify-center ring-4 ring-[#fc2779]/10 flex-shrink-0">
+                                        <span className="font-daciana text-3xl text-white leading-none mt-1">{initial}</span>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-lg font-black tracking-tight text-slate-900 truncate">{profile?.full_name || "Customer"}</p>
+                                        <p className="text-sm text-slate-400 truncate">{user?.email}</p>
+                                        {memberSince && (
+                                            <p className="text-xs text-slate-400 mt-1">Since {memberSince}</p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="mt-6 pt-6 border-t border-slate-100">
+                                    <Link href="/profile/settings/edit"
+                                        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:border-[#fc2779] hover:text-[#fc2779] transition-colors"
+                                    >
+                                        <User className="w-4 h-4" /> Edit Profile
+                                    </Link>
+                                </div>
+                            </div>
+
+                            {/* Nav */}
+                            <nav className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm space-y-1">
+                                <Link href="/profile/orders" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <Package className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">My Orders</span>
+                                    {ordersCount > 0 && <span className="ml-auto text-[10px] font-black text-slate-400">{ordersCount}</span>}
+                                </Link>
+                                <Link href="/profile/wishlist" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <Heart className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">Wishlist</span>
+                                    {wishlistCount > 0 && <span className="ml-auto text-[10px] font-black text-slate-400">{wishlistCount}</span>}
+                                </Link>
+                                <Link href="/profile/addresses" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <MapPin className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">Addresses</span>
+                                    {addressesCount > 0 && <span className="ml-auto text-[10px] font-black text-slate-400">{addressesCount}</span>}
+                                </Link>
+                                <Link href="/rewards" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <Award className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">M Beauty Rewards</span>
+                                </Link>
+                                <Link href="/gift-cards" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <Gift className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">Gift Cards</span>
+                                </Link>
+                                <div className="my-2 border-t border-slate-100" />
+                                <Link href="/profile/notifications" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <Bell className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">Notifications</span>
+                                </Link>
+                                <Link href="/profile/settings" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <Settings className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">Account Settings</span>
+                                </Link>
+                                <Link href="/contact" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <MessageCircle className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">Contact Us</span>
+                                </Link>
+                                <div className="my-2 border-t border-slate-100" />
+                                <Link href="/legal/return_policy" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <RotateCcw className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">Return Policy</span>
+                                </Link>
+                                <Link href="/legal/privacy_policy" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <FileText className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-700">Privacy Policy</span>
+                                </Link>
+                            </nav>
+                        </aside>
+
+                        {/* Main content */}
+                        <main className="space-y-8 min-w-0">
+                            {/* Stats */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                <Link href="/profile/orders" className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm hover:border-[#fc2779]/30 transition-colors">
+                                    <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center mb-3">
+                                        <Package className="w-5 h-5 text-[#fc2779]" />
+                                    </div>
+                                    <p className="text-2xl font-black tracking-tight text-slate-900">{ordersCount}</p>
+                                    <p className="text-xs font-semibold text-slate-400 mt-0.5">Total Orders</p>
+                                </Link>
+                                <Link href="/profile/wishlist" className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm hover:border-[#fc2779]/30 transition-colors">
+                                    <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center mb-3">
+                                        <Heart className="w-5 h-5 text-[#fc2779]" />
+                                    </div>
+                                    <p className="text-2xl font-black tracking-tight text-slate-900">{wishlistCount}</p>
+                                    <p className="text-xs font-semibold text-slate-400 mt-0.5">Wishlist Items</p>
+                                </Link>
+                                <Link href="/rewards" className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm hover:border-[#fc2779]/30 transition-colors">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-3">
+                                        <Award className="w-5 h-5 text-amber-500" />
+                                    </div>
+                                    <p className="text-2xl font-black tracking-tight text-slate-900">{loyaltyData?.points?.balance ?? 0}</p>
+                                    <p className="text-xs font-semibold text-slate-400 mt-0.5">Reward Coins</p>
+                                </Link>
+                                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-3">
+                                        <TrendingUp className="w-5 h-5 text-emerald-500" />
+                                    </div>
+                                    <p className="text-2xl font-black tracking-tight text-slate-900">₹{Number(totalSpent || 0).toLocaleString("en-IN")}</p>
+                                    <p className="text-xs font-semibold text-slate-400 mt-0.5">Total Spent</p>
+                                </div>
+                            </div>
+
+                            {/* Recent Orders */}
+                            <section className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                                    <div className="flex items-center gap-2.5">
+                                        <Package className="w-4 h-4 text-slate-400" />
+                                        <h2 className="text-base font-black tracking-tight text-slate-900">Recent Orders</h2>
+                                    </div>
+                                    <Link href="/profile/orders" className="flex items-center gap-1 text-xs font-black text-[#fc2779] uppercase tracking-widest hover:opacity-80">
+                                        View All <ChevronRight className="w-3.5 h-3.5" />
+                                    </Link>
+                                </div>
+                                {recentOrders.length > 0 ? (
+                                    <div className="divide-y divide-slate-50">
+                                        {recentOrders.map((order: any) => {
+                                            const cfg = statusCfg[order.status] || statusCfg.pending
+                                            const date = new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                                            const firstItem = order.order_items?.[0]
+                                            const thumbUrl = firstItem?.product_id ? thumbMap[firstItem.product_id] : null
+                                            return (
+                                                <Link key={order.id} href={`/profile/orders/${order.id}`}
+                                                    className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors"
+                                                >
+                                                    <div className="w-12 h-12 rounded-xl bg-slate-50 flex-shrink-0 overflow-hidden">
+                                                        {thumbUrl ? (
+                                                            <img src={thumbUrl} alt={order.order_items?.[0]?.product_name || "Order item"} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                <Package className="w-5 h-5 text-slate-300" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold text-slate-800 truncate">
+                                                            {order.order_items?.map((i: any) => i.product_name).join(", ") || "Order"}
+                                                        </p>
+                                                        <p className="text-xs text-slate-400 mt-0.5">
+                                                            {date} · <span className="font-semibold text-slate-500">₹{Number(order.total).toLocaleString("en-IN")}</span>
+                                                        </p>
+                                                    </div>
+                                                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md ${cfg.bg} ${cfg.color}`}>
+                                                        {cfg.label}
+                                                    </span>
+                                                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                                                </Link>
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="px-6 py-12 text-center">
+                                        <Package className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                                        <p className="text-sm font-medium text-slate-400">No orders yet</p>
+                                        <Link href="/products" className="text-xs font-black text-[#fc2779] uppercase tracking-widest mt-2 inline-block">
+                                            Start Shopping
+                                        </Link>
+                                    </div>
+                                )}
+                            </section>
+
+                            {/* Gift Cards + Coupons */}
+                            <div className="grid grid-cols-2 gap-6">
+                                {/* Gift Cards */}
+                                <section className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+                                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                                        <div className="flex items-center gap-2.5">
+                                            <Gift className="w-4 h-4 text-slate-400" />
+                                            <h2 className="text-base font-black tracking-tight text-slate-900">Gift Cards</h2>
+                                        </div>
+                                        <Link href="/gift-cards" className="text-xs font-black text-white bg-[#fc2779] rounded-lg px-3 py-1.5 uppercase tracking-widest hover:opacity-90">
+                                            Buy Gift Card
+                                        </Link>
+                                    </div>
+                                    {giftCards.length > 0 ? (
+                                        <div className="divide-y divide-slate-50">
+                                            {giftCards.map((gc: any) => {
+                                                const now = new Date()
+                                                const expiry = gc.expires_at ? new Date(gc.expires_at) : null
+                                                const daysLeft = expiry ? Math.ceil((expiry.getTime() - now.getTime()) / 86400000) : null
+                                                const expiryColor = !expiry ? "text-slate-400"
+                                                    : daysLeft! < 0 ? "text-red-500"
+                                                    : daysLeft! <= 30 ? "text-amber-600"
+                                                    : "text-emerald-600"
+                                                return (
+                                                    <div key={gc.id} className="flex items-center gap-3 px-6 py-4">
+                                                        <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center flex-shrink-0">
+                                                            <Gift className="w-4 h-4 text-rose-400" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-mono text-sm font-bold text-slate-800 tracking-wider">{gc.code}</span>
+                                                                <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                                                                    gc.status === "active" ? "bg-emerald-50 text-emerald-700"
+                                                                    : gc.status === "redeemed" ? "bg-blue-50 text-blue-700"
+                                                                    : gc.status === "expired" ? "bg-slate-100 text-slate-500"
+                                                                    : "bg-red-50 text-red-700"
+                                                                }`}>
+                                                                    {gc.status}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-sm font-semibold text-slate-900">{formatPrice(Number(gc.remaining_balance))}</span>
+                                                                <span className="text-xs text-slate-400">/ {formatPrice(Number(gc.original_balance))}</span>
+                                                                {expiry && (
+                                                                    <span className={`text-xs ${expiryColor}`}>
+                                                                        · {daysLeft! < 0 ? "Expired" : `${daysLeft} days left`}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="px-6 py-10 text-center">
+                                            <Gift className="w-7 h-7 text-slate-200 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-slate-400">No gift cards</p>
+                                        </div>
+                                    )}
+                                </section>
+
+                                {/* Reward Coupons */}
+                                <section className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+                                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                                        <div className="flex items-center gap-2.5">
+                                            <Tag className="w-4 h-4 text-emerald-500" />
+                                            <h2 className="text-base font-black tracking-tight text-slate-900">Reward Coupons</h2>
+                                        </div>
+                                        <span className="text-xs font-black text-emerald-600">{coupons.length}</span>
+                                    </div>
+                                    {coupons.length > 0 ? (
+                                        <div className="divide-y divide-slate-50">
+                                            {coupons.map((c: any) => (
+                                                <div key={c.id} className="flex items-center gap-3 px-6 py-4">
+                                                    <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                                                        <Tag className="w-4 h-4 text-emerald-500" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <span className="font-mono text-sm font-bold text-slate-800 tracking-wider">{c.code}</span>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-sm font-semibold text-emerald-600">{formatPrice(c.discount_amount)} OFF</span>
+                                                            {c.min_order_value > 0 && (
+                                                                <span className="text-xs text-slate-400">on {formatPrice(c.min_order_value)}+</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-wider">
+                                                        {c.reward?.product_name || "Coupon"}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="px-6 py-10 text-center">
+                                            <Tag className="w-7 h-7 text-slate-200 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-slate-400">No coupons yet</p>
+                                        </div>
+                                    )}
+                                </section>
+                            </div>
+                        </main>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex flex-col items-center gap-2 pt-16">
+                        <div className="w-8 h-px bg-slate-200" />
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">The Makeup Store Wangkhei</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* ===== MOBILE LAYOUT (unchanged) ===== */}
+            <div className="lg:hidden">
             <div className="max-w-lg mx-auto px-4 pt-12 pb-24">
                 <div className="space-y-4">
                     {/* Profile Card */}
@@ -531,6 +841,7 @@ export function ProfileContent({
                         <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.3em]">The Makeup Store Wangkhei</p>
                     </div>
                 </div>
+            </div>
             </div>
 
             {/* Sign Out Confirmation */}

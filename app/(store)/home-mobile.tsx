@@ -11,6 +11,7 @@ import {
 import { ProductCard } from "@/components/store/product-card"
 import { KylieBanner } from "@/components/store/kylie-banner"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
+import { Capacitor } from "@capacitor/core"
 
 const VALUES = [
   { icon: Rocket, label: "Free Shipping", sub: "Above ₹2,999" },
@@ -94,7 +95,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
-    if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) return
+    if (Capacitor.isNativePlatform()) return
     const hidden = localStorage.getItem("app-banner-hidden")
     if (!hidden) setShowAppBanner(true)
   }, [])

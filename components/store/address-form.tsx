@@ -190,14 +190,14 @@ export function AddressForm({
                             </div>
                             <Input
                                 value={phone}
-                                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                                 placeholder="Phone Number *"
                                 className="pl-[5.5rem] h-14 rounded-2xl"
                                 inputMode="numeric"
                             />
                         </div>
-                        {phone.length > 0 && phone.length < 10 && (
-                            <p className="text-[11px] text-red-500 ml-1">Enter a valid 10-digit number</p>
+                        {phone.length > 0 && phone.length < 5 && (
+                            <p className="text-[11px] text-red-500 ml-1">Enter a valid phone number</p>
                         )}
                     </div>
                     <div className="flex gap-2">
@@ -209,7 +209,7 @@ export function AddressForm({
                             </Button>
                         ))}
                     </div>
-                    <Button disabled={!fullName || fullName.length < 2 || phone.length !== 10} onClick={() => setStep(2)} className="w-full h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest mt-4">
+                    <Button disabled={!fullName || fullName.length < 2 || phone.length < 5} onClick={() => setStep(2)} className="w-full h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest mt-4">
                         Next <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                 </div>

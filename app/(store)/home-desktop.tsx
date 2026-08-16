@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { ProductCard } from "@/components/store/product-card"
+import { FunSizeSection } from "@/components/store/fun-size-section"
 import { ArrowRight, TrendingUp, Truck, ShieldCheck, Package, Headphones } from "lucide-react"
 
 const VALUES = [
@@ -195,6 +196,11 @@ export function HomeDesktop({ banner, categories, products, forever52Products, p
             </div>
           </div>
         )}
+
+        {/* FUN SIZE MINIS SECTION */}
+        <div className="mb-20">
+          <FunSizeSection />
+        </div>
 
         {/* NEW ARRIVALS — 5 products in grid */}
         {products.length > 0 && (

@@ -9,7 +9,7 @@ import { ProductCard } from "@/components/store/product-card"
 import {
     Heart, ShoppingBag, Star, Share2, Store, MapPin,
     ShieldCheck, RotateCcw, ChevronDown, ChevronUp, ChevronRight, Check, X, Plus, Minus, Bell,
-    Tag, Search
+    Tag, Search, ZoomIn, ZoomOut, ChevronLeft, Maximize2
 } from "lucide-react"
 import { toast } from "sonner"
 import { Capacitor } from "@capacitor/core"
@@ -93,6 +93,9 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
 
     const [product, setProduct] = useState(initialProduct)
     const [activeImage, setActiveImage] = useState(0)
+    const [showLightbox, setShowLightbox] = useState(false)
+    const [lightboxScale, setLightboxScale] = useState(1)
+    const pinchRef = useRef<{ initialDist: number; initialScale: number } | null>(null)
     const [selectedVariant, setSelectedVariant] = useState<any>(null)
     const [selectedVariantData, setSelectedVariantData] = useState<any>(null)
     const [descExpanded, setDescExpanded] = useState(false)
@@ -337,6 +340,54 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
         }
     }, [])
 
+    const openLightbox = () => {
+        setLightboxScale(1)
+        setShowLightbox(true)
+    }
+
+    const closeLightbox = () => {
+        setShowLightbox(false)
+        setLightboxScale(1)
+    }
+
+    const lightboxPaginate = (dir: number) => {
+        const next = (activeImage + dir + imageList.length) % imageList.length
+        setActiveImage(next)
+        setLightboxScale(1)
+    }
+
+    const getTouchDistance = (t1: React.Touch, t2: React.Touch) => {
+        const dx = t1.clientX - t2.clientX
+        const dy = t1.clientY - t2.clientY
+        return Math.sqrt(dx * dx + dy * dy)
+    }
+
+    const onLightboxTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            e.preventDefault()
+            pinchRef.current = { initialDist: getTouchDistance(e.touches[0], e.touches[1]), initialScale: lightboxScale }
+        }
+    }
+
+    const onLightboxTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && pinchRef.current) {
+            e.preventDefault()
+            const dist = getTouchDistance(e.touches[0], e.touches[1])
+            const ratio = dist / pinchRef.current.initialDist
+            setLightboxScale(Math.min(Math.max(pinchRef.current.initialScale * ratio, 1), 4))
+        }
+    }
+
+    const onLightboxTouchEnd = () => { pinchRef.current = null }
+
+    const onLightboxWheel = (e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            const delta = e.deltaY > 0 ? -0.2 : 0.2
+            setLightboxScale(s => Math.min(Math.max(s + delta, 1), 4))
+        }
+    }
+
     const [pincode, setPincode] = useState("")
     const [deliveryChecking, setDeliveryChecking] = useState(false)
     const [deliveryStatus, setDeliveryStatus] = useState<"idle" | "available" | "unavailable">("idle")
@@ -454,7 +505,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                     {imageList.length > 1 ? (
                         imageList.map((img: string, i: number) => (
                             <div key={i} className="w-full shrink-0 snap-center">
-                                <div className="relative w-full" style={{ aspectRatio: "1 / 0.85" }}>
+                                <div className="relative w-full" style={{ aspectRatio: "1 / 0.85" }} onClick={openLightbox}>
                                     <img
                                         src={img}
                                         alt={`${product.name} ${i + 1}`}
@@ -465,7 +516,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         ))
                     ) : (
                         <div className="w-full shrink-0">
-                            <div className="relative w-full" style={{ aspectRatio: "1 / 0.85" }}>
+                            <div className="relative w-full" style={{ aspectRatio: "1 / 0.85" }} onClick={openLightbox}>
                                 <img
                                     src={imageList[0] || "/placeholder.png"}
                                     alt={product.name}
@@ -883,12 +934,15 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                     <div className="grid grid-cols-2 gap-12">
                         {/* Left: Image Gallery */}
                         <div>
-                            <div className="relative w-full bg-[#fafafa] rounded-2xl overflow-hidden" style={{ aspectRatio: "1 / 0.85" }}>
+                            <div className="relative w-full bg-[#fafafa] rounded-2xl overflow-hidden cursor-zoom-in" style={{ aspectRatio: "1 / 0.85" }} onClick={openLightbox}>
                                 <img
                                     src={imageList[activeImage] || imageList[0] || "/placeholder.png"}
                                     alt={product?.name}
                                     className="w-full h-full object-contain"
                                 />
+                                <div className="absolute top-3 right-3 w-9 h-9 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm">
+                                    <Maximize2 className="w-4 h-4 text-slate-500" />
+                                </div>
                                 {activeFlashSale && (
                                     <div className="absolute top-4 left-0 bg-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-r-sm tracking-wider shadow-lg z-10">
                                         {activeFlashSale.label || 'FLASH SALE'}
@@ -1368,6 +1422,66 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                 Notify Me
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Image Zoom Lightbox */}
+            {showLightbox && (
+                <div className="fixed inset-0 z-[500] bg-white flex flex-col touch-none">
+                    <div className="p-5 flex justify-between items-center bg-white/80 backdrop-blur-md z-10">
+                        <div>
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-900">Detail View</h4>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                                {activeImage + 1} of {imageList.length}
+                            </p>
+                        </div>
+                        <button onClick={closeLightbox} className="w-11 h-11 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-xl">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <div
+                        className="flex-1 relative overflow-hidden flex items-center justify-center bg-slate-50"
+                        onTouchStart={onLightboxTouchStart}
+                        onTouchMove={onLightboxTouchMove}
+                        onTouchEnd={onLightboxTouchEnd}
+                        onWheel={onLightboxWheel}
+                    >
+                        <img
+                            src={imageList[activeImage] || imageList[0] || "/placeholder.png"}
+                            alt={product.name}
+                            onDoubleClick={() => setLightboxScale(s => s === 1 ? 2.5 : 1)}
+                            style={{ transform: `scale(${lightboxScale})`, transition: "transform 0.25s ease-out" }}
+                            className="max-w-[95%] max-h-[85vh] object-contain select-none"
+                            draggable={false}
+                        />
+                        {imageList.length > 1 && (
+                            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4">
+                                <button onClick={() => lightboxPaginate(-1)} aria-label="Previous image" className="w-11 h-11 bg-white/70 backdrop-blur-md rounded-full flex items-center justify-center shadow-md hover:bg-white">
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                                <button onClick={() => lightboxPaginate(1)} aria-label="Next image" className="w-11 h-11 bg-white/70 backdrop-blur-md rounded-full flex items-center justify-center shadow-md hover:bg-white">
+                                    <ChevronRight className="w-6 h-6" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-5 bg-white border-t border-slate-100 flex items-center justify-center">
+                        <div className="flex items-center gap-5 bg-slate-100 p-2 rounded-2xl">
+                            <button onClick={() => setLightboxScale(s => Math.max(s - 0.5, 1))} aria-label="Zoom out" className="p-2 hover:bg-white rounded-xl shadow-sm">
+                                <ZoomOut className="w-5 h-5" />
+                            </button>
+                            <span className="text-[11px] font-black w-12 text-center tracking-widest">{Math.round(lightboxScale * 100)}%</span>
+                            <button onClick={() => setLightboxScale(s => Math.min(s + 0.5, 4))} aria-label="Zoom in" className="p-2 hover:bg-white rounded-xl shadow-sm">
+                                <ZoomIn className="w-5 h-5" />
+                            </button>
+                            <div className="w-[1px] h-4 bg-slate-200 mx-1" />
+                            <button onClick={() => setLightboxScale(1)} aria-label="Reset zoom" className="p-2 hover:bg-white rounded-xl shadow-sm text-slate-400">
+                                <RotateCcw className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
