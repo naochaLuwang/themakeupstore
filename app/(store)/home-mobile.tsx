@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { KylieBanner } from "@/components/store/kylie-banner"
+import { FunSizeSection } from "@/components/store/fun-size-section"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import { Capacitor } from "@capacitor/core"
 
@@ -86,9 +87,10 @@ interface Props {
   parentCategories: CategoryItem[]
   shelfProducts: Record<string, string[]>
   showcaseItems: ShowcaseItem[]
+  funSizeProducts: ProductItem[]
 }
 
-export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts, showcaseItems }: Props) {
+export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts, showcaseItems, funSizeProducts }: Props) {
   const [mounted, setMounted] = useState(false)
   const [showAppBanner, setShowAppBanner] = useState(false)
   const recentlyViewed = useRecentlyViewed(s => s.items)
@@ -149,12 +151,13 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
         </div>
       </div>
 
-      {/* MONSOON MARQUEE */}
-      <div className="overflow-hidden" style={{ background: 'linear-gradient(90deg, #166534, #c084fc)' }}>
-        <div className="animate-marquee whitespace-nowrap py-2.5 text-white text-xs font-bold uppercase tracking-[0.15em]">
-          <span className="mx-6">FREE SHIPPING ABOVE ₹2999 — IMPHAL EAST & WEST DISTRICT</span>
-          <span className="mx-6">FREE SHIPPING ABOVE ₹2999 — IMPHAL EAST & WEST DISTRICT</span>
-          <span className="mx-6">FREE SHIPPING ABOVE ₹2999 — IMPHAL EAST & WEST DISTRICT</span>
+      {/* SHIPPING BANNER */}
+      <div className="bg-gradient-to-r from-[#fc2779]/5 via-[#fc2779]/10 to-[#fc2779]/5 py-3">
+        <div className="flex items-center justify-center gap-2">
+          <Rocket className="w-4 h-4 text-[#fc2779]" />
+          <p className="text-[#fc2779] font-bold text-xs tracking-wide">
+            FREE SHIPPING ABOVE ₹2999 — IMPHAL EAST & WEST
+          </p>
         </div>
       </div>
 
@@ -226,7 +229,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
               return (
                 <Link
                   key={cat.id}
-                  href={`/category/${cat.slug}`}
+                  href={cat.slug === "fun-size" ? "/fun-size" : `/category/${cat.slug}`}
                   className="relative rounded-2xl overflow-hidden bg-rose-500 aspect-[4/5] group active:scale-[0.97] transition-all duration-200 shadow-sm"
                 >
                   {/* Torn image section */}
@@ -272,6 +275,13 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
             ))}
           </div>
         </Section>
+      )}
+
+      {/* FUN SIZE MINIS */}
+      {funSizeProducts.length > 0 && (
+        <div className="mb-5">
+          <FunSizeSection products={funSizeProducts.slice(0, 10)} />
+        </div>
       )}
 
       {/* FOREVER52 PRODUCTS */}

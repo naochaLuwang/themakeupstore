@@ -1,7 +1,10 @@
+"use client"
+
 import Link from "next/link"
 import { ProductCard } from "@/components/store/product-card"
 import { FunSizeSection } from "@/components/store/fun-size-section"
 import { ArrowRight, TrendingUp, Truck, ShieldCheck, Package, Headphones } from "lucide-react"
+import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 
 const VALUES = [
   { icon: Truck, label: "Free Shipping", sub: "Above ₹2,999" },
@@ -49,12 +52,14 @@ interface Props {
   forever52Products: ProductItem[]
   parentCategories: CategoryItem[]
   shelfProducts: Record<string, string[]>
+  funSizeProducts: ProductItem[]
 }
 
-export function HomeDesktop({ banner, categories, products, forever52Products, parentCategories, shelfProducts }: Props) {
+export function HomeDesktop({ banner, categories, products, forever52Products, parentCategories, shelfProducts, funSizeProducts }: Props) {
   const hero = banner
   const heroImage = "/web-home.webp"
   const featuredProduct = products[0]
+  const recentlyViewed = useRecentlyViewed(s => s.items)
 
   return (
     <div className="bg-white min-h-screen">
@@ -143,6 +148,25 @@ export function HomeDesktop({ banner, categories, products, forever52Products, p
           </div>
         )}
 
+        {/* RECENTLY VIEWED */}
+        {recentlyViewed.length > 0 && (
+          <div className="mb-20">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CONTINUE SHOPPING</p>
+                <h2 className="text-4xl font-light tracking-tight text-slate-900">Recently Viewed</h2>
+              </div>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+              {recentlyViewed.slice(0, 8).map((item: any) => (
+                <div key={item.id} className="flex-shrink-0 w-[240px]">
+                  <ProductCard product={item} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* SHOP BY CATEGORY — torn-edge cards inspired by mobile */}
         {parentCategories.filter((cat) => cat.slug !== "essentials" && cat.slug !== "exclusive").length > 0 && (
           <div className="mb-20">
@@ -161,7 +185,7 @@ export function HomeDesktop({ banner, categories, products, forever52Products, p
                 return (
                   <Link
                     key={cat.id}
-                    href={`/category/${cat.slug}`}
+                    href={cat.slug === "fun-size" ? "/fun-size" : `/category/${cat.slug}`}
                     className="relative rounded-2xl overflow-hidden bg-rose-500 aspect-[4/5] group hover:shadow-xl transition-all duration-200"
                   >
                     {/* Torn image section */}
@@ -198,9 +222,11 @@ export function HomeDesktop({ banner, categories, products, forever52Products, p
         )}
 
         {/* FUN SIZE MINIS SECTION */}
-        <div className="mb-20">
-          <FunSizeSection />
-        </div>
+        {funSizeProducts.length > 0 && (
+          <div className="mb-20">
+            <FunSizeSection products={funSizeProducts.slice(0, 10)} />
+          </div>
+        )}
 
         {/* NEW ARRIVALS — 5 products in grid */}
         {products.length > 0 && (

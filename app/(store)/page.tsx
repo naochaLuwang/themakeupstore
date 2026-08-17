@@ -23,9 +23,9 @@ const BRAND_BLACKLIST = [
 export default async function GatewayPage() {
   const supabase = await createClient()
 
-  let bannersRes: any, catDataRes: any, prodDataRes: any, forever52ProdDataRes: any, parentCatDataRes: any, showcaseItemsRes: any, childrenDataRes: any, fentyProdDataRes: any
+  let bannersRes: any, catDataRes: any, prodDataRes: any, forever52ProdDataRes: any, parentCatDataRes: any, showcaseItemsRes: any, childrenDataRes: any, fentyProdDataRes: any, funSizeCatRes: any, funSizeProdRes: any
   try {
-    [bannersRes, catDataRes, prodDataRes, forever52ProdDataRes, parentCatDataRes, showcaseItemsRes, childrenDataRes, fentyProdDataRes] = await Promise.all([
+    [bannersRes, catDataRes, prodDataRes, forever52ProdDataRes, parentCatDataRes, showcaseItemsRes, childrenDataRes, fentyProdDataRes, funSizeCatRes] = await Promise.all([
       supabase.from("hero_banners").select("image_url, subtitle, title, description, route").eq("is_active", true).order("position").limit(5),
       supabase.from("categories").select("id, name, slug, image_url, parent:parent_id(slug)").not("parent_id", "is", null).order("name"),
       supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").order("created_at", { ascending: false }).limit(50),
@@ -34,6 +34,7 @@ export default async function GatewayPage() {
       supabase.from("showcase_items").select("id, title, subtitle, image_url, link_url").eq("is_active", true).order("position", { ascending: true }),
       supabase.from("categories").select("id, parent_id").not("parent_id", "is", null),
       supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("brand", "Fenty Beauty").not("thumbnail_url", "is", null).order("created_at", { ascending: false }),
+      supabase.from("categories").select("id").eq("slug", "fun-size").single(),
     ])
   } catch {
     bannersRes = { data: null }
@@ -44,6 +45,7 @@ export default async function GatewayPage() {
     showcaseItemsRes = { data: null }
     childrenDataRes = { data: null }
     fentyProdDataRes = { data: null }
+    funSizeCatRes = { data: null }
   }
   const banners = bannersRes.data
   const catData = catDataRes.data
@@ -159,16 +161,33 @@ export default async function GatewayPage() {
   })
   const displayCats = [faceCat, lipsCat, ...otherCats].filter(Boolean).slice(0, 9) as any[]
 
+  let funSizeProducts: any[] = []
+  if (funSizeCatRes?.data?.id) {
+    const { data: funJunction } = await supabase.from("product_categories").select("product_id").eq("category_id", funSizeCatRes.data.id)
+    const funIds = funJunction?.map((j: any) => j.product_id) || []
+    if (funIds.length > 0) {
+      const { data: funProds } = await supabase
+        .from("products")
+        .select("id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)")
+        .eq("status", "active")
+        .in("id", funIds)
+      funSizeProducts = (funProds || []).filter((p: any) => {
+        const v = p.product_variants || []
+        return v.length === 0 || v.some((x: any) => Number(x.stock) > 0)
+      })
+    }
+  }
+
   return (
     <>
       {/* DESKTOP: mobile-like scrollable feed */}
       <div className="hidden md:block">
-        <HomeDesktop banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} />
+        <HomeDesktop banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} funSizeProducts={funSizeProducts} />
       </div>
 
       {/* MOBILE: native-style scrollable feed */}
       <div className="md:hidden">
-        <HomeMobile banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} showcaseItems={showcaseItems || []} />
+        <HomeMobile banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} showcaseItems={showcaseItems || []} funSizeProducts={funSizeProducts} />
       </div>
     </>
   )
