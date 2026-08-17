@@ -740,7 +740,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         <div className={`flex items-center gap-4 p-3 border rounded-xl ${giftQualified ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50'}`}>
                             <div className="relative shrink-0">
                                 {(() => {
-                                    const giftImg = resolvedGift.gift_product_ref?.image_url || resolvedGift.gift_product?.thumbnail_url
+                                    const giftImg = (resolvedGift.gift_product_ref?.images?.[0]) || resolvedGift.gift_product?.thumbnail_url
                                     const giftName = resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name
                                     return giftImg ? (
                                         <img src={giftImg} alt={giftName} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
@@ -1141,7 +1141,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                         <div className={`flex items-center gap-4 p-3 border rounded-xl ${giftQualified ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50'}`}>
                                             <div className="relative shrink-0">
                                                 {(() => {
-                                                    const giftImg = resolvedGift.gift_product_ref?.image_url || resolvedGift.gift_product?.thumbnail_url
+                                                    const giftImg = (resolvedGift.gift_product_ref?.images?.[0]) || resolvedGift.gift_product?.thumbnail_url
                                                     const giftName = resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name
                                                     return giftImg ? (
                                                         <img src={giftImg} alt={giftName} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />

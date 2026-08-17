@@ -7,7 +7,7 @@ export default async function AdminFreeGiftsPage() {
     const supabase = await createClient()
     const { data: rules } = await supabase
         .from('free_gifts')
-        .select('*, gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url), gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url)')
+        .select('*, gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url), gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, images)')
         .order('created_at', { ascending: false })
 
     return (

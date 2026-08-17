@@ -27,7 +27,7 @@ export interface FreeGiftRule {
     expires_at: string | null
     is_active: boolean
     gift_product?: { name: string; thumbnail_url: string | null; base_price: number }
-    gift_product_ref?: { name: string; image_url: string | null; price: number; stock: number }
+    gift_product_ref?: { name: string; images: string[] | null; price: number; stock: number }
     gift_variant?: { title: string; price: number; stock: number; image_url: string | null }
     qualifying_products?: { product_id: string }[]
     qualifying_categories?: { category_id: string }[]
@@ -126,7 +126,7 @@ export async function getActiveFreeGiftRules(): Promise<FreeGiftRule[]> {
             *,
             gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url, base_price),
             gift_variant:product_variants!free_gifts_gift_variant_id_fkey(title, price, stock, image_url),
-            gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock)
+            gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, images, price, stock)
         `)
         .eq("is_active", true)
         .lte("starts_at", now)
@@ -303,7 +303,7 @@ export async function evaluateFreeGifts(
 
         const giftRefId = rule.gift_product_ref_id || rule.gift_product_id
         const giftName = rule.gift_product_ref?.name || rule.gift_product?.name || "Free Gift"
-        const giftImage = rule.gift_product_ref?.image_url || rule.gift_variant?.image_url || rule.gift_product?.thumbnail_url || null
+        const giftImage = rule.gift_product_ref?.images?.[0] || rule.gift_variant?.image_url || rule.gift_product?.thumbnail_url || null
         const giftPrice = rule.gift_product_ref?.price || rule.gift_variant?.price || rule.gift_product?.base_price || 0
         gifts.push({
             rule_id: rule.id,

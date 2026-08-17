@@ -141,8 +141,14 @@ export default function OrderInvoicePage() {
         header, footer, nav, button, .no-print { display: none !important; }
         @page { size: ${isThermal ? '58mm auto' : 'A4'}; margin: 0; }
         body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        #printable-invoice { border: none !important; box-shadow: none !important; position: absolute; top: 0; left: 0; width: ${isThermal ? '58mm' : '100%'} !important; padding: ${isThermal ? '1mm' : '12mm'} !important; border-radius: 0 !important; color: black !important; }
-        svg { max-width: 100% !important; }
+        #printable-invoice {
+            border: none !important; box-shadow: none !important; position: absolute; top: 0; left: 0;
+            width: ${isThermal ? '58mm' : '100%'} !important; padding: ${isThermal ? '1mm' : '12mm'} !important;
+            border-radius: 0 !important; color: #000 !important; background: #fff !important;
+        }
+        #printable-invoice * { color: #000 !important; background: transparent !important; border-color: #000 !important; }
+        #printable-invoice .bg-white { background: #fff !important; }
+        svg { max-width: 100% !important; color: #000 !important; }
     }
 `}</style>
 

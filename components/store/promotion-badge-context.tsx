@@ -59,7 +59,7 @@ export function PromotionBadgeProvider({ children }: { children: React.ReactNode
                         .select(`
                             id, name, is_active, starts_at, expires_at, trigger_type, trigger_threshold, min_cart_amount,
                             gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url),
-                            gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock),
+                            gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, images, price, stock),
                             gift_quantity
                         `)
                         .eq('is_active', true)
@@ -151,7 +151,7 @@ export function PromotionBadgeProvider({ children }: { children: React.ReactNode
                     ruleName: rule.name,
                     minCartAmount: rule.min_cart_amount || undefined,
                     giftProduct: rule.gift_product_ref
-                        ? { name: rule.gift_product_ref.name, thumbnail_url: rule.gift_product_ref.image_url }
+                        ? { name: rule.gift_product_ref.name, thumbnail_url: rule.gift_product_ref.images?.[0] }
                         : rule.gift_product || undefined,
                     giftQuantity: rule.gift_quantity || 1,
                 })

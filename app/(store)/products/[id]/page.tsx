@@ -76,7 +76,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 id, name, description, gift_quantity, trigger_type, trigger_threshold, min_cart_amount, is_active, starts_at, expires_at,
                 gift_product_id, gift_product_ref_id,
                 gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url),
-                gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, image_url, price, stock)
+                gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, images, price, stock)
             `)
             .eq('is_active', true)
             .lte('starts_at', now)
