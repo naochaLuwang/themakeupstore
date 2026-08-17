@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Heart, ShoppingBag, Plus, X, Check, Palette, Star, StarHalf } from "lucide-react"
+import { Heart, ShoppingBag, Plus, X, Check, Palette, Star, StarHalf, ThumbsUp } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { useCart } from "@/components/store/use-cart"
 import { motion, AnimatePresence } from "framer-motion"
@@ -222,6 +222,22 @@ export function ProductCard({ product, priority, activeFlashSale }: { product: a
                         </div>
                     </div>
                 )}
+                {product.tag && (() => {
+                    let tagTop = 8
+                    if (product.is_new) tagTop += 24
+                    if (activeFlashSale) tagTop += 28
+                    if (hasDiscount && !product.is_new) tagTop += 28
+                    const isBestseller = product.tag === "BESTSELLER"
+                    return (
+                        <div
+                            className={`absolute left-2 z-10 px-2 py-[3px] rounded-sm flex items-center gap-1 ${isBestseller ? "bg-gradient-to-r from-[#fce4ec] to-[#f8bbd0]" : "bg-slate-900"}`}
+                            style={{ top: tagTop }}
+                        >
+                            {isBestseller && <ThumbsUp className="w-[8px] h-[8px] text-[#fc2779] fill-[#fc2779]" />}
+                            <span className={`text-[7px] font-black uppercase tracking-wider leading-none ${isBestseller ? "text-[#fc2779]" : "text-white"}`}>{product.tag}</span>
+                        </div>
+                    )
+                })()}
 
                 {productIsOutOfStock && (
                     <div className="absolute inset-0 z-20 bg-white/55 flex items-center justify-center">

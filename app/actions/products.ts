@@ -28,6 +28,7 @@ export async function createProduct(formData: FormData) {
                 name: payload.name,
                 slug: payload.slug,
                 brand: payload.brand,
+                tag: payload.tag || null,
                 description: payload.description,
                 has_variants: payload.has_variants,
                 base_price: payload.has_variants ? null : Number(payload.base_price),
@@ -176,7 +177,7 @@ export async function updateProduct(productId: string, formData: FormData) {
         // 4. Update Main Product & Gallery
         await supabase.from("products").update({
             name: payload.name, slug: payload.slug, description: payload.description,
-            brand: payload.brand, has_variants: payload.has_variants,
+            brand: payload.brand, tag: payload.tag || null, has_variants: payload.has_variants,
             base_price: payload.has_variants ? null : Number(payload.base_price),
             discount_type: payload.has_variants ? 'none' : payload.discount_type,
             discount_value: payload.has_variants ? 0 : Number(payload.discount_value),

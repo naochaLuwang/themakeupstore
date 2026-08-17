@@ -76,7 +76,7 @@ export default function ProductForm({ categories = [], concerns = [], initialDat
     const form = useForm<ProductFormValues>({
         resolver: zodResolver(productSchema) as any,
         defaultValues: {
-            name: "", slug: "", description: "", brand: "",
+            name: "", slug: "", description: "", brand: "", tag: "",
             has_variants: false, category_ids: [], concern_ids: [], base_price: 0, stock: 0,
             discount_type: "none", discount_value: 0, image_files: [], existing_images: [], variants: []
         }
@@ -218,6 +218,9 @@ export default function ProductForm({ categories = [], concerns = [], initialDat
                                 <div className="grid grid-cols-2 gap-6">
                                     <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase">Title</FormLabel><FormControl><Input className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl></FormItem>} />
                                     <FormField control={form.control} name="brand" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase">Brand Authority</FormLabel><FormControl><Input className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl></FormItem>} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <FormField control={form.control} name="tag" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase">Tag (optional)</FormLabel><FormControl><Input placeholder="e.g. BESTSELLER, NEW, MINI" className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl><FormDescription className="text-[10px] text-slate-400">Shown as badge on product card</FormDescription></FormItem>} />
                                 </div>
                                 <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase">Narration</FormLabel><RichTextEditor value={field.value} onChange={field.onChange} /></FormItem>} />
                                 <FormField control={form.control} name="category_ids" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase">Collections</FormLabel><MultiSelect options={categories.map(c => ({ label: c.name, value: c.id }))} selected={field.value || []} onChange={field.onChange} /></FormItem>} />

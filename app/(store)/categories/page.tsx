@@ -73,6 +73,11 @@ export default function CategoriesPage() {
                 childrenMap[cat.parent_id].push(cat)
             }
         })
+        parents.sort((a, b) => {
+            if (a.slug === "fun-size") return 1
+            if (b.slug === "fun-size") return -1
+            return a.name.localeCompare(b.name)
+        })
         return { parents, childrenMap }
     }, [allCategories])
 
@@ -109,69 +114,89 @@ export default function CategoriesPage() {
 
                                     return (
                                         <div key={parent.id}>
-                                            <button
-                                                onClick={() =>
-                                                    setExpandedId(isExpanded ? null : parent.id)
-                                                }
-                                                className="w-full text-left rounded-[26px] min-h-[180px] overflow-hidden relative border-0 outline-none"
-                                                style={{
-                                                    borderBottomLeftRadius: isExpanded ? 0 : 26,
-                                                    borderBottomRightRadius: isExpanded ? 0 : 26,
-                                                }}
-                                            >
-                                                {/* Backdrop image */}
-                                                {bgImage && (
-                                                    <img
-                                                        src={bgImage}
-                                                        alt={parent.name || "Category"}
-                                                        className="absolute inset-0 w-full h-full object-cover"
-                                                        style={{
-                                                            backgroundColor: tint.bg,
-                                                            borderRadius: 26,
-                                                        }}
-                                                    />
-                                                )}
-                                                {/* Tint overlay */}
-                                                <div
-                                                    className="absolute inset-0"
-                                                    style={{
-                                                        backgroundColor: tint.bg,
-                                                        opacity: 0.55,
-                                                        borderRadius: 26,
-                                                    }}
-                                                />
-                                                {/* Content */}
-                                                <div className="relative z-10 p-6 min-h-[180px] flex flex-col justify-between">
-                                                    <div>
-                                                        <span
-                                                            className="text-xs font-medium"
-                                                            style={{ color: tint.accent + "60" }}
-                                                        >
-                                                            {numStr}
-                                                        </span>
-                                                        <h2 className="text-[22px] font-semibold text-gray-900 -tracking-[0.3px] mt-1">
-                                                            {parent.name}
-                                                        </h2>
-                                                        <p
-                                                            className="text-sm font-medium mt-1.5"
-                                                            style={{ color: tint.accent }}
-                                                        >
-                                                            {children.length}{" "}
-                                                            {children.length === 1
-                                                                ? "category"
-                                                                : "categories"}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex justify-end">
+                                            {(() => {
+                                                const cardBody = (
+                                                    <>
+                                                        {/* Backdrop image */}
+                                                        {bgImage && (
+                                                            <img
+                                                                src={bgImage}
+                                                                alt={parent.name || "Category"}
+                                                                className="absolute inset-0 w-full h-full object-cover"
+                                                                style={{
+                                                                    backgroundColor: tint.bg,
+                                                                    borderRadius: 26,
+                                                                }}
+                                                            />
+                                                        )}
+                                                        {/* Tint overlay */}
                                                         <div
-                                                            className="w-11 h-11 rounded-full flex items-center justify-center"
-                                                            style={{ backgroundColor: "#111" }}
-                                                        >
-                                                            <ArrowRight className="w-[18px] h-[18px] text-white" />
+                                                            className="absolute inset-0"
+                                                            style={{
+                                                                backgroundColor: tint.bg,
+                                                                opacity: 0.55,
+                                                                borderRadius: 26,
+                                                            }}
+                                                        />
+                                                        {/* Content */}
+                                                        <div className="relative z-10 p-6 min-h-[180px] flex flex-col justify-between">
+                                                            <div>
+                                                                <span
+                                                                    className="text-xs font-medium"
+                                                                    style={{ color: tint.accent + "60" }}
+                                                                >
+                                                                    {numStr}
+                                                                </span>
+                                                                <h2 className="text-[22px] font-semibold text-gray-900 -tracking-[0.3px] mt-1">
+                                                                    {parent.name}
+                                                                </h2>
+                                                                <p
+                                                                    className="text-sm font-medium mt-1.5"
+                                                                    style={{ color: tint.accent }}
+                                                                >
+                                                                    {children.length}{" "}
+                                                                    {children.length === 1
+                                                                        ? "category"
+                                                                        : "categories"}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex justify-end">
+                                                                <div
+                                                                    className="w-11 h-11 rounded-full flex items-center justify-center"
+                                                                    style={{ backgroundColor: "#111" }}
+                                                                >
+                                                                    <ArrowRight className="w-[18px] h-[18px] text-white" />
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </div>
-                                            </button>
+                                                    </>
+                                                )
+                                                return children.length === 0 ? (
+                                                    <Link
+                                                        href={parent.slug === "fun-size" ? "/fun-size" : `/categories/${parent.slug}`}
+                                                        className="w-full text-left rounded-[26px] min-h-[180px] overflow-hidden relative border-0 outline-none block"
+                                                        style={{
+                                                            borderBottomLeftRadius: 26,
+                                                            borderBottomRightRadius: 26,
+                                                        }}
+                                                    >
+                                                        {cardBody}
+                                                    </Link>
+                                                ) : (
+                                                    <button
+                                                        onClick={() =>
+                                                            setExpandedId(isExpanded ? null : parent.id)
+                                                        }
+                                                        className="w-full text-left rounded-[26px] min-h-[180px] overflow-hidden relative border-0 outline-none"
+                                                        style={{
+                                                            borderBottomLeftRadius: isExpanded ? 0 : 26,
+                                                            borderBottomRightRadius: isExpanded ? 0 : 26,
+                                                        }}
+                                                    >
+                                                        {cardBody}
+                                                    </button>
+                                                )
+                                            })()}
 
                                             {/* Expanded sub-list */}
                                             {isExpanded && children.length > 0 && (

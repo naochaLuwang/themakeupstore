@@ -67,6 +67,7 @@ export const adminConfig = {
             items: [
                 { title: "Products", href: "/admin/products", icon: ShoppingBag },
                 { title: "Categories", href: "/admin/categories", icon: FolderTree },
+                { title: "Tags", href: "/admin/tags", icon: Tag },
                 { title: "Stock", href: "/admin/stock", icon: Archive },
                 { title: "Inventory", href: "/admin/inventory", icon: PackageSearch },
                 { title: "Pricing", href: "/admin/pricing", icon: TrendingUp },

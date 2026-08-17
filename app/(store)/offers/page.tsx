@@ -47,7 +47,7 @@ export default function MidYearSalePage() {
 
           const { data: pc } = await supabase
             .from('product_categories')
-            .select('products(id, name, slug, base_price, thumbnail_url, brand, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url))')
+            .select('products(id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url))')
             .in('category_id', matched.map(c => c.id))
             .limit(40)
 

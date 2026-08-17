@@ -250,7 +250,7 @@ export default function ProductEditForm({ product, categories, concerns = [] }: 
 
     const form = useForm<ProductFormValues>({
         resolver: zodResolver(productSchema) as any,
-        defaultValues: { name: "", slug: "", description: "", brand: "", has_variants: false, category_ids: [], concern_ids: [], base_price: 0, stock: 0, discount_type: "none", discount_value: 0, image_files: [], variants: [] }
+        defaultValues: { name: "", slug: "", description: "", brand: "", tag: "", has_variants: false, category_ids: [], concern_ids: [], base_price: 0, stock: 0, discount_type: "none", discount_value: 0, image_files: [], variants: [] }
     })
 
     const { fields: vFields, append: addV, remove: remV } = useFieldArray({ control: form.control, name: "variants", keyName: "_rhfId" })
@@ -385,6 +385,7 @@ export default function ProductEditForm({ product, categories, concerns = [] }: 
                                     <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">Public Title</FormLabel><FormControl><Input className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl></FormItem>} />
                                     <FormField control={form.control} name="slug" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">URL Segment</FormLabel><FormControl><Input className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl></FormItem>} />
                                 </div>
+                                <FormField control={form.control} name="tag" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">Tag (optional)</FormLabel><FormControl><Input placeholder="e.g. BESTSELLER, NEW, MINI" className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl><FormDescription className="text-[10px] text-slate-400">Shown as badge on product card</FormDescription></FormItem>} />
                                 <FormField control={form.control} name="description" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">Product Narration</FormLabel>

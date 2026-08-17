@@ -6,6 +6,7 @@ export const productSchema = z.object({
     slug: z.string().min(2, "Slug is required"),
     description: z.string().default(""),
     brand: z.string().default(""),
+    tag: z.string().default(""),
     has_variants: z.boolean().default(false),
     category_ids: z.array(z.string()).default([]),
     concern_ids: z.array(z.string()).default([]),

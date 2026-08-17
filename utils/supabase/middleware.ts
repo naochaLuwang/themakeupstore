@@ -63,6 +63,7 @@ export async function updateSession(request: NextRequest) {
         path.startsWith('/offers') ||
         path.startsWith('/shop') ||
         path.startsWith('/categories') ||
+        path.startsWith('/fun-size') ||
         path.startsWith('/exclusive') ||
         path.startsWith('/essentials') ||
         path.startsWith('/skincare-accessories') ||
