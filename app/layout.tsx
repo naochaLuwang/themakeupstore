@@ -92,9 +92,13 @@ export const metadata: Metadata = {
 };
 
 async function AuthCartSync() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return <CartSync userId={user?.id || null} />;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    return <CartSync userId={data?.user?.id || null} />;
+  } catch {
+    return <CartSync userId={null} />;
+  }
 }
 
 export default async function RootLayout({
