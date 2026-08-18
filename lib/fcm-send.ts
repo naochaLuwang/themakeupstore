@@ -6,75 +6,39 @@ export function parseServiceAccountKey(rawValue: string | undefined | null): any
 
   let s = String(rawValue).trim()
 
-  const cands = new Set<string>()
-  cands.add(s)
+  // Find JSON boundaries: first { to last }
+  const firstBrace = s.indexOf('{')
+  const lastBrace = s.lastIndexOf('}')
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error('No JSON object found in FIREBASE_SERVICE_ACCOUNT_KEY')
+  }
+  s = s.substring(firstBrace, lastBrace + 1)
 
-  // A) Strip JSON.stringify wrapper layers (outer "..." quotes)
-  let inner = s
-  for (let i = 0; i < 3; i++) {
-    if (inner.startsWith('"') && inner.endsWith('"')) {
-      inner = inner.slice(1, -1)
-      cands.add(inner)
-    } else break
+  // Try parsing as-is first (handles \n escape sequences correctly)
+  const candidates = [s]
+
+  // If the string contains actual newlines (not \n sequences), escape them
+  if (s.includes('\n')) {
+    candidates.push(s.replace(/\n/g, '\\n'))
   }
 
-  // B) Strip escaped-quote wrapper \"...\" if present
-  if (s.startsWith('\\"') && s.endsWith('\\"')) {
-    cands.add(s.slice(2, -2))
+  // If private key has literal \n that are actually backslash-n (from env escaping),
+  // try converting them to real newlines
+  if (s.includes('\\\\n')) {
+    candidates.push(s.replace(/\\\\n/g, '\\n'))
+  }
+  if (s.includes('\\n') && !s.includes('\n')) {
+    // \n are literal two-char sequences - this is already valid JSON, try as-is
   }
 
-  // C) Unescape \" -> " (one layer)
-  let un = s.replace(/\\"/g, '"')
-  cands.add(un)
-  // strip resulting surrounding quotes
-  if (un.startsWith('"') && un.endsWith('"')) cands.add(un.slice(1, -1))
-  if (un.startsWith('\\"') && un.endsWith('\\"')) cands.add(un.slice(2, -2))
-
-  // D) For any candidate containing raw newline chars, add escaped variant
-  for (const c of [...cands]) {
-    if (c.includes('\n')) cands.add(c.replace(/\n/g, '\\n'))
-  }
-
-  // E) Strip \{ and \} wrappers (env vars set via shell escaping)
-  for (const c of [...cands]) {
-    let trimmed = c
-    if (trimmed.startsWith('\\{')) trimmed = trimmed.slice(1)
-    if (trimmed.endsWith('\\}')) trimmed = trimmed.slice(0, -1)
-    if (trimmed !== c) cands.add(trimmed)
-  }
-
-  // F) Handle \{...\} wrapper with literal \n in private key
-  for (const c of [...cands]) {
-    if (c.startsWith('\\{') && c.endsWith('\\}')) {
-      let stripped = c.slice(1, -1)
-      cands.add(stripped)
-      if (stripped.includes('\\n')) {
-        cands.add(stripped.replace(/\\n/g, '\n'))
-      }
-    }
-  }
-
-  // G) Unescape remaining escaped characters within the string
-  for (const c of [...cands]) {
-    if (c.includes('\\')) {
-      cands.add(c.replace(/\\{/g, '{').replace(/\\}/g, '}'))
-    }
-  }
-
-  // Try each candidate; pick the one yielding a valid key with most newlines in pk
-  let best: any = null
-  for (const c of cands) {
+  for (const c of candidates) {
     try {
-      let parsed = JSON.parse(c)
-      while (typeof parsed === 'string') parsed = JSON.parse(parsed)
-      const pk = parsed && parsed.private_key
-      if (typeof pk === 'string' && pk.includes('BEGIN PRIVATE KEY')) {
-        const nl = (pk.match(/\n/g) || []).length
-        if (!best || nl > best.nl) best = { parsed, nl }
+      const parsed = JSON.parse(c)
+      if (parsed && typeof parsed.private_key === 'string' && parsed.private_key.includes('BEGIN PRIVATE KEY')) {
+        return parsed
       }
     } catch {}
   }
-  if (best) return best.parsed
 
   throw new Error('Could not parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON')
 }
@@ -144,6 +108,38 @@ export async function sendFcmNotification(token: string, title: string, body: st
   if (!res.ok) {
     const err = await res.text()
     throw new Error(`FCM send failed: ${res.status} ${err}`)
+  }
+
+  return res.json()
+}
+
+export async function sendFcmToTopic(topic: string, title: string, body: string, url?: string) {
+  const accessToken = await getAccessToken()
+
+  const message: any = {
+    message: {
+      topic,
+      notification: { title, body },
+      android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true, channel_id: 'push-notifications' } },
+    },
+  }
+
+  if (url) {
+    message.message.data = { url }
+  }
+
+  const res = await fetch(FCM_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(message),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`FCM topic send failed: ${res.status} ${err}`)
   }
 
   return res.json()

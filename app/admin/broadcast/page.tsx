@@ -79,7 +79,7 @@ export default function AdminBroadcastForm() {
     const sendTest = async () => {
         if (!form.title || !form.body) return;
         setTestLoading(true);
-        setTestStatus("Sending test notification...");
+        setTestStatus("Sending to your devices...");
         try {
             const res = await fetch('/api/admin/broadcast/test', {
                 method: 'POST',
@@ -88,12 +88,35 @@ export default function AdminBroadcastForm() {
             });
             const data = await res.json();
             if (data.success) {
-                setTestStatus(`Test sent to ${data.sent} device${data.sent !== 1 ? 's' : ''}`);
+                setTestStatus(`Sent to ${data.sent} of your ${data.devices} device(s)`);
             } else {
                 setTestStatus(data.error || "Test failed.");
             }
         } catch {
             setTestStatus("Test failed.");
+        } finally {
+            setTestLoading(false);
+        }
+    }
+
+    const sendTopicTest = async () => {
+        if (!form.title || !form.body) return;
+        setTestLoading(true);
+        setTestStatus("Sending to admin topic...");
+        try {
+            const res = await fetch('/api/admin/broadcast/test-topic', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form)
+            });
+            const data = await res.json();
+            if (data.success) {
+                setTestStatus("Sent to admin topic — all subscribed devices receive this");
+            } else {
+                setTestStatus(data.error || "Topic test failed.");
+            }
+        } catch {
+            setTestStatus("Topic test failed.");
         } finally {
             setTestLoading(false);
         }
@@ -229,11 +252,19 @@ export default function AdminBroadcastForm() {
                         </button>
                         <button
                             onClick={sendTest}
-                            disabled={testLoading || !form.title || !form.body}
+                            disabled={testLoading || stats.devices === 0}
+                            className="w-full py-3 bg-zinc-900 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-[0.99] disabled:opacity-30"
+                        >
+                            {testLoading ? <Activity className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            {testLoading ? "SENDING..." : "SEND TEST TO MY DEVICES"}
+                        </button>
+                        <button
+                            onClick={sendTopicTest}
+                            disabled={testLoading || stats.devices === 0}
                             className="w-full py-3 bg-white border border-zinc-200 text-zinc-600 rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-zinc-50 transition-all active:scale-[0.99] disabled:opacity-30"
                         >
-                            {testLoading ? <Activity className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
-                            {testLoading ? "SENDING..." : "SEND TEST TO MY DEVICE"}
+                            {testLoading ? <Activity className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            TEST VIA TOPIC (ALL ADMIN DEVICES)
                         </button>
                         {testStatus && (
                             <p className={`text-[11px] font-medium text-center ${testStatus.includes('sent') ? 'text-emerald-600' : 'text-amber-600'}`}>

@@ -81,6 +81,14 @@ export async function registerForFCM() {
 
   if (error) console.error('[FCM] DB insert failed:', error.message)
   else console.log('[FCM] Registered successfully')
+
+  // Subscribe to admin topic for test broadcasts
+  try {
+    await FirebaseMessaging.subscribeToTopic({ topic: 'admin' })
+    console.log('[FCM] Subscribed to admin topic')
+  } catch (err) {
+    console.warn('[FCM] Topic subscription failed:', err)
+  }
 }
 
 export async function unregisterFCM() {
