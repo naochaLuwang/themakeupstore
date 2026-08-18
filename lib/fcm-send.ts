@@ -43,10 +43,21 @@ export function parseServiceAccountKey(rawValue: string | undefined | null): any
     if (trimmed !== c) cands.add(trimmed)
   }
 
-  // F) Unescape remaining escaped characters within the string
+  // F) Handle \{...\} wrapper with literal \n in private key
+  for (const c of [...cands]) {
+    if (c.startsWith('\\{') && c.endsWith('\\}')) {
+      let stripped = c.slice(1, -1)
+      cands.add(stripped)
+      if (stripped.includes('\\n')) {
+        cands.add(stripped.replace(/\\n/g, '\n'))
+      }
+    }
+  }
+
+  // G) Unescape remaining escaped characters within the string
   for (const c of [...cands]) {
     if (c.includes('\\')) {
-      cands.add(c.replace(/\\{/g, '{').replace(/\\}/g, '}').replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t'))
+      cands.add(c.replace(/\\{/g, '{').replace(/\\}/g, '}'))
     }
   }
 

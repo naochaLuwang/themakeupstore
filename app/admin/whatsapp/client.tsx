@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Save, Plus, Trash2, MessageSquare, CheckCircle2, Clock, XCircle, Smartphone } from "lucide-react"
+import { Save, Plus, Trash2, MessageSquare, CheckCircle2, Clock, XCircle } from "lucide-react"
 
 interface Template {
   id: string

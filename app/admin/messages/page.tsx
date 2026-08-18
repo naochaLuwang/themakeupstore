@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
-import { Mail, Clock, User as UserIcon, Trash2 } from "lucide-react"
+import { Mail, User as UserIcon } from "lucide-react"
 import { MessageItem } from "./message-item"
 
 export default async function AdminMessagesPage() {

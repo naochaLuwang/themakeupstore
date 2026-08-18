@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
-import { Star, Trash2, CheckCircle, XCircle, ShieldCheck } from "lucide-react"
+import { Star, Trash2, XCircle, ShieldCheck } from "lucide-react"
 import { deleteReview, toggleVerification, approveReview } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

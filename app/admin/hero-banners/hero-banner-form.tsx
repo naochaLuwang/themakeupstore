@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { createHeroBanner, updateHeroBanner } from "@/app/actions/hero-banners"
-import { Loader2, ArrowRight, ImageIcon, Route, Type, AlignLeft, Hash, FlipHorizontal } from "lucide-react"
+import { Loader2, ArrowRight, ImageIcon, Route, Type, FlipHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"

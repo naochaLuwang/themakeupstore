@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Search, Plus, Trash2, MapPin, Clock, Pencil, Check, X, ChevronRight } from "lucide-react"
+import { Search, Plus, Trash2, MapPin, Clock, Pencil, Check, X } from "lucide-react"
 import { toast } from "sonner"
 import { getZones, createZone, updateZone, deleteZone, createMethod, updateMethod, deleteMethod } from "@/app/actions/shipping"
 

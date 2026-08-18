@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
-import { Check, X, Building2, FileText, User, Eye, MapPin, Ban, History, Users, Clock } from "lucide-react"
+import { Check, Building2, FileText, User, Eye, MapPin, Ban, History, Users, Clock } from "lucide-react"
 import { revalidatePath } from "next/cache"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"

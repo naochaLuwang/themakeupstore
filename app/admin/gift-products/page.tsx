@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
-import { Plus, Edit3, Trash2, ShoppingBag } from "lucide-react"
+import { Plus, Edit3, ShoppingBag } from "lucide-react"
 import Link from "next/link"
 import { deleteGiftProduct } from "@/app/actions/gift-products"
 import { GiftProductDeleteButton } from "@/components/admin/gift-product-controls"

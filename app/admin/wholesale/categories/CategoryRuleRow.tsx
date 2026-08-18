@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { updateWholesaleRule } from "@/app/actions/wholesale"
 import { toast } from "sonner"
-import { Save, Loader2, Hash } from "lucide-react"
+import { Save, Loader2 } from "lucide-react"
 
 export default function CategoryRuleRow({ category }: { category: any }) {
     // Extract the existing rule from the array

@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client"
 import { updateOrderPOS } from "@/app/actions/orders"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Trash2, Save, ArrowLeft, Plus, Search, Tag, Calculator, Truck } from "lucide-react"
+import { Trash2, ArrowLeft, Search, Tag, Calculator, Truck } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 

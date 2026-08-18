@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Trash2, Package, Tag, ArrowRight } from "lucide-react"
+import { ChevronLeft, Trash2, Package, Tag } from "lucide-react"
 import Link from "next/link"
 import { revalidatePath } from "next/cache"
 import { AddProductSidebar } from "@/components/admin/category-add-product"

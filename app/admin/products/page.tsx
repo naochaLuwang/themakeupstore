@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Package, Eye, EyeOff, Tag, Box, MoreVertical } from "lucide-react"
+import { Plus, Package, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { ProductSearch } from "@/components/admin/product-search"

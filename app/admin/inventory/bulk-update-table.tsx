@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { Save, RotateCcw, Loader2 } from "lucide-react"
+import { Save, RotateCcw } from "lucide-react"
 
 export function BulkUpdateTable({ inventory }: { inventory: any[] }) {
     const [pendingChanges, setPendingChanges] = useState<{ [key: string]: number }>({})

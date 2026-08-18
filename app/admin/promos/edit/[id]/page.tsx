@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { notFound } from "next/navigation"
 import { PromoForm } from "../../promo-form"
 import { getPromoUsageHistory } from "@/app/actions/promo"
-import { ChevronLeft, Clock, ShoppingBag } from "lucide-react"
+import { ChevronLeft, Clock } from "lucide-react"
 import Link from "next/link"
 
 interface PageProps {
