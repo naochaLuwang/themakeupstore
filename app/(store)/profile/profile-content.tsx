@@ -89,6 +89,20 @@ export function ProfileContent({
         return () => clearTimeout(t)
     }, [])
 
+    if (!user?.id) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#F8F8F8]">
+                <div className="text-center space-y-4">
+                    <User className="w-12 h-12 text-slate-300 mx-auto" />
+                    <p className="text-sm font-semibold text-slate-500">Please sign in to view your profile</p>
+                    <button onClick={() => router.push("/login")} className="px-6 py-3 bg-[#fc2779] text-white text-sm font-bold rounded-xl">
+                        Sign In
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
     if (!ready) return <PinkLoader />
 
     const handleSignOut = async () => {
@@ -459,7 +473,7 @@ export function ProfileContent({
                     </div>
 
                     {/* M Beauty Rewards */}
-                    {loyaltyData && (
+                    {loyaltyData?.points && (
                         <div className="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
                             <Link href="/rewards" className="flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors">
                                 <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">

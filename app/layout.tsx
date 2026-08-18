@@ -47,7 +47,6 @@ export const metadata: Metadata = {
   },
   description: "Your ultimate destination for authentic international and luxury makeup brands in Imphal. Shop original products from Nars, Rare Beauty, Dior, and more at THE MAKEUP STORE WANGKHEI.",
   keywords: ["makeup store imphal", "authentic makeup manipur", "luxury beauty wangkhei", "international makeup brands imphal", "the makeup store wangkhei"],
-  manifest: "/manifest.webmanifest",
   alternates: {
     canonical: "/",
   },
@@ -57,14 +56,6 @@ export const metadata: Metadata = {
     google: "hFyzbJnQoYlJqQAlHIZ-M58V4vsedlVBx6zL-dzu5Jw",
   },
 
-  other: {
-    "mobile-web-app-capable": "yes",
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "THE MAKEUP STORE WANGKHEI",
-  },
   formatDetection: {
     telephone: false,
   },

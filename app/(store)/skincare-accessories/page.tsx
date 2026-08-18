@@ -35,7 +35,7 @@ export default function SkincareAccessoriesPage() {
                     return;
                 }
 
-                const parentIds = parents.map(p => p.id)
+                const parentIds = parents.map((p: any) => p.id)
 
                 const { data: subs } = await supabase
                     .from('categories')
@@ -45,7 +45,7 @@ export default function SkincareAccessoriesPage() {
 
                 if (subs) setSubcategories(subs)
 
-                const cIds = [...parentIds, ...(subs?.map(s => s.id) || [])]
+                const cIds = [...parentIds, ...(subs?.map((s: any) => s.id) || [])]
                 setCategoryIds(cIds)
 
                 const { data: junction } = await supabase
@@ -53,7 +53,7 @@ export default function SkincareAccessoriesPage() {
                     .select('product_id')
                     .in('category_id', cIds)
 
-                const lpIds = Array.from(new Set((junction?.map(j => j.product_id) || []).filter(id => !!id)))
+                const lpIds = Array.from(new Set((junction?.map((j: any) => j.product_id) || []).filter((id: any) => !!id))) as string[]
                 setLinkedProductIds(lpIds)
 
                 await fetchProducts(0, cIds, lpIds)

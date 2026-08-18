@@ -40,15 +40,15 @@ export default function MidYearSalePage() {
         const sectionProducts: Record<string, any[]> = {}
 
         for (const [key, names] of Object.entries(CATEGORY_MAP)) {
-          const matched = cats.filter(c =>
-            names.some(n => c.name.toLowerCase() === n.toLowerCase())
+          const matched = cats.filter((c: any) =>
+            names.some((n: any) => c.name.toLowerCase() === n.toLowerCase())
           )
           if (matched.length === 0) continue
 
           const { data: pc } = await supabase
             .from('product_categories')
             .select('products(id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url))')
-            .in('category_id', matched.map(c => c.id))
+            .in('category_id', matched.map((c: any) => c.id))
             .limit(40)
 
           const seen = new Set<string>()

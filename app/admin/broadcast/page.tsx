@@ -37,7 +37,7 @@ export default function AdminBroadcastForm() {
             if (error) throw error;
 
             if (data) {
-                const uniqueIds = new Set(data.map(d => d.user_id)).size;
+                const uniqueIds = new Set(data.map((d: any) => d.user_id)).size;
                 setStats({
                     devices: data.length,
                     users: uniqueIds

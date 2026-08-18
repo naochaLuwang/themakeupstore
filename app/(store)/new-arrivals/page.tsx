@@ -30,7 +30,7 @@ export default function NewArrivalsPage() {
                 if (!category) return
 
                 const { data: junctionData } = await supabase.from('product_categories').select('product_id').eq('category_id', category.id)
-                const productIds = junctionData?.map(j => j.product_id) || []
+                const productIds = junctionData?.map((j: any) => j.product_id) || []
                 
                 // Fetch products from BOTH the direct category_id column AND the junction table
                 let query = supabase

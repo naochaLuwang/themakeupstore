@@ -209,7 +209,7 @@ export function usePromotions() {
                     const { data: prods } = await supabase.from("products").select("id, brand").in("id", productIds)
                     const brands = new Set(rule.qualifying_brands?.map(b => b.brand) || [])
                     const qualifying = realItems.filter(i => {
-                        const p = prods?.find(pr => pr.id === i.productId)
+                        const p = prods?.find((pr: any) => pr.id === i.productId)
                         return p && brands.has(p.brand)
                     })
                     qualifyingSubtotal = qualifying.reduce((s, i) => s + i.price * i.quantity, 0)
@@ -228,7 +228,7 @@ export function usePromotions() {
                         const { data: { user } } = await supabase.auth.getUser()
                         if (user) {
                             const { data: userOrders } = await supabase.from("orders").select("id").eq("user_id", user.id)
-                            const orderIds = (userOrders || []).map(o => o.id)
+                            const orderIds = (userOrders || []).map((o: any) => o.id)
                             const claimed = new Set<string>()
                             if (orderIds.length > 0) {
                                 const { data: existingGifts } = await supabase
@@ -389,7 +389,7 @@ export function usePromotions() {
                     const { data: prods } = await supabase.from("products").select("id, brand").in("id", productIds)
                     const brands = new Set(rule.qualifying_brands?.map(b => b.brand) || [])
                     const qualifying = realItems.filter(i => {
-                        const p = prods?.find(pr => pr.id === i.productId)
+                        const p = prods?.find((pr: any) => pr.id === i.productId)
                         return p && brands.has(p.brand)
                     })
                     const qty = qualifying.reduce((s, i) => s + i.quantity, 0)
@@ -446,7 +446,7 @@ export function usePromotions() {
                     const { data: prods } = await supabase.from("products").select("id, brand").in("id", productIds)
                     const brands = new Set(rule.buy_brands?.map(b => b.brand) || [])
                     qualifyingItems = realItems.filter(i => {
-                        const p = prods?.find(pr => pr.id === i.productId)
+                        const p = prods?.find((pr: any) => pr.id === i.productId)
                         return p && brands.has(p.brand)
                     })
                 }

@@ -99,7 +99,7 @@ export default function ExclusivePage() {
 
             if (subs) setSubcategories(subs)
 
-            const categoryIds = [parent.id, ...(subs?.map((s) => s.id) || [])]
+            const categoryIds = [parent.id, ...(subs?.map((s: any) => s.id) || [])]
 
             const { data: junction } = await supabase
                 .from("product_categories")

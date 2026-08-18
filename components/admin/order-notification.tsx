@@ -53,7 +53,7 @@ export function OrderNotification() {
             .from("orders")
             .select("id, status, created_at, total", { count: "exact", head: true })
             .in("status", ["pending", "confirmed"])
-            .then(({ count }) => setPendingCount(count || 0))
+            .then(({ count }: any) => setPendingCount(count || 0))
     }, [supabase])
 
     useEffect(() => {
@@ -62,7 +62,7 @@ export function OrderNotification() {
             .on(
                 "postgres_changes",
                 { event: "INSERT", schema: "public", table: "orders" },
-                async (payload) => {
+                async (payload: any) => {
                     const order = await enrichOrder(payload.new, supabase)
                     setPendingCount((c) => c + 1)
                     playNotificationSound()

@@ -29,7 +29,7 @@ export default function VisitorHistoryPage() {
 
         const channel = supabase.channel('history-realtime')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'traffic_log' },
-                (p) => setLogs(prev => [p.new, ...prev]))
+                (p: any) => setLogs(prev => [p.new, ...prev]))
             .subscribe()
 
         return () => { supabase.removeChannel(channel) }

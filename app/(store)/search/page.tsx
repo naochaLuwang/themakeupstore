@@ -102,7 +102,7 @@ export default function SearchPage() {
 
         if (brandResult.data) {
             const unique = [...new Set(brandResult.data.map((p: any) => p.brand).filter(Boolean))].sort()
-            setAllBrands(unique)
+            setAllBrands(unique as string[])
         }
     }
 
@@ -174,7 +174,7 @@ export default function SearchPage() {
                             .from("product_categories")
                             .select("product_id")
                             .in("category_id", catIds)
-                        catProductIds = [...new Set((pcData || []).map((p: any) => p.product_id))]
+                        catProductIds = [...new Set((pcData || []).map((p: any) => p.product_id))] as string[]
                     }
                     if (matchIds === null) {
                         matchIds = catProductIds
@@ -218,14 +218,14 @@ export default function SearchPage() {
                 if (activePriceIdx !== null) {
                     const range = PRICE_RANGES[activePriceIdx]
                     processed = processed.filter(
-                        (p) => p._effectivePrice >= range.min && (range.max === Infinity || p._effectivePrice < range.max)
+                        (p: any) => p._effectivePrice >= range.min && (range.max === Infinity || p._effectivePrice < range.max)
                     )
                 }
 
                 if (activeSort === "price_asc") {
-                    processed.sort((a, b) => a._effectivePrice - b._effectivePrice)
+                    processed.sort((a: any, b: any) => a._effectivePrice - b._effectivePrice)
                 } else if (activeSort === "price_desc") {
-                    processed.sort((a, b) => b._effectivePrice - a._effectivePrice)
+                    processed.sort((a: any, b: any) => b._effectivePrice - a._effectivePrice)
                 }
 
                 setResults(processed)

@@ -72,7 +72,7 @@ export function FlashSaleForm({ initialData, isEdit = false, categories = [] }: 
     setBrandSearching(true)
     const { data } = await supabase.from('products').select('brand').not('brand', 'is', null).ilike('brand', `%${term}%`).order('brand').limit(10)
     const unique = [...new Set((data || []).map((r: any) => r.brand).filter(Boolean))]
-    setBrandResults(unique)
+    setBrandResults(unique as string[])
     setBrandOpen(true)
     setBrandSearching(false)
   }, 300)

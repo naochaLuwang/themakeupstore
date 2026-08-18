@@ -147,7 +147,7 @@ export default function CartPage() {
                 .select("*, product_variants(id, price, stock, title, image_url)")
                 .in("id", productIds)
                 .limit(1)
-                .then(({ data }) => {
+                .then(({ data }: any) => {
                     if (data?.length) {
                         const brand = data[0].brand
                         if (brand) {
@@ -157,7 +157,7 @@ export default function CartPage() {
                                 .eq("brand", brand)
                                 .not("id", "in", `(${productIds.join(",")})`)
                                 .limit(6)
-                                .then(({ data: recs }) => setRecommendations(recs || []))
+                                .then(({ data: recs }: any) => setRecommendations(recs || []))
                         }
                     }
                 })

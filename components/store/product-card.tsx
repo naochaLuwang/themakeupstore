@@ -100,7 +100,7 @@ export function ProductCard({ product, priority, activeFlashSale }: { product: a
                 .eq("product_id", product.id)
                 .eq("is_approved", true)
             if (reviews && reviews.length > 0) {
-                const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+                const avg = reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length
                 setAverageRating(Math.round(avg * 10) / 10)
             }
         } catch {}
@@ -117,16 +117,19 @@ export function ProductCard({ product, priority, activeFlashSale }: { product: a
 
     const inBag = useMemo(() => cartItems.some((i) => i.productId === product.id), [cartItems, product.id])
 
-    const isInWishlist = useMemo(async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return false
-        const { data } = await supabase.from("wishlist").select("id").eq("user_id", user.id).eq("product_id", product.id).maybeSingle()
-        return !!data
-    }, [product.id, supabase])
-
     useEffect(() => {
-        isInWishlist.then(setIsWishlisted)
-    }, [isInWishlist])
+        let cancelled = false
+        async function checkWishlist() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user || cancelled) return
+                const { data } = await supabase.from("wishlist").select("id").eq("user_id", user.id).eq("product_id", product.id).maybeSingle()
+                if (!cancelled) setIsWishlisted(!!data)
+            } catch {}
+        }
+        checkWishlist()
+        return () => { cancelled = true }
+    }, [product.id])
 
     const handleAddToBag = async (e: React.MouseEvent) => {
         e.preventDefault()

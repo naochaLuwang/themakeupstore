@@ -186,7 +186,7 @@ export default function SkincareRoutineFinder({ open, onClose }: Props) {
             return
         }
 
-        const parentIds = parents.map(p => p.id)
+        const parentIds = parents.map((p: any) => p.id)
 
         // Fetch all subcategories under skincare/face
         const { data: subCats } = await supabase
@@ -210,7 +210,7 @@ export default function SkincareRoutineFinder({ open, onClose }: Props) {
             return
         }
 
-        const productIds = [...new Set(junction.map(j => j.product_id))]
+        const productIds = [...new Set(junction.map((j: any) => j.product_id))]
 
         const { data: products } = await supabase
             .from("products")
@@ -222,14 +222,14 @@ export default function SkincareRoutineFinder({ open, onClose }: Props) {
 
         // Build product → category mapping
         const productCategoryMap = new Map<string, string[]>()
-        junction.forEach(j => {
+        junction.forEach((j: any) => {
             const existing = productCategoryMap.get(j.product_id) || []
             existing.push(j.category_id)
             productCategoryMap.set(j.product_id, existing)
         })
 
         // Score each product
-        const scored = products.map(p => {
+        const scored = products.map((p: any) => {
             const text = `${p.name} ${p.description || ""}`.toLowerCase()
             let score = 0
             const matches: string[] = []
@@ -292,12 +292,12 @@ export default function SkincareRoutineFinder({ open, onClose }: Props) {
         })
 
         // Filter to products that matched a routine step AND have a minimum score
-        const valid = scored.filter(s => s.step && s.score >= (hasAnswers ? 1 : 0))
+        const valid = scored.filter((s: any) => s.step && s.score >= (hasAnswers ? 1 : 0))
         const grouped = new Map<RoutineStep, SkincareProduct[]>()
         ROUTINE_STEPS.forEach(rs => grouped.set(rs.value, []))
 
-        valid.sort((a, b) => b.score - a.score)
-        valid.forEach(s => {
+        valid.sort((a: any, b: any) => b.score - a.score)
+        valid.forEach((s: any) => {
             const step = s.step as RoutineStep
             const list = grouped.get(step) || []
             if (list.length < 3) list.push(s.product)

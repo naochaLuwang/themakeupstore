@@ -51,7 +51,7 @@ export function ReviewModal({ visible, productId, onClose }: ReviewModalProps) {
             if (error) throw error
 
             if (reviews && reviews.length > 0) {
-                const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+                const avgRating = reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
                 setAverageRating(Math.round(avgRating * 10) / 10)
                 setReviewCount(reviews.length)
                 setReviews(reviews)

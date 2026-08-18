@@ -14,18 +14,27 @@ import { WishlistCounter } from "../wishlist-counter"
 import { HeaderScroll } from "./header-scroll"
 
 export default async function Navbar() {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    let user: any = null
+    let supabase: any = null
+    try {
+        supabase = await createClient()
+        const { data } = await supabase.auth.getUser()
+        user = data?.user || null
+    } catch {
+        // Invalid session — render navbar without user state
+    }
 
     async function signOut() {
         "use server"
-        const supabase = await createClient()
-        await supabase.auth.signOut()
+        try {
+            const supabase = await createClient()
+            await supabase.auth.signOut()
+        } catch {}
         redirect("/")
     }
 
     let initialWishlistCount = 0
-    if (user) {
+    if (user && supabase) {
         const { count } = await supabase
             .from('wishlist')
             .select('*', { count: 'exact', head: true })

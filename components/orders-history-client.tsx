@@ -99,7 +99,7 @@ export default function OrdersHistoryClient({ initialOrders }: { initialOrders: 
             .order("created_at", { ascending: false })
         if (data) {
             const priority = ["pending", "approved", "refunded", "rejected"]
-            setOrders(data.map(o => {
+            setOrders(data.map((o: any) => {
                 const returns: any[] = (o as any).return_requests || []
                 const best = returns.filter(r => r.status).sort(
                     (a: any, b: any) => priority.indexOf(a.status) - priority.indexOf(b.status)

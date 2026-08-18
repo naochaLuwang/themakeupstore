@@ -18,7 +18,7 @@ export default function WishlistPage() {
     const cartItems = useCart((s) => s.items)
 
     React.useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+        supabase.auth.getUser().then(({ data: { user } }: any) => setUser(user))
     }, [supabase])
 
     const fetchWishlist = React.useCallback(async () => {
@@ -34,7 +34,7 @@ export default function WishlistPage() {
             .eq('user_id', user.id)
 
         if (data) {
-            setItems(data.map(item => ({
+            setItems(data.map((item: any) => ({
                 ...item.product,
                 wishlist_id: item.id
             })))

@@ -98,7 +98,7 @@ export default function VariantSelector({ product, variants = [], onVariantChang
             const { data: zones, error } = await supabase.from("shipping_zones").select("*, shipping_methods(*)").eq("pincode", checkPincode);
             if (error) throw error;
             if (zones && zones.length > 0) {
-                const allMethods = zones.flatMap(z => z.shipping_methods);
+                const allMethods = zones.flatMap((z: any) => z.shipping_methods);
                 setPincodeStatus({ loading: false, checked: true, available: true, methods: allMethods });
                 localStorage.setItem('user_pincode', checkPincode);
             } else {

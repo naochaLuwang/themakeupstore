@@ -63,8 +63,8 @@ export default function ReturnRequestPage() {
             .eq("order_id", orderId)
 
         if (returns) {
-            setExistingReturns(returns.map(r => r.product_variant_id).filter(Boolean))
-            const returnedIds = returns.map(r => r.product_id)
+            setExistingReturns(returns.map((r: any) => r.product_variant_id).filter(Boolean))
+            const returnedIds = returns.map((r: any) => r.product_id)
             const stillAvailable = (order.order_items || []).filter(
                 (item: any) => !returnedIds.includes(item.product_id)
             )

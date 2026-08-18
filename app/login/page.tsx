@@ -26,7 +26,7 @@ export default function AuthPage() {
     useEffect(() => { setMounted(true); document.title = "Sign In | THE MAKEUP STORE WANGKHEI" }, [])
 
     useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
             if (event === 'SIGNED_IN' && session) {
                 router.push("/")
                 router.refresh()

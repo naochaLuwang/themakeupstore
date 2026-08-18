@@ -1,32 +1,9 @@
 import type { NextConfig } from "next";
 
-
-import withPWAInit from "@ducanh2912/next-pwa";
-
-const withPWA = withPWAInit({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: false,
-  reloadOnOnline: true,
-  sw: "sw.js",
-  customWorkerSrc: "worker",
-  workboxOptions: {
-    disableDevLogs: true,
-    skipWaiting: true,
-    clientsClaim: true,
-  },
-  fallbacks: {
-    document: "/offline",
-  },
-});
-
 const nextConfig: NextConfig = {
-  /* config options here */
-
   experimental: {
     serverActions: {
-      bodySizeLimit: '10mb', // Set this to 10mb or higher
+      bodySizeLimit: '10mb',
     },
   },
   images: {
@@ -85,7 +62,6 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;
