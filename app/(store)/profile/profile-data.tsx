@@ -5,8 +5,20 @@ import { getMyGiftCards } from "@/app/actions/gift-cards"
 import { getLoyaltyData, getMyCoupons } from "@/app/actions/loyalty"
 
 export default async function ProfileData() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let supabase: any
+  try {
+    supabase = await createClient()
+  } catch {
+    redirect("/login")
+  }
+
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    redirect("/login")
+  }
   if (!user) redirect("/login")
 
   let profileRes: any, ordersCountRes: any, wishlistRes: any, addressesRes: any, totalSpentRes: any, recentOrdersRes: any, giftCards: any, loyaltyData: any, coupons: any

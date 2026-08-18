@@ -23,7 +23,18 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
+    let user = null
+    try {
+        const { data } = await supabase.auth.getUser()
+        user = data.user
+    } catch {
+        // Invalid/expired refresh token — clear cookies and redirect to login
+        const response = NextResponse.redirect(new URL('/login', request.url))
+        request.cookies.getAll().forEach(({ name }) => {
+            response.cookies.set(name, '', { maxAge: 0 })
+        })
+        return response
+    }
     const path = request.nextUrl.pathname;
 
     // --- ADMIN & WHOLESALE PROTECTION ---
