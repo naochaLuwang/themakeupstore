@@ -55,16 +55,34 @@ export async function registerForFCM() {
 
   console.log('[FCM] Checking permissions...')
   const permResult = await FirebaseMessaging.checkPermissions()
+
   if (permResult.receive !== 'granted') {
-    console.log('[FCM] Requesting permissions...')
+    console.log('[FCM] Requesting notification permissions...')
     const { receive } = await FirebaseMessaging.requestPermissions()
-    if (receive !== 'granted') { console.log('[FCM] Permission denied'); return }
+    if (receive !== 'granted') {
+      console.log('[FCM] Notification permission denied')
+      return
+    }
+  }
+
+  // Also request POST_NOTIFICATIONS permission on Android 13+
+  if (Capacitor.getPlatform() === 'android') {
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications')
+      const notifPerm = await LocalNotifications.checkPermissions()
+      if (notifPerm.display !== 'granted') {
+        console.log('[FCM] Requesting POST_NOTIFICATIONS permission...')
+        await LocalNotifications.requestPermissions()
+      }
+    } catch (err) {
+      console.warn('[FCM] Local notification permission check failed:', err)
+    }
   }
 
   console.log('[FCM] Getting token...')
   const { token } = await FirebaseMessaging.getToken()
   if (!token) { console.log('[FCM] No token returned'); return }
-  console.log('[FCM] Got token:', token.substring(0, 30) + '...')
+  console.log('[FCM] Got token:', token)
 
   await supabase
     .from('push_subscriptions')

@@ -6,41 +6,55 @@ export function parseServiceAccountKey(rawValue: string | undefined | null): any
 
   let s = String(rawValue).trim()
 
-  // Find JSON boundaries: first { to last }
+  // Log for debugging (remove in production)
+  console.log('[FCM_PARSER] Input length:', s.length)
+  console.log('[FCM_PARSER] First 50 chars:', s.substring(0, 50))
+  console.log('[FCM_PARSER] Last 50 chars:', s.substring(s.length - 50))
+
+  // Step 1: Strip any \{ \} wrappers (Hostinger adds these)
+  if (s.startsWith('\\{')) s = s.substring(1)
+  if (s.endsWith('\\}')) s = s.substring(0, s.length - 1)
+
+  // Step 2: Strip regular { } if they're escaped at boundaries
+  // Hostinger may store: \{"type":...\}
+  s = s.trim()
+
+  // Step 3: Find JSON boundaries
   const firstBrace = s.indexOf('{')
   const lastBrace = s.lastIndexOf('}')
   if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-    throw new Error('No JSON object found in FIREBASE_SERVICE_ACCOUNT_KEY')
+    throw new Error(`No JSON object found. First 100 chars: ${s.substring(0, 100)}`)
   }
   s = s.substring(firstBrace, lastBrace + 1)
 
-  // Try parsing as-is first (handles \n escape sequences correctly)
-  const candidates = [s]
+  // Step 4: Handle newline escaping
+  // The private_key should have \n as literal two-char sequences in JSON
+  // But env vars may have: \\n (double escaped) or actual newlines
 
-  // If the string contains actual newlines (not \n sequences), escape them
-  if (s.includes('\n')) {
-    candidates.push(s.replace(/\n/g, '\\n'))
+  // If there are actual newlines in the string, we need to escape them for JSON
+  if (s.includes('\n') && !s.includes('\\n')) {
+    s = s.replace(/\n/g, '\\n')
   }
 
-  // If private key has literal \n that are actually backslash-n (from env escaping),
-  // try converting them to real newlines
+  // If there are double-escaped newlines (\\\\n), reduce to single-escaped (\\n)
   if (s.includes('\\\\n')) {
-    candidates.push(s.replace(/\\\\n/g, '\\n'))
-  }
-  if (s.includes('\\n') && !s.includes('\n')) {
-    // \n are literal two-char sequences - this is already valid JSON, try as-is
+    s = s.replace(/\\\\n/g, '\\n')
   }
 
-  for (const c of candidates) {
-    try {
-      const parsed = JSON.parse(c)
-      if (parsed && typeof parsed.private_key === 'string' && parsed.private_key.includes('BEGIN PRIVATE KEY')) {
-        return parsed
+  // Step 5: Try parsing
+  try {
+    const parsed = JSON.parse(s)
+    if (parsed && typeof parsed.private_key === 'string' && parsed.private_key.includes('BEGIN PRIVATE KEY')) {
+      // Ensure private_key has proper newlines
+      if (parsed.private_key.includes('\\n') && !parsed.private_key.includes('\n')) {
+        parsed.private_key = parsed.private_key.replace(/\\n/g, '\n')
       }
-    } catch {}
+      return parsed
+    }
+    throw new Error('Parsed JSON but missing valid private_key')
+  } catch (e: any) {
+    throw new Error(`JSON parse failed: ${e.message}. Input starts with: ${s.substring(0, 100)}`)
   }
-
-  throw new Error('Could not parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON')
 }
 
 async function getAccessToken(): Promise<string> {
