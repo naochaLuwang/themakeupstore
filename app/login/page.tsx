@@ -1,12 +1,10 @@
-
-
 "use client"
 
 import * as React from "react"
 import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import {
@@ -19,6 +17,7 @@ export default function AuthPage() {
     const [loading, setLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [mounted, setMounted] = useState(false)
+    const reduceMotion = useReducedMotion()
 
     const supabase = createClient()
     const router = useRouter()
@@ -93,40 +92,71 @@ export default function AuthPage() {
     if (!mounted) return null
 
     return (
-        <div className="min-h-screen w-full bg-white">
+        <div className="min-h-[100dvh] w-full bg-white relative overflow-hidden">
+            {/* SOFT PINK WASHES */}
+            <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                    backgroundImage: [
+                        "radial-gradient(1100px 700px at 90% -10%, rgba(252,39,121,0.09), transparent 60%)",
+                        "radial-gradient(900px 600px at -5% 110%, rgba(252,39,121,0.06), transparent 55%)",
+                    ].join(", "),
+                }}
+            />
+
+            {/* FLOATING WATERMARK — signature Anders M */}
             <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col min-h-screen"
+                aria-hidden
+                animate={reduceMotion ? undefined : { y: [0, -10, 0] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                className="pointer-events-none absolute inset-0 flex items-center justify-center"
             >
+                <span
+                    className="font-daciana text-[46vw] md:text-[400px] leading-none select-none bg-clip-text text-transparent"
+                    style={{
+                        backgroundImage: "linear-gradient(180deg, rgba(252,39,121,0.16) 0%, rgba(252,39,121,0.05) 70%)",
+                    }}
+                >
+                    M
+                </span>
+            </motion.div>
+
+            <div className="relative flex flex-col min-h-[100dvh] max-w-md mx-auto w-full px-6">
                 {/* BRAND HEADER */}
-                <div className="pt-20 pb-8 px-6 text-center">
-                    <div className="w-20 h-20 mx-auto mb-5 p-1.5 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                        <img
-                            src="/icon-192x192.svg"
-                            alt="Logo"
-                            className="w-full h-full object-contain rounded-xl"
-                        />
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                    className="pt-16 pb-9 text-center flex flex-col items-center"
+                >
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fc2779] to-[#d91d64] shadow-lg shadow-pink-200 flex items-center justify-center mb-5">
+                        <span className="font-daciana text-[26px] text-white leading-none pt-0.5">M</span>
                     </div>
-                    <h1 className="text-3xl font-daciana text-slate-950 tracking-tighter leading-none mb-1">
+                    <h1 className="text-2xl font-daciana text-slate-950 tracking-tight leading-none">
                         THE MAKEUP STORE
                     </h1>
-                    <p className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-400">
-                        WANGKHEI
+                    <p className="text-[10px] font-black uppercase tracking-[0.45em] text-[#fc2779] mt-1.5">
+                        Wangkhei
                     </p>
-                </div>
+                </motion.div>
 
                 {/* FORM CARD */}
-                <div className="flex-1 px-6">
-                    <div className="bg-[#FAFAFA] rounded-3xl p-6 pb-8 border border-slate-100">
+                <motion.div
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex-1"
+                >
+                    <div className="bg-white rounded-[2rem] border border-pink-50/70 p-6 pb-8 shadow-[0_24px_80px_-24px_rgba(252,39,121,0.25)]">
                         {/* MODE TOGGLE */}
-                        <div className="flex bg-white rounded-xl p-1 mb-7 shadow-sm border border-slate-100">
+                        <div className="flex bg-slate-50/80 rounded-2xl p-1 mb-7 border border-slate-100">
                             {(['login', 'signup'] as const).map((m) => (
                                 <button
                                     key={m}
                                     onClick={() => setMode(m)}
                                     disabled={loading}
-                                    className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                                    className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${
                                         mode === m
                                             ? 'bg-[#fc2779] text-white shadow-sm shadow-pink-200'
                                             : 'text-slate-400 hover:text-slate-600'
@@ -146,18 +176,18 @@ export default function AuthPage() {
                                 >
                                     <div className="relative">
                                         <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                        <Input name="fullName" placeholder="Full name" className="h-12 pl-11 rounded-xl border-slate-200 bg-white text-[13px] font-medium placeholder:text-slate-400 focus:border-[#fc2779] focus:ring-0 transition-all" required />
+                                        <Input name="fullName" placeholder="Full name" className="h-12 pl-11 rounded-2xl border-slate-200 bg-white text-[13px] font-medium placeholder:text-slate-400 focus:border-[#fc2779] focus:ring-4 focus:ring-pink-100 transition-all" required />
                                     </div>
                                     <div className="relative">
                                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                        <Input name="phone" type="tel" placeholder="Phone number" className="h-12 pl-11 rounded-xl border-slate-200 bg-white text-[13px] font-medium placeholder:text-slate-400 focus:border-[#fc2779] focus:ring-0 transition-all" required />
+                                        <Input name="phone" type="tel" placeholder="Phone number" className="h-12 pl-11 rounded-2xl border-slate-200 bg-white text-[13px] font-medium placeholder:text-slate-400 focus:border-[#fc2779] focus:ring-4 focus:ring-pink-100 transition-all" required />
                                     </div>
                                 </motion.div>
                             )}
 
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input name="email" type="email" placeholder="Email address" className="h-12 pl-11 rounded-xl border-slate-200 bg-white text-[13px] font-medium placeholder:text-slate-400 focus:border-[#fc2779] focus:ring-0 transition-all" required />
+                                <Input name="email" type="email" placeholder="Email address" className="h-12 pl-11 rounded-2xl border-slate-200 bg-white text-[13px] font-medium placeholder:text-slate-400 focus:border-[#fc2779] focus:ring-4 focus:ring-pink-100 transition-all" required />
                             </div>
 
                             <div className="relative">
@@ -166,7 +196,7 @@ export default function AuthPage() {
                                     name="password"
                                     type={showPassword ? "text" : "password"}
                                     placeholder="Password"
-                                    className="h-12 pl-11 pr-11 rounded-xl border-slate-200 bg-white text-[13px] font-medium placeholder:text-slate-400 focus:border-[#fc2779] focus:ring-0 transition-all"
+                                    className="h-12 pl-11 pr-11 rounded-2xl border-slate-200 bg-white text-[13px] font-medium placeholder:text-slate-400 focus:border-[#fc2779] focus:ring-4 focus:ring-pink-100 transition-all"
                                     required
                                 />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#fc2779] transition-colors">
@@ -177,7 +207,7 @@ export default function AuthPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-12 mt-2 rounded-xl bg-[#fc2779] text-white hover:bg-[#d91d64] transition-all font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-lg shadow-pink-200 active:scale-[0.98]"
+                                className="w-full h-12 mt-2 rounded-2xl bg-[#fc2779] text-white hover:bg-[#d91d64] transition-all font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-lg shadow-pink-200/60 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                                 {loading ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -199,7 +229,7 @@ export default function AuthPage() {
                             type="button"
                             onClick={handleGoogleLogin}
                             disabled={loading}
-                            className="w-full h-12 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-all font-semibold text-[13px] flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full h-12 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all font-semibold text-[13px] text-slate-700 flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -210,15 +240,18 @@ export default function AuthPage() {
                             Continue with Google
                         </button>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* FOOTER */}
-                <div className="py-8 px-6 text-center">
-                    <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.4em]">
-                        The Makeup Store Wangkhei &copy; 2026
-                    </p>
-                </div>
-            </motion.div>
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                    className="py-8 text-center text-[9px] font-bold text-slate-300 uppercase tracking-[0.4em]"
+                >
+                    The Makeup Store Wangkhei &copy; 2026
+                </motion.p>
+            </div>
         </div>
     )
 }

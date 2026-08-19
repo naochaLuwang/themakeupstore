@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 export function HeaderScroll({ children }: { children: React.ReactNode }) {
     const [scrolled, setScrolled] = useState(false)
-    const ref = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const scroller = document.getElementById("app-scroller")
@@ -20,9 +19,10 @@ export function HeaderScroll({ children }: { children: React.ReactNode }) {
     return (
         <div
             id="store-header"
-            ref={ref}
             className={`sticky top-0 z-[200] w-full transition-all duration-300 ${
-                scrolled ? "bg-white shadow-sm" : "bg-transparent"
+                scrolled
+                    ? "bg-white/90 backdrop-blur-xl border-b border-pink-50/60 shadow-sm shadow-pink-100/40"
+                    : "bg-transparent border-b border-transparent"
             }`}
         >
             {children}

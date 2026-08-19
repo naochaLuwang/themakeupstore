@@ -10,7 +10,7 @@ import {
     Package,
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Bone } from "@/components/store/bone"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
 
@@ -226,16 +226,16 @@ export default function ShopClient({ initialProducts, searchQuery }: { initialPr
                                     <span className="font-daciana text-[80px] text-[#CBD5E1]" style={{ lineHeight: 1 }}>M</span>
                                 </div>
                                 <div className="p-4 space-y-3">
-                                    <Skeleton className="h-3 w-1/3 rounded" />
-                                    <Skeleton className="h-4 w-3/4 rounded" />
-                                    <Skeleton className="h-3 w-1/2 rounded" />
+                                    <Bone className="h-3 w-1/3 rounded" />
+                                    <Bone className="h-4 w-3/4 rounded" />
+                                    <Bone className="h-3 w-1/2 rounded" />
                                     <div className="pt-3 border-t border-slate-50 flex items-center gap-3">
-                                        <Skeleton className="h-5 w-1/4 rounded" />
-                                        <Skeleton className="h-3 w-1/5 rounded" />
+                                        <Bone className="h-5 w-1/4 rounded" />
+                                        <Bone className="h-3 w-1/5 rounded" />
                                     </div>
                                     <div className="flex gap-2">
-                                        <Skeleton className="w-10 h-10 rounded-lg" />
-                                        <Skeleton className="flex-1 h-10 rounded-lg" />
+                                        <Bone className="w-10 h-10 rounded-lg" />
+                                        <Bone className="flex-1 h-10 rounded-lg" />
                                     </div>
                                 </div>
                             </div>

@@ -1,5 +1,12 @@
-import { SignatureLoader } from "@/components/store/signature-loader"
+"use client"
+
+import { Skeleton } from "boneyard-js/react"
+import { StoreSkeleton } from "@/components/store/store-skeleton"
 
 export default function RootStoreLoading() {
-    return <SignatureLoader loading={true} />
+    return (
+        <Skeleton name="store-home" loading={true} fallback={<StoreSkeleton />}>
+            <StoreSkeleton />
+        </Skeleton>
+    )
 }

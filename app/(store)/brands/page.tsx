@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { Search, SearchX } from "lucide-react"
-import { SignatureLoader } from "@/components/store/signature-loader"
+import { Skeleton } from "boneyard-js/react"
+import { StoreSkeleton } from "@/components/store/store-skeleton"
 
 const BLACKLISTED_NAMES = ["Foundation", "Concealer", "Face Primer", "Lipstick", "Lip Gloss", "Lip Liner", "Liquid Lipstick", "Blush", "Bronzer & Contour", "Highlighter & Illuminator", "Loose Powder", "Compact", "Eye Brow Enhancers", "Eyeliner", "Mascara", "Eye shadow", "Setting Spray", "Makeup Remover", "Skincare", "Fragrance", "Tools & Brushes", "Kajal", "Lip Balm", "Lip Tint", "Cleansers & Toners", "Moisturisers", "Serum", "Sunscreen", "False Eyelashes", "Makeup Brushes", "Makeup remover & wipes", "Sheet Mask", "Sponges & Applicators", "Lenses"]
 
@@ -74,10 +75,8 @@ export default function BrandsPage() {
     )
 
     return (
-        <>
-            <SignatureLoader loading={loading} text="The Makeup Store / Brands" />
-            {!loading && (
-                <div className="min-h-screen bg-white">
+        <Skeleton name="brands" loading={loading} fallback={<StoreSkeleton />}>
+            <div className="min-h-screen bg-white">
                     <div className="max-w-6xl mx-auto px-5 pt-2 pb-20">
                         {/* Title */}
                         <div className="mb-7">
@@ -156,7 +155,6 @@ export default function BrandsPage() {
                         )}
                     </div>
                 </div>
-            )}
-        </>
+        </Skeleton>
     )
 }

@@ -1,103 +1,36 @@
-import Link from "next/link"
-import { Check, Package, MapPin } from "lucide-react"
 import { createClient } from "@/utils/supabase/server"
 import { CartClearer } from "@/components/store/cart-clearer"
+import { ReceiptPage } from "./receipt"
+import { redirect } from "next/navigation"
 
 export default async function OrderSuccessPage(props: { searchParams: Promise<{ orderId?: string }> }) {
     const searchParams = await props.searchParams
     const orderId = searchParams.orderId
 
-    let paymentMethod = "Cash on Delivery"
-    let paymentStatus = "unpaid"
-    if (orderId) {
-        const supabase = await createClient()
-        const { data: order } = await supabase
-            .from("orders")
-            .select("payment_method, payment_status")
-            .eq("id", orderId)
-            .maybeSingle()
-        if (order) {
-            paymentMethod = order.payment_method === "razorpay" ? "Razorpay" : order.payment_method || "Cash on Delivery"
-            paymentStatus = order.payment_status || "unpaid"
-        }
-    }
+    if (!orderId) redirect("/")
+
+    const supabase = await createClient()
+
+    const { data: order } = await supabase
+        .from("orders")
+        .select(`
+            id, created_at, total, shipping_price, shipping_label,
+            payment_method, payment_status, razorpay_payment_id,
+            promo_code, promo_discount_amount,
+            shipping_address,
+            order_items (
+                id, product_name, variant_title, quantity, unit_price, mrp, is_gift
+            )
+        `)
+        .eq("id", orderId)
+        .maybeSingle()
+
+    if (!order) redirect("/")
 
     return (
-        <div className="min-h-auto bg-white flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
+        <>
             <CartClearer />
-
-            <div className="w-full max-w-xl space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
-
-                {/* Status Indicator */}
-                <header className="text-center space-y-6">
-                    <div className="flex justify-center">
-                        <div className="w-14 h-14 rounded-full bg-slate-900 flex items-center justify-center shadow-2xl shadow-slate-200">
-                            <Check className="w-6 h-6 text-white" />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-slate-900">
-                            Order Confirmed
-                        </h1>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
-                            Your shipment is being prepared and will be on its way soon.
-                        </p>
-                    </div>
-                </header>
-
-                {/* Logistics Info Card */}
-                <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100">
-                    <div className="grid grid-cols-2 gap-8 pb-8 border-b border-slate-200/50">
-                        <div className="space-y-1.5">
-                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Order Reference</p>
-                            <p className="text-sm font-black text-slate-900">
-                                #{orderId?.slice(0, 8).toUpperCase() || "ORD-XXXX"}
-                            </p>
-                        </div>
-                        <div className="space-y-1.5 text-right">
-                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Payment</p>
-                            <p className="text-[10px] font-black uppercase tracking-tight text-slate-900">
-                                {paymentMethod}
-                            </p>
-                            <p className={`text-[9px] font-bold uppercase tracking-wider ${
-                                paymentStatus === "paid" ? "text-emerald-600" : "text-slate-400"
-                            }`}>
-                                {paymentStatus === "paid" ? "Paid" : paymentStatus}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="pt-8 space-y-6">
-                        <Link
-                            href={`/profile/orders/${orderId}`}
-                            className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-black transition-all active:scale-[0.98]"
-                        >
-                            View Order Details <Check className="w-4 h-4" />
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Footer Navigation */}
-                <footer className="flex flex-col items-center gap-8">
-                    <Link href="/" className="group flex flex-col items-center gap-1">
-                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 group-hover:text-slate-900 transition-colors">Return to Shop</span>
-                        <div className="h-[1.5px] w-4 bg-slate-200 group-hover:w-full transition-all duration-300" />
-                    </Link>
-
-                    <div className="flex items-center gap-4 opacity-30">
-                        <Package className="w-4 h-4" />
-                        <div className="h-4 w-[1px] bg-slate-900" />
-                        <MapPin className="w-4 h-4" />
-                    </div>
-                </footer>
-
-            </div>
-
-            {/* Background Branding Detail */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[20vw] font-black text-slate-50/40 -z-10 select-none tracking-tighter uppercase italic">
-                Done
-            </div>
-        </div>
+            <ReceiptPage order={order} />
+        </>
     )
 }

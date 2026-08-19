@@ -3,7 +3,8 @@
 import * as React from "react"
 import { createClient } from "@/utils/supabase/client"
 import SkincareAccessoriesClient from "./skincare-accessories-client"
-import { SignatureLoader } from "@/components/store/signature-loader"
+import { Skeleton } from "boneyard-js/react"
+import { StoreSkeleton } from "@/components/store/store-skeleton"
 
 const PAGE_SIZE = 20;
 
@@ -106,9 +107,7 @@ export default function SkincareAccessoriesPage() {
     }
 
     return (
-        <>
-            <SignatureLoader loading={loading} text="The Makeup Store / Loading Skincare & Accessories" />
-            {!loading && (
+        <Skeleton name="skincare-accessories" loading={loading} fallback={<StoreSkeleton />}>
                 <SkincareAccessoriesClient
                     initialSubcategories={subcategories}
                     initialProducts={allProducts}
@@ -116,7 +115,6 @@ export default function SkincareAccessoriesPage() {
                     loadingMore={loadingMore}
                     onLoadMore={loadMore}
                 />
-            )}
-        </>
+        </Skeleton>
     )
 }

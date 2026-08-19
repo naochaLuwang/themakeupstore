@@ -3,7 +3,8 @@
 import * as React from "react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
-import { SignatureLoader } from "@/components/store/signature-loader"
+import { Skeleton } from "boneyard-js/react"
+import { StoreSkeleton } from "@/components/store/store-skeleton"
 
 export default function FunSizePage() {
     const [products, setProducts] = React.useState<any[]>([])
@@ -72,9 +73,7 @@ export default function FunSizePage() {
                 </div>
             </div>
 
-            <SignatureLoader loading={loading} text="The Makeup Store / Fun Size" />
-
-            {!loading && (
+            <Skeleton name="fun-size" loading={loading} fallback={<StoreSkeleton />}>
                 <div className="mt-6">
                     <div className="flex items-end justify-between px-4 mb-5">
                         <div>
@@ -103,7 +102,7 @@ export default function FunSizePage() {
                         </div>
                     )}
                 </div>
-            )}
+            </Skeleton>
         </div>
     )
 }

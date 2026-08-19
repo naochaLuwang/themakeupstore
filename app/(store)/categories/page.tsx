@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { ArrowRight, ChevronDown } from "lucide-react"
-import { SignatureLoader } from "@/components/store/signature-loader"
+import { Skeleton } from "boneyard-js/react"
+import { StoreSkeleton } from "@/components/store/store-skeleton"
 
 const cardTints = [
     { bg: "#FFF0F0", accent: "#FF2D8D" },
@@ -87,9 +88,7 @@ export default function CategoriesPage() {
     }
 
     return (
-        <>
-            <SignatureLoader loading={loading} text="The Makeup Store / Categories" />
-            {!loading && (
+        <Skeleton name="categories" loading={loading} fallback={<StoreSkeleton />}>
                 <div className="min-h-screen bg-white">
                     <div className="max-w-2xl mx-auto px-5 pt-2 pb-24">
                         {/* Header */}
@@ -256,7 +255,6 @@ export default function CategoriesPage() {
                         ) : null}
                     </div>
                 </div>
-            )}
-        </>
+        </Skeleton>
     )
 }

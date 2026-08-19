@@ -14,37 +14,8 @@ import {
     Gift, Clock, History, Award, Coins, Star, TrendingUp, Tag
 } from "lucide-react"
 
-function PinkSkeleton({ className }: { className?: string }) {
-    return (
-        <div
-            className={`animate-pulse rounded-lg ${className || ""}`}
-            style={{ backgroundColor: "#fce4ec" }}
-        />
-    )
-}
-
-function PinkLoader() {
-    return (
-        <div className="min-h-screen" style={{ backgroundColor: "#FDFBF7" }}>
-            <div className="max-w-lg mx-auto px-4 pt-12 pb-24 space-y-4">
-                <div className="flex items-center gap-3">
-                    <PinkSkeleton className="w-10 h-10 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                        <PinkSkeleton className="h-4 w-32" />
-                        <PinkSkeleton className="h-3 w-48" />
-                    </div>
-                </div>
-                <PinkSkeleton className="h-24 w-full rounded-xl" />
-                <PinkSkeleton className="h-44 w-full rounded-xl" />
-                <div className="grid grid-cols-2 gap-4">
-                    <PinkSkeleton className="h-16 w-full rounded-xl" />
-                    <PinkSkeleton className="h-16 w-full rounded-xl" />
-                </div>
-                <PinkSkeleton className="h-56 w-full rounded-xl" />
-            </div>
-        </div>
-    )
-}
+import { Skeleton } from "boneyard-js/react"
+import { StoreSkeleton } from "@/components/store/store-skeleton"
 
 function formatPrice(amount: number) {
     return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount)
@@ -103,7 +74,7 @@ export function ProfileContent({
         )
     }
 
-    if (!ready) return <PinkLoader />
+    if (!ready) return <Skeleton name="profile" loading={true} fallback={<StoreSkeleton />}><StoreSkeleton /></Skeleton>
 
     const handleSignOut = async () => {
         await supabase.auth.signOut()
