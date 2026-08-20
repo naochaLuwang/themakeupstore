@@ -11,6 +11,8 @@ import {
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { Bone } from "@/components/store/bone"
+import { createClient } from "@/utils/supabase/client"
+import type { ActiveFlashSale } from "@/lib/active-flash-sales"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
 
@@ -28,42 +30,116 @@ const sortOptions: { key: SortOption; label: string }[] = [
     { key: "name", label: "Name: A-Z" },
 ]
 
-function computeEffectivePrice(product: any): number {
-    if (product.has_variants && product.product_variants?.length > 0) {
-        const prices = product.product_variants.map((v: any) => {
-            const base = v.price || 0
-            const dType = v.discount_type || product.discount_type || "none"
-            const dVal = v.discount_value || product.discount_value || 0
-            if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-            if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-            return base
-        })
-        return Math.min(...prices)
-    }
-    const base = product.base_price || 0
+function computeEffectivePrice(product: any, activeFlashSale?: ActiveFlashSale | null): number {
+    const basePrice = product.has_variants && product.product_variants?.length > 0
+        ? Math.min(...product.product_variants.map((v: any) => v.price || 0))
+        : product.base_price || 0
+    
     const dType = product.discount_type || "none"
     const dVal = product.discount_value || 0
-    if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-    if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-    return base
+    
+    let regularPrice = basePrice
+    if (dType === "percentage" && dVal > 0) regularPrice = basePrice * (1 - dVal / 100)
+    else if ((dType === "fixed" || dType === "amount") && dVal > 0) regularPrice = Math.max(0, basePrice - dVal)
+    
+    if (!activeFlashSale) return regularPrice
+    
+    const flashPrice = activeFlashSale.discount_type === 'percentage'
+        ? basePrice * (1 - activeFlashSale.discount_value / 100)
+        : Math.max(0, basePrice - activeFlashSale.discount_value)
+    
+    return Math.min(regularPrice, flashPrice)
 }
 
-export default function ShopClient({ initialProducts, searchQuery }: { initialProducts: any[], searchQuery: string }) {
-    const [products] = React.useState(initialProducts)
-    const [filtered, setFiltered] = React.useState<any[]>([])
-    const [loading, setLoading] = React.useState(true)
-    const [availableBrands, setAvailableBrands] = React.useState<string[]>([])
+function getProductCategoryIds(product: any): string[] {
+    const ids: string[] = []
+    if (product.category_id) ids.push(product.category_id)
+    if (product.product_categories) {
+        for (const pc of product.product_categories) {
+            if (pc?.category_id && !ids.includes(pc.category_id)) ids.push(pc.category_id)
+        }
+    }
+    if (product.categories) {
+        const cats = Array.isArray(product.categories) ? product.categories : [product.categories]
+        for (const c of cats) {
+            if (c?.id && !ids.includes(c.id)) ids.push(c.id)
+        }
+    }
+    return ids
+}
 
+function findBestFlashSale(
+    flashSales: ActiveFlashSale[],
+    product: any
+): ActiveFlashSale | null {
+    let best: ActiveFlashSale | null = null
+    let bestDiscount = 0
+    
+    const productId = product.id
+    const categoryIds = getProductCategoryIds(product)
+    const brand = product.brand || null
+    
+    for (const fs of flashSales) {
+        let match = false
+        switch (fs.scope) {
+            case 'all':
+                match = true
+                break
+            case 'product':
+                match = fs.product_id === productId
+                break
+            case 'category':
+                match = fs.category_id ? categoryIds.includes(fs.category_id) : false
+                break
+            case 'brand':
+                match = fs.brand === brand
+                break
+        }
+        if (!match) continue
+        
+        const discountValue = fs.discount_type === 'percentage' ? fs.discount_value : fs.discount_value * 100
+        if (!best || discountValue > bestDiscount) {
+            best = fs
+            bestDiscount = discountValue
+        }
+    }
+    
+    return best
+}
+
+export default function ShopClient({ initialProducts }: { initialProducts: any[] }) {
+    const [products, setProducts] = React.useState(initialProducts)
+    const [filtered, setFiltered] = React.useState<any[]>([])
+    const [loading, setLoading] = React.useState(false)
+    const [showSort, setShowSort] = React.useState(false)
+    const [showFilter, setShowFilter] = React.useState(false)
     const [sort, setSort] = React.useState<SortOption>("newest")
     const [selectedBrands, setSelectedBrands] = React.useState<string[]>([])
     const [selectedPriceRange, setSelectedPriceRange] = React.useState<number | null>(null)
-    const [showSort, setShowSort] = React.useState(false)
-    const [showFilter, setShowFilter] = React.useState(false)
-
+    const [availableBrands, setAvailableBrands] = React.useState<string[]>([])
     const [tempBrands, setTempBrands] = React.useState<string[]>([])
     const [tempPriceRange, setTempPriceRange] = React.useState<number | null>(null)
-
+    const [flashSales, setFlashSales] = React.useState<ActiveFlashSale[]>([])
     const sortRef = React.useRef<HTMLDivElement>(null)
+
+    // Fetch active flash sales
+    React.useEffect(() => {
+        const fetchFlashSales = async () => {
+            const supabase = createClient()
+            const now = new Date().toISOString()
+            const { data } = await supabase
+                .from('flash_sales')
+                .select('*')
+                .eq('is_active', true)
+                .lte('starts_at', now)
+                .gte('ends_at', now)
+            if (data) setFlashSales(data as ActiveFlashSale[])
+        }
+        fetchFlashSales()
+        // Refetch every 30 seconds
+        const interval = setInterval(fetchFlashSales, 30000)
+        return () => clearInterval(interval)
+    }, [])
 
     React.useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -83,13 +159,17 @@ export default function ShopClient({ initialProducts, searchQuery }: { initialPr
     }, [initialProducts])
 
     React.useEffect(() => {
-        let processed = [...products].map((p) => ({
-            ...p,
-            _effectivePrice: computeEffectivePrice(p),
-            _outOfStock: p.product_variants?.length > 0
-                ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
-                : false,
-        }))
+        let processed = [...products].map((p) => {
+            const bestFlashSale = findBestFlashSale(flashSales, p)
+            return {
+                ...p,
+                _bestFlashSale: bestFlashSale,
+                _effectivePrice: computeEffectivePrice(p, bestFlashSale),
+                _outOfStock: p.product_variants?.length > 0
+                    ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
+                    : false,
+            }
+        })
 
         if (selectedBrands.length > 0) {
             processed = processed.filter((p) => selectedBrands.includes(p.brand))
@@ -134,290 +214,185 @@ export default function ShopClient({ initialProducts, searchQuery }: { initialPr
 
         setFiltered(processed)
         setLoading(false)
-    }, [sort, selectedBrands, selectedPriceRange, products])
+    }, [sort, selectedBrands, selectedPriceRange, products, flashSales])
 
     const activeFilterCount = selectedBrands.length + (selectedPriceRange !== null ? 1 : 0)
 
-    const openFilter = () => {
-        setTempBrands([...selectedBrands])
-        setTempPriceRange(selectedPriceRange)
-        setShowFilter(true)
-    }
-
     const applyFilters = () => {
-        setSelectedBrands([...tempBrands])
+        setSelectedBrands(tempBrands)
         setSelectedPriceRange(tempPriceRange)
         setShowFilter(false)
     }
 
-    const toggleTempBrand = (brand: string) => {
-        setTempBrands((prev) =>
-            prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
-        )
-    }
-
-    const removeBrand = (brand: string) => {
-        setSelectedBrands((prev) => prev.filter((b) => b !== brand))
-    }
-
-    const removePriceRange = () => {
-        setSelectedPriceRange(null)
+    const clearFilters = () => {
+        setTempBrands([])
+        setTempPriceRange(null)
     }
 
     return (
-        <div className="min-h-screen bg-white pb-24">
-            {/* HEADER */}
-            <div className="bg-white border-b border-slate-100">
-                <div className="max-w-7xl mx-auto px-4 h-14 flex items-center">
-                    <h1 className="text-lg font-black tracking-tight text-slate-900">
-                        {searchQuery ? (
-                            <>Results: &ldquo;{searchQuery}&rdquo;</>
-                        ) : (
-                            "Shop All"
+        <div className="w-full">
+            {/* Toolbar */}
+            <div className="sticky top-16 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
+                <div className="container mx-auto px-4 py-3 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-900">{filtered.length} products</p>
+                        {activeFilterCount > 0 && (
+                            <button
+                                onClick={() => { setTempBrands([]); setTempPriceRange(null); setSelectedBrands([]); setSelectedPriceRange(null); }}
+                                className="text-xs text-rose-500 font-semibold hover:underline flex items-center gap-1"
+                            >
+                                <X className="w-3 h-3" /> Clear all
+                            </button>
                         )}
-                    </h1>
-                    <p className="ml-auto text-[10px] font-semibold text-slate-400">
-                        {loading ? "..." : `${filtered.length} products`}
-                    </p>
-                </div>
-            </div>
-
-            {/* ACTIVE FILTER CHIPS */}
-            {activeFilterCount > 0 && (
-                <div className="max-w-7xl mx-auto px-4 pt-3 pb-2 flex flex-wrap gap-2">
-                    {selectedBrands.map((brand) => (
-                        <button
-                            key={brand}
-                            onClick={() => removeBrand(brand)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#fc2779]/25 bg-[#fc2779]/8 text-[10px] font-semibold text-[#fc2779] hover:bg-[#fc2779]/15 transition-all"
-                        >
-                            {brand}
-                            <X className="w-3 h-3" />
-                        </button>
-                    ))}
-                    {selectedPriceRange !== null && (
-                        <button
-                            onClick={removePriceRange}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#fc2779]/25 bg-[#fc2779]/8 text-[10px] font-semibold text-[#fc2779] hover:bg-[#fc2779]/15 transition-all"
-                        >
-                            {PRICE_RANGES[selectedPriceRange].label}
-                            <X className="w-3 h-3" />
-                        </button>
-                    )}
-                    <button
-                        onClick={() => {
-                            setSelectedBrands([])
-                            setSelectedPriceRange(null)
-                        }}
-                        className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-all"
-                    >
-                        Clear all
-                    </button>
-                </div>
-            )}
-
-            {/* PRODUCT GRID */}
-            <div>
-                {loading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                        {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div key={i} className="border-r border-b border-slate-100">
-                                <div className="aspect-square bg-[#F1F5F9] flex items-center justify-center">
-                                    <span className="font-daciana text-[80px] text-[#CBD5E1]" style={{ lineHeight: 1 }}>M</span>
-                                </div>
-                                <div className="p-4 space-y-3">
-                                    <Bone className="h-3 w-1/3 rounded" />
-                                    <Bone className="h-4 w-3/4 rounded" />
-                                    <Bone className="h-3 w-1/2 rounded" />
-                                    <div className="pt-3 border-t border-slate-50 flex items-center gap-3">
-                                        <Bone className="h-5 w-1/4 rounded" />
-                                        <Bone className="h-3 w-1/5 rounded" />
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Bone className="w-10 h-10 rounded-lg" />
-                                        <Bone className="flex-1 h-10 rounded-lg" />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
                     </div>
-                ) : filtered.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-white overflow-hidden">
-                        {filtered.map((p, idx) => (
-                            <ProductCard key={p.id} product={p} priority={idx < 4} />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-32">
-                        <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-8 shadow-sm border border-slate-100">
-                            <Package className="w-9 h-9 text-slate-200" />
+                    <div className="flex items-center gap-2">
+                        {/* Sort */}
+                        <div className="relative" ref={sortRef}>
+                            <button
+                                onClick={() => setShowSort(!showSort)}
+                                className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                            >
+                                <ArrowUpDown className="w-4 h-4" />
+                                <span>{sortOptions.find(o => o.key === sort)?.label}</span>
+                            </button>
+                            {showSort && (
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 min-w-[180px] overflow-hidden">
+                                    {sortOptions.map(opt => (
+                                        <button
+                                            key={opt.key}
+                                            onClick={() => { setSort(opt.key); setShowSort(false) }}
+                                            className={`w-full px-4 py-2 text-left text-sm transition-colors ${sort === opt.key ? 'bg-rose-50 text-rose-600 font-semibold' : 'text-slate-700 hover:bg-slate-50'}`}
+                                        >
+                                            {opt.label}
+                                            {sort === opt.key && <Check className="w-4 h-4 ml-auto" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                        <p className="text-base font-semibold text-slate-400">No products found</p>
+                        
+                        {/* Filter */}
+                        <button
+                            onClick={() => { setTempBrands(selectedBrands); setTempPriceRange(selectedPriceRange); setShowFilter(true) }}
+                            className={`flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-semibold transition-colors ${activeFilterCount > 0 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                        >
+                            <Package className="w-4 h-4" />
+                            <span>Filter</span>
+                            {activeFilterCount > 0 && (
+                                <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
                     </div>
-                )}
-            </div>
-
-            {/* BOTTOM BAR */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-50">
-                <div className="max-w-7xl mx-auto flex">
-                    <button
-                        onClick={openFilter}
-                        className="flex-1 flex items-center justify-center gap-2 py-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-all"
-                    >
-                        <SlidersHorizontal className="w-4 h-4" />
-                        <span>Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}</span>
-                    </button>
-                    <div className="w-px bg-slate-100" />
-                    <button
-                        onClick={() => setShowSort(!showSort)}
-                        className="flex-1 flex items-center justify-center gap-2 py-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-all relative"
-                    >
-                        <ArrowUpDown className="w-4 h-4" />
-                        <span>{sortOptions.find((o) => o.key === sort)?.label || "Sort"}</span>
-                    </button>
                 </div>
             </div>
 
-            {/* SORT POPOVER */}
-            <AnimatePresence>
-                {showSort && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[60]"
-                            onClick={() => setShowSort(false)}
-                        />
-                        <motion.div
-                            ref={sortRef}
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="fixed bottom-20 right-6 z-[70] bg-white rounded-2xl shadow-2xl border border-slate-100 min-w-[220px] overflow-hidden"
-                        >
-                            {sortOptions.map((opt) => (
-                                <button
-                                    key={opt.key}
-                                    onClick={() => { setSort(opt.key); setShowSort(false) }}
-                                    className={`w-full flex items-center justify-between px-5 py-4 text-sm transition-all hover:bg-slate-50 ${
-                                        sort === opt.key
-                                            ? "text-[#fc2779] font-semibold bg-[#fc2779]/5"
-                                            : "text-slate-600 font-medium"
-                                    }`}
-                                >
-                                    {opt.label}
-                                    {sort === opt.key && (
-                                        <div className="w-5 h-5 rounded-full bg-[#fc2779] flex items-center justify-center">
-                                            <Check className="w-3 h-3 text-white" />
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
-            {/* FILTER BOTTOM SHEET */}
+            {/* Filter Sheet */}
             <AnimatePresence>
                 {showFilter && (
-                    <>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm sm:hidden"
+                        onClick={() => setShowFilter(false)}
+                    >
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowFilter(false)}
-                            className="fixed inset-0 bg-black/30 z-[60]"
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 28, stiffness: 220 }}
-                            className="fixed bottom-0 left-0 right-0 bg-white z-[70] rounded-t-[2rem] shadow-2xl max-h-[75vh] flex flex-col"
+                            initial={{ x: "100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "100%" }}
+                            className="fixed right-0 top-0 h-full w-full sm:w-80 bg-white shadow-xl flex flex-col"
+                            onClick={e => e.stopPropagation()}
                         >
-                            <div className="flex justify-center pt-3 pb-1">
-                                <div className="w-10 h-1 rounded-full bg-slate-300" />
+                            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-slate-900">Filters</h3>
+                                <button onClick={() => setShowFilter(false)} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
                             </div>
-
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                                <button onClick={() => setShowFilter(false)} className="text-sm text-slate-400 font-medium">Cancel</button>
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-lg font-bold text-slate-900">Filters</h2>
-                                    {activeFilterCount > 0 && (
-                                        <span className="w-5 h-5 rounded-full bg-[#fc2779] text-white text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span>
-                                    )}
-                                </div>
-                                <button onClick={() => { setTempBrands([]); setTempPriceRange(null) }} className="text-sm font-semibold text-[#fc2779]">Reset</button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto px-6 py-4">
-                                <div className="mb-8">
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <h3 className="text-sm font-semibold text-slate-800">Brand</h3>
-                                        {tempBrands.length > 0 && <span className="text-xs text-[#fc2779] font-medium ml-auto">{tempBrands.length} selected</span>}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-900 mb-3">Brands</h4>
+                                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                                        {availableBrands.map(brand => (
+                                            <label key={brand} className="flex items-center gap-3 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={tempBrands.includes(brand)}
+                                                    onChange={e => e.target.checked ? setTempBrands([...tempBrands, brand]) : setTempBrands(tempBrands.filter(b => b !== brand))}
+                                                    className="w-4 h-4 rounded border-slate-300 text-rose-500 focus:ring-rose-500"
+                                                />
+                                                <span className="text-sm text-slate-700">{brand}</span>
+                                            </label>
+                                        ))}
                                     </div>
-                                    {availableBrands.length === 0 ? (
-                                        <p className="text-sm italic text-slate-400">No brands available</p>
-                                    ) : (
-                                        <div className="flex flex-wrap gap-2">
-                                            {availableBrands.map((brand) => {
-                                                const selected = tempBrands.includes(brand)
-                                                return (
-                                                    <button
-                                                        key={brand}
-                                                        onClick={() => toggleTempBrand(brand)}
-                                                        className={`px-4 py-2.5 rounded-full border text-xs font-medium transition-all ${
-                                                            selected
-                                                                ? "border-[#fc2779] bg-[#fc2779]/8 text-[#fc2779] font-semibold"
-                                                                : "border-slate-200 text-slate-500 hover:border-slate-300"
-                                                        }`}
-                                                    >
-                                                        {brand}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                    )}
                                 </div>
-
-                                <div className="h-px bg-slate-100 -mx-6 mb-8" />
-
-                                <div className="mb-6">
-                                    <h3 className="text-sm font-semibold text-slate-800 mb-4">Price Range</h3>
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-900 mb-3">Price Range</h4>
                                     <div className="space-y-2">
-                                        {PRICE_RANGES.map((range, idx) => {
-                                            const selected = tempPriceRange === idx
-                                            return (
-                                                <button
-                                                    key={idx}
-                                                    onClick={() => setTempPriceRange(selected ? null : idx)}
-                                                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border transition-all ${
-                                                        selected ? "border-[#fc2779]/30 bg-[#fc2779]/5" : "border-slate-100 bg-white hover:border-slate-200"
-                                                    }`}
-                                                >
-                                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selected ? "border-[#fc2779]" : "border-slate-300"}`}>
-                                                        {selected && <div className="w-2.5 h-2.5 rounded-full bg-[#fc2779]" />}
-                                                    </div>
-                                                    <span className={`text-sm ${selected ? "font-semibold text-[#fc2779]" : "text-slate-700"}`}>{range.label}</span>
-                                                    {selected && <Check className="w-4 h-4 text-[#fc2779] ml-auto" />}
-                                                </button>
-                                            )
-                                        })}
+                                        {PRICE_RANGES.map((range, idx) => (
+                                            <label key={idx} className="flex items-center gap-3 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="priceRange"
+                                                    checked={tempPriceRange === idx}
+                                                    onChange={() => setTempPriceRange(idx)}
+                                                    className="w-4 h-4 rounded border-slate-300 text-rose-500 focus:ring-rose-500"
+                                                />
+                                                <span className="text-sm text-slate-700">{range.label}</span>
+                                            </label>
+                                        ))}
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="priceRange"
+                                                checked={tempPriceRange === null}
+                                                onChange={() => setTempPriceRange(null)}
+                                                className="w-4 h-4 rounded border-slate-300 text-rose-500 focus:ring-rose-500"
+                                            />
+                                            <span className="text-sm text-slate-700">All Prices</span>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="px-6 py-4 border-t border-slate-100 pb-8">
-                                <button onClick={applyFilters} className="w-full py-4 rounded-2xl bg-slate-900 text-white text-sm font-bold tracking-wider hover:bg-slate-800 transition-all active:scale-[0.98]">
-                                    Apply Filters
-                                </button>
+                            <div className="p-4 border-t border-slate-200 flex gap-2">
+                                <button onClick={clearFilters} className="flex-1 h-10 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50">Clear</button>
+                                <button onClick={applyFilters} className="flex-1 h-10 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800">Apply</button>
                             </div>
                         </motion.div>
-                    </>
+                    </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Product Grid */}
+            <div className="container mx-auto px-4 py-6 md:py-8">
+                {loading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="space-y-4">
+                                <Bone className="aspect-[4/5] w-full rounded-2xl" />
+                                <div className="space-y-2">
+                                    <Bone className="h-3 w-1/2" />
+                                    <Bone className="h-4 w-full" />
+                                    <Bone className="h-4 w-1/4" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="text-center py-20 px-6">
+                        <Package className="w-12 h-12 mx-auto text-slate-300 mb-4" />
+                        <p className="text-lg font-semibold text-slate-900 mb-1">No products found</p>
+                        <p className="text-slate-500">Try adjusting your filters</p>
+                        <button onClick={() => { setSelectedBrands([]); setSelectedPriceRange(null); }} className="mt-4 text-sm font-semibold text-rose-500 hover:underline">Clear filters</button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-white overflow-hidden">
+                        {filtered.map((p, idx) => (
+                            <ProductCard key={p.id} product={p} priority={idx < 4} activeFlashSale={p._bestFlashSale} />
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

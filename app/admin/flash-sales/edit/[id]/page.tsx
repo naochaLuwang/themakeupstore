@@ -9,7 +9,7 @@ export default async function EditFlashSalePage({ params }: { params: Promise<{ 
   const supabase = await createClient()
 
   const [saleResult, categoriesResult] = await Promise.all([
-    supabase.from('flash_sales').select('*, products(name)').eq('id', id).single(),
+    supabase.from('flash_sales').select('*').eq('id', id).single(),
     supabase.from('categories').select('id, name').order('name', { ascending: true }),
   ])
 

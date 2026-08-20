@@ -5,11 +5,31 @@ import { FlashSaleStatusToggle, DeleteFlashSaleButton } from "@/components/admin
 
 export default async function AdminFlashSalesPage() {
   const supabase = await createClient()
-  const { data: sales } = await supabase
+  
+  // Fetch flash sales first
+  const { data: sales, error: salesError } = await supabase
     .from('flash_sales')
-    .select('*, products(name, thumbnail_url), categories(name)')
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(500)
+  
+  if (salesError) throw new Error(salesError.message)
+
+  // Fetch related product and category data separately
+  const productIds = sales?.filter(s => s.scope === 'product' && s.product_id).map(s => s.product_id) || []
+  const categoryIds = sales?.filter(s => s.scope === 'category' && s.category_id).map(s => s.category_id) || []
+  
+  const [productsRes, categoriesRes] = await Promise.all([
+    productIds.length > 0 
+      ? supabase.from('products').select('id, name, thumbnail_url').in('id', productIds)
+      : { data: [], error: null },
+    categoryIds.length > 0
+      ? supabase.from('categories').select('id, name').in('id', categoryIds)
+      : { data: [], error: null }
+  ])
+
+  const productMap = new Map((productsRes.data || []).map(p => [p.id, p]))
+  const categoryMap = new Map((categoriesRes.data || []).map(c => [c.id, c]))
 
   const now = new Date()
 
@@ -29,7 +49,7 @@ export default async function AdminFlashSalesPage() {
         <table className="w-full">
           <thead className="bg-slate-50/50">
             <tr className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-              <th className="py-4 px-6 text-left">Product</th>
+              <th className="py-4 px-6 text-left">Target</th>
               <th className="py-4 px-6 text-left">Discount</th>
               <th className="py-4 px-6 text-left">Schedule</th>
               <th className="py-4 px-6 text-left">Status</th>
@@ -46,19 +66,23 @@ export default async function AdminFlashSalesPage() {
                 const isLive = sale.is_active && now >= start && now <= end
                 const isScheduled = sale.is_active && now < start
                 const isExpired = now > end
+                
+                const product = sale.scope === 'product' && sale.product_id ? productMap.get(sale.product_id) : null
+                const category = sale.scope === 'category' && sale.category_id ? categoryMap.get(sale.category_id) : null
+
                 return (
                   <tr key={sale.id} className="hover:bg-slate-50/30 transition-all">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
-                        {sale.scope === 'product' && sale.products?.thumbnail_url ? (
-                          <img src={sale.products.thumbnail_url} className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
+                        {sale.scope === 'product' && product?.thumbnail_url ? (
+                          <img src={product.thumbnail_url} className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
                         ) : (
                           <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><Zap className="w-4 h-4 text-slate-400" /></div>
                         )}
                         <div>
                           <div className="font-semibold text-slate-900 text-sm">
-                            {sale.scope === 'product' ? sale.products?.name || 'Unknown Product' :
-                             sale.scope === 'category' ? `Category: ${sale.categories?.name || 'Unknown'}` :
+                            {sale.scope === 'product' ? product?.name || 'Unknown Product' :
+                             sale.scope === 'category' ? `Category: ${category?.name || 'Unknown'}` :
                              sale.scope === 'brand' ? `Brand: ${sale.brand}` :
                              'All Products'}
                           </div>

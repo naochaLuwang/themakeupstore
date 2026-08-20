@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Heart, ShoppingBag, Plus, X, Check, Palette, Star, StarHalf, ThumbsUp } from "lucide-react"
+import { Heart, ShoppingBag, Plus, X, Check, Palette, Star, StarHalf, ThumbsUp, Clock } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { useCart } from "@/components/store/use-cart"
 import { motion, AnimatePresence } from "framer-motion"
@@ -13,6 +13,39 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 import { useProductPromo } from "@/components/store/promotion-badge-context"
 import { applyFlashSaleToPrice, type FlashSaleOverride } from "@/lib/flash-sale-helper"
+import type { ActiveFlashSale } from "@/lib/active-flash-sales"
+
+function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
+    const [timeLeft, setTimeLeft] = useState(() => {
+        const end = new Date(endsAt).getTime()
+        const now = Date.now()
+        return Math.max(0, end - now)
+    })
+    
+    useEffect(() => {
+        const end = new Date(endsAt).getTime()
+        const update = () => {
+            const now = Date.now()
+            setTimeLeft(Math.max(0, end - now))
+        }
+        update()
+        const interval = setInterval(update, 1000)
+        return () => clearInterval(interval)
+    }, [endsAt])
+    
+    if (timeLeft <= 0) return <span>ENDED</span>
+    
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60))
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
+    
+    return (
+        <span className="flex items-center gap-1">
+            <Clock className="w-2.5 h-2.5" />
+            {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`}
+        </span>
+    )
+}
 
 function RatingStars({ rating, size = 10 }: { rating: number; size?: number }) {
     const full = Math.floor(rating)
@@ -69,7 +102,7 @@ function getCheapestVariantPrice(product: any, flashSale?: FlashSaleOverride | n
     return { salePrice: sale, mrp: mrpVal, discountPercentage, discountAmount, hasDiscount: discountAmount > 0 || isFlashSale }
 }
 
-export function ProductCard({ product, priority, activeFlashSale }: { product: any; priority?: boolean; activeFlashSale?: FlashSaleOverride | null }) {
+export function ProductCard({ product, priority, activeFlashSale }: { product: any; priority?: boolean; activeFlashSale?: ActiveFlashSale | null }) {
     const [isWishlisted, setIsWishlisted] = useState(false)
     const [isPending, setIsPending] = useState(false)
     const [showVariantSelector, setShowVariantSelector] = useState(false)
@@ -215,6 +248,12 @@ export function ProductCard({ product, priority, activeFlashSale }: { product: a
                         <div className="bg-amber-500 text-white text-[7px] font-black uppercase tracking-wider px-2 py-1 shadow-sm rounded-sm">
                             {activeFlashSale.label || 'FLASH'}
                         </div>
+                    </div>
+                )}
+                {/* Countdown timer for flash sale */}
+                {activeFlashSale && (
+                    <div className="absolute top-9 left-3 z-10 bg-black/80 text-white text-[8px] font-mono px-2 py-1 rounded-sm">
+                        <FlashSaleCountdown endsAt={activeFlashSale.ends_at} />
                     </div>
                 )}
                 {hasDiscount && !product.is_new && (

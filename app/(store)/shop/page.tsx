@@ -18,7 +18,7 @@ export default async function ShopPage({
     // Initial Data Fetch
     let supabaseQuery = supabase
         .from('products')
-        .select(`*, product_variants(id, price, stock, discount_type, discount_value, title, image_url)`)
+        .select(`*, product_variants(id, price, stock, discount_type, discount_value, title, image_url), product_categories(category_id)`)
         .eq('status', 'active')
 
     if (query) {
@@ -27,5 +27,5 @@ export default async function ShopPage({
 
     const { data: products } = await supabaseQuery.order('created_at', { ascending: false }).limit(100)
 
-    return <ShopClient initialProducts={products || []} searchQuery={query} />
+    return <ShopClient initialProducts={products || []} />
 }

@@ -9,7 +9,7 @@ export function FlashSaleStatusToggle({ id, isActive }: { id: string; isActive: 
   const handleToggle = async () => {
     setLoading(true)
     try {
-      await toggleFlashSale(id, isActive)
+      await toggleFlashSale(id, !isActive)
       toast.success("Status updated")
       window.location.reload()
     } catch {

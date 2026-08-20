@@ -9,7 +9,7 @@ import { ProductCard } from "@/components/store/product-card"
 import {
     Heart, ShoppingBag, Star, Share2, Store, MapPin,
     ShieldCheck, RotateCcw, ChevronDown, ChevronUp, ChevronRight, Check, X, Plus, Minus, Bell,
-    Tag, Search, ZoomIn, ZoomOut, ChevronLeft, Maximize2
+    Tag, Search, ZoomIn, ZoomOut, ChevronLeft, Maximize2, Clock
 } from "lucide-react"
 import { toast } from "sonner"
 import { Capacitor } from "@capacitor/core"
@@ -44,6 +44,8 @@ function stripHtml(html: string): string {
         .trim()
 }
 
+import { applyFlashSaleToPrice, type FlashSaleOverride } from "@/lib/flash-sale-helper"
+
 function getVariantPrice(variant: any, productDiscountType: string, productDiscountValue: number, flashSale?: FlashSaleOverride | null) {
     const base = variant.price || 0
     const dType = variant.discount_type && variant.discount_type !== "none" ? variant.discount_type : productDiscountType
@@ -57,7 +59,37 @@ function calculateDiscountPercentage(finalPrice: number, originalPrice: number):
     return Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
 }
 
-import { applyFlashSaleToPrice, type FlashSaleOverride } from "@/lib/flash-sale-helper"
+function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
+    const [timeLeft, setTimeLeft] = useState(() => {
+        const end = new Date(endsAt).getTime()
+        const now = Date.now()
+        return Math.max(0, end - now)
+    })
+
+    useEffect(() => {
+        const end = new Date(endsAt).getTime()
+        const update = () => {
+            const now = Date.now()
+            setTimeLeft(Math.max(0, end - now))
+        }
+        update()
+        const interval = setInterval(update, 1000)
+        return () => clearInterval(interval)
+    }, [endsAt])
+    
+    if (timeLeft <= 0) return <span>ENDED</span>
+    
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60))
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
+    
+    return (
+        <span className="flex items-center gap-1">
+            <Clock className="w-2.5 h-2.5" />
+            {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`}
+        </span>
+    )
+}
 
 export default function ProductClient({ initialProduct, activeBXGY, activeGift, activeFlashSale }: { initialProduct: any; activeBXGY?: any; activeGift?: any; activeFlashSale?: FlashSaleOverride | null }) {
     const router = useRouter()
@@ -573,6 +605,12 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         {activeFlashSale.label || 'FLASH SALE'}
                     </div>
                 )}
+                {/* Countdown timer for flash sale */}
+                {activeFlashSale && (
+                    <div className="absolute top-10 left-0 bg-black/80 text-white text-[8px] font-mono px-2 py-1 rounded-r-sm shadow-lg z-10">
+                        <FlashSaleCountdown endsAt={activeFlashSale.ends_at} />
+                    </div>
+                )}
                 {discountPct > 0 && (
                     <div className={`absolute ${activeFlashSale ? 'top-10' : 'top-4'} left-0 bg-[#fc2779] text-white text-[11px] font-black px-2.5 py-1 rounded-r-sm tracking-wider`}>
                         {discountPct}% OFF
@@ -990,8 +1028,13 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                         {activeFlashSale.label || 'FLASH SALE'}
                                     </div>
                                 )}
+                                {activeFlashSale && (
+                                    <div className="absolute top-10 left-0 bg-black/80 text-white text-[8px] font-mono px-2 py-1 rounded-r-sm shadow-lg z-10">
+                                        <FlashSaleCountdown endsAt={activeFlashSale.ends_at} />
+                                    </div>
+                                )}
                                 {discountPct > 0 && (
-                                    <div className={`absolute ${activeFlashSale ? 'top-12' : 'top-4'} left-0 bg-[#fc2779] text-white text-xs font-black px-3 py-1.5 rounded-r-sm tracking-wider`}>
+                                    <div className={`absolute ${activeFlashSale ? 'top-16' : 'top-4'} left-0 bg-[#fc2779] text-white text-xs font-black px-3 py-1.5 rounded-r-sm tracking-wider`}>
                                         {discountPct}% OFF
                                     </div>
                                 )}
