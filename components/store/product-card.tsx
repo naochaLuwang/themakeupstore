@@ -103,14 +103,15 @@ function getCheapestVariantPrice(product: any, flashSale?: FlashSaleOverride | n
             const dVal = Number(v.discount_value || product.discount_value || 0)
             const { salePrice: sale } = applyFlashSaleToPrice(base, flashSale || null, dType, dVal)
             const discAmt = Math.max(0, mrpVal - sale)
-            if (discAmt > 0) hasDisc = true
+            const pct = mrpVal > 0 ? Math.round((discAmt / mrpVal) * 100) : 0
             if (sale < minSale) {
                 minSale = sale
                 minMrp = mrpVal
             }
+            if (discAmt > 0) hasDisc = true
             if (discAmt > bestDiscAmount) {
                 bestDiscAmount = discAmt
-                bestDiscPct = dType !== "none" && dVal > 0 ? (dType === "percentage" ? dVal : (mrpVal > 0 ? Math.round((discAmt / mrpVal) * 100) : 0)) : 0
+                bestDiscPct = pct
             }
         }
         if (flashSale && !hasDisc) hasDisc = true
@@ -314,19 +315,10 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                         <FlashSaleCountdown endsAt={flashSaleLive.ends_at} />
                     </div>
                 )}
-                {hasDiscount && !product.is_new && (
-                    <div className={`absolute ${flashSaleLive || flashSaleUpcoming ? 'top-9' : 'top-3'} left-3 z-10 flex items-center`}>
-                        <div className="bg-slate-900 text-white text-[8px] font-bold uppercase tracking-wider px-3 py-1.5 shadow-sm"
-                             style={{ clipPath: 'polygon(0 0, 100% 0, 92% 50%, 100% 100%, 0 100%)' }}>
-                            {discountPercentage > 0 ? `${discountPercentage}% OFF` : `-₹${Math.round(discountAmount).toLocaleString()}`}
-                        </div>
-                    </div>
-                )}
                 {product.tag && (() => {
                     let tagTop = 8
                     if (product.is_new) tagTop += 24
                     if (flashSaleLive || flashSaleUpcoming) tagTop += 28
-                    if (hasDiscount && !product.is_new) tagTop += 28
                     const tagText = String(product.tag).toUpperCase()
                     const isBestseller = tagText === "BESTSELLER"
                     const isJustLanded = tagText === "JUST LANDED" || tagText === "JUSTLANDED"

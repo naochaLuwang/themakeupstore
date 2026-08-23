@@ -661,11 +661,6 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         <span className="text-xl font-black text-gray-900">
                             ₹{Math.round(selectedVariantData?.calculated_price || finalPrice || sellingPrice)}
                         </span>
-                        {activeFlashSale && (
-                            <span className="text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded uppercase tracking-wider">
-                                {activeFlashSale.label || 'FLASH'}
-                            </span>
-                        )}
                         {discountPct > 0 && (
                             <>
                                 <span className="text-sm text-gray-400 line-through">₹{Math.round(sellingPrice)}</span>
@@ -1086,11 +1081,6 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                 <span className="text-2xl font-black text-gray-900">
                                     ₹{Math.round(selectedVariantData?.calculated_price || finalPrice || sellingPrice)}
                                 </span>
-                                {activeFlashSale && (
-                                    <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded uppercase tracking-wider">
-                                        {activeFlashSale.label || 'FLASH'}
-                                    </span>
-                                )}
                                 {discountPct > 0 && (
                                     <>
                                         <span className="text-base text-gray-400 line-through">₹{Math.round(sellingPrice)}</span>
