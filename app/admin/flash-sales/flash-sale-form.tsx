@@ -21,6 +21,12 @@ const SCOPES = [
   { value: 'all', label: 'All Products', description: 'Store-wide flash sale', icon: Calendar },
 ] as const
 
+const toLocalInputValue = (iso: string) => {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export function FlashSaleForm({ initialData, isEdit = false, categories = [] }: FlashSaleFormProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -36,8 +42,8 @@ export function FlashSaleForm({ initialData, isEdit = false, categories = [] }: 
   const [discountType, setDiscountType] = useState<"percentage" | "fixed">(initialData?.discount_type || "percentage")
   const [discountValue, setDiscountValue] = useState(initialData?.discount_value || "")
   const [label, setLabel] = useState(initialData?.label || "")
-  const [startsAt, setStartsAt] = useState(initialData?.starts_at ? new Date(initialData.starts_at).toISOString().slice(0, 16) : "")
-  const [endsAt, setEndsAt] = useState(initialData?.ends_at ? new Date(initialData.ends_at).toISOString().slice(0, 16) : "")
+  const [startsAt, setStartsAt] = useState(initialData?.starts_at ? toLocalInputValue(initialData.starts_at) : "")
+  const [endsAt, setEndsAt] = useState(initialData?.ends_at ? toLocalInputValue(initialData.ends_at) : "")
   const [isPending, setIsPending] = useState(false)
 
   // Search states

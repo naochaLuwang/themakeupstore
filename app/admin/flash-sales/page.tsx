@@ -96,10 +96,10 @@ export default async function AdminFlashSalesPage() {
                     </td>
                     <td className="py-4 px-6 text-sm">
                       <div className="text-slate-600 font-medium">
-                        {start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
                       </div>
                       <div className="text-slate-400 text-xs">
-                        → {end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        → {end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
                       </div>
                       <div className="text-[10px] font-bold mt-1 uppercase tracking-wider"
                         style={{ color: isLive ? '#059669' : isScheduled ? '#d97706' : isExpired ? '#94a3b8' : '#0f172a' }}

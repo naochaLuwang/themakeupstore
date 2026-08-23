@@ -76,6 +76,51 @@
 - No shared admin components — all consistency is enforced via Tailwind classes directly on each page
 - Shadcn color utility classes (`text-muted-foreground`, `text-primary`, `border-primary`, `bg-primary`) replaced with explicit Tailwind values across all admin-scoped code; shadcn UI library files left untouched
 
+## Flash Sale System (Session 2026-07-29)
+
+### DB Schema (`flash_sales` table — migration `20260721_flash_sales.sql`)
+- Columns: `id`, `scope` (product|category|brand|all), `product_id`, `category_id`, `brand`, `discount_type` (percentage|fixed), `discount_value`, `starts_at`, `ends_at`, `label`, `is_active`, `created_at`, `updated_at`
+- **IMPORTANT**: If `scope` column is missing from DB, run the migration SQL in Supabase SQL Editor (see `supabase/migrations/20260721_flash_sales.sql`)
+- Constraints: `ends_after_starts` (ends_at > starts_at), `scope_has_target` (product→product_id, category→category_id, brand→brand, all→no target)
+
+### Admin
+- **Form** (`app/admin/flash-sales/flash-sale-form.tsx`): Full redesign — scope selector grid (Product/Category/Brand/All with icons), product search with variant support, brand autocomplete, discount type/value toggle, schedule inputs, live preview card, validation + confirm dialog
+- **Controls** (`app/admin/flash-sales/flash-sale-controls.tsx`): Toggle fix for is_active
+- **Server actions** (`app/actions/flash-sales.ts`): createFlashSale, updateFlashSale + validation (ends_at > starts_at, discount_value > 0), auto-start/end logic
+- **List page** (`app/admin/flash-sales/page.tsx`): Fixed broken `products(name)` join queries — use `select('*')` only, no joins
+- **Edit page** (`app/admin/flash-sales/edit/[id]/page.tsx`): Same join fix, passes `categories` prop to form
+- **New page** (`app/admin/flash-sales/new/page.tsx`): Passes `categories` prop to form
+
+### Storefront — How Flash Sales Flow to Product Cards
+1. **Server-side helpers** (`lib/active-flash-sales.ts`): `getActiveFlashSales()` fetches active sales from DB, `flashSaleMatchesProduct()` checks scope match, `pickBestFlashSale()` picks best discount
+2. **Server-side helpers** (`lib/flash-sale-helper.ts`): `FlashSaleOverride` type (discount_type, discount_value, label, ends_at), `applyFlashSaleToPrice()`, `calculateDiscountedPrice()`, `pickBestFlashSale()` (older version)
+3. **Shop page** (`app/(store)/shop/page.tsx`): Server query fetches products with `product_categories(category_id)` — needed for category-scope matching
+4. **Shop client** (`app/(store)/shop/shop-client.tsx`): Client-side fetches active flash sales via Supabase `useEffect` (30s polling), `findBestFlashSale()` matches per product, passes `activeFlashSale` to `ProductCard`
+5. **ProductCard** (`components/store/product-card.tsx`): Renders flash sale badge (amber "FLASH" label), countdown timer (`FlashSaleCountdown` component), discounted price with strikethrough MRP
+6. **Product detail** (`app/(store)/products/[id]/product-client.tsx`): Server-side flash sale passed as prop, `FlashSaleCountdown` in both mobile and desktop views
+
+### Key Bug Fix: Flash Sales Not Showing on Product Cards
+- **Root cause**: `getProductCategoryIds()` in shop-client.tsx only checked `product.categories` (a join NOT in the shop query). Ignored `product.category_id` (flat column via `*`) and `product.product_categories` (junction table)
+- **Fix**: Updated `getProductCategoryIds` to read `product.category_id` + `product.product_categories` + `product.categories` (fallback)
+- **Also required**: Shop query added `product_categories(category_id)` to select so junction data is available
+- **`mrp` column**: NOT added to product_variants selects (was tried then reverted — not needed for flash sale display)
+
+### Key Decisions
+- `FlashSaleOverride` (from `flash-sale-helper.ts`) is used for product detail page (server-side) — has discount_type, discount_value, label, ends_at
+- `ActiveFlashSale` (from `active-flash-sales.ts`) is used for shop/product-card (client-side) — has additional id, scope, starts_at, product_id, category_id, brand
+- ProductCard accepts `ActiveFlashSale | null` for its `activeFlashSale` prop
+- ProductClient (detail page) accepts `FlashSaleOverride | null` for its `activeFlashSale` prop
+- Shop-client uses `select('*')` for flash_sales (client-side) — if `scope` column is missing, `findBestFlashSale` switch falls to default and returns no match
+- Flash sale countdown uses live timer (1s interval), shows "ENDED" when time passes
+
+### Flash Sale Matching Logic (findBestFlashSale / pickBestFlashSale)
+- `all` scope → matches every product
+- `product` scope → `fs.product_id === productId`
+- `category` scope → `fs.category_id` must be in product's category IDs (from `category_id` + `product_categories`)
+- `brand` scope → `fs.brand === product.brand`
+- Best sale = highest effective discount (percentage valued higher than fixed for comparison)
+- **Live DB gotcha**: the production `flash_sales` table was created with `product_id UUID NOT NULL` (differs from migration file where it's nullable) — this silently blocked category/brand/all scope creation with "null value in column product_id violates not-null constraint". Fixed 2026-08-23 via `ALTER TABLE flash_sales ALTER COLUMN product_id DROP NOT NULL;` in Supabase SQL Editor. If it regresses, check the live schema first via REST OpenAPI (`GET /rest/v1/`) — don't trust the migration file alone.
+
 ## Next Steps
 - (none — admin section fully standardized and enhanced)
 
@@ -126,6 +171,20 @@
 - `components/admin/product-search.tsx`: replaced `text-muted-foreground` with `text-slate-400`
 - `components/admin/product-form.tsx`: replaced `text-muted-foreground` with `text-slate-400`
 - `components/admin/product-edit-form.tsx`: replaced `text-muted-foreground` with `text-slate-400`
+
+## Flash Sale Files
+- `app/admin/flash-sales/page.tsx`: flash sale list page
+- `app/admin/flash-sales/new/page.tsx`: new flash sale form
+- `app/admin/flash-sales/edit/[id]/page.tsx`: edit flash sale form
+- `app/admin/flash-sales/flash-sale-form.tsx`: full form component (scope grid, product search, brand search, discount config, schedule, live preview)
+- `app/admin/flash-sales/flash-sale-controls.tsx`: toggle controls for is_active
+- `app/actions/flash-sales.ts`: server actions (create, update, delete, start, end, cancel)
+- `lib/flash-sale-helper.ts`: FlashSaleOverride type, applyFlashSaleToPrice, calculateDiscountedPrice, pickBestFlashSale, flashSaleMatchesProduct
+- `lib/active-flash-sales.ts`: ActiveFlashSale type, getActiveFlashSales, flashSaleMatchesProduct, pickBestFlashSale (client-side helpers)
+- `app/(store)/shop/page.tsx`: shop page — fetches products with `product_categories(category_id)` for flash sale matching
+- `app/(store)/shop/shop-client.tsx`: fetches active flash sales client-side (30s polling), findBestFlashSale matching, passes to ProductCard
+- `components/store/product-card.tsx`: renders flash sale badge + FlashSaleCountdown + discounted price
+- `app/(store)/products/[id]/product-client.tsx`: product detail — server-side flash sale, FlashSaleCountdown in mobile + desktop views
 
 ## Capacitor
 - Android project lives in `android/`, ignored by git

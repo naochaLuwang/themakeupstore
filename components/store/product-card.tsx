@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Heart, ShoppingBag, Plus, X, Check, Palette, Star, StarHalf, ThumbsUp, Clock } from "lucide-react"
+import { Heart, ShoppingBag, Plus, X, Check, Palette, Star, StarHalf, ThumbsUp, Clock, Sparkles } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { useCart } from "@/components/store/use-cart"
 import { motion, AnimatePresence } from "framer-motion"
@@ -14,6 +14,8 @@ import { toast } from "sonner"
 import { useProductPromo } from "@/components/store/promotion-badge-context"
 import { applyFlashSaleToPrice, type FlashSaleOverride } from "@/lib/flash-sale-helper"
 import type { ActiveFlashSale } from "@/lib/active-flash-sales"
+import { flashSaleMatchesTarget } from "@/lib/flash-sale-match"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
 
 function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
     const [timeLeft, setTimeLeft] = useState(() => {
@@ -45,6 +47,28 @@ function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
             {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`}
         </span>
     )
+}
+
+function FlashSaleStartCountdown({ startsAt }: { startsAt: string }) {
+    const [timeLeft, setTimeLeft] = useState(() => Math.max(0, new Date(startsAt).getTime() - Date.now()))
+
+    useEffect(() => {
+        const update = () => setTimeLeft(Math.max(0, new Date(startsAt).getTime() - Date.now()))
+        update()
+        const interval = setInterval(update, 1000)
+        return () => clearInterval(interval)
+    }, [startsAt])
+
+    if (timeLeft <= 0) return null
+
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24))
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60))
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
+
+    if (days > 0) return <span>{`${days}d ${hours % 24}h`}</span>
+    if (hours > 0) return <span>{`${hours}h ${minutes}m`}</span>
+    return <span>{`${minutes}m ${seconds}s`}</span>
 }
 
 function RatingStars({ rating, size = 10 }: { rating: number; size?: number }) {
@@ -102,7 +126,7 @@ function getCheapestVariantPrice(product: any, flashSale?: FlashSaleOverride | n
     return { salePrice: sale, mrp: mrpVal, discountPercentage, discountAmount, hasDiscount: discountAmount > 0 || isFlashSale }
 }
 
-export function ProductCard({ product, priority, activeFlashSale }: { product: any; priority?: boolean; activeFlashSale?: ActiveFlashSale | null }) {
+export function ProductCard({ product, priority, activeFlashSale, upcomingFlashSale }: { product: any; priority?: boolean; activeFlashSale?: ActiveFlashSale | null; upcomingFlashSale?: ActiveFlashSale | null }) {
     const [isWishlisted, setIsWishlisted] = useState(false)
     const [isPending, setIsPending] = useState(false)
     const [showVariantSelector, setShowVariantSelector] = useState(false)
@@ -114,6 +138,32 @@ export function ProductCard({ product, priority, activeFlashSale }: { product: a
         ? [...(product.category_id ? [product.category_id] : []), ...product.product_categories.map((pc: any) => pc.category_id).filter(Boolean)]
         : (product.category_id ? [product.category_id] : [])
     const { activePromo } = useProductPromo(product.id, product.category_id, product.brand, productCategoryIds)
+
+    // Self-discover flash sales from context when not passed explicitly as props
+    const { sales: contextSales, categoryMap: contextCategoryMap } = useFlashSales()
+    const { resolvedActive: flashSaleLive, resolvedUpcoming: flashSaleUpcoming } = useMemo(() => {
+        if (activeFlashSale !== undefined || upcomingFlashSale !== undefined) {
+            return { resolvedActive: activeFlashSale ?? null, resolvedUpcoming: upcomingFlashSale ?? null }
+        }
+        if (!contextSales?.length) return { resolvedActive: null, resolvedUpcoming: null }
+        const nowMs = Date.now()
+        // Fall back to the provider's product->category map for pages whose queries don't embed categories
+        const catIds = productCategoryIds.length > 0 ? productCategoryIds : (contextCategoryMap.get(product.id) || [])
+        let bestLive: ActiveFlashSale | null = null
+        let bestUpcoming: ActiveFlashSale | null = null
+        let bestLiveVal = 0
+        let bestUpcomingVal = 0
+        for (const fs of contextSales) {
+            if (!flashSaleMatchesTarget(fs, product.id, catIds, product.brand || null)) continue
+            const val = fs.discount_type === 'percentage' ? fs.discount_value : fs.discount_value * 100
+            if (new Date(fs.starts_at).getTime() <= nowMs) {
+                if (val > bestLiveVal) { bestLive = fs; bestLiveVal = val }
+            } else {
+                if (val > bestUpcomingVal) { bestUpcoming = fs; bestUpcomingVal = val }
+            }
+        }
+        return { resolvedActive: bestLive, resolvedUpcoming: bestLive ? null : bestUpcoming }
+    }, [activeFlashSale, upcomingFlashSale, contextSales, contextCategoryMap, product.id])
 
     const supabase = createClient()
     const router = useRouter()
@@ -141,7 +191,7 @@ export function ProductCard({ product, priority, activeFlashSale }: { product: a
 
     const variants = product.product_variants || []
     const hasVariants = product.has_variants && variants.length > 0
-    const pricing = getCheapestVariantPrice(product, activeFlashSale)
+    const pricing = getCheapestVariantPrice(product, flashSaleLive)
     const { salePrice, mrp, discountPercentage, discountAmount, hasDiscount } = pricing
 
     const productIsOutOfStock = variants.length > 0
@@ -243,21 +293,29 @@ export function ProductCard({ product, priority, activeFlashSale }: { product: a
                         <span className="text-[8px] font-bold uppercase tracking-wider">NEW</span>
                     </div>
                 )}
-                {activeFlashSale && (
+                {flashSaleLive && (
                     <div className="absolute top-3 left-3 z-10">
                         <div className="bg-amber-500 text-white text-[7px] font-black uppercase tracking-wider px-2 py-1 shadow-sm rounded-sm">
-                            {activeFlashSale.label || 'FLASH'}
+                            {flashSaleLive.label || 'FLASH'}
                         </div>
                     </div>
                 )}
+                {/* Scheduled flash sale teaser */}
+                {flashSaleUpcoming && !flashSaleLive && (
+                    <div className="absolute top-3 left-3 z-10 bg-slate-900/85 backdrop-blur-sm text-white text-[8px] font-mono px-2 py-1 rounded-sm flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5 text-amber-400" />
+                        <span>Starts in</span>
+                        <FlashSaleStartCountdown startsAt={flashSaleUpcoming.starts_at} />
+                    </div>
+                )}
                 {/* Countdown timer for flash sale */}
-                {activeFlashSale && (
+                {flashSaleLive && (
                     <div className="absolute top-9 left-3 z-10 bg-black/80 text-white text-[8px] font-mono px-2 py-1 rounded-sm">
-                        <FlashSaleCountdown endsAt={activeFlashSale.ends_at} />
+                        <FlashSaleCountdown endsAt={flashSaleLive.ends_at} />
                     </div>
                 )}
                 {hasDiscount && !product.is_new && (
-                    <div className={`absolute ${activeFlashSale ? 'top-9' : 'top-3'} left-3 z-10 flex items-center`}>
+                    <div className={`absolute ${flashSaleLive || flashSaleUpcoming ? 'top-9' : 'top-3'} left-3 z-10 flex items-center`}>
                         <div className="bg-slate-900 text-white text-[8px] font-bold uppercase tracking-wider px-3 py-1.5 shadow-sm"
                              style={{ clipPath: 'polygon(0 0, 100% 0, 92% 50%, 100% 100%, 0 100%)' }}>
                             {discountPercentage > 0 ? `${discountPercentage}% OFF` : `-₹${Math.round(discountAmount).toLocaleString()}`}
@@ -267,9 +325,20 @@ export function ProductCard({ product, priority, activeFlashSale }: { product: a
                 {product.tag && (() => {
                     let tagTop = 8
                     if (product.is_new) tagTop += 24
-                    if (activeFlashSale) tagTop += 28
+                    if (flashSaleLive || flashSaleUpcoming) tagTop += 28
                     if (hasDiscount && !product.is_new) tagTop += 28
-                    const isBestseller = product.tag === "BESTSELLER"
+                    const tagText = String(product.tag).toUpperCase()
+                    const isBestseller = tagText === "BESTSELLER"
+                    const isJustLanded = tagText === "JUST LANDED" || tagText === "JUSTLANDED"
+                    if (isJustLanded) return (
+                        <div
+                            className="absolute left-2 z-10 flex items-center gap-1 bg-white/70 backdrop-blur-md border border-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.10)] px-2.5 py-1 rounded-full"
+                            style={{ top: tagTop }}
+                        >
+                            <Sparkles className="w-2.5 h-2.5 text-[#fc2779]" />
+                            <span className="text-[8px] font-bold uppercase tracking-[0.14em] leading-none text-slate-900">{product.tag}</span>
+                        </div>
+                    )
                     return (
                         <div
                             className={`absolute left-2 z-10 px-2 py-[3px] rounded-sm flex items-center gap-1 ${isBestseller ? "bg-gradient-to-r from-[#fce4ec] to-[#f8bbd0]" : "bg-slate-900"}`}

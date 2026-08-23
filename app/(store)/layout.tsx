@@ -3,17 +3,20 @@ import { Footer } from "@/components/layout/footer"
 import Navbar from "@/components/layout/navbar"
 import { BottomNavWrapper } from "@/components/layout/bottom-nav-wrapper"
 import { PromotionBadgeProvider } from "@/components/store/promotion-badge-context"
+import { FlashSalesProvider } from "@/components/store/flash-sales-provider"
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex flex-col min-h-screen">
             <PromotionBadgeProvider>
+            <FlashSalesProvider>
                 <Navbar />
                 <main className="flex-grow">
                     {children}
                 </main>
                 <BottomNavWrapper />
                 <div className="hidden md:block"><Footer /></div>
+            </FlashSalesProvider>
             </PromotionBadgeProvider>
         </div>
     )

@@ -122,7 +122,7 @@ export default function ShopClient({ initialProducts }: { initialProducts: any[]
     const [flashSales, setFlashSales] = React.useState<ActiveFlashSale[]>([])
     const sortRef = React.useRef<HTMLDivElement>(null)
 
-    // Fetch active flash sales
+    // Fetch active + scheduled flash sales
     React.useEffect(() => {
         const fetchFlashSales = async () => {
             const supabase = createClient()
@@ -131,7 +131,6 @@ export default function ShopClient({ initialProducts }: { initialProducts: any[]
                 .from('flash_sales')
                 .select('*')
                 .eq('is_active', true)
-                .lte('starts_at', now)
                 .gte('ends_at', now)
             if (data) setFlashSales(data as ActiveFlashSale[])
         }
@@ -159,11 +158,16 @@ export default function ShopClient({ initialProducts }: { initialProducts: any[]
     }, [initialProducts])
 
     React.useEffect(() => {
+        const nowMs = Date.now()
+        const liveSales = flashSales.filter((fs) => new Date(fs.starts_at).getTime() <= nowMs)
+        const upcomingSales = flashSales.filter((fs) => new Date(fs.starts_at).getTime() > nowMs)
         let processed = [...products].map((p) => {
-            const bestFlashSale = findBestFlashSale(flashSales, p)
+            const bestFlashSale = findBestFlashSale(liveSales, p)
+            const upcomingFlashSale = bestFlashSale ? null : findBestFlashSale(upcomingSales, p)
             return {
                 ...p,
                 _bestFlashSale: bestFlashSale,
+                _upcomingFlashSale: upcomingFlashSale,
                 _effectivePrice: computeEffectivePrice(p, bestFlashSale),
                 _outOfStock: p.product_variants?.length > 0
                     ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
@@ -388,7 +392,7 @@ export default function ShopClient({ initialProducts }: { initialProducts: any[]
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-white overflow-hidden">
                         {filtered.map((p, idx) => (
-                            <ProductCard key={p.id} product={p} priority={idx < 4} activeFlashSale={p._bestFlashSale} />
+                            <ProductCard key={p.id} product={p} priority={idx < 4} activeFlashSale={p._bestFlashSale} upcomingFlashSale={p._upcomingFlashSale} />
                         ))}
                     </div>
                 )}

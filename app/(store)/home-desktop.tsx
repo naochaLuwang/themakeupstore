@@ -231,14 +231,9 @@ export function HomeDesktop({ banner, categories, products, forever52Products, p
         {/* NEW ARRIVALS — 5 products in grid */}
         {products.length > 0 && (
           <div className="mb-20">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">NEW THIS WEEK</p>
-                <h2 className="text-4xl font-light tracking-tight text-slate-900">Just Landed</h2>
-              </div>
-              <Link href="/new-arrivals" className="text-sm font-semibold text-slate-400 hover:text-slate-900 transition-colors">
-                View All →
-              </Link>
+            <div className="mb-8">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">NEW THIS WEEK</p>
+              <h2 className="text-4xl font-light tracking-tight text-slate-900">Just Landed</h2>
             </div>
             <div className="grid grid-cols-5 gap-6">
               {products.slice(0, 5).map((product) => (

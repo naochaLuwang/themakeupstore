@@ -262,7 +262,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
 
       {/* NEW ARRIVALS */}
       {products.length > 0 && (
-        <Section label="NEW THIS WEEK" title="Just Landed" href="/new-arrivals" linkLabel="View All">
+        <Section label="NEW THIS WEEK" title="Just Landed">
           <div className="grid grid-cols-2">
             {products.map((product, idx) => (
               <div
