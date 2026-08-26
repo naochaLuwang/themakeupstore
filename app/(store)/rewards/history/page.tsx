@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { getTransactionHistory } from "@/app/actions/loyalty"
-import { ChevronLeft, Coins, ArrowUpRight, ArrowDownRight, Clock } from "lucide-react"
+import { ChevronLeft, Coins, ArrowUpRight, ArrowDownRight, Clock, X } from "lucide-react"
 import Link from "next/link"
 
 function formatDate(ts: string) {
@@ -81,14 +81,17 @@ export default async function RewardsHistoryPage() {
                         {transactions.map((tx: any) => {
                             const isEarn = tx.type === "earn" || tx.type === "bonus"
                             const isPending = tx.status === "pending"
+                            const isCancelled = tx.status === "cancelled"
                             return (
-                                <div key={tx.id} className="px-4 py-3.5">
+                                <div key={tx.id} className={`px-4 py-3.5 ${isCancelled ? "opacity-50" : ""}`}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3 min-w-0 flex-1">
                                             <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${
-                                                isEarn ? "bg-emerald-50" : "bg-rose-50"
+                                                isCancelled ? "bg-slate-50" : isEarn ? "bg-emerald-50" : "bg-rose-50"
                                             }`}>
-                                                {isEarn ? (
+                                                {isCancelled ? (
+                                                    <X className="w-4 h-4 text-slate-400" />
+                                                ) : isEarn ? (
                                                     <ArrowUpRight className="w-4 h-4 text-emerald-500" />
                                                 ) : (
                                                     <ArrowDownRight className="w-4 h-4 text-rose-400" />
@@ -96,15 +99,20 @@ export default async function RewardsHistoryPage() {
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-1.5">
-                                                    <p className="text-xs font-semibold text-slate-800 truncate">
+                                                    <p className={`text-xs font-semibold truncate ${isCancelled ? "text-slate-400" : "text-slate-800"}`}>
                                                         {tx.note || tx.reference_type || "Transaction"}
                                                     </p>
-                                                    {isPending && (
+                                                    {isCancelled && (
+                                                        <span className="text-[7px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                                                            Cancelled
+                                                        </span>
+                                                    )}
+                                                    {isPending && !isCancelled && (
                                                         <span className="text-[7px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                                                             Pending
                                                         </span>
                                                     )}
-                                                    {tx.status === "available" && tx.type !== "spend" && (
+                                                    {!isPending && !isCancelled && tx.status === "available" && tx.type !== "spend" && (
                                                         <span className="text-[7px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                                                             Cleared
                                                         </span>

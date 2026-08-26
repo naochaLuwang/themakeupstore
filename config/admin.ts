@@ -91,7 +91,6 @@ export const adminConfig = {
             items: [
                 { title: "Rewards", href: "/admin/rewards", icon: Award },
                 { title: "Reward Users", href: "/admin/rewards/users", icon: Users },
-                { title: "Gift Cards", href: "/admin/gift-cards", icon: CreditCard },
             ],
         },
         {

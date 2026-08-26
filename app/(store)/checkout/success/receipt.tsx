@@ -25,6 +25,8 @@ interface Order {
     razorpay_payment_id: string | null
     promo_code: string | null
     promo_discount_amount: number
+    bxgy_discount_amount: number
+    coin_discount_amount: number
     shipping_address: any
     order_items: OrderItem[]
 }
@@ -275,6 +277,12 @@ export function ReceiptPage({ order }: { order: Order }) {
                             <div className="flex justify-between mb-2">
                                 <span style={{ color: "#77736B" }}>Discount ({order.promo_code})</span>
                                 <span className="tabular-nums" style={{ color: "#77736B" }}>-{formatCurrency(promoDiscount)}</span>
+                            </div>
+                        )}
+                        {Number(order.coin_discount_amount) > 0 && (
+                            <div className="flex justify-between mb-2">
+                                <span style={{ color: "#77736B" }}>M Coins</span>
+                                <span className="tabular-nums" style={{ color: "#77736B" }}>-{formatCurrency(Number(order.coin_discount_amount))}</span>
                             </div>
                         )}
                         <div className="flex justify-between mb-2">

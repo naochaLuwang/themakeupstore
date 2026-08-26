@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation"
 import { getLoyaltyData } from "@/app/actions/loyalty"
-import { ChevronLeft, Gift, Award, Crown, Star, Zap, Coins, Sparkles, ArrowRight, History } from "lucide-react"
+import { ChevronLeft, ChevronRight, Award, Crown, Star, Zap, Coins, Sparkles, History } from "lucide-react"
 import Link from "next/link"
 
 const TIERS = [
-    { id: "bronze", label: "Bronze", range: "₹0 – ₹4,999", earnRate: "1 coin / ₹60", icon: Star, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", ring: "ring-orange-300" },
-    { id: "silver", label: "Silver", range: "₹5,000 – ₹12,999", earnRate: "1 coin / ₹60", icon: Zap, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-300", ring: "ring-slate-300" },
-    { id: "gold", label: "Gold", range: "₹13,000+", earnRate: "1 coin / ₹60", icon: Crown, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-300", ring: "ring-amber-300" },
+    { id: "bronze", label: "Bronze", range: "₹0 – ₹9,999", earnRate: "1 coin / ₹100", icon: Star, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", ring: "ring-orange-300" },
+    { id: "silver", label: "Silver", range: "₹10,000 – ₹24,999", earnRate: "1 coin / ₹100", icon: Zap, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-300", ring: "ring-slate-300" },
+    { id: "gold", label: "Gold", range: "₹25,000+", earnRate: "1 coin / ₹100", icon: Crown, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-300", ring: "ring-amber-300" },
 ]
 
 function fmt(n: number) {
@@ -102,20 +102,6 @@ export default async function RewardsPage() {
                     )}
                 </div>
 
-                {/* Beauty Rewards — hero link to catalog */}
-                <Link href="/rewards/catalog" className="block rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 p-5 mb-6 text-white shadow-lg shadow-pink-200/40 hover:shadow-pink-300/50 transition-shadow active:scale-[0.99]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                            <Gift className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-sm font-black tracking-tight">Beauty Rewards</p>
-                            <p className="text-[11px] text-white/70 mt-0.5">{points.balance} M Coins available · Browse the catalog</p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-white/60" />
-                    </div>
-                </Link>
-
                 {/* Transaction History — always visible */}
                 <Link href="/rewards/history" className="block rounded-xl border border-slate-100 bg-white p-4 shadow-sm mb-4 hover:border-slate-200 transition-colors">
                     <div className="flex items-center justify-between">
@@ -128,7 +114,7 @@ export default async function RewardsPage() {
                                 <p className="text-[9px] text-slate-400 mt-0.5">Every coin earned, spent, and remaining</p>
                             </div>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-slate-300" />
+                        <ChevronRight className="w-4 h-4 text-slate-300" />
                     </div>
                 </Link>
 
@@ -137,9 +123,9 @@ export default async function RewardsPage() {
                     <h2 className="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-3">How It Works</h2>
                     <div className="space-y-2.5">
                         {[
-                            { icon: Sparkles, text: "Earn 1 coin per ₹60 spent, credited as soon as your product is delivered" },
-                            { icon: Gift, text: "Redeem M Coins for free products or discount coupons" },
-                            { icon: Award, text: "Level up your tier to earn faster and unlock more perks" },
+                            { icon: Sparkles, text: "Earn 1 coin per ₹100 spent, credited as soon as your product is delivered" },
+                            { icon: Coins, text: "Use all your M Coins at checkout — 1 coin = ₹1 off your order" },
+                            { icon: Award, text: "Level up your tier: Bronze (₹0+), Silver (₹10K+), Gold (₹25K+)" },
                         ].map((item, i) => (
                             <div key={i} className="flex items-start gap-2.5">
                                 <div className="w-6 h-6 rounded-lg bg-pink-50 flex items-center justify-center shrink-0 mt-0.5">
@@ -152,7 +138,7 @@ export default async function RewardsPage() {
                 </div>
 
                 {/* Recent Activity */}
-                {transactions.filter((t: any) => t.type === "spend" || t.status === "available").length > 0 && (
+                {transactions.filter((t: any) => t.status !== "cancelled" && (t.type === "spend" || t.status === "available" || t.status === "pending")).length > 0 && (
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">Recent Activity</h2>
@@ -161,7 +147,7 @@ export default async function RewardsPage() {
                             </Link>
                         </div>
                         <div className="rounded-xl border border-slate-100 bg-white shadow-sm divide-y divide-slate-50">
-                            {transactions.slice(0, 5).map((tx: any) => {
+                            {transactions.filter((t: any) => t.status !== "cancelled").slice(0, 5).map((tx: any) => {
                                 const isEarn = tx.type === "earn" || tx.type === "bonus"
                                 return (
                                     <div key={tx.id} className="flex items-center justify-between px-4 py-3">

@@ -11,7 +11,7 @@ import {
     LogOut, ShieldCheck, Bell,
     Package, ChevronRight, User,
     MessageCircle, Info, FileText, RotateCcw,
-    Gift, Clock, History, Award, Coins, Star, TrendingUp, Tag
+    Gift, Clock, History, Award, Coins, Star, TrendingUp,
 } from "lucide-react"
 
 import { Skeleton } from "boneyard-js/react"
@@ -36,7 +36,7 @@ const statusCfg: Record<string, { label: string; color: string; bg: string }> = 
 }
 
 export function ProfileContent({
-    profile, user, ordersCount, wishlistCount, addressesCount, totalSpent, recentOrders, thumbMap, giftCards, loyaltyData, coupons,
+    profile, user, ordersCount, wishlistCount, addressesCount, totalSpent, recentOrders, thumbMap, giftCards, loyaltyData,
 }: {
     profile: any
     user: { email: string; id: string }
@@ -48,7 +48,6 @@ export function ProfileContent({
     thumbMap: Record<string, string>
     giftCards: any[]
     loyaltyData: any
-    coupons: any[]
 }) {
     const [showConfirm, setShowConfirm] = useState(false)
     const [ready, setReady] = useState(false)
@@ -343,45 +342,6 @@ export function ProfileContent({
                                         <div className="px-6 py-10 text-center">
                                             <Gift className="w-7 h-7 text-slate-200 mx-auto mb-2" />
                                             <p className="text-sm font-medium text-slate-400">No gift cards</p>
-                                        </div>
-                                    )}
-                                </section>
-
-                                {/* Reward Coupons */}
-                                <section className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-                                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                                        <div className="flex items-center gap-2.5">
-                                            <Tag className="w-4 h-4 text-emerald-500" />
-                                            <h2 className="text-base font-black tracking-tight text-slate-900">Reward Coupons</h2>
-                                        </div>
-                                        <span className="text-xs font-black text-emerald-600">{coupons.length}</span>
-                                    </div>
-                                    {coupons.length > 0 ? (
-                                        <div className="divide-y divide-slate-50">
-                                            {coupons.map((c: any) => (
-                                                <div key={c.id} className="flex items-center gap-3 px-6 py-4">
-                                                    <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                                                        <Tag className="w-4 h-4 text-emerald-500" />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <span className="font-mono text-sm font-bold text-slate-800 tracking-wider">{c.code}</span>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-sm font-semibold text-emerald-600">{formatPrice(c.discount_amount)} OFF</span>
-                                                            {c.min_order_value > 0 && (
-                                                                <span className="text-xs text-slate-400">on {formatPrice(c.min_order_value)}+</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-wider">
-                                                        {c.reward?.product_name || "Coupon"}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="px-6 py-10 text-center">
-                                            <Tag className="w-7 h-7 text-slate-200 mx-auto mb-2" />
-                                            <p className="text-sm font-medium text-slate-400">No coupons yet</p>
                                         </div>
                                     )}
                                 </section>
@@ -704,40 +664,6 @@ export function ProfileContent({
                                 })}
                             </div>
                         </div>
-
-                    {/* Reward Coupons */}
-                    {coupons.length > 0 && (
-                        <div className="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-                            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
-                                <div className="flex items-center gap-2">
-                                    <Tag className="w-3.5 h-3.5 text-emerald-500" />
-                                    <h2 className="text-xs font-black tracking-tight text-slate-800">Reward Coupons</h2>
-                                </div>
-                                <span className="text-[9px] font-black text-emerald-600">{coupons.length}</span>
-                            </div>
-                            <div className="divide-y divide-slate-50">
-                                {coupons.map((c: any) => (
-                                    <div key={c.id} className="flex items-center gap-3 px-4 py-3">
-                                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                                            <Tag className="w-4 h-4 text-emerald-500" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">{c.code}</span>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className="text-xs font-semibold text-emerald-600">{formatPrice(c.discount_amount)} OFF</span>
-                                                {c.min_order_value > 0 && (
-                                                    <span className="text-[9px] text-slate-400">on {formatPrice(c.min_order_value)}+</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                                            {c.reward?.product_name || "Coupon"}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     {/* Settings & Support */}
                     <div className="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">

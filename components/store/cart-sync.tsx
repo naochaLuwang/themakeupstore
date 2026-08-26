@@ -73,6 +73,21 @@ export function CartSync({ userId }: { userId: string | null }) {
                     .eq('is_active', true)
                     .lte('starts_at', now)
                     .gte('ends_at', now)
+
+                // Product -> category links via junction table (flat products.category_id is often null)
+                const prodCats = new Map<string, string[]>()
+                if (productIds.length > 0) {
+                    const { data: junctionRows } = await supabase
+                        .from('product_categories')
+                        .select('product_id, category_id')
+                        .in('product_id', productIds)
+                    for (const row of junctionRows || []) {
+                        const list = prodCats.get((row as any).product_id) || []
+                        list.push((row as any).category_id)
+                        prodCats.set((row as any).product_id, list)
+                    }
+                }
+
                 const prodMeta = new Map<string, { categoryId?: string; brand?: string | null }>()
                 for (const ci of dbItems as any[]) {
                     if (!prodMeta.has(ci.product_id)) prodMeta.set(ci.product_id, { categoryId: ci.products?.category_id, brand: ci.products?.brand })
@@ -83,7 +98,7 @@ export function CartSync({ userId }: { userId: string | null }) {
                         let match = false
                         if (f.scope === 'all') match = true
                         else if (f.scope === 'product') match = f.product_id === pid
-                        else if (f.scope === 'category') match = f.category_id === catId
+                        else if (f.scope === 'category') match = f.category_id ? (f.category_id === catId || (prodCats.get(pid) || []).includes(f.category_id)) : false
                         else if (f.scope === 'brand') match = f.brand === br
                         if (!match) continue
                         const val = f.discount_type === 'percentage' ? f.discount_value : f.discount_value * 100

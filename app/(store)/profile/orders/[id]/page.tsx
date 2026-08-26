@@ -273,8 +273,9 @@ export default function OrderDetailPage() {
     const discount = Number(order.promo_discount_amount) || 0
     const bxgyDiscount = Number(order.bxgy_discount_amount) || 0
     const giftCardDiscount = Number(order.gift_card_discount) || 0
+    const coinDiscount = Number(order.coin_discount_amount) || 0
     const shipping = Number(order.shipping_price) || 0
-    const subtotal = Number(order.total) + discount + bxgyDiscount + giftCardDiscount - shipping
+    const subtotal = Number(order.total) + discount + bxgyDiscount + giftCardDiscount + coinDiscount - shipping
 
     const statusColors: Record<string, string> = {
         pending: "#F59E0B",
@@ -472,8 +473,14 @@ export default function OrderDetailPage() {
                         )}
                         {giftCardDiscount > 0 && (
                             <div className="flex justify-between mb-1.5">
-                                <span className="text-[13px] text-blue-600">Gift Card</span>
-                                <span className="text-[13px] font-medium text-blue-600">-₹{giftCardDiscount}</span>
+                                <span className="text-[13px] text-emerald-500">Gift Card</span>
+                                <span className="text-[13px] font-medium text-emerald-500">-₹{Math.round(giftCardDiscount)}</span>
+                            </div>
+                        )}
+                        {coinDiscount > 0 && (
+                            <div className="flex justify-between mb-1.5">
+                                <span className="text-[13px] text-amber-500">M Coins</span>
+                                <span className="text-[13px] font-medium text-amber-500">-₹{Math.round(coinDiscount)}</span>
                             </div>
                         )}
                         <p className="text-[10px] tracking-wider text-gray-300 my-2 text-center">- - - - - - - - - - - - - - - -</p>

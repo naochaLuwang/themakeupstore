@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet } from "lucide-react"
+import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet, Coins } from "lucide-react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
 import { removeOrderItem, updateOrderDiscount, processPartialRefund, updateOrderDeliveryPartner } from "@/app/actions/orders"
@@ -436,6 +436,12 @@ export default function OrderInvoicePage() {
                                     <p className="text-[9px] font-bold text-emerald-700 leading-tight">{order.discount_remark}</p>
                                 </div>
                             )}
+                        </div>
+                    )}
+                    {Number(order.coin_discount_amount) > 0 && (
+                        <div className={`${isThermal ? 'flex justify-between' : 'w-48 flex justify-between'} text-[9px] font-black text-amber-600 uppercase`}>
+                            <span className="flex items-center gap-1"><Coins className="w-2.5 h-2.5" /> M Coins</span>
+                            <span>-₹{Number(order.coin_discount_amount).toLocaleString()}</span>
                         </div>
                     )}
                     <div className={`${isThermal ? 'flex justify-between pt-2 border-t border-slate-900 border-dotted' : 'w-full flex justify-between items-end border-t-4 border-slate-900 pt-4 mt-2'}`}>

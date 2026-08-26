@@ -72,7 +72,7 @@ serve(async (req) => {
     const promoDiscount = record.promo_discount_amount || 0
     const bxgyDiscount = record.bxgy_discount_amount || 0
     const giftDiscount = record.gift_card_discount || 0
-    const pointsDiscount = record.points_discount || 0
+    const pointsDiscount = record.coin_discount_amount || record.points_discount || 0
     const shipping = record.shipping_price || 0
     const extraCharges = record.additional_charges || 0
 
@@ -84,7 +84,7 @@ serve(async (req) => {
       ${promoDiscount > 0 ? `<tr><td style="padding: 8px 0; font-size: 11px; color: #666;">Promo${record.promo_code ? ` (${record.promo_code})` : ""}</td><td style="padding: 8px 0; font-size: 11px; color: #22c55e; text-align: right;">-₹${promoDiscount.toLocaleString("en-IN")}</td></tr>` : ""}
       ${bxgyDiscount > 0 ? `<tr><td style="padding: 8px 0; font-size: 11px; color: #666;">Buy X Get Y</td><td style="padding: 8px 0; font-size: 11px; color: #22c55e; text-align: right;">-₹${bxgyDiscount.toLocaleString("en-IN")}</td></tr>` : ""}
       ${giftDiscount > 0 ? `<tr><td style="padding: 8px 0; font-size: 11px; color: #666;">Gift Card</td><td style="padding: 8px 0; font-size: 11px; color: #22c55e; text-align: right;">-₹${giftDiscount.toLocaleString("en-IN")}</td></tr>` : ""}
-      ${pointsDiscount > 0 ? `<tr><td style="padding: 8px 0; font-size: 11px; color: #666;">Reward Points</td><td style="padding: 8px 0; font-size: 11px; color: #22c55e; text-align: right;">-₹${pointsDiscount.toLocaleString("en-IN")}</td></tr>` : ""}
+      ${pointsDiscount > 0 ? `<tr><td style="padding: 8px 0; font-size: 11px; color: #666;">M Coins</td><td style="padding: 8px 0; font-size: 11px; color: #22c55e; text-align: right;">-₹${pointsDiscount.toLocaleString("en-IN")}</td></tr>` : ""}
       ${!isPickup ? `<tr><td style="padding: 8px 0; font-size: 11px; color: #666;">Shipping</td><td style="padding: 8px 0; font-size: 11px; color: ${shipping === 0 ? "#22c55e" : "#999"}; text-align: right;">${shipping === 0 ? "FREE" : `₹${shipping.toLocaleString("en-IN")}`}</td></tr>` : ""}
       ${extraCharges > 0 ? `<tr><td style="padding: 8px 0; font-size: 11px; color: #666;">${record.additional_charges_label || "Extra"}</td><td style="padding: 8px 0; font-size: 11px; color: #999; text-align: right;">₹${extraCharges.toLocaleString("en-IN")}</td></tr>` : ""}
       <tr style="border-top: 1px solid #333;">

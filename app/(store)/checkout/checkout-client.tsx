@@ -5,12 +5,12 @@ import { useCart } from "@/components/store/use-cart"
 import { placeOrder } from "@/app/actions/orders"
 import { validatePromoCode } from "@/app/actions/promo"
 import { validateGiftCard } from "@/app/actions/gift-cards"
-import { applyRewardCoupon } from "@/app/actions/loyalty"
+import { getAvailableBalance } from "@/app/actions/loyalty"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import {
     Plus, Loader2, Check, ChevronRight,
-    MapPin, ShoppingBag, Ticket, X, Sparkles, Gift, Tag,
+    MapPin, ShoppingBag, Ticket, X, Sparkles, Gift, Tag, Coins, Info,
 } from "lucide-react"
 import { checkPromoEligibility } from "@/lib/promo-helper"
 import { usePromotions } from "@/hooks/use-promotions"
@@ -56,13 +56,19 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const [giftCardCode, setGiftCardCode] = useState("")
     const [applyingGiftCard, setApplyingGiftCard] = useState(false)
     const [giftCardError, setGiftCardError] = useState("")
-    const [rewardCoupon, setRewardCoupon] = useState<any | null>(null)
-    const [rewardCouponCode, setRewardCouponCode] = useState("")
-    const [applyingRewardCoupon, setApplyingRewardCoupon] = useState(false)
-    const [rewardCouponError, setRewardCouponError] = useState("")
+    const [coinBalance, setCoinBalance] = useState(0)
+    const [useCoins, setUseCoins] = useState(false)
+    const [showCoinInfo, setShowCoinInfo] = useState(false)
+    const [loadingCoins, setLoadingCoins] = useState(false)
     const [paymentMethod, setPaymentMethod] = useState<"cod" | "razorpay">("razorpay")
 
     useEffect(() => { setMounted(true) }, [])
+
+    useEffect(() => {
+        if (profile?.id) {
+            getAvailableBalance(profile.id).then(setCoinBalance).catch(() => {})
+        }
+    }, [profile?.id])
 
     useEffect(() => {
         const script = document.createElement("script")
@@ -119,8 +125,8 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const giftItems = mounted ? getGiftItems() : []
     const total = mounted ? getFinalTotal() : 0
     const giftCardDiscount = giftCard ? Math.min(Number(giftCard.remaining_balance), total) : 0
-    const rewardCouponDiscount = rewardCoupon ? Math.min(Number(rewardCoupon.discount_amount), total) : 0
-    const adjustedTotal = Math.max(0, total - giftCardDiscount - rewardCouponDiscount)
+    const coinDiscount = useCoins && coinBalance > 0 ? Math.min(coinBalance, total) : 0
+    const adjustedTotal = Math.max(0, total - giftCardDiscount - coinDiscount)
     const isFreeShipping = currentSubtotal >= FREE_SHIPPING_THRESHOLD && selectedShippingId && FREE_SHIPPING_PINCODES.includes(selectedAddress?.pincode)
 
     const handleAddressAdded = (newAddr: any) => {
@@ -179,25 +185,25 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
         toast.info("Gift card removed")
     }
 
-    const handleApplyRewardCoupon = async () => {
-        if (!rewardCouponCode.trim()) return
-        setApplyingRewardCoupon(true)
-        setRewardCouponError("")
-        const res = await applyRewardCoupon(rewardCouponCode.trim())
-        if (res.success) {
-            setRewardCoupon(res.coupon)
-            setRewardCouponCode("")
-            toast.success("Reward coupon applied!")
-        } else {
-            setRewardCouponError(res.message || "Invalid coupon")
-            toast.error(res.message || "Invalid reward coupon")
+    const handleToggleCoinRedemption = async () => {
+        if (useCoins) {
+            setUseCoins(false)
+            toast.info("M Coins removed")
+            return
         }
-        setApplyingRewardCoupon(false)
-    }
-
-    const handleRemoveRewardCoupon = () => {
-        setRewardCoupon(null)
-        toast.info("Reward coupon removed")
+        setLoadingCoins(true)
+        if (profile?.id) {
+            const balance = await getAvailableBalance(profile.id)
+            setCoinBalance(balance)
+            if (balance <= 0) {
+                toast.error("No M Coins available")
+                setLoadingCoins(false)
+                return
+            }
+            setUseCoins(true)
+            toast.success(`${balance} M Coins applied! −₹${balance}`)
+        }
+        setLoadingCoins(false)
     }
 
     const handlePlaceOrder = async () => {
@@ -240,7 +246,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 bxgyDetails,
                 giftDetails,
                 giftCard ? { code: giftCard.code, amount: giftCardDiscount } : undefined,
-                rewardCoupon ? { id: rewardCoupon.id, discount: rewardCouponDiscount } : undefined,
+                useCoins && coinDiscount > 0 ? { amount: coinDiscount } : undefined,
             ] as const
 
             if (paymentMethod === "cod") {
@@ -281,8 +287,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         bxgyDiscount,
                         giftCardCode: giftCard?.code || null,
                         giftCardDiscount,
-                        rewardCouponId: rewardCoupon?.id || null,
-                        rewardCouponDiscount,
+                        coinDiscount,
                     }),
                 })
                 if (!orderRes.ok) {
@@ -612,52 +617,31 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             </div>
                         </details>
 
-                        <details className="group bg-white border border-gray-200 rounded-xl overflow-hidden">
-                            <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-                                <ChevronRight className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90" />
-                                <Tag className="w-4 h-4 text-emerald-500" />
-                                Reward Coupon
-                                {rewardCoupon && <span className="text-[10px] font-bold text-emerald-600 ml-auto">Applied</span>}
-                            </summary>
-                            <div className="px-4 pb-4">
-                                {rewardCoupon ? (
-                                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-3 mt-2">
-                                        <div className="w-9 h-9 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
-                                            <Tag className="w-[18px] h-[18px] text-white" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-gray-900">{rewardCoupon.code}</p>
-                                            <p className="text-xs font-semibold text-emerald-600">{currency(rewardCoupon.discount_amount)} OFF</p>
-                                        </div>
-                                        <button onClick={handleRemoveRewardCoupon}>
-                                            <X className="w-[18px] h-[18px] text-gray-400" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="bg-white border border-gray-200 rounded-xl p-3 mt-2">
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Enter reward coupon code"
-                                                value={rewardCouponCode}
-                                                onChange={(e) => setRewardCouponCode(e.target.value.toUpperCase())}
-                                                className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-900 transition-colors placeholder:text-gray-300"
-                                            />
-                                            <button
-                                                onClick={handleApplyRewardCoupon}
-                                                disabled={applyingRewardCoupon || !rewardCouponCode.trim()}
-                                                className="h-10 px-4 bg-emerald-600 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-emerald-700 transition-colors shrink-0"
-                                            >
-                                                {applyingRewardCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
-                                            </button>
-                                        </div>
-                                        {rewardCouponError && (
-                                            <p className="text-[11px] font-medium text-red-500 mt-2">{rewardCouponError}</p>
-                                        )}
-                                    </div>
-                                )}
+                        {coinBalance > 0 && (
+                            <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl">
+                                <div className="flex items-center gap-2.5">
+                                    <Coins className="w-4 h-4 text-amber-500" />
+                                    <span className="text-sm font-semibold text-gray-900">Use M Coins</span>
+                                    <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{coinBalance} coins = ₹{coinBalance}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); setShowCoinInfo(true) }} className="ml-0.5">
+                                        <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 transition-colors" />
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={handleToggleCoinRedemption}
+                                    disabled={loadingCoins}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                        useCoins ? "bg-amber-500" : "bg-gray-200"
+                                    }`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                                            useCoins ? "translate-x-6" : "translate-x-1"
+                                        }`}
+                                    />
+                                </button>
                             </div>
-                        </details>
+                        )}
                     </div>
                 </section>
 
@@ -767,12 +751,12 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                         </div>
                                     </>
                                 )}
-                                {rewardCouponDiscount > 0 && (
+                                {coinDiscount > 0 && (
                                     <>
                                         <div className="h-px bg-gray-50 mx-5" />
-                                        <div className="px-5 py-3.5 flex justify-between bg-emerald-50/50">
-                                            <span className="text-sm font-medium text-emerald-600">Reward Coupon</span>
-                                            <span className="text-sm font-bold text-emerald-600">−₹{Math.round(rewardCouponDiscount)}</span>
+                                        <div className="px-5 py-3.5 flex justify-between bg-amber-50/50">
+                                            <span className="text-sm font-medium text-amber-600">M Coins</span>
+                                            <span className="text-sm font-bold text-amber-600">−₹{Math.round(coinDiscount)}</span>
                                         </div>
                                     </>
                                 )}
@@ -1004,6 +988,40 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         <div className="p-5">
                             <AddressForm userId={profile.id} onSuccess={handleAddressAdded} />
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showCoinInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+                    <div className="absolute inset-0 bg-black/40" onClick={() => setShowCoinInfo(false)} />
+                    <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+                        <button onClick={() => setShowCoinInfo(false)} className="absolute top-4 right-4">
+                            <X className="w-5 h-5 text-gray-400" />
+                        </button>
+                        <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center mb-4">
+                            <Coins className="w-6 h-6 text-amber-500" />
+                        </div>
+                        <h3 className="text-lg font-black text-gray-900 mb-2">What are M Coins?</h3>
+                        <p className="text-sm text-gray-500 leading-relaxed mb-1">
+                            M Coins are reward points you earn with every purchase. For every ₹100 spent, you get <span className="font-bold text-gray-700">1 M Coin</span>.
+                        </p>
+                        <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                            Use them at checkout — <span className="font-bold text-amber-600">1 coin = ₹1 off</span>. The more you shop, the more you save.
+                        </p>
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-5">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Your Balance</span>
+                            </div>
+                            <p className="text-2xl font-black text-amber-600">{coinBalance} M Coins <span className="text-sm font-semibold text-amber-400">= ₹{coinBalance}</span></p>
+                        </div>
+                        <button
+                            onClick={() => { setShowCoinInfo(false); router.push("/rewards") }}
+                            className="w-full h-11 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-colors"
+                        >
+                            View Full Rewards
+                        </button>
                     </div>
                 </div>
             )}

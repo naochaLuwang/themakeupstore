@@ -51,17 +51,15 @@ export default function RewardsTermsPage() {
                     <section className="mb-8">
                         <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase mb-3">3. Earning M Coins</h2>
                         <p className="text-slate-600 mb-2">
-                            Members earn M Coins based on their tier status:
+                            Members earn M Coins on every purchase:
                         </p>
                         <ul className="list-disc pl-5 text-slate-600 space-y-1 mb-2">
-                            <li><strong>Bronze</strong> — 1 M Coin per ₹60 spent</li>
-                            <li><strong>Silver</strong> — 1 M Coin per ₹60 spent</li>
-                            <li><strong>Gold</strong> — 1 M Coin per ₹60 spent</li>
+                            <li><strong>All Tiers</strong> — 1 M Coin per ₹100 spent</li>
                         </ul>
                         <p className="text-slate-600 mb-2">
                             Coins are calculated on the pre-tax, pre-discount order value excluding shipping charges, gift card
                             payments, and promotional discounts exceeding 50%. Coins are credited as "pending" at the time of
-                            purchase and become "available" 15 days after successful delivery.
+                            purchase and become "available" when your order is marked as delivered.
                         </p>
                         <p className="text-slate-600">
                             Coins are not earned on gift card purchases, taxes, shipping fees, or returned items. If an order is
@@ -75,34 +73,35 @@ export default function RewardsTermsPage() {
                             Your tier is determined by your total spending across all orders placed on your account:
                         </p>
                         <ul className="list-disc pl-5 text-slate-600 space-y-1 mb-2">
-                            <li><strong>Bronze</strong> — ₹0 to ₹4,999</li>
-                            <li><strong>Silver</strong> — ₹5,000 to ₹12,999</li>
-                            <li><strong>Gold</strong> — ₹13,000 and above</li>
+                            <li><strong>Bronze</strong> — ₹0 to ₹9,999</li>
+                            <li><strong>Silver</strong> — ₹10,000 to ₹24,999</li>
+                            <li><strong>Gold</strong> — ₹25,000 and above</li>
                         </ul>
                         <p className="text-slate-600">
                             Tier status is recalculated after each completed order. Returns and cancellations may reduce your
-                            total spend and result in a tier downgrade at the next recalculation.
+                            total spend and result in a tier downgrade at the next recalculation. Tiers are displayed as badges
+                            on your profile and rewards page.
                         </p>
                     </section>
 
                     <section className="mb-8">
                         <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase mb-3">5. Redeeming M Coins</h2>
                         <p className="text-slate-600 mb-2">
-                            Available M Coins can be redeemed for products listed in the Rewards Catalog. The redemption value is
-                            approximately 100 M Coins ≈ ₹100 in product value. All redemptions are final and non-refundable.
+                            Available M Coins can be applied as a discount at checkout. The redemption rate is
+                            <strong> 1 M Coin = ₹1</strong>. When you choose to use your coins at checkout, all available
+                            coins will be applied to your order total.
                         </p>
                         <p className="text-slate-600 mb-2">
                             To redeem:
                         </p>
                         <ol className="list-decimal pl-5 text-slate-600 space-y-1 mb-2">
-                            <li>Browse the Rewards Catalog and select an item</li>
-                            <li>Click "Redeem" and confirm your choice</li>
-                            <li>The redeemed product will be shipped to your default address</li>
+                            <li>Add items to your cart and proceed to checkout</li>
+                            <li>Expand the "M Coins" section and click "Use All"</li>
+                            <li>Your available coins will be applied as a discount</li>
                         </ol>
                         <p className="text-slate-600">
-                            Shipping timelines for redeemed products match our standard delivery estimates. Redemptions are
-                            subject to product availability. If a reward item is out of stock, we reserve the right to offer
-                            an equivalent substitute or refund the coins to your account.
+                            If your order is cancelled, the redeemed coins will be refunded to your balance.
+                            Coins cannot be exchanged for cash.
                         </p>
                     </section>
 

@@ -1,5 +1,5 @@
 import { adminGetUserTransactions } from "@/app/actions/loyalty"
-import { ChevronLeft, Coins, Award, TrendingUp, TrendingDown, ExternalLink } from "lucide-react"
+import { ChevronLeft, Coins, Award, TrendingUp, TrendingDown, ExternalLink, X } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AdjustPointsForm } from "./adjust-points-form"
@@ -11,9 +11,10 @@ export default async function AdminRewardsUserDetailPage(props: { params: Promis
 
   const { points, transactions, profile } = data
 
-  const totalEarned = transactions.filter(t => t.type === "earn" || t.type === "bonus").reduce((s, t) => s + t.amount, 0)
-  const totalSpent = transactions.filter(t => t.type === "spend").reduce((s, t) => s + t.amount, 0)
-  const pendingAmount = transactions.filter(t => t.status === "pending").reduce((s, t) => s + t.amount, 0)
+  const activeTxs = transactions.filter((t: any) => t.status !== "cancelled")
+  const totalEarned = activeTxs.filter((t: any) => t.type === "earn" || t.type === "bonus").reduce((s: number, t: any) => s + t.amount, 0)
+  const totalSpent = activeTxs.filter((t: any) => t.type === "spend").reduce((s: number, t: any) => s + t.amount, 0)
+  const pendingAmount = activeTxs.filter((t: any) => t.status === "pending").reduce((s: number, t: any) => s + t.amount, 0)
 
   return (
     <div className="space-y-6">
@@ -87,24 +88,34 @@ export default async function AdminRewardsUserDetailPage(props: { params: Promis
               {transactions.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 font-medium">No transactions yet.</div>
               ) : (
-                transactions.map((tx: any) => (
-                  <div key={tx.id} className="px-6 py-4 hover:bg-slate-50/30 transition-all">
+                transactions.map((tx: any) => {
+                  const isCancelled = tx.status === "cancelled"
+                  return (
+                  <div key={tx.id} className={`px-6 py-4 transition-all ${isCancelled ? "opacity-40" : "hover:bg-slate-50/30"}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                          isCancelled ? "bg-slate-50 text-slate-400" :
                           tx.type === "earn" || tx.type === "bonus" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
                         }`}>
-                          {tx.type === "earn" || tx.type === "bonus" ? "+" : "−"}
+                          {isCancelled ? <X className="w-3.5 h-3.5" /> : (tx.type === "earn" || tx.type === "bonus" ? "+" : "−")}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-slate-900 text-sm capitalize">{tx.type}</span>
+                            <span className={`font-semibold text-sm capitalize ${isCancelled ? "text-slate-400" : "text-slate-900"}`}>{tx.type}</span>
+                            {isCancelled && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-red-50 text-red-500">Cancelled</span>
+                            )}
+                            {!isCancelled && (
+                            <>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
                               tx.status === "available" ? "bg-emerald-50 text-emerald-600" :
                               tx.status === "pending" ? "bg-amber-50 text-amber-600" :
                               "bg-slate-100 text-slate-500"
                             }`}>{tx.status}</span>
                             <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded font-mono">{tx.reference_type}</span>
+                            </>
+                            )}
                           </div>
                           <div className="text-xs text-slate-400 mt-0.5">{tx.note || "—"}</div>
                           {tx.reference_type === "order" && tx.reference_id && (
@@ -125,7 +136,8 @@ export default async function AdminRewardsUserDetailPage(props: { params: Promis
                       </div>
                     </div>
                   </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>

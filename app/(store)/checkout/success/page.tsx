@@ -16,7 +16,7 @@ export default async function OrderSuccessPage(props: { searchParams: Promise<{ 
         .select(`
             id, created_at, total, shipping_price, shipping_label,
             payment_method, payment_status, razorpay_payment_id,
-            promo_code, promo_discount_amount,
+            promo_code, promo_discount_amount, bxgy_discount_amount, coin_discount_amount,
             shipping_address,
             order_items (
                 id, product_name, variant_title, quantity, unit_price, mrp, is_gift

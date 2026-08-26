@@ -108,7 +108,7 @@ export async function placeOrder(
     bxgyDetails?: { discount: number; freeItems?: { variantId: string; productId: string; ruleId?: string; quantity: number }[] },
     giftDetails?: { variantId: string; productId: string; ruleId?: string; quantity: number }[],
     giftCardDetails?: { code: string; amount: number },
-    rewardCoupon?: { id: string; discount: number },
+    coinRedemption?: { amount: number },
     paymentDetails?: { method: string; payment_id?: string; status: string }
 ) {
     const supabase = await createClient()
@@ -560,19 +560,18 @@ export async function placeOrder(
             verifiedGiftCardAmount = Math.min(Number(gc.remaining_balance), maxApplicable)
         }
 
-        // ── 3c. RE-VERIFY REWARD COUPON ──
-        let verifiedRewardCouponDiscount = 0;
-        if (rewardCoupon?.id) {
-            const { data: rc } = await supabase
-                .from('reward_coupons')
-                .select('discount_amount, min_order_value, used')
-                .eq('id', rewardCoupon.id)
+        // ── 3c. RE-VERIFY COIN REDEMPTION ──
+        let verifiedCoinDiscount = 0;
+        if (coinRedemption?.amount && coinRedemption.amount > 0) {
+            const { data: lp } = await supabase
+                .from('loyalty_points')
+                .select('balance')
                 .eq('user_id', user.id)
-                .single()
-            if (!rc || rc.used) throw new Error("Reward coupon is no longer valid")
-            const subtotalAfterDiscounts = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - verifiedGiftCardAmount + verifiedShippingPrice))
-            if (rc.min_order_value && subtotalAfterDiscounts < Number(rc.min_order_value)) throw new Error("Minimum order value not met for reward coupon")
-            verifiedRewardCouponDiscount = Math.min(Number(rc.discount_amount), subtotalAfterDiscounts)
+                .maybeSingle()
+            const availableBalance = lp?.balance || 0
+            if (availableBalance < coinRedemption.amount) throw new Error("Insufficient M Coins")
+            const maxApplicable = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount + verifiedShippingPrice))
+            verifiedCoinDiscount = Math.min(coinRedemption.amount, maxApplicable)
         }
 
         // ── 3d. SHIPPING METHOD REQUIRED ──
@@ -581,7 +580,7 @@ export async function placeOrder(
         }
 
         // ── 4. FINAL TOTAL CALCULATION ──
-        const finalTotal = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - verifiedGiftCardAmount - verifiedRewardCouponDiscount + verifiedShippingPrice))
+        const finalTotal = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - verifiedGiftCardAmount - verifiedCoinDiscount + verifiedShippingPrice))
 
         // ── 5. Build order items array ──
         const orderItems: any[] = verifiedItems.map(item => ({
@@ -676,6 +675,7 @@ export async function placeOrder(
                 promo_discount_amount: verifiedDiscount,
                 bxgy_discount_amount: verifiedBXGYDiscount || 0,
                 gift_card_discount: verifiedGiftCardAmount,
+                coin_discount_amount: verifiedCoinDiscount || 0,
             }])
             .select()
             .single()
@@ -790,8 +790,8 @@ export async function placeOrder(
             } catch {}
         }
 
-        if (rewardCoupon) {
-            try { const { markCouponUsed } = await import("./loyalty"); await markCouponUsed(rewardCoupon.id) } catch {}
+        if (coinRedemption?.amount && coinRedemption.amount > 0) {
+            try { const { redeemCoinsAtCheckout } = await import("./loyalty"); await redeemCoinsAtCheckout(user.id, order.id, verifiedCoinDiscount) } catch {}
         }
 
         try { const { earnOrderPoints } = await import("./loyalty"); await earnOrderPoints(user.id, order.id, finalTotal) } catch {}
@@ -1009,20 +1009,45 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
             await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
         }
 
-        // 7. Void pending loyalty points for this order
+        // 7. Void loyalty points for this order (pending + available earn transactions)
         try {
-            const { data: pendingTx } = await supabase
+            const { data: earnTxs } = await supabase
                 .from("loyalty_transactions")
-                .select("id")
+                .select("id, user_id, amount, status")
                 .eq("reference_id", orderId)
-                .eq("status", "pending")
-                .maybeSingle()
-            if (pendingTx) {
+                .eq("reference_type", "order")
+                .in("type", ["earn", "bonus"])
+                .in("status", ["pending", "available"])
+
+            if (earnTxs && earnTxs.length > 0) {
+                const totalToDeduct = earnTxs.reduce((sum, tx) => sum + tx.amount, 0)
+
                 await supabase
                     .from("loyalty_transactions")
                     .update({ status: "cancelled", note: "Order cancelled — points voided" })
-                    .eq("id", pendingTx.id)
+                    .in("id", earnTxs.map(tx => tx.id))
+
+                // Decrement balance
+                const userId = earnTxs[0].user_id
+                const { data: lp } = await supabase
+                    .from("loyalty_points")
+                    .select("balance, lifetime_earned")
+                    .eq("user_id", userId)
+                    .maybeSingle()
+                if (lp) {
+                    await supabase.from("loyalty_points").update({
+                        balance: Math.max(0, lp.balance - totalToDeduct),
+                        lifetime_earned: Math.max(0, (lp.lifetime_earned || 0) - totalToDeduct),
+                        updated_at: new Date().toISOString(),
+                    }).eq("user_id", userId)
+                }
             }
+        } catch {}
+
+        // 8. Reverse coin redemption if coins were used at checkout
+        try {
+            const { reverseCoinRedemption } = await import("./loyalty")
+            await reverseCoinRedemption(orderId)
         } catch {}
 
         // 8. CACHE CLEARING: Update the UI for both Admin and User

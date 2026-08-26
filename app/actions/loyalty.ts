@@ -6,8 +6,8 @@ import { requireAdmin } from "@/lib/admin"
 import { revalidatePath } from "next/cache"
 
 const TIER_THRESHOLDS = [
-  { tier: "gold", minSpend: 13000 },
-  { tier: "silver", minSpend: 5000 },
+  { tier: "gold", minSpend: 25000 },
+  { tier: "silver", minSpend: 10000 },
   { tier: "bronze", minSpend: 0 },
 ] as const
 
@@ -19,16 +19,7 @@ function computeTier(totalSpend: number): string {
 }
 
 function calcPoints(total: number): number {
-  return Math.floor(total / 60)
-}
-
-function generateCouponCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-  let code = "MB-"
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return code
+  return Math.floor(total / 100)
 }
 
 async function ensureLoyaltyPoints(userId: string, tier: string) {
@@ -55,7 +46,7 @@ export async function getLoyaltyData() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [pointsRes, transactionsRes, ordersRes, rewardsRes] = await Promise.all([
+  const [pointsRes, transactionsRes, ordersRes] = await Promise.all([
     supabase.from("loyalty_points").select("balance, lifetime_earned, tier").eq("user_id", user.id).maybeSingle(),
     supabase.from("loyalty_transactions")
       .select("id, amount, type, status, created_at, note, reference_type")
@@ -66,7 +57,6 @@ export async function getLoyaltyData() {
       .select("total")
       .eq("user_id", user.id)
       .neq("status", "cancelled"),
-    supabase.from("reward_products").select("id, product_name, thumbnail_url, coins_required, stock, reward_type, tier_restriction, discount_amount, min_order_value").eq("active", true).order("coins_required", { ascending: true }),
   ])
 
   const totalSpend = (ordersRes.data || []).reduce((s: number, o: any) => s + Number(o.total), 0)
@@ -89,7 +79,6 @@ export async function getLoyaltyData() {
       const currentIdx = TIER_THRESHOLDS.findIndex(t => t.tier === tier)
       return currentIdx > 0 ? TIER_THRESHOLDS[currentIdx - 1] : null
     })(),
-    rewards: rewardsRes.data || [],
   }
 }
 
@@ -123,7 +112,7 @@ export async function earnOrderPoints(userId: string, orderId: string, total: nu
 
 // ─── Release pending points after delivery ───
 export async function releasePendingPoints(orderId: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   const { data: tx } = await supabase
     .from("loyalty_transactions")
@@ -139,8 +128,6 @@ export async function releasePendingPoints(orderId: string) {
     order_delivered_at: new Date().toISOString(),
   }).eq("id", tx.id)
 
-  // Trigger already set loyalty_points.balance = balance_after on INSERT
-  // Only need to bump lifetime_earned now that status is 'available'
   const { data: lp } = await supabase
     .from("loyalty_points")
     .select("lifetime_earned")
@@ -153,250 +140,114 @@ export async function releasePendingPoints(orderId: string) {
   }).eq("user_id", tx.user_id)
 }
 
-// ─── Redeem coins for a reward ───
-export async function redeemReward(rewardProductId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, message: "Please sign in" }
+// ─── Get available coin balance for checkout ───
+export async function getAvailableBalance(userId: string) {
+  const supabase = await createAdminClient()
 
-  const [rewardRes, pointsRes] = await Promise.all([
-    supabase.from("reward_products").select("*").eq("id", rewardProductId).single(),
-    supabase.from("loyalty_points").select("balance, tier").eq("user_id", user.id).maybeSingle(),
-  ])
-
-  const reward = rewardRes.data
-  const points = pointsRes.data
-
-  if (!reward || !reward.active) return { success: false, message: "Reward not found" }
-  if (reward.stock <= 0) return { success: false, message: "Out of stock" }
-  if (!points || points.balance < reward.coins_required) return { success: false, message: "Insufficient coins" }
-  if (reward.tier_restriction && reward.tier_restriction !== points.tier) return { success: false, message: "This reward is not available for your tier" }
-
-  if (reward.reward_type === "coupon") {
-    // 1. Generate coupon code first (before any deduction)
-    let code = generateCouponCode()
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const { data: existing } = await supabase.from("reward_coupons").select("id").eq("code", code).maybeSingle()
-      if (!existing) break
-      code = generateCouponCode()
-    }
-
-    const { error: couponErr } = await supabase.from("reward_coupons").insert({
-      user_id: user.id,
-      reward_id: reward.id,
-      code,
-      discount_amount: reward.discount_amount || reward.coins_required * 100,
-      min_order_value: reward.min_order_value || 0,
-    })
-
-    if (couponErr) return { success: false, message: "Failed to generate coupon" }
-
-    // 2. Deduct coins
-    await supabase.from("loyalty_points").update({
-      balance: Math.max((points.balance || 0) - reward.coins_required, 0),
-      updated_at: new Date().toISOString(),
-    }).eq("user_id", user.id)
-
-    // 3. Log transaction
-    await supabase.from("loyalty_transactions").insert({
-      user_id: user.id,
-      type: "spend",
-      amount: reward.coins_required,
-      reference_type: "redemption",
-      reference_id: reward.id,
-      status: "available",
-      note: `Redeemed coupon: ${reward.product_name}`,
-    })
-
-    // 4. Decrement stock (atomic with optimistic lock)
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data: r } = await supabase.from("reward_products").select("stock").eq("id", reward.id).single()
-      if (!r || r.stock <= 0) return { success: false, message: "Out of stock" }
-      const { error: decErr } = await supabase.from("reward_products").update({ stock: r.stock - 1 }).eq("id", reward.id).eq("stock", r.stock)
-      if (!decErr) break
-      if (attempt === 2) return { success: false, message: "Stock update failed, try again" }
-    }
-
-    revalidatePath("/rewards")
-    return { success: true, type: "coupon", code, discount_amount: reward.discount_amount || reward.coins_required * 100, min_order_value: reward.min_order_value || 0, product_name: reward.product_name }
-  }
-
-  // Product redemption: create tx first, then deduct
-  const { error: txErr } = await supabase.from("loyalty_transactions").insert({
-    user_id: user.id,
-    type: "spend",
-    amount: reward.coins_required,
-    reference_type: "redemption",
-    reference_id: reward.id,
-    status: "available",
-    note: `Redeemed for ${reward.product_name}`,
-  })
-
-  if (txErr) return { success: false, message: "Failed to process redemption" }
-
-  await supabase.from("loyalty_points").update({
-    balance: Math.max((points.balance || 0) - reward.coins_required, 0),
-    updated_at: new Date().toISOString(),
-  }).eq("user_id", user.id)
-
-  // Decrement stock (atomic with optimistic lock)
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const { data: r } = await supabase.from("reward_products").select("stock").eq("id", reward.id).single()
-    if (!r || r.stock <= 0) return { success: false, message: "Out of stock" }
-    const { error: decErr } = await supabase.from("reward_products").update({ stock: r.stock - 1 }).eq("id", reward.id).eq("stock", r.stock)
-    if (!decErr) break
-    if (attempt === 2) return { success: false, message: "Stock update failed, try again" }
-  }
-
-  revalidatePath("/rewards")
-  return { success: true, type: "product", reward }
-}
-
-// ─── Get user's unused reward coupons ───
-export async function getMyCoupons() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data } = await supabase
-    .from("reward_coupons")
-    .select("*, reward:reward_products(product_name)")
-    .eq("user_id", user.id)
-    .eq("used", false)
-    .order("created_at", { ascending: false })
-
-  return data || []
-}
-
-// ─── Apply a reward coupon (mark as used) ───
-export async function applyRewardCoupon(code: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, message: "Please sign in" }
-
-  const { data: coupon } = await supabase
-    .from("reward_coupons")
-    .select("*")
-    .eq("code", code)
-    .eq("used", false)
-    .eq("user_id", user.id)
+  const { data: points } = await supabase
+    .from("loyalty_points")
+    .select("balance")
+    .eq("user_id", userId)
     .maybeSingle()
 
-  if (!coupon) return { success: false, message: "Invalid or already used coupon" }
-
-  return {
-    success: true,
-    coupon: {
-      id: coupon.id,
-      code: coupon.code,
-      discount_amount: coupon.discount_amount,
-      min_order_value: coupon.min_order_value,
-    },
-  }
+  return points?.balance || 0
 }
 
-// ─── Mark coupon as used at checkout ───
-export async function markCouponUsed(couponId: string) {
+// ─── Redeem coins at checkout ───
+export async function redeemCoinsAtCheckout(userId: string, orderId: string, amount: number) {
+  const supabase = await createClient()
+
+  if (amount <= 0) return { success: false, message: "Invalid amount" }
+
+  const { data: points } = await supabase
+    .from("loyalty_points")
+    .select("balance")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  const currentBalance = points?.balance || 0
+  if (currentBalance < amount) return { success: false, message: "Insufficient coins" }
+
+  await supabase.from("loyalty_points").update({
+    balance: Math.max(0, currentBalance - amount),
+    updated_at: new Date().toISOString(),
+  }).eq("user_id", userId)
+
+  await supabase.from("loyalty_transactions").insert({
+    user_id: userId,
+    type: "spend",
+    amount,
+    reference_type: "order",
+    reference_id: orderId,
+    status: "available",
+    note: `${amount} M Coins redeemed at checkout for order #${orderId.toString().slice(-6).toUpperCase()}`,
+  })
+
+  revalidatePath("/rewards")
+  revalidatePath("/checkout")
+  return { success: true }
+}
+
+// ─── Reverse coin redemption on order cancellation ───
+export async function reverseCoinRedemption(orderId: string) {
+  const supabase = await createClient()
+
+  const { data: tx } = await supabase
+    .from("loyalty_transactions")
+    .select("id, user_id, amount")
+    .eq("reference_id", orderId)
+    .eq("type", "spend")
+    .eq("reference_type", "order")
+    .maybeSingle()
+
+  if (!tx) return
+
+  const { data: points } = await supabase
+    .from("loyalty_points")
+    .select("balance")
+    .eq("user_id", tx.user_id)
+    .maybeSingle()
+
+  await supabase.from("loyalty_points").update({
+    balance: (points?.balance || 0) + tx.amount,
+    updated_at: new Date().toISOString(),
+  }).eq("user_id", tx.user_id)
+
+  await supabase.from("loyalty_transactions").update({
+    status: "cancelled",
+    note: "Order cancelled — coins refunded",
+  }).eq("id", tx.id)
+}
+
+// ─── Get user's complete transaction history ───
+export async function getTransactionHistory() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false }
+  if (!user) return null
 
-  await supabase.from("reward_coupons").update({
-    used: true,
-    used_at: new Date().toISOString(),
-  }).eq("id", couponId).eq("user_id", user.id)
+  const [pointsRes, transactionsRes] = await Promise.all([
+    supabase.from("loyalty_points").select("balance, lifetime_earned, tier").eq("user_id", user.id).maybeSingle(),
+    supabase.from("loyalty_transactions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(200),
+  ])
 
-  return { success: true }
-}
+  const txs = transactionsRes.data || []
+  const activeTxs = txs.filter(t => t.status !== "cancelled")
+  const earned = activeTxs.filter(t => t.type === "earn" || t.type === "bonus").reduce((s, t) => s + t.amount, 0)
+  const spent = activeTxs.filter(t => t.type === "spend").reduce((s, t) => s + t.amount, 0)
 
-// ─── Admin: list all reward products ───
-export async function listRewardProducts() {
-  await requireAdmin()
-  const supabase = await createAdminClient()
-  const { data } = await supabase.from("reward_products").select("id, product_name, thumbnail_url, coins_required, stock, reward_type, tier_restriction, discount_amount, min_order_value, active, description").order("coins_required", { ascending: true })
-  return data || []
-}
-
-// ─── Admin: create reward product ───
-export async function createRewardProduct(formData: FormData) {
-  await requireAdmin()
-  const supabase = await createAdminClient()
-
-  const rewardType = formData.get("reward_type") as string
-
-  const payload: any = {
-    product_name: formData.get("product_name") as string,
-    description: (formData.get("description") as string) || null,
-    thumbnail_url: (formData.get("thumbnail_url") as string) || null,
-    coins_required: Number(formData.get("coins_required")),
-    stock: Number(formData.get("stock")) || 0,
-    reward_type: rewardType,
-    tier_restriction: (formData.get("tier_restriction") as string) || null,
+  return {
+    points: pointsRes.data || { balance: 0, lifetime_earned: 0, tier: "bronze" },
+    transactions: txs,
+    summary: {
+      earned,
+      spent,
+      pending: activeTxs.filter(t => t.status === "pending").reduce((s, t) => s + t.amount, 0),
+    },
   }
-
-  if (rewardType === "coupon") {
-    payload.discount_amount = Number(formData.get("discount_amount")) || 0
-    payload.min_order_value = Number(formData.get("min_order_value")) || 0
-  }
-
-  const { error } = await supabase.from("reward_products").insert(payload)
-  if (error) throw new Error(error.message)
-  revalidatePath("/admin/rewards")
-}
-
-// ─── Admin: update reward product ───
-export async function updateRewardProduct(id: string, formData: FormData) {
-  await requireAdmin()
-  const supabase = await createAdminClient()
-
-  const rewardType = formData.get("reward_type") as string
-
-  const payload: any = {
-    product_name: formData.get("product_name") as string,
-    description: (formData.get("description") as string) || null,
-    thumbnail_url: (formData.get("thumbnail_url") as string) || null,
-    coins_required: Number(formData.get("coins_required")),
-    stock: Number(formData.get("stock")) || 0,
-    reward_type: rewardType,
-    active: formData.get("active") === "true",
-    tier_restriction: (formData.get("tier_restriction") as string) || null,
-    updated_at: new Date().toISOString(),
-  }
-
-  if (rewardType === "coupon") {
-    payload.discount_amount = Number(formData.get("discount_amount")) || 0
-    payload.min_order_value = Number(formData.get("min_order_value")) || 0
-  } else {
-    payload.discount_amount = null
-    payload.min_order_value = null
-  }
-
-  const { error } = await supabase.from("reward_products").update(payload).eq("id", id)
-  if (error) return { success: false, message: error.message }
-  revalidatePath("/admin/rewards")
-  return { success: true }
-}
-
-// ─── Admin: toggle reward product active ───
-export async function toggleRewardProduct(id: string, currentActive: boolean) {
-  await requireAdmin()
-  const supabase = await createAdminClient()
-  const { error } = await supabase.from("reward_products").update({
-    active: !currentActive,
-    updated_at: new Date().toISOString(),
-  }).eq("id", id)
-  if (error) return { success: false, message: error.message }
-  revalidatePath("/admin/rewards")
-  return { success: true }
-}
-
-// ─── Admin: delete reward product ───
-export async function deleteRewardProduct(id: string) {
-  await requireAdmin()
-  const supabase = await createAdminClient()
-  const { error } = await supabase.from("reward_products").delete().eq("id", id)
-  if (error) throw new Error(error.message)
-  revalidatePath("/admin/rewards")
 }
 
 // ─── Admin: get overall loyalty stats ───
@@ -424,55 +275,22 @@ export async function getLoyaltyStats() {
   }
 }
 
-// ─── Get user's complete transaction history ───
-export async function getTransactionHistory() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const [pointsRes, transactionsRes] = await Promise.all([
-    supabase.from("loyalty_points").select("balance, lifetime_earned, tier").eq("user_id", user.id).maybeSingle(),
-    supabase.from("loyalty_transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(200),
-  ])
-
-  const txs = transactionsRes.data || []
-  const earned = txs.filter(t => t.type === "earn" || t.type === "bonus").reduce((s, t) => s + t.amount, 0)
-  const spent = txs.filter(t => t.type === "spend").reduce((s, t) => s + t.amount, 0)
-
-  return {
-    points: pointsRes.data || { balance: 0, lifetime_earned: 0, tier: "bronze" },
-    transactions: txs,
-    summary: {
-      earned,
-      spent,
-      pending: txs.filter(t => t.status === "pending").reduce((s, t) => s + t.amount, 0),
-    },
-  }
-}
-
-// ─── Admin: get all users' points ───
-export async function adminGetAllUsersPoints() {
+// ─── Admin: get all users' points (with filters) ───
+export async function adminGetAllUsersPoints(opts?: { search?: string; tier?: string; hideZero?: boolean }) {
   await requireAdmin()
   const supabase = await createAdminClient()
 
-  // Get all users who have loyalty transactions (most reliable source)
   const { data: allTx } = await supabase
     .from("loyalty_transactions")
     .select("user_id, type, amount, status, created_at")
     .order("created_at", { ascending: false })
 
-  // Also fetch loyalty_points table
   const { data: pointsData } = await supabase
     .from("loyalty_points")
     .select("*")
 
   const pointsMap = new Map((pointsData || []).map((p: any) => [p.user_id, p]))
 
-  // Build user aggregates from transactions
   const userTxMap = new Map<string, { earned: number; spent: number; pending: number; lastActivity: string | null }>()
   for (const tx of allTx || []) {
     const existing = userTxMap.get(tx.user_id) || { earned: 0, spent: 0, pending: 0, lastActivity: null }
@@ -490,13 +308,12 @@ export async function adminGetAllUsersPoints() {
     ...(allTx || []).map(t => t.user_id),
   ])]
 
-  // Fetch profiles
   const { data: profiles } = userIds.length > 0
     ? await supabase.from("profiles").select("id, full_name, phone").in("id", userIds)
     : { data: [] }
   const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
 
-  const result = userIds.map(userId => {
+  let result = userIds.map(userId => {
     const p = pointsMap.get(userId)
     const tx = userTxMap.get(userId) || { earned: 0, spent: 0, pending: 0, lastActivity: null }
     const profile = profileMap.get(userId)
@@ -512,6 +329,22 @@ export async function adminGetAllUsersPoints() {
       last_activity: tx.lastActivity,
     }
   })
+
+  // Apply filters
+  if (opts?.search) {
+    const q = opts.search.toLowerCase()
+    result = result.filter(u =>
+      u.full_name.toLowerCase().includes(q) ||
+      u.phone.toLowerCase().includes(q) ||
+      u.user_id.toLowerCase().includes(q)
+    )
+  }
+  if (opts?.tier && opts.tier !== "all") {
+    result = result.filter(u => u.tier === opts.tier)
+  }
+  if (opts?.hideZero) {
+    result = result.filter(u => u.balance > 0)
+  }
 
   result.sort((a, b) => b.balance - a.balance)
   return result
@@ -546,7 +379,6 @@ export async function adminAdjustPoints(userId: string, amount: number, note: st
 
   if (amount === 0) return { success: false, message: "Amount must be non-zero" }
 
-  // Get current balance
   const { data: points } = await supabase
     .from("loyalty_points")
     .select("balance")
@@ -555,12 +387,10 @@ export async function adminAdjustPoints(userId: string, amount: number, note: st
 
   const currentBalance = points?.balance || 0
 
-  // Prevent negative balance on deduction
   if (amount < 0 && currentBalance + amount < 0) {
     return { success: false, message: `User only has ${currentBalance} coins — cannot deduct ${Math.abs(amount)}` }
   }
 
-  // Ensure loyalty_points row exists
   if (!points) {
     await supabase.from("loyalty_points").insert({
       user_id: userId,
@@ -570,9 +400,6 @@ export async function adminAdjustPoints(userId: string, amount: number, note: st
     })
   }
 
-  // DB triggers auto-update balance_before/balance_after and loyalty_points.balance
-  // For credits: use type='bonus' (trigger does balance += amount, lifetime_earned += amount)
-  // For debits: use type='spend' (trigger does balance -= amount)
   const { error: txErr } = await supabase.from("loyalty_transactions").insert({
     user_id: userId,
     type: amount > 0 ? "bonus" : "spend",
@@ -584,6 +411,85 @@ export async function adminAdjustPoints(userId: string, amount: number, note: st
 
   if (txErr) return { success: false, message: txErr.message }
 
+  // Update lifetime_earned when crediting bonus
+  if (amount > 0) {
+    const { data: lp } = await supabase
+      .from("loyalty_points")
+      .select("lifetime_earned")
+      .eq("user_id", userId)
+      .maybeSingle()
+    if (lp) {
+      await supabase.from("loyalty_points").update({
+        lifetime_earned: (lp.lifetime_earned || 0) + amount,
+        updated_at: new Date().toISOString(),
+      }).eq("user_id", userId)
+    }
+  }
+
   revalidatePath("/admin/rewards/users")
   return { success: true }
+}
+
+// ─── Admin: backfill points for delivered orders missing loyalty transactions ───
+export async function backfillDeliveredOrderPoints() {
+  await requireAdmin()
+  const supabase = await createAdminClient()
+
+  const { data: deliveredOrders } = await supabase
+    .from("orders")
+    .select("id, user_id, total")
+    .eq("status", "delivered")
+    .not("user_id", "is", null)
+
+  if (!deliveredOrders || deliveredOrders.length === 0) return { backfilled: 0 }
+
+  const orderIds = deliveredOrders.map(o => o.id)
+
+  const { data: existingTxs } = await supabase
+    .from("loyalty_transactions")
+    .select("reference_id")
+    .in("reference_id", orderIds)
+    .eq("reference_type", "order")
+    .eq("type", "earn")
+
+  const existingOrderIds = new Set((existingTxs || []).map(tx => tx.reference_id))
+  const missing = deliveredOrders.filter(o => !existingOrderIds.has(o.id))
+
+  if (missing.length === 0) return { backfilled: 0 }
+
+  let backfilled = 0
+  for (const order of missing) {
+    const amount = calcPoints(Number(order.total))
+    if (amount <= 0) continue
+
+    const { error } = await supabase.from("loyalty_transactions").insert({
+      user_id: order.user_id,
+      type: "earn",
+      amount,
+      reference_type: "order",
+      reference_id: order.id,
+      status: "available",
+      order_delivered_at: new Date().toISOString(),
+      note: `${amount} M Coins backfilled for delivered order #${order.id.toString().slice(-6).toUpperCase()}`,
+    })
+
+    if (!error) {
+      const { data: lp } = await supabase
+        .from("loyalty_points")
+        .select("balance, lifetime_earned")
+        .eq("user_id", order.user_id)
+        .maybeSingle()
+
+      await supabase.from("loyalty_points").update({
+        balance: (lp?.balance || 0) + amount,
+        lifetime_earned: (lp?.lifetime_earned || 0) + amount,
+        updated_at: new Date().toISOString(),
+      }).eq("user_id", order.user_id)
+
+      backfilled++
+    }
+  }
+
+  revalidatePath("/admin/rewards")
+  return { backfilled }
 }

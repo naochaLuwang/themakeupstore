@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
             promoDiscount: clientPromoDiscount, promoCode,
             bxgyDiscount: clientBxgyDiscount,
             giftCardCode, giftCardDiscount: clientGiftCardDiscount,
-            rewardCouponId, rewardCouponDiscount: clientRewardCouponDiscount,
+            coinDiscount: clientCoinDiscount,
         } = await req.json()
 
         if (!amount || amount < 100) {
@@ -133,34 +133,32 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // ── 6. Verify reward coupon from DB ──
-        let verifiedRewardCouponDiscount = 0
-        if (rewardCouponId && clientRewardCouponDiscount > 0) {
-            const { data: rc } = await supabase
-                .from("reward_coupons")
-                .select("discount_amount, min_order_value, used")
-                .eq("id", rewardCouponId)
+        // ── 6. Verify coin redemption from DB ──
+        let verifiedCoinDiscount = 0
+        if (clientCoinDiscount && clientCoinDiscount > 0) {
+            const { data: lp } = await supabase
+                .from("loyalty_points")
+                .select("balance")
                 .eq("user_id", user.id)
-                .single()
-            if (rc && !rc.used) {
+                .maybeSingle()
+            const availableBalance = lp?.balance || 0
+            if (availableBalance >= clientCoinDiscount) {
                 const subtotalAfterDiscounts = Math.max(0, calculatedSubtotal - verifiedPromoDiscount - verifiedBxgyDiscount - verifiedGiftCardAmount + verifiedShippingPrice)
-                if (!rc.min_order_value || subtotalAfterDiscounts >= Number(rc.min_order_value)) {
-                    verifiedRewardCouponDiscount = Math.min(Number(rc.discount_amount), subtotalAfterDiscounts)
-                }
+                verifiedCoinDiscount = Math.min(clientCoinDiscount, subtotalAfterDiscounts)
             }
         }
 
         // ── 7. Compute expected total in paise and compare ──
         // All values above are in rupees; convert to paise for comparison with client amount
         const expectedTotalPaise = Math.max(0, Math.round(
-            (calculatedSubtotal - verifiedPromoDiscount - verifiedBxgyDiscount - verifiedGiftCardAmount - verifiedRewardCouponDiscount + verifiedShippingPrice) * 100
+            (calculatedSubtotal - verifiedPromoDiscount - verifiedBxgyDiscount - verifiedGiftCardAmount - verifiedCoinDiscount + verifiedShippingPrice) * 100
         ))
 
         // Allow 1% tolerance for rounding differences
         const minExpected = Math.floor(expectedTotalPaise * 0.99)
         const maxExpected = Math.ceil(expectedTotalPaise * 1.01)
         if (amount < minExpected || amount > maxExpected) {
-            console.error("AMOUNT_MISMATCH:", { amount, expectedTotalPaise, calculatedSubtotal, verifiedPromoDiscount, verifiedBxgyDiscount, verifiedGiftCardAmount, verifiedRewardCouponDiscount, verifiedShippingPrice })
+            console.error("AMOUNT_MISMATCH:", { amount, expectedTotalPaise, calculatedSubtotal, verifiedPromoDiscount, verifiedBxgyDiscount, verifiedGiftCardAmount, verifiedCoinDiscount, verifiedShippingPrice })
             return NextResponse.json({ error: "Amount mismatch — please refresh and try again" }, { status: 409 })
         }
 

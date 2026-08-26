@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { ProfileContent } from "./profile-content"
 import { getMyGiftCards } from "@/app/actions/gift-cards"
-import { getLoyaltyData, getMyCoupons } from "@/app/actions/loyalty"
+import { getLoyaltyData } from "@/app/actions/loyalty"
 
 export default async function ProfileData() {
   let supabase: any
@@ -21,9 +21,9 @@ export default async function ProfileData() {
   }
   if (!user) redirect("/login")
 
-  let profileRes: any, ordersCountRes: any, wishlistRes: any, addressesRes: any, totalSpentRes: any, recentOrdersRes: any, giftCards: any, loyaltyData: any, coupons: any
+  let profileRes: any, ordersCountRes: any, wishlistRes: any, addressesRes: any, totalSpentRes: any, recentOrdersRes: any, giftCards: any, loyaltyData: any
   try {
-    [profileRes, ordersCountRes, wishlistRes, addressesRes, totalSpentRes, recentOrdersRes, giftCards, loyaltyData, coupons] = await Promise.all([
+    [profileRes, ordersCountRes, wishlistRes, addressesRes, totalSpentRes, recentOrdersRes, giftCards, loyaltyData] = await Promise.all([
       supabase.from("profiles").select("full_name, created_at, is_admin").eq("id", user.id).single(),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       supabase.from("wishlist").select("id", { count: "exact", head: true }).eq("user_id", user.id),
@@ -35,7 +35,6 @@ export default async function ProfileData() {
       `).eq("user_id", user.id).order("created_at", { ascending: false }).limit(3),
       getMyGiftCards(),
       getLoyaltyData(),
-      getMyCoupons(),
     ])
   } catch {
     profileRes = { data: null }
@@ -46,7 +45,6 @@ export default async function ProfileData() {
     recentOrdersRes = { data: [] }
     giftCards = []
     loyaltyData = null
-    coupons = []
   }
 
   const orders = recentOrdersRes.data || []
@@ -83,7 +81,6 @@ export default async function ProfileData() {
       thumbMap={thumbMap}
       giftCards={giftCards}
       loyaltyData={loyaltyData}
-      coupons={coupons}
     />
   )
 }
