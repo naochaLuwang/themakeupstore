@@ -582,7 +582,7 @@ export default function CartPage() {
                         <p className="text-sm text-gray-400 text-center mt-2 max-w-xs">Discover our bestsellers and fill it up.</p>
                         <Link
                             href="/shop"
-                            className="mt-8 h-12 px-10 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+                            className="mt-8 h-12 px-10 bg-pink-600 text-white text-xs font-black uppercase tracking-widest rounded-full flex items-center justify-center hover:bg-pink-700 transition-colors"
                         >
                             SHOP NOW →
                         </Link>
@@ -819,7 +819,7 @@ export default function CartPage() {
                         ) : (
                             <Link
                                 href="/checkout"
-                                className="h-[42px] bg-gray-900 text-white text-[11px] font-black tracking-wider rounded-lg flex items-center justify-center gap-1.5 px-6 hover:bg-gray-800 transition-colors"
+                                className="h-[42px] bg-pink-600 text-white text-[11px] font-black tracking-wider rounded-lg flex items-center justify-center gap-1.5 px-6 hover:bg-pink-700 transition-colors"
                             >
                                 PROCEED TO CHECKOUT
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2}>

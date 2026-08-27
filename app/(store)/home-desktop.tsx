@@ -291,15 +291,15 @@ export function HomeDesktop({ banner, categories, products, forever52Products, p
           </div>
         )}
 
-        {/* FOREVER52 HORIZONTAL SCROLL CAROUSEL */}
+        {/* KIKO MILANI HORIZONTAL SCROLL CAROUSEL */}
         {forever52Products.length > 0 && (
           <div className="mb-20">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">FEATURED BRAND</p>
-                <h2 className="text-4xl font-light tracking-tight text-slate-900">FOREVER52</h2>
+                <h2 className="text-4xl font-light tracking-tight text-slate-900">KIKO MILANO</h2>
               </div>
-              <Link href="/search?q=FOREVER52" className="text-sm font-semibold text-slate-400 hover:text-slate-900 transition-colors">
+              <Link href="/search?q=kiko-milano" className="text-sm font-semibold text-slate-400 hover:text-slate-900 transition-colors">
                 Shop All →
               </Link>
             </div>

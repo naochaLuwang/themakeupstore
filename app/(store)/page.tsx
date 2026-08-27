@@ -23,13 +23,13 @@ const BRAND_BLACKLIST = [
 export default async function GatewayPage() {
   const supabase = await createClient()
 
-  let bannersRes: any, catDataRes: any, prodDataRes: any, forever52ProdDataRes: any, parentCatDataRes: any, showcaseItemsRes: any, childrenDataRes: any, fentyProdDataRes: any, funSizeCatRes: any, funSizeProdRes: any
+  let bannersRes: any, catDataRes: any, prodDataRes: any, kikoProdDataRes: any, parentCatDataRes: any, showcaseItemsRes: any, childrenDataRes: any, fentyProdDataRes: any, funSizeCatRes: any, funSizeProdRes: any
   try {
-    [bannersRes, catDataRes, prodDataRes, forever52ProdDataRes, parentCatDataRes, showcaseItemsRes, childrenDataRes, fentyProdDataRes, funSizeCatRes] = await Promise.all([
+    [bannersRes, catDataRes, prodDataRes, kikoProdDataRes, parentCatDataRes, showcaseItemsRes, childrenDataRes, fentyProdDataRes, funSizeCatRes] = await Promise.all([
       supabase.from("hero_banners").select("image_url, subtitle, title, description, route").eq("is_active", true).order("position").limit(5),
       supabase.from("categories").select("id, name, slug, image_url, parent:parent_id(slug)").not("parent_id", "is", null).order("name"),
       supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").order("created_at", { ascending: false }).limit(50),
-      supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("brand", "FOREVER52").limit(20),
+      supabase.from("products").select("id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").ilike("brand", "%kiko%").limit(20),
       supabase.from("categories").select("id, name, slug, image_url").is("parent_id", null).order("name"),
       supabase.from("showcase_items").select("id, title, subtitle, image_url, link_url").eq("is_active", true).order("position", { ascending: true }),
       supabase.from("categories").select("id, parent_id").not("parent_id", "is", null),
@@ -40,7 +40,7 @@ export default async function GatewayPage() {
     bannersRes = { data: null }
     catDataRes = { data: null }
     prodDataRes = { data: null }
-    forever52ProdDataRes = { data: null }
+    kikoProdDataRes = { data: null }
     parentCatDataRes = { data: null }
     showcaseItemsRes = { data: null }
     childrenDataRes = { data: null }
@@ -50,7 +50,7 @@ export default async function GatewayPage() {
   const banners = bannersRes.data
   const catData = catDataRes.data
   const prodData = prodDataRes.data
-  const forever52ProdData = forever52ProdDataRes.data
+  const kikoProdData = kikoProdDataRes.data
   const parentCatData = parentCatDataRes.data
   const showcaseItems = showcaseItemsRes.data
   const childrenData = childrenDataRes.data
@@ -70,7 +70,7 @@ export default async function GatewayPage() {
     !BRAND_BLACKLIST.some(name => b.name.toLowerCase() === name.toLowerCase())
   )
 
-  const forever52Products = (forever52ProdData || []).filter((p: any) => {
+  const kikoProducts = (kikoProdData || []).filter((p: any) => {
     const variants = p.product_variants || []
     return variants.length === 0 || variants.some((v: any) => Number(v.stock) > 0)
   }).map((p: any) => {
@@ -182,12 +182,12 @@ export default async function GatewayPage() {
     <>
       {/* DESKTOP: mobile-like scrollable feed */}
       <div className="hidden md:block">
-        <HomeDesktop banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} funSizeProducts={funSizeProducts} />
+        <HomeDesktop banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={kikoProducts} parentCategories={parentCatData || []} shelfProducts={shelfProducts} funSizeProducts={funSizeProducts} />
       </div>
 
       {/* MOBILE: native-style scrollable feed */}
       <div className="md:hidden">
-        <HomeMobile banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={forever52Products} parentCategories={parentCatData || []} shelfProducts={shelfProducts} showcaseItems={showcaseItems || []} funSizeProducts={funSizeProducts} />
+        <HomeMobile banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={kikoProducts} parentCategories={parentCatData || []} shelfProducts={shelfProducts} showcaseItems={showcaseItems || []} funSizeProducts={funSizeProducts} />
       </div>
     </>
   )

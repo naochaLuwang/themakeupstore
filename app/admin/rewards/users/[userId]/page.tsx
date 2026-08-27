@@ -75,7 +75,7 @@ export default async function AdminRewardsUserDetailPage(props: { params: Promis
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Adjust Points Form */}
         <div className="lg:col-span-1">
-          <AdjustPointsForm userId={userId} currentBalance={points.balance} />
+          <AdjustPointsForm userId={userId} />
         </div>
 
         {/* Transaction History */}

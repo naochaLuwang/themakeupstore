@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight, Award, Crown, Star, Zap, Coins, Sparkles, Hi
 import Link from "next/link"
 
 const TIERS = [
-    { id: "bronze", label: "Bronze", range: "₹0 – ₹9,999", earnRate: "1 coin / ₹100", icon: Star, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", ring: "ring-orange-300" },
-    { id: "silver", label: "Silver", range: "₹10,000 – ₹24,999", earnRate: "1 coin / ₹100", icon: Zap, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-300", ring: "ring-slate-300" },
-    { id: "gold", label: "Gold", range: "₹25,000+", earnRate: "1 coin / ₹100", icon: Crown, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-300", ring: "ring-amber-300" },
+    { id: "bronze", label: "Bronze", range: "₹0 – ₹9,999", icon: Star, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", ring: "ring-orange-300" },
+    { id: "silver", label: "Silver", range: "₹10,000 – ₹24,999", icon: Zap, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-300", ring: "ring-slate-300" },
+    { id: "gold", label: "Gold", range: "₹25,000+", icon: Crown, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-300", ring: "ring-amber-300" },
 ]
 
 function fmt(n: number) {
@@ -21,6 +21,7 @@ export default async function RewardsPage() {
     const tierIndex = TIERS.findIndex(t => t.id === points.tier)
     const currentTier = TIERS[tierIndex]
     const progress = nextTier ? Math.min(100, (totalSpend / nextTier.minSpend) * 100) : 100
+    const recentCount = (transactions || []).length
 
     return (
         <div className="min-h-screen bg-[#FDFBF7]">
@@ -31,11 +32,52 @@ export default async function RewardsPage() {
                     <ChevronLeft className="w-4 h-4" /> Back
                 </Link>
 
-                {/* Balance Card */}
-                <div className="rounded-2xl bg-gradient-to-br from-pink-500 to-pink-600 p-6 mb-6 text-white shadow-lg shadow-pink-200/30">
-                    <p className="text-[11px] font-semibold text-white/70 uppercase tracking-wider mb-3">M Beauty Rewards</p>
-                    <p className="text-5xl font-black tracking-tight">{points.balance}</p>
-                    <p className="text-sm font-medium text-white/80">M Coins</p>
+                {/* Balance Card — Signature Anders M */}
+                <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white p-6 mb-6 shadow-xl shadow-slate-900/20">
+                    {/* Ghost Anders M watermark */}
+                    <span
+                        aria-hidden
+                        className="pointer-events-none absolute -top-2 right-2 font-daciana leading-none select-none bg-clip-text text-transparent"
+                        style={{
+                            fontSize: "9rem",
+                            backgroundImage: "linear-gradient(180deg, rgba(252,39,121,0.55) 0%, rgba(252,39,121,0.12) 75%)",
+                        }}
+                    >
+                        M
+                    </span>
+
+                    {/* subtle radial glow */}
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0"
+                        style={{
+                            backgroundImage: "radial-gradient(600px 300px at 30% -20%, rgba(252,39,121,0.18), transparent 60%)",
+                        }}
+                    />
+
+                    <div className="relative">
+                        <div className="flex items-center justify-between mb-6">
+                            <p className="text-[11px] font-semibold text-white/60 uppercase tracking-[0.25em]">M Beauty Rewards</p>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#fc2779]" />
+                        </div>
+
+                        <p className="text-6xl font-black tracking-tight leading-none">{points.balance}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                            <p className="text-sm font-semibold text-white/80">M Coins</p>
+                            <span className="text-[10px] font-bold text-white/50">1 coin = ₹1 off</span>
+                        </div>
+
+                        <div className="h-px bg-white/10 mt-6 mb-3" />
+
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
+                                {currentTier?.label} member
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#fc2779]">
+                                {(transactions || []).filter(t => t.status === "available").length} active txn
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Tier Indicator — horizontal row of circles like Nykaa/Tira */}
@@ -81,7 +123,7 @@ export default async function RewardsPage() {
                     {/* Progress to next tier */}
                     {nextTier && (
                         <div className="rounded-xl bg-slate-50 p-3">
-                            <div className="flex items-center justify-between text-[10px] mb-1.5">
+                            <div className="flex items-center justify-between mb-1.5">
                                 <span className="font-medium text-slate-500">Spent {fmt(totalSpend)}</span>
                                 <span className="font-semibold text-pink-600">
                                     {fmt(Math.max(0, nextTier.minSpend - totalSpend))} to go
@@ -111,7 +153,7 @@ export default async function RewardsPage() {
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-slate-800">Transaction History</p>
-                                <p className="text-[9px] text-slate-400 mt-0.5">Every coin earned, spent, and remaining</p>
+                                <p className="text-[9px] text-slate-400 mt-0.5">{recentCount} recent activities</p>
                             </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-slate-300" />
@@ -135,50 +177,6 @@ export default async function RewardsPage() {
                             </div>
                         ))}
                     </div>
-                </div>
-
-                {/* Recent Activity */}
-                {transactions.filter((t: any) => t.status !== "cancelled" && (t.type === "spend" || t.status === "available" || t.status === "pending")).length > 0 && (
-                    <div className="mb-6">
-                        <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">Recent Activity</h2>
-                            <Link href="/rewards/history" className="flex items-center gap-1 text-[8px] font-semibold text-pink-500 uppercase tracking-wider hover:text-pink-600 transition-colors">
-                                <History className="w-3 h-3" /> View All
-                            </Link>
-                        </div>
-                        <div className="rounded-xl border border-slate-100 bg-white shadow-sm divide-y divide-slate-50">
-                            {transactions.filter((t: any) => t.status !== "cancelled").slice(0, 5).map((tx: any) => {
-                                const isEarn = tx.type === "earn" || tx.type === "bonus"
-                                return (
-                                    <div key={tx.id} className="flex items-center justify-between px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-7 h-7 rounded-lg ${isEarn ? "bg-emerald-50" : "bg-rose-50"} flex items-center justify-center shrink-0`}>
-                                                <Coins className={`w-3.5 h-3.5 ${isEarn ? "text-emerald-500" : "text-rose-400"}`} />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-semibold text-slate-800">{tx.note || tx.reference_type}</p>
-                                                <p className="text-[9px] text-slate-400">
-                                                    {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                                                    {tx.status === "pending" && <span className="text-amber-500 ml-1">· Pending</span>}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <span className={`text-xs font-bold tabular-nums ${isEarn ? "text-emerald-600" : "text-rose-500"}`}>
-                                            {isEarn ? "+" : "-"}{tx.amount}
-                                        </span>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* Footer */}
-                <div className="flex flex-col items-center gap-2 pt-4">
-                    <div className="w-6 h-px bg-slate-200" />
-                    <Link href="/legal/rewards-terms" className="text-[8px] font-semibold text-slate-300 uppercase tracking-[0.3em] hover:text-pink-500 transition-colors">
-                        Terms &amp; Conditions
-                    </Link>
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { getTransactionHistory } from "@/app/actions/loyalty"
-import { ChevronLeft, Coins, ArrowUpRight, ArrowDownRight, Clock, X } from "lucide-react"
+import { ChevronLeft, Coins, TrendingUp, TrendingDown, Clock, X } from "lucide-react"
 import Link from "next/link"
 
 function formatDate(ts: string) {
@@ -28,129 +28,118 @@ export default async function RewardsHistoryPage() {
             <div className="max-w-lg mx-auto px-4 pt-6 pb-28">
 
                 {/* Back */}
-                <Link
+                {/* <Link
                     href="/rewards"
                     className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-800 mb-5"
                 >
                     <ChevronLeft className="w-4 h-4" /> Back
-                </Link>
+                </Link> */}
 
                 {/* Header */}
                 <h1 className="text-lg font-black tracking-tight text-slate-900 mb-1">Transaction History</h1>
-                <p className="text-[11px] text-slate-400 mb-5">Every M Coin movement, from first purchase to latest reward</p>
+                <p className="text-[11px] text-slate-400 mb-6">Every M Coin movement, from first purchase to latest reward</p>
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-3 gap-2.5 mb-6">
-                    <div className="rounded-xl bg-white border border-slate-100 shadow-sm p-3.5">
-                        <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Earned</p>
-                        <div className="flex items-center gap-1.5">
-                            <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500" />
-                            <p className="text-lg font-black text-emerald-600 tracking-tight">{summary.earned}</p>
+                {/* Summary row */}
+                <div className="flex items-center justify-between rounded-2xl bg-white border border-slate-200/70 shadow-sm px-4 py-3.5 mb-5">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center">
+                            <Coins className="w-4 h-4 text-slate-700" />
+                        </div>
+                        <div>
+                            <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Balance</p>
+                            <p className="text-xl font-black text-slate-900 tracking-tight leading-none mt-0.5">{points.balance} <span className="text-[10px] font-semibold text-slate-400">coins</span></p>
                         </div>
                     </div>
-                    <div className="rounded-xl bg-white border border-slate-100 shadow-sm p-3.5">
-                        <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Spent</p>
-                        <div className="flex items-center gap-1.5">
-                            <ArrowDownRight className="w-3.5 h-3.5 text-rose-400" />
-                            <p className="text-lg font-black text-rose-500 tracking-tight">{summary.spent}</p>
+                    <div className="flex gap-4">
+                        <div className="text-right">
+                            <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Earned</p>
+                            <p className="text-sm font-bold text-slate-700 tabular-nums mt-0.5">+{summary.earned}</p>
                         </div>
-                    </div>
-                    <div className="rounded-xl bg-white border border-slate-100 shadow-sm p-3.5">
-                        <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Balance</p>
-                        <div className="flex items-center gap-1.5">
-                            <Coins className="w-3.5 h-3.5 text-amber-500" />
-                            <p className="text-lg font-black text-slate-900 tracking-tight">{points.balance}</p>
+                        <div className="text-right">
+                            <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Spent</p>
+                            <p className="text-sm font-bold text-slate-700 tabular-nums mt-0.5">−{summary.spent}</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Pending notice */}
                 {summary.pending > 0 && (
-                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 mb-5 flex items-center gap-2.5">
+                    <div className="rounded-xl bg-white border border-slate-200/70 shadow-sm px-4 py-3 mb-5 flex items-center gap-2.5">
                         <Clock className="w-4 h-4 text-amber-500 shrink-0" />
                         <div>
-                            <p className="text-[10px] font-bold text-amber-700">{summary.pending} M Coins pending</p>
-                            <p className="text-[9px] text-amber-600/70">Available after your orders are delivered</p>
+                            <p className="text-[10px] font-bold text-slate-800">{summary.pending} M Coins pending</p>
+                            <p className="text-[9px] text-slate-400">Available after your orders are delivered</p>
                         </div>
                     </div>
                 )}
 
                 {/* Transaction List */}
                 {transactions.length > 0 ? (
-                    <div className="rounded-xl border border-slate-100 bg-white shadow-sm divide-y divide-slate-50">
+                    <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm divide-y divide-slate-100">
                         {transactions.map((tx: any) => {
                             const isEarn = tx.type === "earn" || tx.type === "bonus"
                             const isPending = tx.status === "pending"
                             const isCancelled = tx.status === "cancelled"
                             return (
-                                <div key={tx.id} className={`px-4 py-3.5 ${isCancelled ? "opacity-50" : ""}`}>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                                            <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${
-                                                isCancelled ? "bg-slate-50" : isEarn ? "bg-emerald-50" : "bg-rose-50"
+                                <div key={tx.id} className={`px-4 py-3.5 ${isCancelled ? "opacity-45" : ""} flex items-center justify-between gap-3`}>
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${isCancelled ? "bg-slate-50 text-slate-300"
+                                                : isEarn ? "bg-pink-50 text-pink-500"
+                                                    : "bg-slate-100 text-slate-400"
                                             }`}>
-                                                {isCancelled ? (
-                                                    <X className="w-4 h-4 text-slate-400" />
-                                                ) : isEarn ? (
-                                                    <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-                                                ) : (
-                                                    <ArrowDownRight className="w-4 h-4 text-rose-400" />
-                                                )}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-1.5">
-                                                    <p className={`text-xs font-semibold truncate ${isCancelled ? "text-slate-400" : "text-slate-800"}`}>
-                                                        {tx.note || tx.reference_type || "Transaction"}
-                                                    </p>
-                                                    {isCancelled && (
-                                                        <span className="text-[7px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
-                                                            Cancelled
-                                                        </span>
-                                                    )}
-                                                    {isPending && !isCancelled && (
-                                                        <span className="text-[7px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
-                                                            Pending
-                                                        </span>
-                                                    )}
-                                                    {!isPending && !isCancelled && tx.status === "available" && tx.type !== "spend" && (
-                                                        <span className="text-[7px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
-                                                            Cleared
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-[9px] text-slate-400 mt-0.5">{formatDate(tx.created_at)}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right shrink-0 ml-3">
-                                            <p className={`text-sm font-black tabular-nums ${
-                                                isEarn ? "text-emerald-600" : "text-rose-500"
-                                            }`}>
-                                                {isEarn ? "+" : "-"}{tx.amount}
-                                            </p>
-                                            {!isNaN(tx.balance_after) && (
-                                                <p className="text-[8px] text-slate-400 tabular-nums">
-                                                    {tx.balance_after} left
-                                                </p>
+                                            {isCancelled ? (
+                                                <X className="w-4 h-4" />
+                                            ) : isEarn ? (
+                                                <TrendingUp className="w-4 h-4" />
+                                            ) : (
+                                                <TrendingDown className="w-4 h-4" />
                                             )}
                                         </div>
+                                        <div className="min-w-0">
+                                            <p className={`text-xs font-semibold truncate ${isCancelled ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                                                {tx.note || tx.reference_type || "Transaction"}
+                                            </p>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                {isCancelled && (
+                                                    <span className="text-[7px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                                                        Cancelled
+                                                    </span>
+                                                )}
+                                                {isPending && !isCancelled && (
+                                                    <span className="text-[7px] font-semibold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                                                        Pending
+                                                    </span>
+                                                )}
+                                                {!isPending && !isCancelled && tx.status === "available" && tx.type !== "spend" && (
+                                                    <span className="text-[7px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                                                        Cleared
+                                                    </span>
+                                                )}
+                                                <span className="text-[9px] text-slate-300">·</span>
+                                                <span className="text-[9px] text-slate-400">{formatDate(tx.created_at)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className={`text-sm font-black tabular-nums ${isCancelled ? "text-slate-300" : isEarn ? "text-pink-500" : "text-slate-700"
+                                            }`}>
+                                            {isEarn ? "+" : "−"}{tx.amount}
+                                        </p>
+                                        {!isNaN(tx.balance_after) && (
+                                            <p className="text-[8px] text-slate-400 tabular-nums mt-0.5">{tx.balance_after} left</p>
+                                        )}
                                     </div>
                                 </div>
                             )
                         })}
                     </div>
                 ) : (
-                    <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-2xl bg-white">
-                        <Coins className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                        <p className="text-sm font-semibold text-slate-400">No transactions yet</p>
-                        <p className="text-[10px] text-slate-300 mt-1">Your coin history will appear here</p>
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center">
+                        <Coins className="w-6 h-6 text-slate-200 mx-auto mb-3" />
+                        <p className="text-xs font-semibold text-slate-400">No transactions yet</p>
+                        <p className="text-[9px] text-slate-300 mt-1">Earn coins on your next purchase</p>
                     </div>
                 )}
-
-                {/* Footer */}
-                <div className="mt-8 flex flex-col items-center gap-2">
-                    <div className="w-6 h-px bg-slate-200" />
-                    <p className="text-[7px] font-semibold text-slate-300 uppercase tracking-[0.3em]">The Makeup Store</p>
-                </div>
             </div>
         </div>
     )

@@ -405,7 +405,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     <p className="text-xs text-gray-400 mt-1 mb-4">Add a delivery address to continue</p>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="h-10 px-6 bg-gray-900 text-white text-xs font-bold rounded-full flex items-center gap-1.5"
+                        className="h-10 px-6 bg-pink-600 text-white text-xs font-bold rounded-full flex items-center gap-1.5 hover:bg-pink-700 transition-colors"
                     >
                         <Plus className="w-4 h-4" /> Add New Address
                     </button>
@@ -465,13 +465,13 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     </div>
                     <div className="space-y-2">
                         {appliedPromo ? (
-                            <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
-                                <div className="w-9 h-9 bg-green-500 rounded-lg flex items-center justify-center shrink-0">
+                            <div className="bg-pink-50 border border-pink-100 rounded-xl p-3 flex items-center gap-3">
+                                <div className="w-9 h-9 bg-pink-500 rounded-lg flex items-center justify-center shrink-0">
                                     <Check className="w-[18px] h-[18px] text-white" />
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-sm font-bold text-gray-900">{appliedPromo.code}</p>
-                                    <p className="text-xs font-semibold text-green-600">You saved ₹{discountAmount}</p>
+                                    <p className="text-xs font-semibold text-pink-600">You saved ₹{discountAmount}</p>
                                 </div>
                                 <button onClick={handleRemovePromo}>
                                     <X className="w-[18px] h-[18px] text-gray-400" />
@@ -491,7 +491,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                         : "View all coupons"}
                                 </span>
                                 {eligiblePromos.length > 0 && (
-                                    <span className="h-5 min-w-[22px] px-1.5 bg-gray-900 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
+                                    <span className="h-5 min-w-[22px] px-1.5 bg-pink-600 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
                                         {eligiblePromos.length}
                                     </span>
                                 )}
@@ -604,7 +604,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                             <button
                                                 onClick={handleApplyGiftCard}
                                                 disabled={applyingGiftCard || !giftCardCode.trim()}
-                                                className="h-10 px-4 bg-gray-900 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-gray-800 transition-colors shrink-0"
+                                                className="h-10 px-4 bg-pink-600 text-white text-xs font-bold rounded-lg disabled:opacity-40 hover:bg-pink-700 transition-colors shrink-0"
                                             >
                                                 {applyingGiftCard ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
                                             </button>
@@ -620,9 +620,9 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         {coinBalance > 0 && (
                             <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl">
                                 <div className="flex items-center gap-2.5">
-                                    <Coins className="w-4 h-4 text-amber-500" />
+                                    <Coins className="w-4 h-4 text-pink-500" />
                                     <span className="text-sm font-semibold text-gray-900">Use M Coins</span>
-                                    <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{coinBalance} coins = ₹{coinBalance}</span>
+                                    <span className="text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full">{coinBalance} coins = ₹{coinBalance}</span>
                                     <button onClick={(e) => { e.stopPropagation(); setShowCoinInfo(true) }} className="ml-0.5">
                                         <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 transition-colors" />
                                     </button>
@@ -631,7 +631,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                     onClick={handleToggleCoinRedemption}
                                     disabled={loadingCoins}
                                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                        useCoins ? "bg-amber-500" : "bg-gray-200"
+                                        useCoins ? "bg-pink-500" : "bg-gray-200"
                                     }`}
                                 >
                                     <span
@@ -652,7 +652,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             onClick={() => setShowBreakup(!showBreakup)}
                             className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50/50 transition-colors"
                         >
-                            <div className="w-9 h-9 rounded-xl bg-gray-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                            <div className="w-9 h-9 rounded-xl bg-pink-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                                 <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                 </svg>
@@ -706,21 +706,21 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                             Shipping{shippingLabel !== "Standard" && shippingLabel !== "FREE" ? ` (${shippingLabel})` : ""}
                                         </span>
                                         {shippingPrice > 0 && currentSubtotal < FREE_SHIPPING_THRESHOLD && (
-                                            <p className="text-[10px] font-semibold text-green-500 mt-0.5">
+                                            <p className="text-[10px] font-semibold text-pink-500 mt-0.5">
                                                 Free shipping on selected pincodes
                                             </p>
                                         )}
                                     </div>
-                                    <span className={`text-sm font-semibold ${isFreeShipping ? "text-green-500" : "text-gray-900"}`}>
+                                    <span className={`text-sm font-semibold ${isFreeShipping ? "text-pink-500" : "text-gray-900"}`}>
                                         {isFreeShipping ? "FREE" : `₹${shippingPrice}`}
                                     </span>
                                 </div>
                                 {discountAmount > 0 && (
                                     <>
                                         <div className="h-px bg-gray-50 mx-5" />
-                                        <div className="px-5 py-3.5 flex justify-between bg-green-50/50">
-                                            <span className="text-sm font-medium text-green-600">Promo Discount</span>
-                                            <span className="text-sm font-bold text-green-600">−₹{discountAmount}</span>
+                                        <div className="px-5 py-3.5 flex justify-between bg-pink-50/50">
+                                            <span className="text-sm font-medium text-pink-600">Promo Discount</span>
+                                            <span className="text-sm font-bold text-pink-600">−₹{discountAmount}</span>
                                         </div>
                                     </>
                                 )}
@@ -754,9 +754,9 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 {coinDiscount > 0 && (
                                     <>
                                         <div className="h-px bg-gray-50 mx-5" />
-                                        <div className="px-5 py-3.5 flex justify-between bg-amber-50/50">
-                                            <span className="text-sm font-medium text-amber-600">M Coins</span>
-                                            <span className="text-sm font-bold text-amber-600">−₹{Math.round(coinDiscount)}</span>
+                                        <div className="px-5 py-3.5 flex justify-between bg-pink-50/50">
+                                            <span className="text-sm font-medium text-pink-600">M Coins</span>
+                                            <span className="text-sm font-bold text-pink-600">−₹{Math.round(coinDiscount)}</span>
                                         </div>
                                     </>
                                 )}
@@ -782,7 +782,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     <button
                         onClick={handlePlaceOrder}
                         disabled={loading || !selectedAddress}
-                        className="w-full h-[46px] bg-gray-900 text-white text-xs font-black tracking-wider rounded-full flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-gray-800 transition-colors"
+                        className="w-full h-[46px] bg-pink-600 text-white text-xs font-black tracking-wider rounded-full flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-pink-700 transition-colors"
                     >
                         {loading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -819,10 +819,10 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 >
                                     <div className="flex items-start gap-3">
                                         <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
-                                            selectedAddress?.id === addr.id ? "border-gray-900" : "border-gray-300"
+                                            selectedAddress?.id === addr.id ? "border-pink-600" : "border-gray-300"
                                         }`}>
                                             {selectedAddress?.id === addr.id && (
-                                                <div className="w-2.5 h-2.5 rounded-full bg-gray-900" />
+                                                <div className="w-2.5 h-2.5 rounded-full bg-pink-600" />
                                             )}
                                         </div>
                                         <div>
@@ -842,7 +842,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         <div className="px-5 pb-6 shrink-0">
                             <button
                                 onClick={() => { setShowAddressPicker(false); setIsAddModalOpen(true) }}
-                                className="w-full h-12 bg-gray-900 text-white text-xs font-bold rounded-full flex items-center justify-center gap-2"
+                                className="w-full h-12 bg-pink-600 text-white text-xs font-bold rounded-full flex items-center justify-center gap-2 hover:bg-pink-700 transition-colors"
                             >
                                 <Plus className="w-4 h-4" /> Add New Address
                             </button>
@@ -902,11 +902,11 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-sm font-bold text-gray-900">{promo.code}</span>
-                                                            <span className={`text-[10px] font-bold ${
-                                                                appliedPromo?.code === promo.code
-                                                                    ? "text-green-600"
-                                                                    : "text-gray-900"
-                                                            }`}>
+<span className={`text-[10px] font-bold ${
+                                                                    appliedPromo?.code === promo.code
+                                                                        ? "text-pink-600"
+                                                                        : "text-gray-900"
+                                                                    }`}>
                                                                 {discountLabel}
                                                             </span>
                                                         </div>
@@ -915,7 +915,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                                         )}
                                                     </div>
                                                     {appliedPromo?.code === promo.code ? (
-                                                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                                        <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
                                                             <Check className="w-3.5 h-3.5 text-white" />
                                                         </div>
                                                     ) : (
@@ -954,7 +954,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                                             </span>
                                                         </div>
                                                         {reasons[0] && (
-                                                            <p className="text-[10px] font-semibold text-amber-600 mt-0.5">· {reasons[0]}</p>
+                                                            <p className="text-[10px] font-semibold text-pink-600 mt-0.5">· {reasons[0]}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -999,26 +999,26 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         <button onClick={() => setShowCoinInfo(false)} className="absolute top-4 right-4">
                             <X className="w-5 h-5 text-gray-400" />
                         </button>
-                        <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center mb-4">
-                            <Coins className="w-6 h-6 text-amber-500" />
+                        <div className="w-12 h-12 rounded-xl bg-pink-50 flex items-center justify-center mb-4">
+                            <Coins className="w-6 h-6 text-pink-500" />
                         </div>
                         <h3 className="text-lg font-black text-gray-900 mb-2">What are M Coins?</h3>
                         <p className="text-sm text-gray-500 leading-relaxed mb-1">
                             M Coins are reward points you earn with every purchase. For every ₹100 spent, you get <span className="font-bold text-gray-700">1 M Coin</span>.
                         </p>
                         <p className="text-sm text-gray-500 leading-relaxed mb-5">
-                            Use them at checkout — <span className="font-bold text-amber-600">1 coin = ₹1 off</span>. The more you shop, the more you save.
+                            Use them at checkout — <span className="font-bold text-pink-600">1 coin = ₹1 off</span>. The more you shop, the more you save.
                         </p>
-                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-5">
+                        <div className="bg-pink-50 border border-pink-100 rounded-xl p-3 mb-5">
                             <div className="flex items-center gap-2 mb-1">
-                                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Your Balance</span>
+                                <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                                <span className="text-xs font-bold text-pink-700 uppercase tracking-wider">Your Balance</span>
                             </div>
-                            <p className="text-2xl font-black text-amber-600">{coinBalance} M Coins <span className="text-sm font-semibold text-amber-400">= ₹{coinBalance}</span></p>
+                            <p className="text-2xl font-black text-pink-600">{coinBalance} M Coins <span className="text-sm font-semibold text-pink-400">= ₹{coinBalance}</span></p>
                         </div>
                         <button
                             onClick={() => { setShowCoinInfo(false); router.push("/rewards") }}
-                            className="w-full h-11 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-colors"
+                            className="w-full h-11 rounded-xl bg-pink-600 text-white text-sm font-bold hover:bg-pink-700 transition-colors"
                         >
                             View Full Rewards
                         </button>

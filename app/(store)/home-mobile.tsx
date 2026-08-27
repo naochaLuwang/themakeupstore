@@ -5,21 +5,13 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 
 import {
-  Search, Heart, ShoppingBag, Rocket, ShieldCheck,
-  RotateCcw, MessageCircle, ArrowRight, X,
+  Search, Heart, ShoppingBag, Rocket, ArrowRight, X,
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { KylieBanner } from "@/components/store/kylie-banner"
 import { FunSizeSection } from "@/components/store/fun-size-section"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import { Capacitor } from "@capacitor/core"
-
-const VALUES = [
-  { icon: Rocket, label: "Free Shipping", sub: "Above ₹2,999" },
-  { icon: ShieldCheck, label: "100% Authentic", sub: "Guaranteed" },
-  { icon: RotateCcw, label: "Easy Returns", sub: "Within 3 days" },
-  { icon: MessageCircle, label: "24/7 Support", sub: "We're here" },
-]
 
 interface CategoryItem {
   id: string
@@ -161,41 +153,32 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
         </div>
       </div>
 
-      {/* VALUE PROPS */}
-      <div className="flex py-4 px-2 mb-4">
-        {VALUES.map((v) => (
-          <div key={v.label} className="flex-1 flex flex-col items-center gap-0.5">
-            <v.icon className="w-[18px] h-[18px] text-[#fc2779]" />
-            <span className="text-[10px] font-bold text-slate-800 tracking-tight mt-1">{v.label}</span>
-            <span className="text-[8px] text-slate-400">{v.sub}</span>
-          </div>
-        ))}
-      </div>
-
       {/* OUR BRANDS */}
       {categories.length > 0 && (
-        <Section label="FEATURED" title="Our Brands" href="/brands" linkLabel="View All">
-          <div className="flex gap-4 overflow-x-auto pl-6 pr-4 no-scrollbar">
-            {categories.slice(0, 14).map((cat) => {
-              const parentSlug = Array.isArray(cat.parent) ? cat.parent[0]?.slug : cat.parent?.slug
-              const pathSegment = parentSlug === 'exclusive' || parentSlug === 'essentials' ? parentSlug : 'categories'
-              return (
-                <Link key={cat.id} href={`/${pathSegment}/${cat.slug}`} className="flex flex-col items-center gap-2 w-[76px] shrink-0 group">
-                  <div className="w-[76px] h-[76px] rounded-full overflow-hidden shadow-sm ring-1 ring-slate-100 group-hover:shadow-md group-hover:ring-slate-200 transition-all duration-300">
-                    {cat.image_url ? (
-                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full bg-slate-50 flex items-center justify-center">
-                        <span className="text-base font-bold text-slate-300">{cat.name[0]}</span>
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-slate-400 group-hover:text-rose-500 transition-colors text-center leading-tight">{cat.name}</span>
-                </Link>
-              )
-            })}
-          </div>
-        </Section>
+        <div className="pt-8">
+          <Section label="FEATURED" title="Our Brands" href="/brands" linkLabel="View All">
+            <div className="flex gap-4 overflow-x-auto pl-6 pr-4 no-scrollbar">
+              {categories.slice(0, 14).map((cat) => {
+                const parentSlug = Array.isArray(cat.parent) ? cat.parent[0]?.slug : cat.parent?.slug
+                const pathSegment = parentSlug === 'exclusive' || parentSlug === 'essentials' ? parentSlug : 'categories'
+                return (
+                  <Link key={cat.id} href={`/${pathSegment}/${cat.slug}`} className="flex flex-col items-center gap-2 w-[76px] shrink-0 group">
+                    <div className="w-[76px] h-[76px] rounded-full overflow-hidden shadow-sm ring-1 ring-slate-100 group-hover:shadow-md group-hover:ring-slate-200 transition-all duration-300">
+                      {cat.image_url ? (
+                        <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full bg-slate-50 flex items-center justify-center">
+                          <span className="text-base font-bold text-slate-300">{cat.name[0]}</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-slate-400 group-hover:text-rose-500 transition-colors text-center leading-tight">{cat.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </Section>
+        </div>
       )}
 
       {/* RECENTLY VIEWED */}
@@ -286,7 +269,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
 
       {/* FOREVER52 PRODUCTS */}
       {forever52Products.length > 0 && (
-        <Section label="FEATURED BRAND" title="FOREVER52">
+        <Section label="FEATURED BRAND" title="KIKO MILANO">
           <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar">
             {forever52Products.map((item) => (
               <div key={item.id} className="w-40 shrink-0">
@@ -307,10 +290,46 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
         </Link>
         <div className="w-10 h-px bg-[#fc2779] mb-4" />
         <div className="flex justify-evenly w-full">
-          {VALUES.map((v) => (
+          {[
+            { icon: "truck", label: "Free Shipping", sub: "Above ₹2,999" },
+            { icon: "shield", label: "100% Authentic", sub: "Guaranteed" },
+            { icon: "return", label: "Easy Returns", sub: "Within 3 days" },
+            { icon: "support", label: "24/7 Support", sub: "We're here" },
+          ].map((v) => (
             <div key={v.label} className="flex flex-col items-center gap-0">
               <div className="w-[72px] h-[72px] rounded-full bg-[#fc2779]/10 flex items-center justify-center mb-2">
-                <v.icon className="w-9 h-9 text-[#fc2779]" />
+                {v.icon === "truck" && (
+                  <svg className="w-9 h-9 text-[#fc2779]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="18" width="26" height="18" rx="2" />
+                    <path d="M28 24h8l6 8v4h-14v-12z" />
+                    <circle cx="12" cy="38" r="3" fill="currentColor" stroke="none" />
+                    <circle cx="36" cy="38" r="3" fill="currentColor" stroke="none" />
+                    <path d="M2 28h26" />
+                  </svg>
+                )}
+                {v.icon === "shield" && (
+                  <svg className="w-9 h-9 text-[#fc2779]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M24 4L6 12v12c0 10.5 7.7 20.4 18 22.5C34.3 44.4 42 34.5 42 24V12L24 4z" />
+                    <path d="M17 24l5 5 9-10" />
+                  </svg>
+                )}
+                {v.icon === "return" && (
+                  <svg className="w-9 h-9 text-[#fc2779]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 24a18 18 0 0 1 32-11.3" />
+                    <path d="M38 24A18 18 0 0 1 6 35.3" />
+                    <path d="M34 4l4 9.3-9.3 1" />
+                    <path d="M14 44l-4-9.3 9.3-1" />
+                  </svg>
+                )}
+                {v.icon === "support" && (
+                  <svg className="w-9 h-9 text-[#fc2779]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 36v-4a16 16 0 0 1 32 0v4" />
+                    <rect x="4" y="32" width="8" height="8" rx="2" />
+                    <rect x="36" y="32" width="8" height="8" rx="2" />
+                    <circle cx="24" cy="20" r="4" />
+                    <path d="M24 24v4" />
+                  </svg>
+                )}
               </div>
               <span className="text-[10px] font-bold text-slate-800">{v.label.split(" ")[0]}</span>
               <span className="text-[10px] font-medium text-slate-800">{v.label.split(" ").slice(1).join(" ")}</span>
@@ -325,17 +344,17 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
         <div className="fixed bottom-14 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-gray-900 shrink-0 flex items-center justify-center shadow-sm">
             <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="5" y="2" width="14" height="20" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M12 18h.01" strokeWidth="2" strokeLinecap="round"/>
+              <rect x="5" y="2" width="14" height="20" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12 18h.01" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-black tracking-tight text-gray-900 truncate">THE MAKEUP STORE</p>
             <div className="flex items-center gap-1">
               <div className="flex">
-                {[1,2,3,4].map(i => (
+                {[1, 2, 3, 4].map(i => (
                   <svg key={i} className="w-3 h-3 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                   </svg>
                 ))}
               </div>

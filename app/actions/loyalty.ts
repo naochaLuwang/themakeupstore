@@ -86,6 +86,16 @@ export async function getLoyaltyData() {
 export async function earnOrderPoints(userId: string, orderId: string, total: number) {
   const supabase = await createClient()
 
+  // Idempotency: skip if earn transaction already exists for this order (prevents concurrent double-earn)
+  const { data: existingTx } = await supabase
+    .from("loyalty_transactions")
+    .select("id")
+    .eq("reference_id", orderId)
+    .eq("reference_type", "order")
+    .eq("type", "earn")
+    .maybeSingle()
+  if (existingTx) return
+
   const { data: points } = await supabase
     .from("loyalty_points")
     .select("tier")
@@ -159,29 +169,13 @@ export async function redeemCoinsAtCheckout(userId: string, orderId: string, amo
 
   if (amount <= 0) return { success: false, message: "Invalid amount" }
 
-  const { data: points } = await supabase
-    .from("loyalty_points")
-    .select("balance")
-    .eq("user_id", userId)
-    .maybeSingle()
-
-  const currentBalance = points?.balance || 0
-  if (currentBalance < amount) return { success: false, message: "Insufficient coins" }
-
-  await supabase.from("loyalty_points").update({
-    balance: Math.max(0, currentBalance - amount),
-    updated_at: new Date().toISOString(),
-  }).eq("user_id", userId)
-
-  await supabase.from("loyalty_transactions").insert({
-    user_id: userId,
-    type: "spend",
-    amount,
-    reference_type: "order",
-    reference_id: orderId,
-    status: "available",
-    note: `${amount} M Coins redeemed at checkout for order #${orderId.toString().slice(-6).toUpperCase()}`,
+  // Atomic balance check + insert in one locked transaction — prevents race condition double-spend
+  const { data: success } = await supabase.rpc("atomic_redeem_coins", {
+    p_user_id: userId,
+    p_amount: amount,
+    p_order_id: orderId,
   })
+  if (!success) return { success: false, message: "Insufficient coins" }
 
   revalidatePath("/rewards")
   revalidatePath("/checkout")
@@ -372,24 +366,18 @@ export async function adminGetUserTransactions(userId: string) {
   }
 }
 
-// ─── Admin: adjust a user's points ───
+// ─── Admin: adjust a user's points (credit only — deductions go through order cancellation) ───
 export async function adminAdjustPoints(userId: string, amount: number, note: string) {
   await requireAdmin()
   const supabase = await createAdminClient()
 
-  if (amount === 0) return { success: false, message: "Amount must be non-zero" }
+  if (amount <= 0) return { success: false, message: "Amount must be positive. Use order cancellation for deductions." }
 
   const { data: points } = await supabase
     .from("loyalty_points")
     .select("balance")
     .eq("user_id", userId)
     .maybeSingle()
-
-  const currentBalance = points?.balance || 0
-
-  if (amount < 0 && currentBalance + amount < 0) {
-    return { success: false, message: `User only has ${currentBalance} coins — cannot deduct ${Math.abs(amount)}` }
-  }
 
   if (!points) {
     await supabase.from("loyalty_points").insert({
@@ -402,28 +390,26 @@ export async function adminAdjustPoints(userId: string, amount: number, note: st
 
   const { error: txErr } = await supabase.from("loyalty_transactions").insert({
     user_id: userId,
-    type: amount > 0 ? "bonus" : "spend",
+    type: "bonus",
     amount: Math.abs(amount),
     reference_type: "admin",
     status: "available",
-    note: `Admin ${amount > 0 ? "credited" : "deducted"}: ${note}`,
+    note: `Admin credited: ${note}`,
   })
 
   if (txErr) return { success: false, message: txErr.message }
 
-  // Update lifetime_earned when crediting bonus
-  if (amount > 0) {
-    const { data: lp } = await supabase
-      .from("loyalty_points")
-      .select("lifetime_earned")
-      .eq("user_id", userId)
-      .maybeSingle()
-    if (lp) {
-      await supabase.from("loyalty_points").update({
-        lifetime_earned: (lp.lifetime_earned || 0) + amount,
-        updated_at: new Date().toISOString(),
-      }).eq("user_id", userId)
-    }
+  // Update lifetime_earned for bonus credit
+  const { data: lp } = await supabase
+    .from("loyalty_points")
+    .select("lifetime_earned")
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (lp) {
+    await supabase.from("loyalty_points").update({
+      lifetime_earned: (lp.lifetime_earned || 0) + Math.abs(amount),
+      updated_at: new Date().toISOString(),
+    }).eq("user_id", userId)
   }
 
   revalidatePath("/admin/rewards/users")
