@@ -39,7 +39,7 @@
 ## Session 2026-07-25 — Production Audit & APK Fixes
 - **Bulk progress indicators**: Added "Saving 1 of N" progress bar to both inventory (`inventory-registry-wrapper.tsx`) and pricing (`pricing-table.tsx`)
 - **Production audit**: fixed `.gitignore` (`fallback-*.js`, `swe-worker-*.js`), removed ~8.5MB unreferenced public images, fixed `offline.html` brand name, removed unused imports in `cart/page.tsx`, added security headers in `next.config.ts`, updated npm packages, removed tracked PWA build artifacts
-- **Push test button**: created `/api/admin/broadcast/test/route.ts` + "SEND TEST TO MY DEVICE" button on broadcast page
+- **Push test button**: created `/api/admin/broadcast/test/route.ts`; broadcast page redesigned (2026-08-28) to corporate style — stat strip (Devices/Users/FCM Service), composer card with pink primary CTA + status banner, phone preview card, FCM key diagnostics + "Register This Device for FCM" card
 - **Google Sign-In nonce fix**: added `crypto.randomUUID()` in `initGoogleAuth()` to fix "passed nonce and nonce_id should both both exist or not" error in Capacitor
 - **Safe area**: created `CapacitorSafeArea` component — queries `StatusBar.getInfo().height`, sets `--safe-area-top` CSS var; CSS `.is-capacitor #app-scroller { padding-top: var(--safe-area-top, 28px) }`
 - **AndroidManifest**: added `POST_NOTIFICATIONS` permission, `AppTheme.NoActionBar` theme, `usesCleartextTraffic=false`, deep link intent filter (`https://themakeupstorewangkhei.com`), `adjustResize` soft input mode
@@ -203,5 +203,5 @@
 - **App icon**: Custom store logo (from `public/icon-192x192-v2.png`) set at all mipmap densities, white adaptive icon background
 - **Splash screen**: White background with `launchShowDuration: 2000` via SplashScreen plugin; `splash.png` in drawable for launch theme; plugin is `@capacitor/splash-screen`
 - **Firebase Push Notifications**: Uses `@capacitor-firebase/messaging` (v8.3.0) for FCM via service account auth (v1 API); requires `google-services.json` at `android/app/` and `FIREBASE_SERVICE_ACCOUNT_KEY` env var server-side (the full JSON from Firebase Admin SDK service account, set as a multiline env var on Hostinger)
-- **Push token storage**: `push_subscriptions` table now has `fcm_token` + `platform` columns; `PushInitializer` detects Capacitor vs browser and registers accordingly (FCM or Web Push)
-- **Dual push sending**: `/api/admin/broadcast` and order notifications send via both Web Push (for PWA) and FCM v1 API (for Capacitor); invalid tokens cleaned up automatically
+- **Push token storage**: `push_subscriptions` table has `fcm_token` + `platform` (default `'android'`) columns; `PushInitializer` registers FCM only on Capacitor
+- **FCM-only push sending**: `/api/admin/broadcast` and order notifications send via FCM v1 API only (`@/lib/fcm-send`); invalid tokens cleaned up automatically. **Web Push removed (2026-08-28)** — `web-push` deps uninstalled, `endpoint`/`subscription_json` columns dropped in `20260828_push_subscriptions_fcm_only.sql`, `NotificationSettings` rewritten to Capacitor-only (no service worker/VAPID)

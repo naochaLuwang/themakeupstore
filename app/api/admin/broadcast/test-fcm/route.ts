@@ -98,30 +98,26 @@ export async function POST(req: Request) {
             return NextResponse.json({ ...results, warning: "No FCM tokens found. Install the app and log in to register.", success: true, step: "no_fcm_tokens" })
         }
 
-        const FCM_ENDPOINT_URL = `https://fcm.googleapis.com/v1/projects/the-makeup-store-7dad3/messages:send`
-        const message = {
-            message: {
-                token: fcmTokens[0],
-                notification: { title: "Test Notification", body: "FCM is working!" },
-                android: { priority: 'high', notification: { sound: 'default', channelId: 'push-notifications' } },
-            }
+        // Fan out to EVERY registered token so the admin's own device gets it too.
+        const { sendFcmMulticast } = await import('@/lib/fcm-send')
+        const result = await sendFcmMulticast(fcmTokens, "Test Notification", "FCM is working!", "/")
+
+        let staleRemoved = 0
+        for (const token of result.invalidTokens) {
+            await supabase.from('push_subscriptions').delete().eq('fcm_token', token)
+            staleRemoved++
         }
 
-        const fcmRes = await fetch(FCM_ENDPOINT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-            body: JSON.stringify(message),
+        results.sentCount = result.sentCount
+        results.staleRemoved = staleRemoved
+
+        return NextResponse.json({
+            ...results,
+            success: true,
+            step: "fcm_sent",
+            message: `Test notification sent to ${result.sentCount} of ${fcmTokens.length} device(s)${staleRemoved ? ` · ${staleRemoved} stale token(s) removed` : ""}`,
+            warning: result.sentCount === 0 ? "FCM returned no failures but nothing was delivered — check the app side." : undefined,
         })
-
-        const fcmBody = await fcmRes.text()
-        results.fcmStatus = fcmRes.status
-        results.fcmResponse = fcmBody.substring(0, 300)
-
-        if (!fcmRes.ok) {
-            return NextResponse.json({ ...results, error: "FCM send failed", detail: fcmBody.substring(0, 500), step: "fcm_send_failed" }, { status: 200 })
-        }
-
-        return NextResponse.json({ ...results, success: true, step: "fcm_sent", message: `Test sent via FCM to ${fcmTokens.length} device(s)` })
     } catch (error: any) {
         return NextResponse.json({ error: error.message, step: "unknown" }, { status: 200 })
     }

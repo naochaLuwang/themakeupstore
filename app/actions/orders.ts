@@ -1580,52 +1580,32 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
             } catch {}
         }
 
-        // Push notification
+        // Push notification (FCM only)
         const bodyText = PUSH_MESSAGES[newStatus]
         if (bodyText && order.user_id) {
             const { data: subs } = await supabase
                 .from('push_subscriptions')
-                .select('*')
+                .select('fcm_token')
                 .eq('user_id', order.user_id)
+                .not('fcm_token', 'is', null)
 
-            if (subs?.length) {
-                const fcmTokens: string[] = []
-                for (const s of subs) {
-                    if (s.fcm_token) {
-                        fcmTokens.push(s.fcm_token)
-                    } else if (s.subscription_json) {
-                        try {
-                            await fetch('/api/push', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    subscription: s.subscription_json,
-                                    payload: {
-                                        title: `Order Update: ${newStatus.toUpperCase()}`,
-                                        body: bodyText,
-                                        url: `/profile/orders/${orderId}`
-                                    }
-                                })
-                            })
-                        } catch {}
-                    }
-                }
-                if (fcmTokens.length > 0) {
-                    try {
-                        const { sendFcmMulticast } = await import('@/lib/fcm-send')
-                        const result = await sendFcmMulticast(
-                            fcmTokens,
-                            `Order Update: ${newStatus.toUpperCase()}`,
-                            bodyText,
-                            `/profile/orders/${orderId}`
-                        )
-                        if (result.invalidTokens.length > 0) {
-                            for (const token of result.invalidTokens) {
-                                await supabase.from('push_subscriptions').delete().eq('fcm_token', token)
-                            }
+            const fcmTokens = (subs || []).map((s: any) => s.fcm_token).filter(Boolean)
+
+            if (fcmTokens.length > 0) {
+                try {
+                    const { sendFcmMulticast } = await import('@/lib/fcm-send')
+                    const result = await sendFcmMulticast(
+                        fcmTokens,
+                        `Order Update: ${newStatus.toUpperCase()}`,
+                        bodyText,
+                        `/profile/orders/${orderId}`
+                    )
+                    if (result.invalidTokens.length > 0) {
+                        for (const token of result.invalidTokens) {
+                            await supabase.from('push_subscriptions').delete().eq('fcm_token', token)
                         }
-                    } catch {}
-                }
+                    }
+                } catch {}
             }
         }
 
