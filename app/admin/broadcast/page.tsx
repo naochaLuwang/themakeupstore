@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
     Send,
     Activity,
@@ -22,10 +22,23 @@ import { toast } from "sonner"
 export default function AdminBroadcastForm() {
     const supabase = createClient()
     const [form, setForm] = useState({ title: "", body: "", url: "" })
+    const [targetUserIds, setTargetUserIds] = useState<string[]>([])
+    const [targetMode, setTargetMode] = useState<"all" | "users">("all")
     const [loading, setLoading] = useState(false)
     const [status, setStatus] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null)
     const [stats, setStats] = useState({ devices: 0, users: 0 })
     const [devices, setDevices] = useState<any[]>([])
+
+    const userOptions = useMemo(() => {
+        const map = new Map<string, { user_id: string; full_name: string }>()
+        for (const d of devices) {
+            if (!d.user_id) continue
+            if (!map.has(d.user_id)) {
+                map.set(d.user_id, { user_id: d.user_id, full_name: d.profiles?.full_name || "Unknown user" })
+            }
+        }
+        return [...map.values()].sort((a, b) => a.full_name.localeCompare(b.full_name))
+    }, [devices])
 
     const fetchNetworkStats = async () => {
         try {
@@ -64,13 +77,15 @@ export default function AdminBroadcastForm() {
             const res = await fetch('/api/admin/broadcast', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form)
+                body: JSON.stringify({ ...form, targetUserIds })
             })
             const data = await res.json()
             if (data.success) {
                 if (data.totalDevices === 0) setMsg("info", data.details || "No FCM devices found")
+                else if (data.targeted) setMsg("success", `Sent to ${data.totalDevices} device(s) for ${data.userCount} user(s): ${(data.users || []).join(", ")}${data.failedDevices ? ` · ${data.failedDevices} invalid removed` : ""}`)
                 else setMsg("success", `Broadcast delivered to ${data.totalDevices} device${data.totalDevices === 1 ? "" : "s"}${data.failedDevices ? ` · ${data.failedDevices} invalid removed` : ""}`)
                 setForm({ title: "", body: "", url: "" })
+                setTargetUserIds([])
                 fetchNetworkStats()
             } else {
                 setMsg("error", data.error || "Broadcast failed.")
@@ -342,14 +357,65 @@ export default function AdminBroadcastForm() {
                         </div>
                     </div>
 
+                    <div className="space-y-2">
+                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Audience</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                                onClick={() => { setTargetMode("all"); setTargetUserIds([]) }}
+                                className={`h-11 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
+                                    targetMode === "all"
+                                        ? "border-pink-300 bg-pink-50 text-pink-700"
+                                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                                }`}
+                            >
+                                <Users className="w-4 h-4" />
+                                All {stats.users} Users
+                            </button>
+                            <button
+                                onClick={() => setTargetMode("users")}
+                                className={`h-11 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
+                                    targetMode === "users"
+                                        ? "border-pink-300 bg-pink-50 text-pink-700"
+                                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                                }`}
+                            >
+                                <Smartphone className="w-4 h-4" />
+                                Specific Users
+                            </button>
+                        </div>
+                        {targetMode === "users" && (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2 space-y-2 max-h-56 overflow-y-auto">
+                                {userOptions.length === 0 && (
+                                    <p className="px-2 py-1 text-xs text-slate-400 font-medium">No registered devices yet</p>
+                                )}
+                                {userOptions.map(u => (
+                                    <label key={u.user_id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white cursor-pointer transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={targetUserIds.includes(u.user_id)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) setTargetUserIds(ids => [...ids, u.user_id])
+                                                else setTargetUserIds(ids => ids.filter(id => id !== u.user_id))
+                                            }}
+                                            className="accent-pink-600 w-4 h-4"
+                                        />
+                                        <span className={`text-xs font-medium truncate ${targetUserIds.includes(u.user_id) ? "text-slate-800" : "text-slate-500"}`}>
+                                            {u.full_name}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="space-y-3 pt-1">
                         <button
                             onClick={sendBroadcast}
-                            disabled={loading || !form.title || !form.body || stats.devices === 0}
+                            disabled={loading || !form.title || !form.body || stats.devices === 0 || (targetMode === "users" && targetUserIds.length === 0)}
                             className="w-full h-11 bg-pink-600 hover:bg-pink-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black tracking-wider uppercase rounded-xl flex items-center justify-center gap-2 transition-colors"
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                            {loading ? "SENDING..." : `Broadcast to ${stats.devices} device${stats.devices === 1 ? "" : "s"}`}
+                            {loading ? "SENDING..." : targetUserIds.length > 0 ? `Send to ${targetUserIds.length} user${targetUserIds.length === 1 ? "" : "s"}` : `Broadcast to ${stats.devices} device${stats.devices === 1 ? "" : "s"}`}
                         </button>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button

@@ -170,11 +170,15 @@ export async function redeemCoinsAtCheckout(userId: string, orderId: string, amo
   if (amount <= 0) return { success: false, message: "Invalid amount" }
 
   // Atomic balance check + insert in one locked transaction — prevents race condition double-spend
-  const { data: success } = await supabase.rpc("atomic_redeem_coins", {
+  const { data: success, error } = await supabase.rpc("atomic_redeem_coins", {
     p_user_id: userId,
     p_amount: amount,
     p_order_id: orderId,
   })
+  if (error) {
+    console.error("[redeemCoinsAtCheckout] RPC failed:", error.message)
+    return { success: false, message: `Redemption error: ${error.message}` }
+  }
   if (!success) return { success: false, message: "Insufficient coins" }
 
   revalidatePath("/rewards")

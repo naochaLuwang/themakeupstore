@@ -28,7 +28,10 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [tierFilter, setTierFilter] = useState("all")
+  const [spentFilter, setSpentFilter] = useState("all")
   const [hideZero, setHideZero] = useState(true)
+
+  const hasSpentUsers = users.filter(u => u.lifetime_spent > 0).length
 
   const filtered = useMemo(() => {
     let result = users
@@ -42,6 +45,12 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
     }
     if (tierFilter !== "all") {
       result = result.filter(u => u.tier === tierFilter)
+    }
+    if (spentFilter === "spent") {
+      result = result.filter(u => u.lifetime_spent > 0)
+    }
+    if (spentFilter === "no-spent") {
+      result = result.filter(u => u.lifetime_spent === 0)
     }
     if (hideZero) {
       result = result.filter(u => u.balance > 0)
@@ -109,7 +118,7 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
             </div>
             <div>
               <div className="text-2xl font-black text-rose-600">{totalSpent.toLocaleString("en-IN")}</div>
-              <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Lifetime Spent</div>
+              <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Lifetime Spent · {hasSpentUsers} user{hasSpentUsers === 1 ? "" : "s"}</div>
             </div>
           </div>
         </div>
@@ -156,6 +165,20 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
             <option value="gold">Gold</option>
             <option value="silver">Silver</option>
             <option value="bronze">Bronze</option>
+          </select>
+        </div>
+
+        {/* Spent filter */}
+        <div className="relative">
+          <ArrowDownRight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <select
+            value={spentFilter}
+            onChange={e => setSpentFilter(e.target.value)}
+            className="h-10 pl-9 pr-8 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 focus:outline-none focus:border-rose-300 appearance-none cursor-pointer"
+          >
+            <option value="all">All Redemptions</option>
+            <option value="spent">Spent M Coins ({hasSpentUsers})</option>
+            <option value="no-spent">Never Spent</option>
           </select>
         </div>
 
@@ -214,7 +237,12 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
                       <span className="text-sm font-semibold text-emerald-600 tabular-nums">{user.lifetime_earned.toLocaleString("en-IN")}</span>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <span className="text-sm font-semibold text-rose-500 tabular-nums">{user.lifetime_spent.toLocaleString("en-IN")}</span>
+                      <div className="flex items-center justify-end gap-2">
+                        <span className={`text-sm font-semibold tabular-nums ${user.lifetime_spent > 0 ? "text-rose-600" : "text-slate-300"}`}>{user.lifetime_spent.toLocaleString("en-IN")}</span>
+                        {user.lifetime_spent > 0 && (
+                          <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-full">Redeemed</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-6 text-center">
                       {user.pending > 0 ? (

@@ -1,0 +1,55 @@
+-- Fix atomic coin redemption: p_order_id was inserted into the UUID reference_id column
+-- without a cast, so redemption threw 42804, was swallowed by the caller's try/catch,
+-- the discount applied but coins were never deducted / no spend tx recorded (double-spend).
+-- Run this in the Supabase SQL Editor.
+
+-- Drop the buggy TEXT-signature versions first so we replace (not overload) the RPC.
+DROP FUNCTION IF EXISTS public.atomic_redeem_coins(UUID, INTEGER, TEXT);
+DROP FUNCTION IF EXISTS public.atomic_reverse_coins(TEXT);
+
+CREATE OR REPLACE FUNCTION atomic_redeem_coins(p_user_id UUID, p_amount INTEGER, p_order_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  current_balance INTEGER;
+BEGIN
+  SELECT balance INTO current_balance FROM loyalty_points WHERE user_id = p_user_id FOR UPDATE;
+  IF COALESCE(current_balance, 0) < p_amount THEN
+    RETURN FALSE;
+  END IF;
+
+  INSERT INTO loyalty_transactions (user_id, type, amount, reference_type, reference_id, status, note)
+  VALUES (p_user_id, 'spend', p_amount, 'order', p_order_id, 'available',
+          p_amount || ' M Coins redeemed at checkout');
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Atomic coin reversal: used on order cancellation
+CREATE OR REPLACE FUNCTION atomic_reverse_coins(p_order_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  tx_record RECORD;
+BEGIN
+  SELECT id, user_id, amount INTO tx_record
+  FROM loyalty_transactions
+  WHERE reference_id = p_order_id
+    AND type = 'spend'
+    AND reference_type = 'order'
+    AND status = 'available'
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN 0;
+  END IF;
+
+  UPDATE loyalty_transactions
+  SET status = 'cancelled', note = note || ' (reversed on cancel)'
+  WHERE id = tx_record.id;
+
+  RETURN tx_record.amount;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Guard: existing supply-chain usage passes order UUID strings — PostgREST will cast a
+-- valid UUID string to the p_order_id UUID parameter automatically.
