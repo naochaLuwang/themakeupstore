@@ -253,6 +253,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                 title: first.title,
                 price: first.price,
                 calculated_price: vp.salePrice,
+                mrp: vp.mrp,
                 image_url: first.image_url || null,
                 stock: first.stock,
                 hex_code: first.hex_code,
@@ -281,9 +282,10 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
     const finalPrice = selectedVariantData
         ? selectedVariantData.calculated_price
         : (calculateDiscountPercentage(0, 0) > 0 ? 0 : sellingPrice)
+    const displayMrp = selectedVariantData?.price || sellingPrice
     const discountPct = calculateDiscountPercentage(
         selectedVariantData?.calculated_price || sellingPrice,
-        sellingPrice
+        displayMrp
     )
 
     const hasVariants = product?.has_variants && product?.product_variants?.length > 0
@@ -663,7 +665,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         </span>
                         {discountPct > 0 && (
                             <>
-                                <span className="text-sm text-gray-400 line-through">₹{Math.round(sellingPrice)}</span>
+                                <span className="text-sm text-gray-400 line-through">₹{Math.round(displayMrp)}</span>
                                 <span className="text-[11px] font-bold text-[#fc2779] bg-[#fc2779]/10 px-2 py-0.5 rounded">{discountPct}% off</span>
                             </>
                         )}
@@ -1083,7 +1085,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                 </span>
                                 {discountPct > 0 && (
                                     <>
-                                        <span className="text-base text-gray-400 line-through">₹{Math.round(sellingPrice)}</span>
+                                        <span className="text-base text-gray-400 line-through">₹{Math.round(displayMrp)}</span>
                                         <span className="text-xs font-bold text-[#fc2779] bg-[#fc2779]/10 px-2.5 py-0.5 rounded">{discountPct}% off</span>
                                     </>
                                 )}
