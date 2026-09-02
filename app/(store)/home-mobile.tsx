@@ -146,7 +146,7 @@ export function HomeMobile({ banner, categories, products, forever52Products, pa
       {/* SHIPPING BANNER */}
       <div className="bg-gradient-to-r from-[#fc2779]/5 via-[#fc2779]/10 to-[#fc2779]/5 py-3">
         <div className="flex items-center justify-center gap-2">
-          <Rocket className="w-4 h-4 text-[#fc2779]" />
+          {/* <Rocket className="w-4 h-4 text-[#fc2779]" /> */}
           <p className="text-[#fc2779] font-bold text-xs tracking-wide">
             FREE SHIPPING ABOVE ₹2999 — IMPHAL EAST & WEST
           </p>

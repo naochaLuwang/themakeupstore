@@ -23,17 +23,18 @@ export async function notifyBackInStock(variantId: string) {
     // 2. Get product info for messages
     const { data: variant } = await supabase
         .from("product_variants")
-        .select("title, products(name, slug)")
+        .select("title, image_url, products(id, name, slug, thumbnail_url)")
         .eq("id", variantId)
         .single()
 
     const productName = (variant?.products as any)?.name || "a product"
     const variantName = variant?.title || ""
-    const productSlug = (variant?.products as any)?.slug || ""
-    const productUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://themakeupstorewangkhei.com"}/products/${productSlug}`
+    const productId = (variant?.products as any)?.id || pending[0].product_id || ""
+    const productUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://themakeupstorewangkhei.com"}/products/${productId}`
+    const imageUrl = variant?.image_url || (variant?.products as any)?.thumbnail_url || null
 
     // 3. Match emails to profiles to find logged-in users
-    const emails = [...new Set(pending.map(n => n.email).filter(Boolean))]
+    const emails = Array.from(new Set(pending.map(n => n.email).filter(Boolean)))
     const { data: profiles } = emails.length > 0
         ? await supabase.from("profiles").select("id, email").in("email", emails)
         : { data: [] }
@@ -59,7 +60,7 @@ export async function notifyBackInStock(variantId: string) {
     let emailSent = 0
 
     for (const n of pending) {
-        const profile = n.email ? profileByEmail.get(n.email) : null
+        const profile = n.email ? (profileByEmail.get(n.email) as any) : null
         const userId = profile?.id
 
         // Push notification (only for logged-in users with push subscriptions)
@@ -88,6 +89,7 @@ export async function notifyBackInStock(variantId: string) {
                 productName,
                 variantName,
                 productUrl,
+                imageUrl,
             })
             emailSent++
         } catch (err) {

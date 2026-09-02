@@ -1,7 +1,10 @@
-import { getLoyaltyStats } from "@/app/actions/loyalty"
+import { getEnhancedLoyaltyStats, getStuckPendingPoints } from "@/app/actions/rewards-admin"
 import { AdminRewardsClient } from "./client"
 
 export default async function AdminRewardsPage() {
-    const stats = await getLoyaltyStats()
-    return <AdminRewardsClient stats={stats} />
+    const [stats, stuckPending] = await Promise.all([
+        getEnhancedLoyaltyStats(),
+        getStuckPendingPoints(),
+    ])
+    return <AdminRewardsClient stats={stats} stuckPending={stuckPending} />
 }

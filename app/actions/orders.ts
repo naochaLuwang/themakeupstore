@@ -1572,8 +1572,8 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
             }
         }
 
-        // Release loyalty points on delivery
-        if (newStatus === "delivered" && oldStatus !== "delivered") {
+        // Release loyalty points on delivery or pickup
+        if ((newStatus === "delivered" || newStatus === "picked_up") && oldStatus !== "delivered" && oldStatus !== "picked_up") {
             try {
                 const { releasePendingPoints } = await import("./loyalty")
                 await releasePendingPoints(orderId)
@@ -1664,14 +1664,100 @@ export async function deleteOrder(orderId: string) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error("Authentication required")
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single()
+        const [orderRes, profileRes] = await Promise.all([
+            supabase
+                .from('orders')
+                .select('user_id, payment_method, payment_status, razorpay_payment_id, coin_discount_amount, order_items(product_variant_id, quantity)')
+                .eq('id', orderId)
+                .single(),
+            supabase
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', user.id)
+                .single()
+        ])
 
-        if (!profile?.is_admin) throw new Error("Admin access required")
+        if (orderRes.error || !orderRes.data) throw new Error("Order not found")
 
+        const order = orderRes.data
+        const isAdmin = profileRes.data?.is_admin || false
+
+        if (!isAdmin) throw new Error("Admin access required")
+
+        // 1. Process Razorpay refund if paid via Razorpay
+        if (order.payment_method === 'razorpay' && order.payment_status === 'paid' && order.razorpay_payment_id) {
+            try {
+                const { default: Razorpay } = await import("razorpay")
+                const razorpay = new Razorpay({
+                    key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+                    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+                })
+                await razorpay.payments.refund(order.razorpay_payment_id, {})
+            } catch (refundErr) {
+                console.error("Razorpay refund error during delete:", refundErr)
+                throw new Error("Failed to process Razorpay refund — order was not deleted")
+            }
+        }
+
+        // 2. Void loyalty points for this order (pending + available earn transactions)
+        try {
+            const { data: earnTxs } = await supabase
+                .from("loyalty_transactions")
+                .select("id, user_id, amount, status")
+                .eq("reference_id", orderId)
+                .eq("reference_type", "order")
+                .in("type", ["earn", "bonus"])
+                .in("status", ["pending", "available"])
+
+            if (earnTxs && earnTxs.length > 0) {
+                const totalToDeduct = earnTxs.reduce((sum, tx) => sum + tx.amount, 0)
+
+                await supabase
+                    .from("loyalty_transactions")
+                    .update({ status: "cancelled", note: "Order deleted — points voided" })
+                    .in("id", earnTxs.map(tx => tx.id))
+
+                const userId = earnTxs[0].user_id
+                const { data: lp } = await supabase
+                    .from("loyalty_points")
+                    .select("balance, lifetime_earned")
+                    .eq("user_id", userId)
+                    .maybeSingle()
+                if (lp) {
+                    await supabase.from("loyalty_points").update({
+                        balance: Math.max(0, lp.balance - totalToDeduct),
+                        lifetime_earned: Math.max(0, (lp.lifetime_earned || 0) - totalToDeduct),
+                        updated_at: new Date().toISOString(),
+                    }).eq("user_id", userId)
+                }
+            }
+        } catch (err) {
+            console.error("Loyalty reversal error during delete:", err)
+            throw new Error("Failed to reverse loyalty points — order was not deleted")
+        }
+
+        // 3. Reverse coin redemption if coins were used at checkout
+        try {
+            const { reverseCoinRedemption } = await import("./loyalty")
+            await reverseCoinRedemption(orderId)
+        } catch (err) {
+            console.error("Coin reversal error during delete:", err)
+            throw new Error("Failed to reverse coin redemption — order was not deleted")
+        }
+
+        // 4. Restore stock
+        const items = order.order_items || []
+        for (const item of items) {
+            if (!item.product_variant_id) continue
+            try {
+                await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
+            } catch (err) {
+                console.error("Stock restore error during delete:", err)
+                throw new Error("Failed to restore stock — order was not deleted")
+            }
+        }
+
+        // 5. Delete order items then the order itself
         const { error: itemsErr } = await supabase
             .from('order_items')
             .delete()
@@ -1687,6 +1773,9 @@ export async function deleteOrder(orderId: string) {
         if (orderErr) throw orderErr
 
         revalidatePath('/admin/orders')
+        revalidatePath('/admin/products')
+        revalidatePath('/profile')
+        revalidatePath(`/profile/orders/${orderId}`)
         return { success: true }
     } catch (error: any) {
         console.error("DELETE_ORDER_ERROR:", error)

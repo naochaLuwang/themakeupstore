@@ -36,25 +36,37 @@ export default function AuthPage() {
 
     const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()
 
-    const handleGoogleLogin = useCallback(async () => {
+const handleGoogleLogin = useCallback(async () => {
         if (isCapacitor) {
-            try {
-                const { nativeGoogleSignIn } = await import('@/lib/capacitor-google-auth')
-                const result = await nativeGoogleSignIn()
-                if (!result) {
-                    toast.error('Google sign-in cancelled')
-                    return
+            // Detect platform: use Google One Tap only on Android; use web OAuth on iOS
+            const isAndroid = (window as any).Capacitor?.getPlatform()?.toLowerCase() === 'android'
+            if (isAndroid) {
+                try {
+                    const { nativeGoogleSignIn } = await import('@/lib/capacitor-google-auth')
+                    const result = await nativeGoogleSignIn()
+                    if (!result) {
+                        toast.error('Google sign-in cancelled')
+                        return
+                    }
+                    const { error } = await supabase.auth.signInWithIdToken({
+                        provider: 'google',
+                        token: result.idToken,
+                        nonce: result.nonce,
+                    })
+                    if (error) toast.error('Supabase error: ' + error.message)
+                } catch (err: any) {
+                    toast.error(err?.message || 'Google sign-in failed')
                 }
-                const { error } = await supabase.auth.signInWithIdToken({
+            } else {
+                // iOS or other platforms: use standard OAuth flow
+                const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
-                    token: result.idToken,
-                    nonce: result.nonce,
+                    options: { redirectTo: `${window.location.origin}/auth/callback` },
                 })
-                if (error) toast.error('Supabase error: ' + error.message)
-            } catch (err: any) {
-                toast.error(err?.message || 'Google sign-in failed')
+                if (error) toast.error(error.message)
             }
         } else {
+            // Web
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: { redirectTo: `${window.location.origin}/auth/callback` },

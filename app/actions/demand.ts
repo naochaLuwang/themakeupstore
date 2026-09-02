@@ -12,8 +12,8 @@ export async function markNotified(variantId: string) {
         .from("back_in_stock_notifications")
         .select(`
             id, email, user_name,
-            products!inner(slug, name),
-            product_variants!inner(title)
+            products!inner(id, slug, name, thumbnail_url),
+            product_variants!inner(title, image_url)
         `)
         .eq("product_variant_id", variantId)
         .eq("is_notified", false)
@@ -29,7 +29,8 @@ export async function markNotified(variantId: string) {
                 userName: n.user_name,
                 productName: (n.products as any).name,
                 variantName: (n.product_variants as any).title,
-                productUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://themakeupstorewangkhei.com"}/products/${(n.products as any).slug}`,
+                productUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://themakeupstorewangkhei.com"}/products/${(n.products as any).id}`,
+                imageUrl: (n.product_variants as any).image_url || (n.products as any).thumbnail_url,
             })
         )
     )

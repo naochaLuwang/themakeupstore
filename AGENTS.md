@@ -36,6 +36,18 @@
 ### Blocked
 - (none)
 
+## Session 2026-09-01 — deleteOrder Full Reconciliation
+- **Bug fix**: `deleteOrder()` now performs full financial reconciliation before hard-deleting an order — mirrors `cancelOrderAndRestoreStock` but finishes with permanent removal
+- Reconciliation steps: Razorpay refund → void earned loyalty points → reverse coin redemption → restore stock → delete order items → delete order
+- Error messages explicitly state "order was not deleted" if any step fails, preventing partial deletes
+- `app/actions/orders.ts` `deleteOrder()` — rewritten to fetch order with items/profile in one query, then process all reversals before deleting
+
+## Session 2026-09-01 — Loyalty Points Fix
+- **Bug fix**: Loyalty points were incorrectly available for spending immediately upon order placement, even when marked as "pending"
+- Root cause: Database trigger `public.update_points_balance()` was updating `loyalty_points.balance` on INSERT of any transaction, regardless of status
+- Fix: Modified trigger to only update balance when transaction status is `'available'` (or for insert of spend/expired transactions which are immediately available)
+- Migration: `supabase/migrations/20260901_fix_loyalty_pending_balance.sql` — new function that handles INSERT and UPDATE, updating balance only for available transactions
+
 ## Session 2026-07-25 — Production Audit & APK Fixes
 - **Bulk progress indicators**: Added "Saving 1 of N" progress bar to both inventory (`inventory-registry-wrapper.tsx`) and pricing (`pricing-table.tsx`)
 - **Production audit**: fixed `.gitignore` (`fallback-*.js`, `swe-worker-*.js`), removed ~8.5MB unreferenced public images, fixed `offline.html` brand name, removed unused imports in `cart/page.tsx`, added security headers in `next.config.ts`, updated npm packages, removed tracked PWA build artifacts
@@ -185,6 +197,39 @@
 - `app/(store)/shop/shop-client.tsx`: fetches active flash sales client-side (30s polling), findBestFlashSale matching, passes to ProductCard
 - `components/store/product-card.tsx`: renders flash sale badge + FlashSaleCountdown + discounted price
 - `app/(store)/products/[id]/product-client.tsx`: product detail — server-side flash sale, FlashSaleCountdown in mobile + desktop views
+
+## Admin Rewards Dashboard (Redesigned 2026-08-31)
+
+### Analytics Dashboard (`/admin/rewards`)
+- **Stats**: Total liability (₹), redemption rate, total users, pending points, reward products count, coupons count
+- **Charts**: 6-month earnings vs spend bar chart, tier distribution with progress bars, earning source breakdown
+- **Stuck Pending Alert**: Flags orders older than 7 days with unreleased loyalty points
+- **Quick Links**: Reward products CRUD, coupon management, transaction logs
+
+### Reward Products (`/admin/rewards/products`)
+- CRUD for `reward_products` table — supports `product` and `coupon` reward types
+- Coupon type includes `discount_amount` and `min_order_value` fields
+- List page with status/stock/type badges, delete with confirmation
+- Form shared between add/edit routes
+
+### Coupons (`/admin/rewards/coupons`)
+- Lists all `reward_coupons` with user info, discount, status
+- Stats strip: total issued, used, unused
+- Revoke button for unused coupons (marks as used)
+
+### Transaction Log (`/admin/rewards/transactions`)
+- Global view of all `loyalty_transactions` with search/filter
+- Filters: type (earn/spend/bonus/expired), status (pending/available/cancelled)
+- Summary: total earned, spent, pending
+
+### Files
+- `app/actions/rewards-admin.ts`: getEnhancedLoyaltyStats, getStuckPendingPoints, reward product CRUD, coupon list/revoke, global transactions
+- `app/admin/rewards/page.tsx`: server component fetching stats + stuck pending
+- `app/admin/rewards/client.tsx`: analytics dashboard with charts + alerts
+- `app/admin/rewards/products/`: list, new, edit pages + form component
+- `app/admin/rewards/coupons/`: list page + client
+- `app/admin/rewards/transactions/`: list page + client
+- Existing: `app/admin/rewards/users/` — user-level point management (unchanged)
 
 ## Capacitor
 - Android project lives in `android/`, ignored by git

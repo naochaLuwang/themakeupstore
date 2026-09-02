@@ -420,6 +420,44 @@ export async function adminAdjustPoints(userId: string, amount: number, note: st
   return { success: true }
 }
 
+// ─── Admin: reconcile stuck pending points for delivered/picked_up orders ───
+export async function reconcileStuckPendingPoints() {
+  await requireAdmin()
+  const supabase = await createAdminClient()
+
+  // Find terminal orders (delivered or picked up) that have a pending earn transaction older than 1 day
+  const oneDayAgo = new Date(Date.now() - 86400000).toISOString()
+
+  const { data: stuckOrders } = await supabase
+    .from("orders")
+    .select(`
+      id,
+      status,
+      created_at,
+      loyalty_transactions!reference_id!inner(user_id, amount, status, created_at)
+    `)
+    .in("status", ["delivered", "picked_up"])
+    .not("loyalty_transactions", "is", null)
+    .eq("loyalty_transactions.type", "earn")
+    .eq("loyalty_transactions.status", "pending")
+    .lt("loyalty_transactions.created_at", oneDayAgo)
+    .limit(1000)
+
+  if (!stuckOrders || stuckOrders.length === 0) return { released: 0 }
+
+  let released = 0
+  for (const order of stuckOrders) {
+    try {
+      await releasePendingPoints(order.id)
+      released++
+    } catch (err) {
+      console.error(`Failed to release points for order ${order.id}:`, err)
+    }
+  }
+
+  return { released }
+}
+
 // ─── Admin: backfill points for delivered orders missing loyalty transactions ───
 export async function backfillDeliveredOrderPoints() {
   await requireAdmin()

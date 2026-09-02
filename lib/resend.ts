@@ -10,12 +10,14 @@ export async function sendBackInStockEmail({
     productName,
     variantName,
     productUrl,
+    imageUrl,
 }: {
     email: string
     userName: string
     productName: string
     variantName: string
     productUrl?: string
+    imageUrl?: string
 }) {
     if (!EDGE_FUNCTION_URL || !ANON_KEY) {
         console.warn("Supabase URL or ANON_KEY not set — skipping email")
@@ -35,6 +37,7 @@ export async function sendBackInStockEmail({
                 productName,
                 variantName,
                 productUrl,
+                imageUrl,
             }),
         })
 
