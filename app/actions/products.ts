@@ -194,11 +194,11 @@ export async function updateProduct(productId: string, formData: FormData) {
 
         // 5. Sync Variants
         if (payload.has_variants) {
+            // When switching to variant mode, delete ALL existing variants (including the old default "Standard" one)
             const { data: existingVariants } = await supabase
                 .from("product_variants")
                 .select("id")
                 .eq("product_id", productId)
-                .eq("is_default", false)
 
             const existingIds = existingVariants?.map(v => v.id) || []
             const incomingIds = payload.variants
