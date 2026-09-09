@@ -583,16 +583,21 @@ export async function placeOrder(
         const finalTotal = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - verifiedGiftCardAmount - verifiedCoinDiscount + verifiedShippingPrice))
 
         // ── 5. Build order items array ──
-        const orderItems: any[] = verifiedItems.map(item => ({
-            product_id: item.productId,
-            product_variant_id: item.variantId,
-            product_name: item.name,
-            variant_title: item.variantTitle,
-            quantity: item.quantity,
-            unit_price: item.price,
-            mrp: item.mrp || item.price,
-            is_gift: false,
-        }))
+        const orderItems: any[] = verifiedItems.map(item => {
+            const variant = paidVariantMap.get(item.variantId)
+            // Use variant's raw price as true MRP (list price) instead of item.mrp which can be 0 for variant products
+            const trueMrp = variant ? Number(variant.price) : Number(item.mrp || item.price)
+            return {
+                product_id: item.productId,
+                product_variant_id: item.variantId,
+                product_name: item.name,
+                variant_title: item.variantTitle,
+                quantity: item.quantity,
+                unit_price: item.price,
+                mrp: trueMrp,
+                is_gift: false,
+            }
+        })
 
         for (const gift of verifiedGiftItems) {
             if (gift.giftSource === 'ref') {

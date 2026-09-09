@@ -14,9 +14,6 @@ import {
     Gift, Clock, History, Award, Coins, Star, TrendingUp,
 } from "lucide-react"
 
-import { Skeleton } from "boneyard-js/react"
-import { StoreSkeleton } from "@/components/store/store-skeleton"
-
 function formatPrice(amount: number) {
     return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount)
 }
@@ -73,7 +70,22 @@ export function ProfileContent({
         )
     }
 
-    if (!ready) return <Skeleton name="profile" loading={true} fallback={<StoreSkeleton />}><StoreSkeleton /></Skeleton>
+    if (!ready) return (
+        <div className="min-h-screen bg-[#F8F8F8] flex items-center justify-center">
+            <div className="w-full max-w-lg mx-auto px-4 space-y-4 pt-12">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" />
+                    <div className="space-y-1.5">
+                        <div className="h-4 w-32 bg-slate-100 rounded animate-pulse" />
+                        <div className="h-3 w-48 bg-slate-100 rounded animate-pulse" />
+                    </div>
+                </div>
+                <div className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+                <div className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+                <div className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+            </div>
+        </div>
+    )
 
     const handleSignOut = async () => {
         await supabase.auth.signOut()

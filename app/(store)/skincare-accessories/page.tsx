@@ -4,7 +4,6 @@ import * as React from "react"
 import { createClient } from "@/utils/supabase/client"
 import SkincareAccessoriesClient from "./skincare-accessories-client"
 import { Skeleton } from "boneyard-js/react"
-import { StoreSkeleton } from "@/components/store/store-skeleton"
 
 const PAGE_SIZE = 20;
 
@@ -107,7 +106,7 @@ export default function SkincareAccessoriesPage() {
     }
 
     return (
-        <Skeleton name="skincare-accessories" loading={loading} fallback={<StoreSkeleton />}>
+        <Skeleton name="skincare-accessories" loading={loading}>
                 <SkincareAccessoriesClient
                     initialSubcategories={subcategories}
                     initialProducts={allProducts}

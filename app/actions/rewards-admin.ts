@@ -18,7 +18,7 @@ export async function getEnhancedLoyaltyStats() {
     rewardCouponsRes,
   ] = await Promise.all([
     supabase.from("loyalty_points").select("balance, lifetime_earned, tier"),
-    supabase.from("loyalty_points").select("id", { count: "exact", head: true }),
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("loyalty_transactions").select("type, amount, status, reference_type, created_at"),
     supabase.from("loyalty_points").select("tier"),
     supabase.from("reward_products").select("*").order("coins_required", { ascending: true }),

@@ -6,7 +6,6 @@ import { Loader2, SlidersHorizontal, X, Check, ChevronDown } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { motion, AnimatePresence } from "framer-motion"
 import { Skeleton } from "boneyard-js/react"
-import { StoreSkeleton } from "@/components/store/store-skeleton"
 import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 export default function NewArrivalsPage() {
@@ -177,7 +176,7 @@ export default function NewArrivalsPage() {
                     </div>
                 </div>
 
-                <Skeleton name="new-arrivals" loading={loading} fallback={<StoreSkeleton />}>
+                <Skeleton name="new-arrivals" loading={loading}>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
                         {filteredProducts.map((product) => (
                             <ProductCard key={product.id} product={product} />

@@ -3,6 +3,7 @@ import Link from "next/link"
 import { createClient } from "@/utils/supabase/server"
 import { HomeMobile } from "./home-mobile"
 import { HomeDesktop } from "./home-desktop"
+import { HomeTablet } from "./home-tablet"
 import { ProductCard } from "@/components/store/product-card"
 
 export const metadata: Metadata = {
@@ -180,14 +181,19 @@ export default async function GatewayPage() {
 
   return (
     <>
-      {/* DESKTOP: mobile-like scrollable feed */}
-      <div className="hidden md:block">
-        <HomeDesktop banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={kikoProducts} parentCategories={parentCatData || []} shelfProducts={shelfProducts} funSizeProducts={funSizeProducts} />
-      </div>
-
-      {/* MOBILE: native-style scrollable feed */}
+      {/* MOBILE: native-style scrollable feed (< 768px) */}
       <div className="md:hidden">
         <HomeMobile banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={kikoProducts} parentCategories={parentCatData || []} shelfProducts={shelfProducts} showcaseItems={showcaseItems || []} funSizeProducts={funSizeProducts} />
+      </div>
+
+      {/* TABLET: optimized for iPad (768px - 1024px) */}
+      <div className="hidden md:block lg:hidden">
+        <HomeTablet banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={kikoProducts} parentCategories={parentCatData || []} shelfProducts={shelfProducts} funSizeProducts={funSizeProducts} />
+      </div>
+
+      {/* DESKTOP: wide scrollable feed (≥ 1024px) */}
+      <div className="hidden lg:block">
+        <HomeDesktop banner={banners?.[0] || null} categories={categories} products={inStockProducts} forever52Products={kikoProducts} parentCategories={parentCatData || []} shelfProducts={shelfProducts} funSizeProducts={funSizeProducts} />
       </div>
     </>
   )

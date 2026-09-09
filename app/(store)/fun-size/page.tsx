@@ -4,7 +4,6 @@ import * as React from "react"
 import { createClient } from "@/utils/supabase/client"
 import { ProductCard } from "@/components/store/product-card"
 import { Skeleton } from "boneyard-js/react"
-import { StoreSkeleton } from "@/components/store/store-skeleton"
 
 export default function FunSizePage() {
     const [products, setProducts] = React.useState<any[]>([])
@@ -73,7 +72,7 @@ export default function FunSizePage() {
                 </div>
             </div>
 
-            <Skeleton name="fun-size" loading={loading} fallback={<StoreSkeleton />}>
+            <Skeleton name="fun-size" loading={loading}>
                 <div className="mt-6">
                     <div className="flex items-end justify-between px-4 mb-5">
                         <div>

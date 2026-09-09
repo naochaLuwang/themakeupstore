@@ -29,7 +29,7 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
   const [search, setSearch] = useState("")
   const [tierFilter, setTierFilter] = useState("all")
   const [spentFilter, setSpentFilter] = useState("all")
-  const [hideZero, setHideZero] = useState(true)
+  const [hideZero, setHideZero] = useState(false)
 
   const hasSpentUsers = users.filter(u => u.lifetime_spent > 0).length
 
@@ -52,11 +52,11 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
     if (spentFilter === "no-spent") {
       result = result.filter(u => u.lifetime_spent === 0)
     }
-    if (hideZero) {
+    if (hideZero && !search) {
       result = result.filter(u => u.balance > 0)
     }
     return result
-  }, [users, search, tierFilter, hideZero])
+  }, [users, search, tierFilter, spentFilter, hideZero])
 
   // Stats from full unfiltered data
   const totalBalance = users.reduce((s: number, u: any) => s + Number(u.balance), 0)

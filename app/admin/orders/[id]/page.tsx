@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet, Coins } from "lucide-react"
+import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet, Coins, Tag } from "lucide-react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
 import { removeOrderItem, updateOrderDiscount, processPartialRefund, updateOrderDeliveryPartner } from "@/app/actions/orders"
@@ -189,6 +189,13 @@ export default function OrderInvoicePage() {
                         </Button>
                         <Button onClick={() => window.print()} className="rounded-full shadow-lg bg-slate-900 hover:bg-slate-800 transition-all font-bold text-white">
                             <Printer className="w-4 h-4 mr-2" /> Print {isThermal ? 'Receipt' : 'Invoice'}
+                        </Button>
+                        <Button 
+                            onClick={() => window.open(`/admin/orders/${id}/label`, '_blank')}
+                            className="rounded-full shadow-lg bg-emerald-600 hover:bg-emerald-700 transition-all font-bold text-white flex items-center gap-2"
+                        >
+                            <Tag className="w-4 h-4" />
+                            Print Label
                         </Button>
                     </div>
                 </div>

@@ -255,7 +255,7 @@ export async function getLoyaltyStats() {
 
   const [totalPoints, totalUsers, totalRedeemed, tierCounts] = await Promise.all([
     supabase.from("loyalty_points").select("balance"),
-    supabase.from("loyalty_points").select("id", { count: "exact", head: true }),
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("loyalty_transactions").select("amount").eq("type", "spend").eq("status", "available"),
     supabase.from("loyalty_points").select("tier"),
   ])
@@ -278,43 +278,69 @@ export async function adminGetAllUsersPoints(opts?: { search?: string; tier?: st
   await requireAdmin()
   const supabase = await createAdminClient()
 
-  const { data: allTx } = await supabase
-    .from("loyalty_transactions")
-    .select("user_id, type, amount, status, created_at")
-    .order("created_at", { ascending: false })
+  const [allTxRes, pointsRes, profilesRes, ordersRes] = await Promise.all([
+    supabase.from("loyalty_transactions")
+      .select("user_id, type, amount, status, created_at")
+      .order("created_at", { ascending: false }),
+    supabase.from("loyalty_points").select("*"),
+    supabase.from("profiles").select("id, full_name, phone, created_at"),
+    supabase.from("orders").select("user_id, shipping_address, created_at").not("user_id", "is", null),
+  ])
 
-  const { data: pointsData } = await supabase
-    .from("loyalty_points")
-    .select("*")
+  const allTx = allTxRes.data || []
+  const pointsData = pointsRes.data || []
+  const profiles = profilesRes.data || []
+  const orders = ordersRes.data || []
 
-  const pointsMap = new Map((pointsData || []).map((p: any) => [p.user_id, p]))
+  const pointsMap = new Map(pointsData.map((p: any) => [p.user_id, p]))
+
+  // Fallback map from orders if profile is missing
+  const orderUserMap = new Map<string, { full_name: string; phone: string; created_at: string }>()
+  for (const ord of orders) {
+    if (ord.user_id && ord.shipping_address) {
+      if (!orderUserMap.has(ord.user_id)) {
+        orderUserMap.set(ord.user_id, {
+          full_name: (ord.shipping_address as any).full_name || "—",
+          phone: (ord.shipping_address as any).phone || "—",
+          created_at: ord.created_at,
+        })
+      }
+    }
+  }
 
   const userTxMap = new Map<string, { earned: number; spent: number; pending: number; lastActivity: string | null }>()
-  for (const tx of allTx || []) {
+  for (const tx of allTx) {
     const existing = userTxMap.get(tx.user_id) || { earned: 0, spent: 0, pending: 0, lastActivity: null }
     if (tx.type === "earn" || tx.type === "bonus") {
       if (tx.status === "available") existing.earned += tx.amount
       if (tx.status === "pending") existing.pending += tx.amount
     }
-    if (tx.type === "spend") existing.spent += tx.amount
+    if (tx.type === "spend") {
+      if (tx.status !== "cancelled") existing.spent += tx.amount
+    }
     if (!existing.lastActivity) existing.lastActivity = tx.created_at
     userTxMap.set(tx.user_id, existing)
   }
 
   const userIds = [...new Set([
-    ...(pointsData || []).map((p: any) => p.user_id),
-    ...(allTx || []).map(t => t.user_id),
+    ...profiles.map((pr: any) => pr.id),
+    ...pointsData.map((p: any) => p.user_id),
+    ...allTx.map(t => t.user_id),
+    ...orders.map((o: any) => o.user_id).filter(Boolean),
   ])]
 
-  const { data: profiles } = userIds.length > 0
-    ? await supabase.from("profiles").select("id, full_name, phone").in("id", userIds)
-    : { data: [] }
-  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+  const profileMap = new Map(profiles.map((p: any) => [p.id, p]))
 
   let result = userIds.map(userId => {
     const p = pointsMap.get(userId)
     const tx = userTxMap.get(userId) || { earned: 0, spent: 0, pending: 0, lastActivity: null }
     const profile = profileMap.get(userId)
+    const orderFallback = orderUserMap.get(userId)
+
+    const full_name = profile?.full_name || orderFallback?.full_name || "—"
+    const phone = profile?.phone || orderFallback?.phone || "—"
+    const last_activity = tx.lastActivity || profile?.created_at || orderFallback?.created_at || null
+
     return {
       user_id: userId,
       balance: p?.balance ?? 0,
@@ -322,9 +348,9 @@ export async function adminGetAllUsersPoints(opts?: { search?: string; tier?: st
       lifetime_spent: tx.spent,
       pending: tx.pending,
       tier: p?.tier ?? "bronze",
-      full_name: profile?.full_name || "—",
-      phone: profile?.phone || "—",
-      last_activity: tx.lastActivity,
+      full_name,
+      phone,
+      last_activity,
     }
   })
 
@@ -353,7 +379,7 @@ export async function adminGetUserTransactions(userId: string) {
   await requireAdmin()
   const supabase = await createAdminClient()
 
-  const [pointsRes, txRes, profileRes] = await Promise.all([
+  const [pointsRes, txRes, profileRes, orderRes] = await Promise.all([
     supabase.from("loyalty_points").select("*").eq("user_id", userId).maybeSingle(),
     supabase.from("loyalty_transactions")
       .select("*")
@@ -361,12 +387,22 @@ export async function adminGetUserTransactions(userId: string) {
       .order("created_at", { ascending: false })
       .limit(200),
     supabase.from("profiles").select("id, full_name, phone").eq("id", userId).maybeSingle(),
+    supabase.from("orders").select("shipping_address").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ])
+
+  let profile = profileRes.data
+  if (!profile && (orderRes.data?.shipping_address as any)) {
+    profile = {
+      id: userId,
+      full_name: (orderRes.data?.shipping_address as any).full_name || "Customer",
+      phone: (orderRes.data?.shipping_address as any).phone || "—",
+    }
+  }
 
   return {
     points: pointsRes.data || { balance: 0, lifetime_earned: 0, tier: "bronze" },
     transactions: txRes.data || [],
-    profile: profileRes.data || null,
+    profile: profile || null,
   }
 }
 

@@ -86,3 +86,6 @@ WHATSAPP_SETUP_GUIDE.md
 
 # Dev-only debug scripts (load secrets from .env.local)
 /scripts/
+
+# Boneyard generated bones
+/bones/
