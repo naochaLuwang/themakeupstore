@@ -87,7 +87,19 @@ export default function CategoriesPage() {
     }
 
     return (
-        <Skeleton name="categories" loading={loading}>
+        <Skeleton name="categories" loading={loading} fallback={
+            <div className="min-h-screen bg-white">
+                <div className="max-w-2xl mx-auto px-5 pt-2 pb-24">
+                    <div className="mb-6">
+                        <div className="h-9 w-40 bg-slate-100 rounded animate-pulse" />
+                        <div className="h-5 w-56 bg-slate-100 rounded animate-pulse mt-2" />
+                    </div>
+                    <div className="space-y-[18px]">
+                        {[...Array(5)].map((_, i) => <div key={i} className="h-[180px] bg-slate-100 rounded-[26px] animate-pulse" />)}
+                    </div>
+                </div>
+            </div>
+        }>
                 <div className="min-h-screen bg-white">
                     <div className="max-w-2xl mx-auto px-5 pt-2 pb-24">
                         {/* Header */}

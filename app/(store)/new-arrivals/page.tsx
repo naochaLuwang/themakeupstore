@@ -176,7 +176,18 @@ export default function NewArrivalsPage() {
                     </div>
                 </div>
 
-                <Skeleton name="new-arrivals" loading={loading}>
+                <Skeleton name="new-arrivals" loading={loading} fallback={
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="space-y-3">
+                                <div className="aspect-square bg-slate-100 rounded-2xl animate-pulse" />
+                                <div className="h-3 w-20 bg-slate-100 rounded animate-pulse" />
+                                <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+                                <div className="h-4 w-16 bg-slate-100 rounded animate-pulse" />
+                            </div>
+                        ))}
+                    </div>
+                }>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
                         {filteredProducts.map((product) => (
                             <ProductCard key={product.id} product={product} />

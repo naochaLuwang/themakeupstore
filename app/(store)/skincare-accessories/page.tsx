@@ -106,7 +106,26 @@ export default function SkincareAccessoriesPage() {
     }
 
     return (
-        <Skeleton name="skincare-accessories" loading={loading}>
+        <Skeleton name="skincare-accessories" loading={loading} fallback={
+            <div className="min-h-screen bg-white">
+                <div className="max-w-6xl mx-auto px-5 pt-2 pb-20">
+                    <div className="mb-6">
+                        <div className="h-9 w-56 bg-slate-100 rounded animate-pulse" />
+                        <div className="h-4 w-40 bg-slate-100 rounded animate-pulse mt-2" />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="space-y-3">
+                                <div className="aspect-square bg-slate-100 rounded-2xl animate-pulse" />
+                                <div className="h-3 w-20 bg-slate-100 rounded animate-pulse" />
+                                <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+                                <div className="h-4 w-16 bg-slate-100 rounded animate-pulse" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        }>
                 <SkincareAccessoriesClient
                     initialSubcategories={subcategories}
                     initialProducts={allProducts}

@@ -72,7 +72,25 @@ export default function FunSizePage() {
                 </div>
             </div>
 
-            <Skeleton name="fun-size" loading={loading}>
+            <Skeleton name="fun-size" loading={loading} fallback={
+                <div className="mt-6">
+                    <div className="flex items-end justify-between px-4 mb-5">
+                        <div>
+                            <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
+                            <div className="h-6 w-32 bg-slate-100 rounded animate-pulse mt-1" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="space-y-2 p-2">
+                                <div className="aspect-square bg-slate-100 rounded animate-pulse" />
+                                <div className="h-3 w-16 bg-slate-100 rounded animate-pulse" />
+                                <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            }>
                 <div className="mt-6">
                     <div className="flex items-end justify-between px-4 mb-5">
                         <div>
