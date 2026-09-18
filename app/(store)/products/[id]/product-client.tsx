@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { useCart } from "@/components/store/use-cart"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
@@ -91,7 +92,7 @@ function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
     )
 }
 
-export default function ProductClient({ initialProduct, activeBXGY, activeGift, activeFlashSale }: { initialProduct: any; activeBXGY?: any; activeGift?: any; activeFlashSale?: FlashSaleOverride | null }) {
+export default function ProductClient({ initialProduct, activeBXGY, activeGift, activeFlashSale, brandLink }: { initialProduct: any; activeBXGY?: any; activeGift?: any; activeFlashSale?: FlashSaleOverride | null; brandLink?: string | null }) {
     const router = useRouter()
     const supabase = createClient()
     const addItem = useCart((s) => s.addItem)
@@ -633,7 +634,11 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
             {/* Product Info */}
             <div className="px-4 pt-4">
                 {product.brand && (
-                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em]">{product.brand}</p>
+                    brandLink ? (
+                        <Link href={brandLink} className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em] underline decoration-black underline-offset-2 hover:text-gray-600 transition-colors">{product.brand}</Link>
+                    ) : (
+                        <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em]">{product.brand}</p>
+                    )
                 )}
                 <h1 className="text-lg font-normal text-gray-900 mt-1 leading-snug">{product.name}</h1>
 
@@ -1056,7 +1061,11 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         {/* Right: Product Info & Actions */}
                         <div className="flex flex-col gap-5">
                             {product?.brand && (
-                                <p className="text-xs font-black text-gray-400 uppercase tracking-[0.15em]">{product.brand}</p>
+                                brandLink ? (
+                                    <Link href={brandLink} className="text-xs font-black text-gray-400 uppercase tracking-[0.15em] underline decoration-black underline-offset-2 hover:text-gray-600 transition-colors">{product.brand}</Link>
+                                ) : (
+                                    <p className="text-xs font-black text-gray-400 uppercase tracking-[0.15em]">{product.brand}</p>
+                                )
                             )}
                             <h1 className="text-2xl font-normal text-gray-900 leading-snug">{product?.name}</h1>
 

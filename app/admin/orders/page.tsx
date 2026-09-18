@@ -172,6 +172,8 @@ export default function AdminOrdersPage() {
     const [fetchLimit, setFetchLimit] = useState(PAGE_SIZE)
     const [total, setTotal] = useState(0)
 
+    const [paidRevenue, setPaidRevenue] = useState(0)
+
     useEffect(() => {
         fetchOrders()
         getDeliveryPartners().then(setDeliveryPartners).catch(() => {})
@@ -185,14 +187,33 @@ export default function AdminOrdersPage() {
             .order('created_at', { ascending: false })
             .range(0, fetchLimit - 1)
 
-        if (date?.from) query = query.gte('created_at', startOfDay(date.from).toISOString())
-        if (date?.to) query = query.lte('created_at', endOfDay(date.to).toISOString())
+        let revQuery = supabase
+            .from('orders')
+            .select('total')
+            .eq('payment_status', 'paid')
 
-        const { data, error, count } = await query
+        if (date?.from) {
+            const fromStr = startOfDay(date.from).toISOString()
+            query = query.gte('created_at', fromStr)
+            revQuery = revQuery.gte('created_at', fromStr)
+        }
+        if (date?.to) {
+            const toStr = endOfDay(date.to).toISOString()
+            query = query.lte('created_at', toStr)
+            revQuery = revQuery.lte('created_at', toStr)
+        }
+
+        const [{ data, error, count }, { data: revData }] = await Promise.all([
+            query,
+            revQuery
+        ])
+
         if (error) toast.error("Failed to load orders")
         else {
             setOrders(data || [])
             setTotal(count || 0)
+            const sum = (revData || []).reduce((acc: number, curr: any) => acc + Number(curr.total || 0), 0)
+            setPaidRevenue(sum)
         }
         setLoading(false)
     }
@@ -200,9 +221,9 @@ export default function AdminOrdersPage() {
     const stats = useMemo(() => {
         const pending = orders.filter(o => getGroupForOrder(o) === "pending").length
         const active = orders.filter(o => getGroupForOrder(o) === "active").length
-        const paid = orders.filter(o => o.payment_status === 'paid').reduce((acc, curr) => acc + Number(curr.total), 0)
+        const paid = paidRevenue
         return { pending, active, paid, total: orders.length }
-    }, [orders])
+    }, [orders, paidRevenue])
 
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {

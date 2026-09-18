@@ -184,5 +184,21 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         productBrand || null
     )
 
-    return <ProductClient key={id} initialProduct={initialProduct} activeBXGY={activeBXGY} activeGift={activeGift} activeFlashSale={activeFlashSale} />
+    // Find brand link
+    let brandLink = null
+    if (data.brand) {
+        const { data: catMatch } = await supabase
+            .from("categories")
+            .select("slug, parent:parent_id(slug)")
+            .ilike("name", data.brand)
+            .maybeSingle()
+        
+        if (catMatch) {
+            const parentSlug = (catMatch.parent as any)?.slug
+            const pathSegment = parentSlug === "exclusive" || parentSlug === "essentials" ? parentSlug : "categories"
+            brandLink = `/${pathSegment}/${catMatch.slug}`
+        }
+    }
+
+    return <ProductClient key={id} initialProduct={initialProduct} activeBXGY={activeBXGY} activeGift={activeGift} activeFlashSale={activeFlashSale} brandLink={brandLink} />
 }
