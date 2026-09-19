@@ -170,27 +170,26 @@ export default function OrderInvoicePage() {
 
             {/* TOP TOOLBAR */}
             <div className="max-w-4xl mx-auto mb-6 no-print">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <Button variant="ghost" asChild className="rounded-xl font-bold text-sm">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
+                    <Button variant="ghost" asChild className="rounded-xl font-bold text-sm w-full sm:w-auto">
                         <Link href={`/admin/orders`}><ArrowLeft className="w-4 h-4 mr-2" /> Back to Orders</Link>
                     </Button>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <Button 
                             variant="outline" 
                             onClick={() => setIsThermal(!isThermal)} 
-                            className={`rounded-xl px-4 font-semibold text-sm transition-all ${isThermal ? 'bg-slate-900 text-white hover:bg-black' : 'text-slate-600 hover:bg-slate-50'}`}
+                            className={`rounded-xl px-3 sm:px-4 font-semibold text-xs sm:text-sm transition-all flex-1 sm:flex-none ${isThermal ? 'bg-slate-900 text-white hover:bg-black' : 'text-slate-600 hover:bg-slate-50'}`}
                         >
-                            <Ticket className="w-4 h-4 mr-2" /> {isThermal ? 'A4 Format' : 'POS Mode'}
+                            <Ticket className="w-4 h-4 mr-1 sm:mr-2" /> <span className="hidden xs:inline">{isThermal ? 'A4 Format' : 'POS Mode'}</span><span className="xs:hidden">{isThermal ? 'A4' : 'POS'}</span>
                         </Button>
-                        <Button onClick={() => window.print()} className="rounded-xl shadow-lg bg-slate-900 hover:bg-slate-800 transition-all font-bold text-white px-5">
-                            <Printer className="w-4 h-4 mr-2" /> Print {isThermal ? 'Receipt' : 'Invoice'}
+                        <Button onClick={() => window.print()} className="rounded-xl shadow-lg bg-slate-900 hover:bg-slate-800 transition-all font-bold text-white px-3 sm:px-5 text-xs sm:text-sm flex-1 sm:flex-none">
+                            <Printer className="w-4 h-4 mr-1 sm:mr-2" /> Print
                         </Button>
                         <Button 
                             onClick={() => window.open(`/admin/orders/${id}/label`, '_blank')}
-                            className="rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 transition-all font-bold text-white px-5 flex items-center gap-2"
+                            className="rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 transition-all font-bold text-white px-3 sm:px-5 text-xs sm:text-sm flex items-center gap-1 sm:gap-2 flex-1 sm:flex-none"
                         >
-                            <Tag className="w-4 h-4" />
-                            Print Label
+                            <Tag className="w-4 h-4" /> Label
                         </Button>
                         {(order.payment_status === "paid" || order.payment_status === "partially_refunded") && (
                             <Button 
@@ -206,13 +205,13 @@ export default function OrderInvoicePage() {
                                     setRefundTransactionId("")
                                     setShowRefundModal(true)
                                 }}
-                                className="rounded-xl border border-rose-200 text-rose-600 text-xs font-semibold uppercase tracking-wider hover:bg-rose-50 transition-all px-4 py-2.5 flex items-center gap-2 bg-white shadow-sm"
+                                className="rounded-xl border border-rose-200 text-rose-600 text-xs font-semibold uppercase tracking-wider hover:bg-rose-50 transition-all px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1 sm:gap-2 bg-white shadow-sm flex-1 sm:flex-none"
                             >
-                                <RotateCcw className="w-4 h-4" /> Refund Items
+                                <RotateCcw className="w-4 h-4" /> Refund
                             </Button>
                         )}
                         {order.status === 'pending' && !isEditing && (
-                            <Button onClick={() => setIsEditing(true)} className="rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider hover:bg-slate-50 hover:text-slate-900 transition-all px-4 py-2.5 flex items-center gap-2 bg-white shadow-sm">
+                            <Button onClick={() => setIsEditing(true)} className="rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider hover:bg-slate-50 hover:text-slate-900 transition-all px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1 sm:gap-2 bg-white shadow-sm flex-1 sm:flex-none">
                                 <Pencil className="w-4 h-4" /> Edit
                             </Button>
                         )}
@@ -220,12 +219,12 @@ export default function OrderInvoicePage() {
                 </div>
             </div>
 
-            <div id="printable-invoice" className={`mx-auto bg-white transition-all duration-500 overflow-hidden ${isThermal ? 'w-[58mm] p-2 rounded-none border-t border-black' : 'max-w-3xl p-12 rounded-[2.5rem] border-2 border-slate-50 shadow-sm relative'}`}>
+            <div id="printable-invoice" className={`mx-auto bg-white transition-all duration-500 overflow-hidden ${isThermal ? 'w-[58mm] p-2 rounded-none border-t border-black' : 'max-w-3xl p-4 sm:p-8 md:p-12 rounded-2xl sm:rounded-[2.5rem] border-2 border-slate-50 shadow-sm relative'}`}>
                 {/* BRANDING */}
-                <div className={`${isThermal ? 'text-center mb-4' : 'flex justify-between items-start mb-8'} relative z-10`}>
+                <div className={`${isThermal ? 'text-center mb-4' : 'flex flex-col sm:flex-row justify-between items-start mb-6 sm:mb-8 gap-4'} relative z-10`}>
                     <div>
                         <div className={`flex flex-col ${isThermal ? 'items-center' : ''}`}>
-                            <span className={`${isThermal ? 'text-[14px] font-daciana' : 'text-3xl font-daciana'} font-black leading-none text-slate-900 uppercase`}>THE MAKEUP STORE</span>
+                            <span className={`${isThermal ? 'text-[14px] font-daciana' : 'text-2xl sm:text-3xl font-daciana'} font-black leading-none text-slate-900 uppercase`}>THE MAKEUP STORE</span>
                             <span className="text-[10px] font-light tracking-[0.2em] uppercase text-slate-400">WANGKHEI</span>
                         </div>
                         <div className={`text-[9px] text-slate-500 font-medium mt-2 leading-tight ${isThermal ? 'text-center' : ''}`}>
@@ -234,8 +233,8 @@ export default function OrderInvoicePage() {
                         </div>
                     </div>
                     {!isThermal && (
-                        <div className="text-right">
-                            <h1 className="text-6xl font-black uppercase text-slate-100 leading-none italic select-none">Invoice</h1>
+                        <div className="sm:text-right">
+                            <h1 className="text-4xl sm:text-6xl font-black uppercase text-slate-100 leading-none italic select-none">Invoice</h1>
                             <p className="text-slate-400 font-mono text-[10px] mt-2 uppercase tracking-tighter">Ref: {order.id.slice(0, 8).toUpperCase()}</p>
                         </div>
                     )}
@@ -300,7 +299,7 @@ export default function OrderInvoicePage() {
 
                 {/* INFO */}
                 {!isThermal && (
-                    <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
                         <div className="rounded-2xl border border-slate-100 bg-slate-50/30 p-4 space-y-1">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Details</span>
                             <p className="text-sm font-bold text-slate-900">{order.shipping_address?.full_name}</p>
@@ -385,9 +384,9 @@ export default function OrderInvoicePage() {
                 {/* TIMESTAMP BADGES (removed duplicate block since timeline stepper above covers it) */}
 
                 {/* ITEMS LIST */}
-                <div className="space-y-4 mb-8">
+                <div className="space-y-3 sm:space-y-4 mb-8">
                     {!isThermal && (
-                        <div className="grid grid-cols-12 gap-4 px-4 py-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <div className="hidden sm:grid grid-cols-12 gap-4 px-4 py-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             <div className="col-span-6">Product Item</div>
                             <div className="col-span-2 text-right">Price Info</div>
                             <div className="col-span-2 text-center">Quantity</div>
@@ -401,45 +400,73 @@ export default function OrderInvoicePage() {
                         const discPercent = itemMrp > rate ? Math.round(((itemMrp - rate) / itemMrp) * 100) : 0
 
                         return (
-                            <div key={item.id} className={`${isThermal ? 'pb-2 border-b border-dotted border-slate-100' : `grid grid-cols-12 gap-4 items-center p-4 rounded-2xl border border-slate-50 bg-white hover:bg-slate-50/50 transition-colors ${isEditing ? 'bg-blue-50/20 border-blue-100' : ''}`}`}>
-                                <div className={`${isThermal ? 'w-full mb-1' : 'col-span-6'} ${isEditing ? 'flex items-center gap-3' : ''}`}>
-                                    {isEditing && !isThermal && (
-                                        <button onClick={() => handleRemoveItem(item.id, idx)} className="h-8 w-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors flex-shrink-0">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                    <div className="min-w-0">
-                                        <p className={`font-black text-slate-900 uppercase truncate ${isThermal ? 'text-[10px]' : 'text-sm'}`}>{item.product_name}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase">{item.variant_title}</span>
-                                            {discPercent > 0 && !isThermal && (
-                                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">{discPercent}% OFF</span>
+                            <div key={item.id} className={`${isThermal ? 'pb-2 border-b border-dotted border-slate-100' : isEditing ? `p-3 sm:p-4 rounded-2xl border border-blue-100 bg-blue-50/20 ${isEditing ? '' : ''}` : `p-3 sm:p-4 rounded-2xl border border-slate-50 bg-white hover:bg-slate-50/50 transition-colors`}`}>
+                                {/* Mobile layout */}
+                                <div className="sm:hidden">
+                                    <div className="flex items-start gap-3">
+                                        {isEditing && (
+                                            <button onClick={() => handleRemoveItem(item.id, idx)} className="h-8 w-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors shrink-0 mt-0.5">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-black text-slate-900 uppercase text-xs sm:text-sm break-words">{item.product_name}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase">{item.variant_title}</span>
+                                                {discPercent > 0 && (
+                                                    <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">{discPercent}% OFF</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                                        <div className="flex items-center gap-3">
+                                            <span className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-black bg-slate-50 text-slate-700">x{item.quantity}</span>
+                                            <span className="text-xs font-bold text-slate-500">₹{rate.toLocaleString()} each</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-sm font-black text-slate-900">₹{(rate * item.quantity).toLocaleString()}</span>
+                                            {itemMrp > rate && (
+                                                <span className="block text-[10px] text-slate-400 line-through">₹{itemMrp.toLocaleString()}</span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                
-                                {!isThermal && (
+
+                                {/* Desktop layout */}
+                                <div className="hidden sm:grid grid-cols-12 gap-4 items-center">
+                                    <div className={`col-span-6 ${isEditing ? 'flex items-center gap-3' : ''}`}>
+                                        {isEditing && (
+                                            <button onClick={() => handleRemoveItem(item.id, idx)} className="h-8 w-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors flex-shrink-0">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        <div className="min-w-0">
+                                            <p className="font-black text-slate-900 uppercase text-xs sm:text-sm break-words">{item.product_name}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase">{item.variant_title}</span>
+                                                {discPercent > 0 && (
+                                                    <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">{discPercent}% OFF</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     <div className="col-span-2 text-right flex flex-col items-end">
                                         <span className="text-xs font-bold text-slate-900">₹{rate.toLocaleString()}</span>
                                         {itemMrp > rate && (
                                             <span className="text-[10px] text-slate-400 line-through">₹{itemMrp.toLocaleString()}</span>
                                         )}
                                     </div>
-                                )}
 
-                                <div className={`${isThermal ? 'flex justify-between items-center text-[9px]' : 'col-span-2 text-center'}`}>
-                                    <span className={`px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-black ${isThermal ? 'text-slate-500' : 'bg-slate-50 text-slate-700'}`}>
-                                        {isThermal ? `${item.quantity} x ₹${rate.toLocaleString()}` : `x${item.quantity}`}
-                                    </span>
-                                    {isThermal && <span className="font-black text-slate-900">₹{(rate * item.quantity).toLocaleString()}</span>}
-                                </div>
+                                    <div className="col-span-2 text-center">
+                                        <span className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-black bg-slate-50 text-slate-700">x{item.quantity}</span>
+                                    </div>
 
-                                {!isThermal && (
                                     <div className="col-span-2 text-right">
                                         <span className="text-sm font-black text-slate-900">₹{(rate * item.quantity).toLocaleString()}</span>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         )
                     })}
@@ -447,39 +474,39 @@ export default function OrderInvoicePage() {
 
                 {/* TOTALS */}
                 <div className={`pt-6 border-t-2 border-slate-900 border-dashed ${isThermal ? 'space-y-1' : 'flex flex-col items-end space-y-2'}`}>
-                    <div className={`${isThermal ? 'flex justify-between' : 'w-64 flex justify-between'} text-xs font-semibold text-slate-500 uppercase`}>
+                    <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-semibold text-slate-500 uppercase`}>
                         <span>{isThermal ? 'Items Total' : 'Subtotal (MRP)'}</span>
                         <span className="text-slate-900 font-bold">₹{subtotalMRP.toLocaleString()}</span>
                     </div>
                     {productSavings > 0 && (
-                        <div className={`${isThermal ? 'flex justify-between' : 'w-64 flex justify-between'} text-xs font-medium text-emerald-600 uppercase`}>
+                        <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-medium text-emerald-600 uppercase`}>
                             <span>{isThermal ? 'Savings' : 'Item Discounts'}</span>
                             <span>-₹{productSavings.toLocaleString()}</span>
                         </div>
                     )}
-                    <div className={`${isThermal ? 'flex justify-between border-y border-dotted border-slate-200 py-1' : 'w-64 flex justify-between border-y border-slate-100 py-1.5'} text-xs font-bold text-slate-900 uppercase`}>
+                    <div className={`${isThermal ? 'flex justify-between border-y border-dotted border-slate-200 py-1' : 'w-full sm:w-64 flex justify-between border-y border-slate-100 py-1.5'} text-xs font-bold text-slate-900 uppercase`}>
                         <span>Subtotal</span>
                         <span>₹{subtotalActual.toLocaleString()}</span>
                     </div>
-                    <div className={`${isThermal ? 'flex justify-between' : 'w-64 flex justify-between'} text-xs font-medium text-slate-500 uppercase`}>
+                    <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-medium text-slate-500 uppercase`}>
                         <span>Shipping</span>
                         <span className="text-slate-900 font-bold">₹{order.shipping_price || 0}</span>
                     </div>
                     {promoDiscount > 0 && (
                         <div>
-                            <div className={`${isThermal ? 'flex justify-between' : 'w-64 flex justify-between'} text-xs font-bold text-emerald-600 uppercase`}>
+                            <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-bold text-emerald-600 uppercase`}>
                                 <span className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {order.promo_code || 'Manual Discount'}</span>
                                 <span>-₹{promoDiscount.toLocaleString()}</span>
                             </div>
                             {order.discount_remark && !order.promo_code && (
-                                <div className={`${isThermal ? 'text-[7px]' : 'w-64'} mt-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl text-right`}>
+                                <div className={`${isThermal ? 'text-[7px]' : 'w-full sm:w-64'} mt-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl sm:text-right`}>
                                     <p className="text-xs font-semibold text-emerald-800 leading-tight">{order.discount_remark}</p>
                                 </div>
                             )}
                         </div>
                     )}
                     {Number(order.coin_discount_amount) > 0 && (
-                        <div className={`${isThermal ? 'flex justify-between' : 'w-64 flex justify-between'} text-xs font-bold text-amber-600 uppercase`}>
+                        <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-bold text-amber-600 uppercase`}>
                             <span className="flex items-center gap-1"><Coins className="w-3 h-3" /> M Coins</span>
                             <span>-₹{Number(order.coin_discount_amount).toLocaleString()}</span>
                         </div>
@@ -492,7 +519,7 @@ export default function OrderInvoicePage() {
                                 <p className="text-[10px] font-mono text-slate-400 mt-0.5">ID: {order.razorpay_payment_id}</p>
                             )}
                         </div>
-                        <p className={`${isThermal ? 'text-[18px]' : 'text-4xl'} font-black tracking-tight text-slate-900`}>₹{Number(order.total).toLocaleString()}</p>
+                        <p className={`${isThermal ? 'text-[18px]' : 'text-3xl sm:text-4xl'} font-black tracking-tight text-slate-900`}>₹{Number(order.total).toLocaleString()}</p>
                     </div>
                 </div>
 
@@ -515,7 +542,7 @@ export default function OrderInvoicePage() {
 
             {/* EDIT PANEL */}
             {isEditing && !isThermal && (
-                <div className="max-w-4xl mx-auto mb-6 no-print">
+                <div className="max-w-4xl mx-auto mb-6 no-print px-4">
                     <div className="rounded-xl border border-blue-200 bg-blue-50/50 shadow-sm p-4 space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -523,7 +550,7 @@ export default function OrderInvoicePage() {
                                     <Pencil className="w-4 h-4 text-blue-600" />
                                 </div>
                                 <span className="text-sm font-bold text-slate-900">Edit Order</span>
-                                <span className="text-[10px] text-slate-400 font-medium">#{order.id.slice(0, 8).toUpperCase()}</span>
+                                <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">#{order.id.slice(0, 8).toUpperCase()}</span>
                             </div>
                             <button
                                 onClick={() => { setIsEditing(false); setEditDiscount(Number(order.promo_discount_amount || 0)); setEditRemark(order.discount_remark || "") }}
@@ -533,8 +560,8 @@ export default function OrderInvoicePage() {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-12 gap-4">
-                            <div className="col-span-4 space-y-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4">
+                            <div className="sm:col-span-4 space-y-1">
                                 <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Discount (₹)</label>
                                 <Input
                                     type="number" min="0"
@@ -543,7 +570,7 @@ export default function OrderInvoicePage() {
                                     className="h-10 text-sm font-bold border-blue-200 bg-white rounded-xl"
                                 />
                             </div>
-                            <div className="col-span-5 space-y-1">
+                            <div className="sm:col-span-5 space-y-1">
                                 <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Remark (reason)</label>
                                 <Input
                                     value={editRemark}
@@ -552,7 +579,7 @@ export default function OrderInvoicePage() {
                                     className="h-10 text-sm border-blue-200 bg-white rounded-xl"
                                 />
                             </div>
-                            <div className="col-span-3 flex items-end gap-2">
+                            <div className="sm:col-span-3 flex items-end gap-2">
                                 <button
                                     onClick={handleSaveDiscount} disabled={saving}
                                     className="flex-1 h-10 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
@@ -563,9 +590,9 @@ export default function OrderInvoicePage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-xs text-slate-500 pt-1 border-t border-blue-100">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs text-slate-500 pt-1 border-t border-blue-100">
                             <span>Click <strong className="text-red-500">×</strong> on any item below to remove it</span>
-                            <span className="text-slate-300">|</span>
+                            <span className="text-slate-300 hidden sm:inline">|</span>
                             <span className="flex items-center gap-1">
                                 <Clock className="w-3 h-3 text-amber-500" />
                                 Changes apply immediately after save
@@ -577,8 +604,8 @@ export default function OrderInvoicePage() {
 
             {/* REFUND MODAL */}
             {showRefundModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg mx-0 sm:mx-4 p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-black text-slate-900">Refund Items</h3>
                             <button onClick={() => setShowRefundModal(false)} className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all">
