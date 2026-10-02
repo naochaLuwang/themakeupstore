@@ -21,6 +21,7 @@ export default async function CustomersPage({
                 created_at
             )
         `, { count: 'exact' })
+        .is("deleted_at", null)
 
     if (q) {
         query = query.ilike("full_name", `%${q}%`)

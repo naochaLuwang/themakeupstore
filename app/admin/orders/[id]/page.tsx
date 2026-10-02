@@ -72,6 +72,22 @@ export default function OrderInvoicePage() {
         fetchOrder()
     }, [id])
 
+    useEffect(() => {
+        async function fetchPartners() {
+            const { data } = await supabase
+                .from('delivery_partners')
+                .select('*')
+                .eq('is_active', true)
+                .order('name', { ascending: true })
+            const partners = data || []
+            setDeliveryPartners(partners)
+            if (order?.delivery_partner_id) {
+                setDeliveryPartner(partners.find((p: any) => p.id === order.delivery_partner_id) || null)
+            }
+        }
+        fetchPartners()
+    }, [order?.delivery_partner_id])
+
     if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
     if (!order) return <div className="p-10 text-center text-slate-500 font-bold uppercase tracking-widest">Order not found</div>
 
@@ -310,7 +326,7 @@ export default function OrderInvoicePage() {
                         <div className="rounded-2xl border border-slate-100 bg-slate-50/30 p-4 space-y-1">
                             <div className="flex items-center justify-between">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shipping Details</span>
-                                <button onClick={() => setEditingPartner(true)} className="text-[10px] font-bold text-pink-600 hover:underline flex items-center gap-1">
+                                <button onClick={() => { setSelectedPartnerId(order.delivery_partner_id || ""); setEditingPartner(true) }} className="text-[10px] font-bold text-pink-600 hover:underline flex items-center gap-1">
                                     <Pencil className="w-2.5 h-2.5" /> Edit Partner
                                 </button>
                             </div>

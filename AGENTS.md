@@ -48,6 +48,22 @@
 - Fix: Modified trigger to only update balance when transaction status is `'available'` (or for insert of spend/expired transactions which are immediately available)
 - Migration: `supabase/migrations/20260901_fix_loyalty_pending_balance.sql` — new function that handles INSERT and UPDATE, updating balance only for available transactions
 
+## Session 2026-10-01 — Self-Service Account Deletion (Critical Set)
+- **Feature**: user account deletion from Settings → Danger Zone is now correct end-to-end (was: bare `auth.admin.deleteUser` with no data cleanup, no re-auth, likely FK failures)
+- **Migration `20261001_account_deletion.sql`** (MUST run in Supabase SQL Editor BEFORE deploying): adds `profiles.deleted_at`, drops `profiles_id_fkey` (so a tombstone profile can outlive its auth user), creates `public.delete_account_data(uuid)` (SECURITY DEFINER, service-role-only EXECUTE)
+- **Design — tombstone, not hard delete**: orders/returns/refunds/gift cards are financial records and are KEPT; profile row is anonymized to `full_name='Deleted Account'` + PII nulled (incl. defensive nulling of live-only columns like `area_name`) so admin joins/reports keep working
+- **Erased atomically by the RPC**: carts(+items), user_addresses, wishlist, push_subscriptions, promo_redemptions, notification_log, traffic_log, visitor_history, wholesale_applications, product_reviews, loyalty_transactions, loyalty_points, reward_coupons (unused coupon liability revoked), back_in_stock_notifications (matched by email, case-insensitive); unlinks `site_settings.updated_by` + `pos_orders.cashier_id`
+- **Guards in RPC**: non-owner caller rejected, `is_admin` accounts rejected, POS cashiers (`pos_sessions`) rejected
+- **`app/actions/profile.ts` `deleteAccount(verify)`**: re-auth first (password users → `signInWithPassword` verify; OAuth-only users → exact email match), admin-block check, RPC cleanup, then `auth.admin.deleteUser`; returns `{ success, message }` instead of throwing (Next.js production redacts thrown action errors)
+- **UI (`app/(store)/profile/settings/page.tsx`)**: confirm sheet now has re-auth input (password or email), Removed/Retained summary (honest copy — order records retained for invoices/refunds), `signOut()` wrapped in try/catch (fails silently post-deletion)
+- **Admin customers page** filters `.is("deleted_at", null)` so tombstones don't inflate customer counts
+- **Verified**: migration executed + behavior-tested against a scratch Postgres 17 cluster (happy path, all 15 tables zeroed, tombstone set, orders FK kept, 3 guard exceptions, role grants); `tsc --noEmit` clean
+
+## Session 2026-10-02 — Email OTP Login: built, tested, REVERTED (password-only)
+- Password | Email Code tabs + `password_set` metadata + deletion OTP fallback were fully implemented then fully reverted the same day — `/login` is plain password sign-in again, settings/deletion flows unchanged
+- **Why it failed**: Supabase `/auth/v1/otp` returns **504 gateway timeout after ~36s** (verified with direct Node diag calls against the live project) while password grant works fine (~1.2s) — no custom SMTP is configured and since Sept 2025 Supabase's default email service can't send; OTP cannot work until custom SMTP + `{{ .Token }}` in the Magic Link template are set up in the dashboard
+- If revisiting: configure SMTP → Magic Link template `{{ .ConfirmationURL }}` → `{{ .Token }}` → raise "Emails sent" rate limit → re-implement
+
 ## Session 2026-07-25 — Production Audit & APK Fixes
 - **Bulk progress indicators**: Added "Saving 1 of N" progress bar to both inventory (`inventory-registry-wrapper.tsx`) and pricing (`pricing-table.tsx`)
 - **Production audit**: fixed `.gitignore` (`fallback-*.js`, `swe-worker-*.js`), removed ~8.5MB unreferenced public images, fixed `offline.html` brand name, removed unused imports in `cart/page.tsx`, added security headers in `next.config.ts`, updated npm packages, removed tracked PWA build artifacts

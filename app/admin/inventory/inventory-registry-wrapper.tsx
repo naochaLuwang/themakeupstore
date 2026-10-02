@@ -225,7 +225,7 @@ export default function InventoryRegistryWrapper({
                             </th>
                             <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Product</th>
                             <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Variant</th>
-                            <th className="py-3 px-4 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Price</th>
+                            <th className="py-3 px-4 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider">MRP / Price</th>
                             <th className="py-3 px-4 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Stock</th>
                             <th className="py-3 px-4 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Adjust</th>
                             <th className="py-3 px-4 w-14"></th>
@@ -266,12 +266,22 @@ export default function InventoryRegistryWrapper({
                                             </div>
                                         </td>
                                         <td className="py-2.5 px-4 text-right">
-                                            {variants.length > 0 && (
-                                                <span className="text-xs text-slate-500">
-                                                    ₹{Math.min(...variants.map(computeSellingPrice)).toFixed(2)}
-                                                    {variants.length > 1 && "+"}
-                                                </span>
-                                            )}
+                                            {variants.length > 0 && (() => {
+                                                const minSelling = Math.min(...variants.map(computeSellingPrice))
+                                                const minMrp = Math.min(...variants.map((v) => v.price || 0))
+                                                const hasDiscount = minMrp > minSelling
+                                                return (
+                                                    <span className="text-xs text-slate-500 inline-flex items-center gap-1.5 justify-end">
+                                                        {hasDiscount && (
+                                                            <span className="line-through text-slate-400">₹{minMrp.toFixed(2)}</span>
+                                                        )}
+                                                        <span className={hasDiscount ? "text-emerald-600 font-semibold" : ""}>
+                                                            ₹{minSelling.toFixed(2)}
+                                                        </span>
+                                                        {variants.length > 1 && "+"}
+                                                    </span>
+                                                )
+                                            })()}
                                         </td>
                                         <td className="py-2.5 px-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
@@ -326,7 +336,14 @@ export default function InventoryRegistryWrapper({
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-4 text-right">
-                                                    <span className="text-xs text-slate-600">₹{sellingPrice.toFixed(2)}</span>
+                                                    <span className="text-xs inline-flex items-center gap-1.5 justify-end">
+                                                        {(v.price || 0) > sellingPrice && (
+                                                            <span className="line-through text-slate-400">₹{(v.price || 0).toFixed(2)}</span>
+                                                        )}
+                                                        <span className={(v.price || 0) > sellingPrice ? "text-emerald-600 font-semibold" : "text-slate-600"}>
+                                                            ₹{sellingPrice.toFixed(2)}
+                                                        </span>
+                                                    </span>
                                                 </td>
                                                 <td className="py-3 px-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">

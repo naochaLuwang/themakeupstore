@@ -31,6 +31,10 @@ export default function SettingsPage() {
     const [loading, setLoading] = React.useState(true)
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false)
     const [deleteLoading, setDeleteLoading] = React.useState(false)
+    const [hasPassword, setHasPassword] = React.useState(true)
+    const [deletePassword, setDeletePassword] = React.useState("")
+    const [showDeletePw, setShowDeletePw] = React.useState(false)
+    const [deleteEmailConfirm, setDeleteEmailConfirm] = React.useState("")
     const [showPasswordSheet, setShowPasswordSheet] = React.useState(false)
     const [pwCurrent, setPwCurrent] = React.useState("")
     const [pwNew, setPwNew] = React.useState("")
@@ -54,6 +58,8 @@ export default function SettingsPage() {
                 .single()
 
             setProfile(data)
+            const providers = user.identities?.map((i: { provider: string }) => i.provider) || []
+            setHasPassword(providers.includes("email") || user.app_metadata?.provider === "email")
             setLoading(false)
         }
         getProfile()
@@ -101,21 +107,36 @@ export default function SettingsPage() {
         }
     }
 
+    const openDeleteConfirm = () => {
+        setDeletePassword("")
+        setDeleteEmailConfirm("")
+        setShowDeletePw(false)
+        setShowDeleteConfirm(true)
+    }
+
     const handleDeleteAccount = async () => {
+        if (hasPassword && !deletePassword) return toast.error("Enter your current password")
+        if (!hasPassword && deleteEmailConfirm.trim().toLowerCase() !== email.toLowerCase())
+            return toast.error("Email does not match your account email")
+
         setDeleteLoading(true)
-        try {
-            const result = await deleteAccount()
-            if (!result.success) throw new Error("Failed to delete account")
-            await supabase.auth.signOut()
-            toast.success("Account deleted")
-            router.push('/')
-            router.refresh()
-        } catch (error: any) {
-            toast.error(error.message || "Failed to delete account")
-            setShowDeleteConfirm(false)
-        } finally {
+        const result = await deleteAccount({
+            password: deletePassword || undefined,
+            confirmEmail: deleteEmailConfirm || undefined,
+        })
+        if (!result.success) {
+            toast.error(result.message || "Failed to delete account")
             setDeleteLoading(false)
+            return
         }
+        try {
+            await supabase.auth.signOut()
+        } catch {
+            // session may already be invalid after account deletion
+        }
+        toast.success("Account deleted")
+        router.push("/")
+        router.refresh()
     }
 
     const legalLinks = [
@@ -201,9 +222,9 @@ export default function SettingsPage() {
                         <AlertTriangle className="w-4 h-4 text-red-400" />
                         <span className="text-xs font-semibold text-red-400">Danger Zone</span>
                     </div>
-                    <p className="text-sm text-gray-700 mb-3">Delete your account and all associated data</p>
+                    <p className="text-sm text-gray-700 mb-3">Permanently delete your account and personal data</p>
                     <button
-                        onClick={() => setShowDeleteConfirm(true)}
+                        onClick={openDeleteConfirm}
                         className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
                     >
                         Delete Account
@@ -326,25 +347,77 @@ export default function SettingsPage() {
                             className="fixed bottom-0 left-0 right-0 bg-white z-[90] rounded-t-xl max-w-lg mx-auto"
                         >
                             <div className="p-6">
-                                <div className="text-center mb-6">
+                                <div className="text-center mb-4">
                                     <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
                                         <Trash2 className="w-5 h-5 text-red-400" />
                                     </div>
                                     <h3 className="text-base font-semibold text-gray-900">Delete Account?</h3>
                                     <p className="text-xs text-gray-500 mt-1">
-                                        All orders, wishlists, and data will be permanently removed.
+                                        This cannot be undone. You will be signed out immediately.
                                     </p>
                                 </div>
+
+                                <div className="rounded-xl bg-gray-50 p-4 mb-4 space-y-2">
+                                    <p className="text-[11px] leading-relaxed text-gray-600">
+                                        <span className="font-semibold text-red-500">Removed:</span> your login, saved addresses, wishlist, reward points, reward coupons, reviews and notification preferences.
+                                    </p>
+                                    <p className="text-[11px] leading-relaxed text-gray-600">
+                                        <span className="font-semibold text-gray-700">Retained:</span> past order records — kept as required for invoices, refunds and returns. Your name on those orders shows as &ldquo;Deleted Account&rdquo;.
+                                    </p>
+                                </div>
+
+                                <div className="mb-5">
+                                    {hasPassword ? (
+                                        <>
+                                            <label className="text-xs font-medium text-gray-700 mb-1.5 block">
+                                                Confirm with your current password
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    type={showDeletePw ? "text" : "password"}
+                                                    value={deletePassword}
+                                                    onChange={(e) => setDeletePassword(e.target.value)}
+                                                    placeholder="Enter current password"
+                                                    disabled={deleteLoading}
+                                                    className="w-full h-11 px-4 pr-10 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-transparent disabled:opacity-50"
+                                                />
+                                                <button type="button" onClick={() => setShowDeletePw(!showDeletePw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                    {showDeletePw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <label className="text-xs font-medium text-gray-700 mb-1.5 block">
+                                                Type your email to confirm
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={deleteEmailConfirm}
+                                                onChange={(e) => setDeleteEmailConfirm(e.target.value)}
+                                                placeholder={email}
+                                                disabled={deleteLoading}
+                                                autoCapitalize="none"
+                                                autoCorrect="off"
+                                                className="w-full h-11 px-4 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-transparent disabled:opacity-50"
+                                            />
+                                        </>
+                                    )}
+                                </div>
+
                                 <div className="flex flex-col gap-2.5">
                                     <button
                                         onClick={handleDeleteAccount}
-                                        disabled={deleteLoading}
+                                        disabled={
+                                            deleteLoading ||
+                                            (hasPassword ? deletePassword.trim() === "" : deleteEmailConfirm.trim().toLowerCase() !== email.toLowerCase())
+                                        }
                                         className="w-full py-3 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                                     >
                                         {deleteLoading ? (
                                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                         ) : (
-                                            "Delete Account"
+                                            "Permanently Delete Account"
                                         )}
                                     </button>
                                     <button

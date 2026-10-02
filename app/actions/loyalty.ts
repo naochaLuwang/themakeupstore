@@ -255,7 +255,7 @@ export async function getLoyaltyStats() {
 
   const [totalPoints, totalUsers, totalRedeemed, tierCounts] = await Promise.all([
     supabase.from("loyalty_points").select("balance"),
-    supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).is("deleted_at", null),
     supabase.from("loyalty_transactions").select("amount").eq("type", "spend").eq("status", "available"),
     supabase.from("loyalty_points").select("tier"),
   ])
@@ -283,7 +283,7 @@ export async function adminGetAllUsersPoints(opts?: { search?: string; tier?: st
       .select("user_id, type, amount, status, created_at")
       .order("created_at", { ascending: false }),
     supabase.from("loyalty_points").select("*"),
-    supabase.from("profiles").select("id, full_name, phone, created_at"),
+    supabase.from("profiles").select("id, full_name, phone, created_at").is("deleted_at", null),
     supabase.from("orders").select("user_id, shipping_address, created_at").not("user_id", "is", null),
   ])
 
