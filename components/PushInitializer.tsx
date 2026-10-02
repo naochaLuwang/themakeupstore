@@ -37,6 +37,30 @@ export default function PushInitializer() {
               App.exitApp()
             }
           })
+
+          // OAuth return from Google sign-in (themakeupstore://auth/callback?code=...)
+          App.addListener('appUrlOpen', async ({ url }: { url: string }) => {
+            try {
+              if (!url.startsWith('themakeupstore://')) return
+              const parsed = new URL(url)
+              const errDesc = parsed.searchParams.get('error_description') || parsed.searchParams.get('error')
+              if (errDesc) {
+                console.error('[Auth deep link] provider error:', errDesc)
+                return
+              }
+              const code = parsed.searchParams.get('code')
+              if (!code) return
+              const { error } = await supabase.auth.exchangeCodeForSession(code)
+              if (error) {
+                console.error('[Auth deep link] exchange failed:', error.message)
+                return
+              }
+              // Session cookies now set for the app origin — land on home
+              window.location.href = '/'
+            } catch (err) {
+              console.error('[Auth deep link] failed:', err)
+            }
+          })
         } catch (err) {
           console.error('Back button handler failed:', err)
         }

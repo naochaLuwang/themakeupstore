@@ -8,10 +8,14 @@
 --   * All personal data (addresses, wishlist, push tokens, loyalty ledger, coupons,
 --     reviews, wholesale/GST application, traffic history, back-in-stock requests)
 --     is erased in ONE transaction by delete_account_data().
+--   * Tables for features not deployed in this environment (notification_log,
+--     pos_orders, pos_sessions — WhatsApp/POS) are intentionally NOT referenced
+--     so the erasure never fails on missing relations.
 --   * The auth user itself is deleted afterwards by the server action via
 --     auth.admin.deleteUser — which is why profiles_id_fkey must be dropped.
 --
--- Run this in the Supabase SQL Editor BEFORE deploying the account deletion UI.
+-- Run this in the Supabase SQL Editor BEFORE deploying the account deletion UI
+-- (safe to re-run: everything below is idempotent).
 
 -- 1. Marker so admin lists can exclude deleted accounts
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
@@ -41,10 +45,6 @@ BEGIN
         RAISE EXCEPTION 'Admin accounts cannot be deleted by the user';
     END IF;
 
-    IF EXISTS (SELECT 1 FROM public.pos_sessions WHERE cashier_id = p_user_id) THEN
-        RAISE EXCEPTION 'Account has POS register history and cannot be self-deleted';
-    END IF;
-
     SELECT email INTO v_email FROM auth.users WHERE id = p_user_id;
 
     -- Carts (cart_items has no ON DELETE CASCADE)
@@ -57,7 +57,6 @@ BEGIN
     DELETE FROM public.wishlist                WHERE user_id = p_user_id;
     DELETE FROM public.push_subscriptions      WHERE user_id = p_user_id;
     DELETE FROM public.promo_redemptions       WHERE user_id = p_user_id;
-    DELETE FROM public.notification_log        WHERE user_id = p_user_id;
     DELETE FROM public.traffic_log             WHERE user_id = p_user_id;
     DELETE FROM public.visitor_history         WHERE user_id = p_user_id;
     DELETE FROM public.wholesale_applications  WHERE user_id = p_user_id;
@@ -76,7 +75,6 @@ BEGIN
 
     -- Unlink system rows owned by this user
     UPDATE public.site_settings SET updated_by = NULL WHERE updated_by = p_user_id;
-    UPDATE public.pos_orders     SET cashier_id = NULL WHERE cashier_id = p_user_id;
 
     -- Anonymize the profile tombstone (keeps orders/returns/gift cards intact)
     UPDATE public.profiles

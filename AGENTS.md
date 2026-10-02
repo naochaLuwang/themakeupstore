@@ -58,11 +58,23 @@
 - **UI (`app/(store)/profile/settings/page.tsx`)**: confirm sheet now has re-auth input (password or email), Removed/Retained summary (honest copy — order records retained for invoices/refunds), `signOut()` wrapped in try/catch (fails silently post-deletion)
 - **Admin customers page** filters `.is("deleted_at", null)` so tombstones don't inflate customer counts
 - **Verified**: migration executed + behavior-tested against a scratch Postgres 17 cluster (happy path, all 15 tables zeroed, tombstone set, orders FK kept, 3 guard exceptions, role grants); `tsc --noEmit` clean
+- **Live fix (2026-10-02)**: production deletion failed with `42P01 relation "public.pos_sessions" does not exist` — the live DB is missing `pos_sessions`, `pos_orders`, `notification_log` (the entire `20260801_whatsapp_integration.sql` was never run there; POS tables exist only in `db.sql`). Per user decision those 3 tables are **not needed for account deletion** — they were removed from the function entirely (also dropped the temporary `to_regclass` guard machinery; remaining statements are plain static DELETE/UPDATE since all other tables are verified to exist live). Guard exceptions reduced to 2 (non-owner, is_admin) — the POS-cashier guard is gone with `pos_sessions`. Re-verified on scratch PG17: missing-table scenario passes, full erasure (15 tables) + tombstone pass, both guards + re-run idempotency pass; user must re-run the file in SQL Editor (idempotent)
 
 ## Session 2026-10-02 — Email OTP Login: built, tested, REVERTED (password-only)
 - Password | Email Code tabs + `password_set` metadata + deletion OTP fallback were fully implemented then fully reverted the same day — `/login` is plain password sign-in again, settings/deletion flows unchanged
 - **Why it failed**: Supabase `/auth/v1/otp` returns **504 gateway timeout after ~36s** (verified with direct Node diag calls against the live project) while password grant works fine (~1.2s) — no custom SMTP is configured and since Sept 2025 Supabase's default email service can't send; OTP cannot work until custom SMTP + `{{ .Token }}` in the Magic Link template are set up in the dashboard
 - If revisiting: configure SMTP → Magic Link template `{{ .ConfirmationURL }}` → `{{ .Token }}` → raise "Emails sent" rate limit → re-implement
+
+## Session 2026-10-02 — iOS Capacitor Google Login Deep-Link Fix
+- **Bug**: tapping Google sign-in in the iOS app opened Safari and finished on the website — the app never got the session
+- **Root cause**: Capacitor iOS `WebViewDelegationHandler.decidePolicyFor` (node_modules/@capacitor/ios) cancels any top-level navigation to a host other than `server.url` (`https://themakeupstorewangkhei.com`) and opens it via `UIApplication.shared.open` → the whole Supabase/Google OAuth ran in Safari, and the `https://…/auth/callback` redirect (session cookies for the *website*) also landed in Safari. The app WebView stayed logged out. (Bonus: PKCE `code_verifier` lives in the app WebView's localStorage, so the exchange in Safari couldn't succeed either.)
+- **Fix — custom URL scheme return**:
+  - `ios/App/App/Info.plist`: added `CFBundleURLTypes` with scheme `themakeupstore` (plist lint passes)
+  - `app/login/page.tsx` `handleGoogleLogin`: iOS Capacitor branch now uses `redirectTo: 'themakeupstore://auth/callback'` (web unchanged: `${origin}/auth/callback`)
+  - `components/PushInitializer.tsx` (global, mounted in root layout): added `App.addListener('appUrlOpen')` — parses `themakeupstore://auth/callback?code=…`, calls `supabase.auth.exchangeCodeForSession(code)` **inside the app WebView** (where the PKCE verifier lives), then `window.location.href = '/'`. Uses `@capacitor/app` `retainUntilConsumed: true` → also works on cold start. Error params logged, not thrown.
+- **REQUIRED manual step**: Supabase Dashboard → Authentication → URL Configuration → Redirect URLs must include `themakeupstore://auth/callback`, otherwise GoTrue ignores the custom scheme and falls back to Site URL (reproducing the bug)
+- Verified: `tsc --noEmit` clean, `plutil -lint` OK; device flow needs a TestFlight/local iOS build
+- Alternative considered (not taken): native iOS Google sign-in — `capacitor-native-google-one-tap-signin@7.0.3` ships an `ios/` plugin dir + podspec, so it may be viable later
 
 ## Session 2026-07-25 — Production Audit & APK Fixes
 - **Bulk progress indicators**: Added "Saving 1 of N" progress bar to both inventory (`inventory-registry-wrapper.tsx`) and pricing (`pricing-table.tsx`)

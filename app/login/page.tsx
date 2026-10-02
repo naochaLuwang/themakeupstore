@@ -58,10 +58,12 @@ const handleGoogleLogin = useCallback(async () => {
                     toast.error(err?.message || 'Google sign-in failed')
                 }
             } else {
-                // iOS or other platforms: use standard OAuth flow
+                // iOS or other platforms: standard OAuth flow — return to the app
+                // via custom scheme (Capacitor opens non-app URLs in Safari, so the
+                // https callback would complete in Safari and the app never gets it)
                 const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
-                    options: { redirectTo: `${window.location.origin}/auth/callback` },
+                    options: { redirectTo: isCapacitor ? 'themakeupstore://auth/callback' : `${window.location.origin}/auth/callback` },
                 })
                 if (error) toast.error(error.message)
             }
