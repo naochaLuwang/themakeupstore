@@ -36,6 +36,13 @@
 ### Blocked
 - (none)
 
+## Bulk 4×6 Label Printing (Session 2026-10-04)
+- **Shared component**: label markup extracted to `components/admin/order-label.tsx` (`OrderLabel`, uses `.order-label` class instead of `id="label"`); single-order page `app/admin/orders/[id]/label/page.tsx` now wraps it — behavior unchanged
+- **Batch page**: `app/admin/orders/labels/page.tsx` — client page reading `?ids=a,b,c` from `window.location.search`, one Supabase `.in('id', ids)` fetch (URL order preserved), renders each label in a `.label-page` (4in×6in, `break-after: page`, capped at 100), hides header/sidebar/nav in print, auto-`window.print()` on load → one print job, one label per page
+- **Orders list** (`app/admin/orders/page.tsx`): checkbox column (select-all visible w/ indeterminate), mobile card checkbox, sticky bottom bulk bar ("N selected / Print Labels / Clear") → opens batch page, per-row Tag button opens batch page with single id
+- Dropped (per user): `label_printed_at` tracking column
+- Verified: `tsc --noEmit` clean; eslint only pre-existing `no-explicit-any` style hits
+
 ## Session 2026-09-01 — deleteOrder Full Reconciliation
 - **Bug fix**: `deleteOrder()` now performs full financial reconciliation before hard-deleting an order — mirrors `cancelOrderAndRestoreStock` but finishes with permanent removal
 - Reconciliation steps: Razorpay refund → void earned loyalty points → reverse coin redemption → restore stock → delete order items → delete order
@@ -75,6 +82,13 @@
 - **REQUIRED manual step**: Supabase Dashboard → Authentication → URL Configuration → Redirect URLs must include `themakeupstore://auth/callback`, otherwise GoTrue ignores the custom scheme and falls back to Site URL (reproducing the bug)
 - Verified: `tsc --noEmit` clean, `plutil -lint` OK; device flow needs a TestFlight/local iOS build
 - Alternative considered (not taken): native iOS Google sign-in — `capacitor-native-google-one-tap-signin@7.0.3` ships an `ios/` plugin dir + podspec, so it may be viable later
+
+## Session 2026-10-02 — iOS Splash Screen Too Small on Physical Device
+- **Bug**: splash logo rendered tiny on physical iPhones
+- **Root cause**: `ios/App/App/Base.lproj/LaunchScreen.storyboard` pinned the `Splash` image view to fixed `width=180 height=180` constraints with `scaleAspectFit` — artwork is a 2732² square with the M glyph at ~65% of canvas, so visible logo was only ~117pt (~30% of screen width)
+- **Fix**: replaced fixed constraints with proportional ones — `width = superview.width × 0.65` + square aspect (`height = width`), still centered; visible logo now ~42% of screen width and scales across devices/iPad. `config.xml` checked — empty Cordova leftover, irrelevant; `Splash.imageset` has proper 1x/2x/3x + dark variants
+- Verified: `xmllint` valid, full `xcodebuild` simulator build **SUCCEEDED** with zero ibtool storyboard errors/warnings
+- Requires a new iOS build (native storyboard — not fixable by website deploy)
 
 ## Session 2026-07-25 — Production Audit & APK Fixes
 - **Bulk progress indicators**: Added "Saving 1 of N" progress bar to both inventory (`inventory-registry-wrapper.tsx`) and pricing (`pricing-table.tsx`)

@@ -17,7 +17,7 @@ import { format, startOfDay, endOfDay, subDays } from "date-fns"
 import {
     Eye, Clock, Calendar as CalendarIcon, FilterX, Search, ChevronDown, ChevronUp,
     ShoppingBag, PackageCheck, X, Trash2, CreditCard, Banknote, FileText,
-    IndianRupee, Loader2
+    IndianRupee, Loader2, Tag, Printer
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -171,6 +171,7 @@ export default function AdminOrdersPage() {
     const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
     const [fetchLimit, setFetchLimit] = useState(PAGE_SIZE)
     const [total, setTotal] = useState(0)
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
 
     const [paidRevenue, setPaidRevenue] = useState(0)
 
@@ -283,6 +284,32 @@ export default function AdminOrdersPage() {
 
     function partnerName(order: any) {
         return deliveryPartners.find(p => p.id === order.delivery_partner_id)?.name || "Unknown"
+    }
+
+    const visibleIds = sortedOrders.map(o => o.id)
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id))
+    const someVisibleSelected = visibleIds.some(id => selectedIds.includes(id))
+
+    function toggleSelect(orderId: string) {
+        setSelectedIds(prev => prev.includes(orderId)
+            ? prev.filter(id => id !== orderId)
+            : [...prev, orderId])
+    }
+
+    function toggleSelectAll() {
+        setSelectedIds(prev => {
+            if (allVisibleSelected) return prev.filter(id => !visibleIds.includes(id))
+            return Array.from(new Set([...prev, ...visibleIds]))
+        })
+    }
+
+    function openLabels(ids: string[]) {
+        if (ids.length === 0) return
+        if (ids.length > 100) {
+            toast.info("Max 100 labels per print job — printing the first 100")
+            ids = ids.slice(0, 100)
+        }
+        window.open(`/admin/orders/labels?ids=${ids.join(",")}`, "_blank")
     }
 
     async function updateOrderType(orderId: string, currentType: string, currentStatus: string) {
@@ -519,6 +546,16 @@ export default function AdminOrdersPage() {
                     <Table>
                         <TableHeader className="bg-slate-50 sticky top-0 z-10">
                             <TableRow className="border-b border-slate-100">
+                                <TableHead className="py-3.5 px-4 w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={allVisibleSelected}
+                                        ref={el => { if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected }}
+                                        onChange={toggleSelectAll}
+                                        aria-label="Select all visible orders"
+                                        className="h-4 w-4 rounded border-slate-300 accent-pink-600 cursor-pointer"
+                                    />
+                                </TableHead>
                                 <TableHead className="py-3.5 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">
                                     <button onClick={() => toggleSort("created_at")} className="inline-flex items-center text-slate-600 active:opacity-70">
                                         Order <SortIndicator k="created_at" />
@@ -539,7 +576,7 @@ export default function AdminOrdersPage() {
                         <TableBody>
                             {sortedOrders.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-32 text-center text-slate-400 font-medium">
+                                    <TableCell colSpan={8} className="h-32 text-center text-slate-400 font-medium">
                                         {loading ? "Loading..." : "No orders found"}
                                     </TableCell>
                                 </TableRow>
@@ -548,6 +585,15 @@ export default function AdminOrdersPage() {
                                 const orderType = order.order_type || "delivery"
                                 return (
                                     <TableRow key={order.id} className="hover:bg-slate-50/70 transition-colors border-b border-slate-50">
+                                        <TableCell className="py-3.5 px-4 align-top">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.includes(order.id)}
+                                                onChange={() => toggleSelect(order.id)}
+                                                aria-label={`Select order ${order.id.slice(0, 8)}`}
+                                                className="h-4 w-4 rounded border-slate-300 accent-pink-600 cursor-pointer mt-0.5"
+                                            />
+                                        </TableCell>
                                         <TableCell className="py-3.5 px-6">
                                             <div className="flex flex-col">
                                                 <span className="font-mono text-xs font-semibold text-slate-900 uppercase">#{order.id.slice(0, 8)}</span>
@@ -627,6 +673,15 @@ export default function AdminOrdersPage() {
                                                 <Button
                                                     variant="outline"
                                                     size="icon"
+                                                    className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all text-slate-400"
+                                                    title="Print label"
+                                                    onClick={() => openLabels([order.id])}
+                                                >
+                                                    <Tag className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
                                                     className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all text-slate-400"
                                                     onClick={() => handleDelete(order.id)}
                                                 >
@@ -670,9 +725,18 @@ export default function AdminOrdersPage() {
                     return (
                         <div key={order.id} className="rounded-2xl border bg-white shadow-sm overflow-hidden">
                             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                <div className="flex flex-col">
-                                    <span className="font-mono text-xs font-semibold text-slate-900 uppercase">#{order.id.slice(0, 8)}</span>
-                                    <span className="text-xs text-slate-400">{format(new Date(order.created_at), "d MMM yyyy")}</span>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.includes(order.id)}
+                                        onChange={() => toggleSelect(order.id)}
+                                        aria-label={`Select order ${order.id.slice(0, 8)}`}
+                                        className="h-4 w-4 rounded border-slate-300 accent-pink-600 cursor-pointer"
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className="font-mono text-xs font-semibold text-slate-900 uppercase">#{order.id.slice(0, 8)}</span>
+                                        <span className="text-xs text-slate-400">{format(new Date(order.created_at), "d MMM yyyy")}</span>
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${FLOW_BADGE_COLORS[order.status] || "bg-slate-50 text-slate-500 border-slate-200"}`}>
@@ -682,6 +746,15 @@ export default function AdminOrdersPage() {
                                         <Link href={`/admin/orders/${order.id}`}>
                                             <Eye className="w-4 h-4" />
                                         </Link>
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-9 w-9 rounded-lg border border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all text-slate-400"
+                                        title="Print label"
+                                        onClick={() => openLabels([order.id])}
+                                    >
+                                        <Tag className="w-4 h-4" />
                                     </Button>
                                 </div>
                             </div>
@@ -742,6 +815,27 @@ export default function AdminOrdersPage() {
                     )
                 })}
             </div>
+
+            {/* BULK ACTIONS BAR */}
+            {selectedIds.length > 0 && (
+                <div className="no-print fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-slate-900 text-white pl-5 pr-2 py-2 rounded-2xl shadow-2xl border border-slate-800">
+                    <span className="text-xs font-bold whitespace-nowrap">
+                        {selectedIds.length} selected
+                    </span>
+                    <button
+                        onClick={() => openLabels(selectedIds)}
+                        className="inline-flex items-center gap-2 bg-pink-600 hover:bg-pink-700 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap"
+                    >
+                        <Printer className="w-3.5 h-3.5" /> Print Labels
+                    </button>
+                    <button
+                        onClick={() => setSelectedIds([])}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white px-3 py-2 transition-colors whitespace-nowrap"
+                    >
+                        <X className="w-3.5 h-3.5" /> Clear
+                    </button>
+                </div>
+            )}
 
             {/* SHIP MODAL */}
             {shipModal && (
