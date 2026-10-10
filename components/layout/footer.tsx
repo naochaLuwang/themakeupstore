@@ -102,6 +102,7 @@ export function Footer() {
                                 { label: "Contact Us", href: "/contact" },
                                 { label: "Track Order", href: "/contact" },
                                 { label: "Rewards", href: "/rewards" },
+                                { label: "Careers", href: "/careers" },
                                 { label: "Return Policy", href: "/legal/return_policy" },
                             ].map((item) => (
                                 <li key={item.label}>
@@ -174,6 +175,7 @@ export function Footer() {
                             <ul className="space-y-2.5">
                                 <li><Link href="/contact" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Contact Us</Link></li>
                                 <li><Link href="/rewards" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Rewards</Link></li>
+                                <li><Link href="/careers" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Careers</Link></li>
                                 <li><Link href="/legal/privacy_policy" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Privacy</Link></li>
                                 <li><Link href="/legal/terms_and_conditions" className="text-[13px] text-slate-400 hover:text-[#fc2779]">Terms</Link></li>
                             </ul>

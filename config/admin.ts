@@ -34,6 +34,7 @@ import {
     MapPin,
     Activity,
     Megaphone,
+    Briefcase,
 } from "lucide-react"
 
 export interface SidebarItem {
@@ -81,6 +82,7 @@ export const adminConfig = {
         { title: "Delivery Partners", href: "/admin/delivery-partners", icon: Truck },
         { title: "Visitor History", href: "/admin/visitor-history", icon: Activity },
         { title: "Wholesale", href: "/admin/wholesale", icon: Store },
+        { title: "Careers", href: "/admin/careers", icon: Briefcase },
         { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
         { title: "Legal Settings", href: "/admin/settings/legal", icon: Settings },
     ] as SidebarItem[],

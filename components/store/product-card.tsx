@@ -23,7 +23,7 @@ function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
         const now = Date.now()
         return Math.max(0, end - now)
     })
-    
+
     useEffect(() => {
         const end = new Date(endsAt).getTime()
         const update = () => {
@@ -34,13 +34,13 @@ function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
         const interval = setInterval(update, 1000)
         return () => clearInterval(interval)
     }, [endsAt])
-    
+
     if (timeLeft <= 0) return <span>ENDED</span>
-    
+
     const hours = Math.floor(timeLeft / (1000 * 60 * 60))
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
     const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
-    
+
     return (
         <span className="flex items-center gap-1">
             <Clock className="w-2.5 h-2.5" />
@@ -187,7 +187,7 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                 const avg = reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length
                 setAverageRating(Math.round(avg * 10) / 10)
             }
-        } catch {}
+        } catch { }
     }
 
     const variants = product.product_variants || []
@@ -209,7 +209,7 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                 if (!user || cancelled) return
                 const { data } = await supabase.from("wishlist").select("id").eq("user_id", user.id).eq("product_id", product.id).maybeSingle()
                 if (!cancelled) setIsWishlisted(!!data)
-            } catch {}
+            } catch { }
         }
         checkWishlist()
         return () => { cancelled = true }
@@ -420,8 +420,8 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                     )}
                     {activePromo?.type === 'bogo' && !hasDiscount && (
                         <div className="mt-0.5">
-                            <span className="text-[9px] font-bold text-[#fc2779] tracking-tight">
-                                🏷️ Buy X Get Y
+                            <span className="block text-[9px] font-bold text-[#fc2779] tracking-tight truncate">
+                                🏷️ {activePromo.ruleName || "Buy X Get Y"}
                             </span>
                         </div>
                     )}
@@ -434,8 +434,8 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                     )}
                     {activePromo?.type === 'bogo' && hasDiscount && (
                         <div className="mt-0.5">
-                            <span className="text-[9px] font-medium text-[#fc2779]">
-                                + BOGO
+                            <span className="block text-[9px] font-medium text-[#fc2779] truncate">
+                                {activePromo.ruleName || "BOGO"}
                             </span>
                         </div>
                     )}
@@ -450,9 +450,8 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                     className="w-[38px] h-[38px] rounded-lg border border-slate-200 flex items-center justify-center shrink-0 hover:bg-slate-50 transition-all"
                 >
                     <Heart
-                        className={`w-[17px] h-[17px] transition-colors ${
-                            isWishlisted ? "fill-[#fc2779] text-[#fc2779]" : "text-slate-500"
-                        }`}
+                        className={`w-[17px] h-[17px] transition-colors ${isWishlisted ? "fill-[#fc2779] text-[#fc2779]" : "text-slate-500"
+                            }`}
                     />
                 </button>
 
@@ -464,11 +463,10 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                     <button
                         onClick={handleAddToBag}
                         disabled={justAdded}
-                        className={`flex-1 h-[38px] rounded-lg flex items-center justify-center text-[11px] font-semibold tracking-wide transition-all active:scale-[0.97] ${
-                            justAdded
+                        className={`flex-1 h-[38px] rounded-lg flex items-center justify-center text-[11px] font-semibold tracking-wide transition-all active:scale-[0.97] ${justAdded
                                 ? "bg-emerald-600 text-white"
                                 : "bg-[#fc2779] text-white shadow-sm shadow-pink-200 hover:bg-[#e0226b]"
-                        }`}
+                            }`}
                     >
                         {justAdded ? (
                             "ADDED ✓"
@@ -540,11 +538,10 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                                                     setJustAdded(true)
                                                     setTimeout(() => setJustAdded(false), 1500)
                                                 }}
-                                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
-                                                    isVOut
+                                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${isVOut
                                                         ? "opacity-40 cursor-not-allowed border-slate-100 bg-slate-50"
                                                         : "border-slate-100 hover:border-[#fc2779]/30 hover:bg-[#fc2779]/5"
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div

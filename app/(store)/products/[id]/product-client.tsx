@@ -77,13 +77,13 @@ function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
         const interval = setInterval(update, 1000)
         return () => clearInterval(interval)
     }, [endsAt])
-    
+
     if (timeLeft <= 0) return <span>ENDED</span>
-    
+
     const hours = Math.floor(timeLeft / (1000 * 60 * 60))
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
     const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
-    
+
     return (
         <span className="flex items-center gap-1">
             <Clock className="w-2.5 h-2.5" />
@@ -553,461 +553,461 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
 
     useEffect(() => {
         if (!user?.id) return
-        ;(async () => {
-            const { data: addr } = await supabase
-                .from("user_addresses")
-                .select("pincode")
-                .eq("user_id", user.id)
-                .order("is_default", { ascending: false })
-                .limit(1)
-                .maybeSingle()
-            if (addr?.pincode) {
-                setPincode(addr.pincode)
-                checkDelivery(addr.pincode)
-            }
-        })()
+            ; (async () => {
+                const { data: addr } = await supabase
+                    .from("user_addresses")
+                    .select("pincode")
+                    .eq("user_id", user.id)
+                    .order("is_default", { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
+                if (addr?.pincode) {
+                    setPincode(addr.pincode)
+                    checkDelivery(addr.pincode)
+                }
+            })()
     }, [user?.id])
 
     return (
         <div className="min-h-screen bg-white">
             {/* Mobile Layout */}
             <div className="md:hidden pb-24">
-            {/* Image Gallery */}
-            <div className="relative w-full bg-[#fafafa]">
-                <div
-                    ref={imageContainerRef}
-                    onScroll={handleImageScroll}
-                    className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                >
-                    {imageList.length > 1 ? (
-                        imageList.map((img: string, i: number) => (
-                            <div key={i} className="w-full shrink-0 snap-center">
+                {/* Image Gallery */}
+                <div className="relative w-full bg-[#fafafa]">
+                    <div
+                        ref={imageContainerRef}
+                        onScroll={handleImageScroll}
+                        className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                    >
+                        {imageList.length > 1 ? (
+                            imageList.map((img: string, i: number) => (
+                                <div key={i} className="w-full shrink-0 snap-center">
+                                    <div className="relative w-full" style={{ aspectRatio: "1 / 0.85" }} onClick={openLightbox}>
+                                        <img
+                                            src={img}
+                                            alt={`${product.name} ${i + 1}`}
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="w-full shrink-0">
                                 <div className="relative w-full" style={{ aspectRatio: "1 / 0.85" }} onClick={openLightbox}>
                                     <img
-                                        src={img}
-                                        alt={`${product.name} ${i + 1}`}
+                                        src={imageList[0] || "/placeholder.png"}
+                                        alt={product.name}
                                         className="w-full h-full object-contain"
                                     />
                                 </div>
                             </div>
-                        ))
-                    ) : (
-                        <div className="w-full shrink-0">
-                            <div className="relative w-full" style={{ aspectRatio: "1 / 0.85" }} onClick={openLightbox}>
-                                <img
-                                    src={imageList[0] || "/placeholder.png"}
-                                    alt={product.name}
-                                    className="w-full h-full object-contain"
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
-                {activeFlashSale && (
-                    <div className="absolute top-4 left-0 bg-amber-500 text-white text-[9px] font-black px-2 py-1 rounded-r-sm tracking-wider shadow-lg z-10">
-                        {activeFlashSale.label || 'FLASH SALE'}
-                    </div>
-                )}
-                {/* Countdown timer for flash sale */}
-                {activeFlashSale && (
-                    <div className="absolute top-10 left-0 bg-black/80 text-white text-[8px] font-mono px-2 py-1 rounded-r-sm shadow-lg z-10">
-                        <FlashSaleCountdown endsAt={activeFlashSale.ends_at} />
-                    </div>
-                )}
-                {discountPct > 0 && (
-                    <div className={`absolute ${activeFlashSale ? 'top-10' : 'top-4'} left-0 bg-[#fc2779] text-white text-[11px] font-black px-2.5 py-1 rounded-r-sm tracking-wider`}>
-                        {discountPct}% OFF
-                    </div>
-                )}
-            </div>
-            {imageList.length > 1 && (
-                <div className="flex justify-center gap-1.5 mt-2">
-                    {imageList.map((_: string, i: number) => (
-                        <div
-                            key={i}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${activeImage === i ? "w-5 bg-[#fc2779]" : "w-1.5 bg-gray-300"}`}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Product Info */}
-            <div className="px-4 pt-4">
-                {product.brand && (
-                    brandLink ? (
-                        <Link href={brandLink} className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em] underline decoration-black underline-offset-2 hover:text-gray-600 transition-colors">{product.brand}</Link>
-                    ) : (
-                        <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em]">{product.brand}</p>
-                    )
-                )}
-                <h1 className="text-lg font-normal text-gray-900 mt-1 leading-snug">{product.name}</h1>
-
-                {averageRating > 0 && (
-                    <button onClick={() => setReviewsModalVisible(true)} className="flex items-center gap-2 mt-2">
-                        <div className="flex items-center gap-1 bg-green-700 text-white px-1.5 py-0.5 rounded text-[11px] font-bold">
-                            <span>{averageRating.toFixed(1)}</span>
-                            <Star className="w-3 h-3 fill-white" />
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                    key={s}
-                                    className={`w-3 h-3 ${s <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
-                                />
-                            ))}
-                        </div>
-                        <span className="text-xs text-gray-400">{totalReviews} Reviews</span>
-                    </button>
-                )}
-            </div>
-
-            {/* Pricing */}
-            <div className="px-4 py-3 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xl font-black text-gray-900">
-                            ₹{Math.round(selectedVariantData?.calculated_price || finalPrice || sellingPrice)}
-                        </span>
-                        {discountPct > 0 && (
-                            <>
-                                <span className="text-sm text-gray-400 line-through">₹{Math.round(displayMrp)}</span>
-                                <span className="text-[11px] font-bold text-[#fc2779] bg-[#fc2779]/10 px-2 py-0.5 rounded">{discountPct}% off</span>
-                            </>
                         )}
                     </div>
-                    <button
-                        onClick={async () => {
-                            const url = window.location.href
-                            if (Capacitor.isNativePlatform()) {
-                                await Share.share({ title: document.title, url })
-                            } else if (navigator.share) {
-                                navigator.share({ title: document.title, url }).catch(() => {})
-                            } else {
-                                navigator.clipboard.writeText(url)
-                                    .then(() => toast.success("Link copied!"))
-                                    .catch(() => {})
-                            }
-                        }}
-                        className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center"
-                    >
-                        <Share2 className="w-4 h-4 text-gray-500" />
-                    </button>
+                    {activeFlashSale && (
+                        <div className="absolute top-4 left-0 bg-amber-500 text-white text-[9px] font-black px-2 py-1 rounded-r-sm tracking-wider shadow-lg z-10">
+                            {activeFlashSale.label || 'FLASH SALE'}
+                        </div>
+                    )}
+                    {/* Countdown timer for flash sale */}
+                    {activeFlashSale && (
+                        <div className="absolute top-10 left-0 bg-black/80 text-white text-[8px] font-mono px-2 py-1 rounded-r-sm shadow-lg z-10">
+                            <FlashSaleCountdown endsAt={activeFlashSale.ends_at} />
+                        </div>
+                    )}
+                    {discountPct > 0 && (
+                        <div className={`absolute ${activeFlashSale ? 'top-10' : 'top-4'} left-0 bg-[#fc2779] text-white text-[11px] font-black px-2.5 py-1 rounded-r-sm tracking-wider`}>
+                            {discountPct}% OFF
+                        </div>
+                    )}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">inclusive of all taxes</p>
-            </div>
+                {imageList.length > 1 && (
+                    <div className="flex justify-center gap-1.5 mt-2">
+                        {imageList.map((_: string, i: number) => (
+                            <div
+                                key={i}
+                                className={`h-1.5 rounded-full transition-all duration-300 ${activeImage === i ? "w-5 bg-[#fc2779]" : "w-1.5 bg-gray-300"}`}
+                            />
+                        ))}
+                    </div>
+                )}
 
-            {/* Variant Selector */}
-            {hasVariants && (
-                <div className="px-4 py-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-semibold text-gray-900">{selectedVariantData?.title || "Select Shade"}</span>
-                        <button onClick={() => setVariantModalVisible(true)} className="flex items-center gap-0.5 text-[#fc2779] text-xs font-semibold">
-                            View All <ChevronDown className="w-3.5 h-3.5" />
+                {/* Product Info */}
+                <div className="px-4 pt-4">
+                    {product.brand && (
+                        brandLink ? (
+                            <Link href={brandLink} className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em] underline decoration-black underline-offset-2 hover:text-gray-600 transition-colors">{product.brand}</Link>
+                        ) : (
+                            <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em]">{product.brand}</p>
+                        )
+                    )}
+                    <h1 className="text-lg font-normal text-gray-900 mt-1 leading-snug">{product.name}</h1>
+
+                    {averageRating > 0 && (
+                        <button onClick={() => setReviewsModalVisible(true)} className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-1 bg-green-700 text-white px-1.5 py-0.5 rounded text-[11px] font-bold">
+                                <span>{averageRating.toFixed(1)}</span>
+                                <Star className="w-3 h-3 fill-white" />
+                            </div>
+                            <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                        key={s}
+                                        className={`w-3 h-3 ${s <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
+                                    />
+                                ))}
+                            </div>
+                            <span className="text-xs text-gray-400">{totalReviews} Reviews</span>
+                        </button>
+                    )}
+                </div>
+
+                {/* Pricing */}
+                <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xl font-black text-gray-900">
+                                ₹{Math.round(selectedVariantData?.calculated_price || finalPrice || sellingPrice)}
+                            </span>
+                            {discountPct > 0 && (
+                                <>
+                                    <span className="text-sm text-gray-400 line-through">₹{Math.round(displayMrp)}</span>
+                                    <span className="text-[11px] font-bold text-[#fc2779] bg-[#fc2779]/10 px-2 py-0.5 rounded">{discountPct}% off</span>
+                                </>
+                            )}
+                        </div>
+                        <button
+                            onClick={async () => {
+                                const url = window.location.href
+                                if (Capacitor.isNativePlatform()) {
+                                    await Share.share({ title: document.title, url })
+                                } else if (navigator.share) {
+                                    navigator.share({ title: document.title, url }).catch(() => { })
+                                } else {
+                                    navigator.clipboard.writeText(url)
+                                        .then(() => toast.success("Link copied!"))
+                                        .catch(() => { })
+                                }
+                            }}
+                            className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center"
+                        >
+                            <Share2 className="w-4 h-4 text-gray-500" />
                         </button>
                     </div>
-                    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                        {product.product_variants.map((v: any) => {
-                            const isSelected = selectedVariant === v.id
-                            const isOOS = v.stock != null && Number(v.stock) <= 0
-                            return (
-                                <button
-                                    key={v.id}
-                                    onClick={() => {
-                                        const vp = getVariantPrice(v, discountType, discountValue, activeFlashSale)
-                                        const variantImages = (v.variant_images || [])
-                                            .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
-                                            .map((vi: any) => vi.url)
-                                            .filter(Boolean)
-                                        setSelectedVariant(v.id)
-                                        setSelectedVariantData({
-                                            id: v.id, title: v.title, price: v.price,
-                                            calculated_price: vp.salePrice, image_url: v.image_url || null,
-                                            stock: v.stock, hex_code: v.hex_code,
-                                            images: variantImages.length > 0 ? variantImages : (v.image_url ? [v.image_url] : []),
-                                        })
-                                    }}
-                                    className="flex flex-col items-center gap-1 shrink-0"
-                                >
-                                    <div className="relative">
-                                        <div
-                                            className={`w-11 h-11 rounded border-2 overflow-hidden ${isSelected ? "border-[#fc2779]" : "border-transparent"}`}
-                                        >
+                    <p className="text-[11px] text-gray-400 mt-1">inclusive of all taxes</p>
+                </div>
+
+                {/* Variant Selector */}
+                {hasVariants && (
+                    <div className="px-4 py-4 border-b border-gray-100">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-semibold text-gray-900">{selectedVariantData?.title || "Select Shade"}</span>
+                            <button onClick={() => setVariantModalVisible(true)} className="flex items-center gap-0.5 text-[#fc2779] text-xs font-semibold">
+                                View All <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                            {product.product_variants.map((v: any) => {
+                                const isSelected = selectedVariant === v.id
+                                const isOOS = v.stock != null && Number(v.stock) <= 0
+                                return (
+                                    <button
+                                        key={v.id}
+                                        onClick={() => {
+                                            const vp = getVariantPrice(v, discountType, discountValue, activeFlashSale)
+                                            const variantImages = (v.variant_images || [])
+                                                .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+                                                .map((vi: any) => vi.url)
+                                                .filter(Boolean)
+                                            setSelectedVariant(v.id)
+                                            setSelectedVariantData({
+                                                id: v.id, title: v.title, price: v.price,
+                                                calculated_price: vp.salePrice, image_url: v.image_url || null,
+                                                stock: v.stock, hex_code: v.hex_code,
+                                                images: variantImages.length > 0 ? variantImages : (v.image_url ? [v.image_url] : []),
+                                            })
+                                        }}
+                                        className="flex flex-col items-center gap-1 shrink-0"
+                                    >
+                                        <div className="relative">
                                             <div
-                                                className="w-full h-full rounded-sm"
-                                                style={{ backgroundColor: v.hex_code || "#f1f1f1" }}
-                                            />
-                                        </div>
-                                        {isOOS && (
-                                            <div className="absolute inset-0 bg-black/55 flex items-center justify-center rounded">
-                                                <span className="text-[7px] font-black text-white uppercase tracking-wider">OOS</span>
+                                                className={`w-11 h-11 rounded border-2 overflow-hidden ${isSelected ? "border-[#fc2779]" : "border-transparent"}`}
+                                            >
+                                                <div
+                                                    className="w-full h-full rounded-sm"
+                                                    style={{ backgroundColor: v.hex_code || "#f1f1f1" }}
+                                                />
                                             </div>
+                                            {isOOS && (
+                                                <div className="absolute inset-0 bg-black/55 flex items-center justify-center rounded">
+                                                    <span className="text-[7px] font-black text-white uppercase tracking-wider">OOS</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {v.title && (
+                                            <span className={`text-[9px] font-medium text-center max-w-[60px] truncate ${isSelected ? "text-[#fc2779]" : "text-gray-500"}`}>
+                                                {v.title}
+                                            </span>
                                         )}
-                                    </div>
-                                    {v.title && (
-                                        <span className={`text-[9px] font-medium text-center max-w-[60px] truncate ${isSelected ? "text-[#fc2779]" : "text-gray-500"}`}>
-                                            {v.title}
-                                        </span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Promotion Callout — above Sold By */}
+                {(resolvedBXGY || resolvedGift) && (
+                    <div className="px-4 space-y-2 py-3">
+                        {resolvedBXGY && (
+                            <div className="flex items-center gap-4 p-3 border border-slate-200 rounded-xl bg-white">
+                                <div className="relative shrink-0">
+                                    {resolvedBXGY.get_product?.thumbnail_url ? (
+                                        <img src={resolvedBXGY.get_product.thumbnail_url} alt={resolvedBXGY.get_product.name} className="w-16 h-16 rounded-lg object-cover border border-slate-100" />
+                                    ) : (
+                                        <div className="w-16 h-16 rounded-lg bg-pink-100 flex items-center justify-center">
+                                            <Tag className="w-6 h-6 text-[#fc2779]" />
+                                        </div>
                                     )}
-                                </button>
-                            )
-                        })}
+                                    <span className="absolute -top-1.5 -right-1.5 bg-[#fc2779] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full max-w-[80px] truncate">{resolvedBXGY.name || "BOGO"}</span>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{resolvedBXGY.get_product?.name || resolvedBXGY.name}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Buy {resolvedBXGY.buy_quantity} Get Y Free</p>
+                                </div>
+                            </div>
+                        )}
+                        {resolvedGift && (
+                            <div className={`flex items-center gap-4 p-3 border rounded-xl ${giftQualified ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50'}`}>
+                                <div className="relative shrink-0">
+                                    {(() => {
+                                        const giftImg = (resolvedGift.gift_product_ref?.images?.[0]) || resolvedGift.gift_product?.thumbnail_url
+                                        const giftName = resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name
+                                        return giftImg ? (
+                                            <img src={giftImg} alt={giftName} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
+                                        ) : (
+                                            <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
+                                                <ShoppingBag className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
+                                            </div>
+                                        )
+                                    })()}
+                                    <span className={`absolute -top-1.5 -right-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${giftQualified ? 'bg-purple-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                                        {giftQualified ? 'FREE' : 'GIFT'}
+                                    </span>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className={`text-sm font-semibold truncate ${giftQualified ? 'text-gray-900' : 'text-slate-400'}`}>
+                                        {resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name}
+                                    </p>
+                                    <p className={`text-xs mt-0.5 ${giftQualified ? 'text-slate-500' : 'text-slate-400'}`}>
+                                        {giftQualified ? 'Free Gift with Purchase' : `Add ₹${giftRemaining.toLocaleString()} more to get free gift`}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Sold By */}
+                <div className="px-4 py-2.5 flex items-center gap-1.5 border-b border-gray-100">
+                    <Store className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs text-gray-500">
+                        Sold by: <span className="font-bold text-gray-800">THE MAKEUPSTORE WANGKHEI</span>
+                    </span>
+                </div>
+
+                {/* Pincode Checker */}
+                <div className="mx-4 mt-3 border border-gray-200 rounded-lg bg-gray-50 p-3">
+                    {deliveryStatus === "idle" || showPincodeInput ? (
+                        <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                            <input
+                                type="text"
+                                placeholder="Enter delivery pincode"
+                                value={pincode}
+                                onChange={(e) => { setPincode(e.target.value); setDeliveryStatus("idle") }}
+                                maxLength={6}
+                                className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none"
+                            />
+                            <button
+                                onClick={() => checkDelivery()}
+                                disabled={deliveryChecking}
+                                className="px-4 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-md disabled:opacity-50"
+                            >
+                                {deliveryChecking ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : "Check"}
+                            </button>
+                        </div>
+                    ) : deliveryStatus === "available" ? (
+                        <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-green-500 shrink-0" />
+                            <span className="flex-1 text-xs text-green-600 font-semibold">
+                                {getDeliveryLine()}
+                            </span>
+                            <button onClick={() => setShowPincodeInput(true)} className="text-[#fc2779] text-xs font-bold">Change</button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-red-500 shrink-0" />
+                            <span className="flex-1 text-xs text-red-500 font-semibold">
+                                Not deliverable to {pincode}
+                            </span>
+                            <button onClick={() => setShowPincodeInput(true)} className="text-[#fc2779] text-xs font-bold">Change</button>
+                        </div>
+                    )}
+                    <button onClick={openPincodeList} className="mt-1.5 text-[10px] font-semibold text-rose-500 hover:text-rose-600 transition-colors">
+                        See all serviceable pincodes
+                    </button>
+                </div>
+
+                {/* Features */}
+                <div className="flex gap-3 px-4 py-3 border-b border-gray-100">
+                    <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5">
+                        <ShieldCheck className="w-4 h-4 text-green-500" />
+                        <span className="text-[11px] font-semibold text-gray-700">100% Authentic</span>
+                    </div>
+                    <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5">
+                        <RotateCcw className="w-4 h-4 text-green-500" />
+                        <span className="text-[11px] font-semibold text-gray-700">Easy Returns</span>
                     </div>
                 </div>
-            )}
 
-            {/* Promotion Callout — above Sold By */}
-            {(resolvedBXGY || resolvedGift) && (
-                <div className="px-4 space-y-2 py-3">
-                    {resolvedBXGY && (
-                        <div className="flex items-center gap-4 p-3 border border-slate-200 rounded-xl bg-white">
-                            <div className="relative shrink-0">
-                                {resolvedBXGY.get_product?.thumbnail_url ? (
-                                    <img src={resolvedBXGY.get_product.thumbnail_url} alt={resolvedBXGY.get_product.name} className="w-16 h-16 rounded-lg object-cover border border-slate-100" />
-                                ) : (
-                                    <div className="w-16 h-16 rounded-lg bg-pink-100 flex items-center justify-center">
-                                        <Tag className="w-6 h-6 text-[#fc2779]" />
-                                    </div>
-                                )}
-                                <span className="absolute -top-1.5 -right-1.5 bg-[#fc2779] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">BOGO</span>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-gray-900 truncate">{resolvedBXGY.get_product?.name || resolvedBXGY.name}</p>
-                                <p className="text-xs text-slate-500 mt-0.5">Buy {resolvedBXGY.buy_quantity} Get Y Free</p>
-                            </div>
-                        </div>
-                    )}
-                    {resolvedGift && (
-                        <div className={`flex items-center gap-4 p-3 border rounded-xl ${giftQualified ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50'}`}>
-                            <div className="relative shrink-0">
-                                {(() => {
-                                    const giftImg = (resolvedGift.gift_product_ref?.images?.[0]) || resolvedGift.gift_product?.thumbnail_url
-                                    const giftName = resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name
-                                    return giftImg ? (
-                                        <img src={giftImg} alt={giftName} className={`w-16 h-16 rounded-lg object-cover border shrink-0 ${giftQualified ? 'border-slate-100' : 'border-slate-100 opacity-50'}`} />
-                                    ) : (
-                                        <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${giftQualified ? 'bg-purple-100' : 'bg-slate-100'}`}>
-                                            <ShoppingBag className={`w-6 h-6 ${giftQualified ? 'text-purple-400' : 'text-slate-300'}`} />
-                                        </div>
-                                    )
-                                })()}
-                                <span className={`absolute -top-1.5 -right-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${giftQualified ? 'bg-purple-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
-                                    {giftQualified ? 'FREE' : 'GIFT'}
-                                </span>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className={`text-sm font-semibold truncate ${giftQualified ? 'text-gray-900' : 'text-slate-400'}`}>
-                                    {resolvedGift.gift_product_ref?.name || resolvedGift.gift_product?.name || resolvedGift.name}
-                                </p>
-                                <p className={`text-xs mt-0.5 ${giftQualified ? 'text-slate-500' : 'text-slate-400'}`}>
-                                    {giftQualified ? 'Free Gift with Purchase' : `Add ₹${giftRemaining.toLocaleString()} more to get free gift`}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Sold By */}
-            <div className="px-4 py-2.5 flex items-center gap-1.5 border-b border-gray-100">
-                <Store className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-500">
-                    Sold by: <span className="font-bold text-gray-800">THE MAKEUPSTORE WANGKHEI</span>
-                </span>
-            </div>
-
-            {/* Pincode Checker */}
-            <div className="mx-4 mt-3 border border-gray-200 rounded-lg bg-gray-50 p-3">
-                {deliveryStatus === "idle" || showPincodeInput ? (
-                    <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-                        <input
-                            type="text"
-                            placeholder="Enter delivery pincode"
-                            value={pincode}
-                            onChange={(e) => { setPincode(e.target.value); setDeliveryStatus("idle") }}
-                            maxLength={6}
-                            className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none"
+                {/* Product Details */}
+                {product.description && (
+                    <div className="px-4 py-4 border-b border-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">Product Details</h3>
+                        <div
+                            className={`text-sm text-gray-600 leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-gray-900 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-gray-900 [&_strong]:font-bold [&_a]:text-rose-500 [&_a]:underline [&_img]:rounded-xl [&_img]:my-4 [&_img]:max-w-full [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-3 [&_br]:mb-2 ${descExpanded ? "" : "line-clamp-3"}`}
+                            dangerouslySetInnerHTML={{ __html: product.description }}
                         />
                         <button
-                            onClick={() => checkDelivery()}
-                            disabled={deliveryChecking}
-                            className="px-4 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-md disabled:opacity-50"
+                            onClick={() => setDescExpanded(!descExpanded)}
+                            className="flex items-center gap-1 mt-2 text-[#fc2779] text-xs font-semibold"
                         >
-                            {deliveryChecking ? (
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : "Check"}
+                            {descExpanded ? "Show Less" : "Read More"}
+                            {descExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
                     </div>
-                ) : deliveryStatus === "available" ? (
-                    <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-green-500 shrink-0" />
-<span className="flex-1 text-xs text-green-600 font-semibold">
-    {getDeliveryLine()}
-</span>
-                        <button onClick={() => setShowPincodeInput(true)} className="text-[#fc2779] text-xs font-bold">Change</button>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-red-500 shrink-0" />
-                        <span className="flex-1 text-xs text-red-500 font-semibold">
-                            Not deliverable to {pincode}
-                        </span>
-                        <button onClick={() => setShowPincodeInput(true)} className="text-[#fc2779] text-xs font-bold">Change</button>
-                    </div>
                 )}
-                <button onClick={openPincodeList} className="mt-1.5 text-[10px] font-semibold text-rose-500 hover:text-rose-600 transition-colors">
-                    See all serviceable pincodes
-                </button>
-            </div>
 
-            {/* Features */}
-            <div className="flex gap-3 px-4 py-3 border-b border-gray-100">
-                <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5">
-                    <ShieldCheck className="w-4 h-4 text-green-500" />
-                    <span className="text-[11px] font-semibold text-gray-700">100% Authentic</span>
-                </div>
-                <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5">
-                    <RotateCcw className="w-4 h-4 text-green-500" />
-                    <span className="text-[11px] font-semibold text-gray-700">Easy Returns</span>
-                </div>
-            </div>
-
-            {/* Product Details */}
-            {product.description && (
-                <div className="px-4 py-4 border-b border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Product Details</h3>
-                    <div
-                        className={`text-sm text-gray-600 leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-gray-900 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-gray-900 [&_strong]:font-bold [&_a]:text-rose-500 [&_a]:underline [&_img]:rounded-xl [&_img]:my-4 [&_img]:max-w-full [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-3 [&_br]:mb-2 ${descExpanded ? "" : "line-clamp-3"}`}
-                        dangerouslySetInnerHTML={{ __html: product.description }}
-                    />
-                    <button
-                        onClick={() => setDescExpanded(!descExpanded)}
-                        className="flex items-center gap-1 mt-2 text-[#fc2779] text-xs font-semibold"
-                    >
-                        {descExpanded ? "Show Less" : "Read More"}
-                        {descExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    </button>
-                </div>
-            )}
-
-            {/* Reviews Section */}
-            <div className="mx-4 my-4 border border-gray-100 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-gray-900">Customer Reviews</h3>
-                    <button onClick={() => setReviewsModalVisible(true)} className="text-[#fc2779] text-xs font-semibold">View All</button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="text-center min-w-[60px]">
-                        <span className="text-2xl font-black text-gray-900">{averageRating > 0 ? averageRating.toFixed(1) : "-"}</span>
-                        <p className="text-[10px] text-gray-400">{totalReviews} {totalReviews === 1 ? "Review" : "Reviews"}</p>
+                {/* Reviews Section */}
+                <div className="mx-4 my-4 border border-gray-100 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-gray-900">Customer Reviews</h3>
+                        <button onClick={() => setReviewsModalVisible(true)} className="text-[#fc2779] text-xs font-semibold">View All</button>
                     </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                    key={s}
-                                    className={`w-4 h-4 ${s <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
-                                />
+
+                    <div className="flex items-center gap-3">
+                        <div className="text-center min-w-[60px]">
+                            <span className="text-2xl font-black text-gray-900">{averageRating > 0 ? averageRating.toFixed(1) : "-"}</span>
+                            <p className="text-[10px] text-gray-400">{totalReviews} {totalReviews === 1 ? "Review" : "Reviews"}</p>
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                        key={s}
+                                        className={`w-4 h-4 ${s <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setReviewsModalVisible(true)}
+                            className="border border-[#fc2779] rounded-lg px-3 py-2 flex items-center gap-1 shrink-0"
+                        >
+                            <Star className="w-3.5 h-3.5 text-[#fc2779]" />
+                            <span className="text-[11px] font-bold text-[#fc2779]">Write</span>
+                        </button>
+                    </div>
+
+                    {product.product_reviews && product.product_reviews.length > 0 && (
+                        <div className="mt-4">
+                            {product.product_reviews.slice(0, 2).map((r: any) => (
+                                <ReviewCard key={r.id} review={r} />
+                            ))}
+                            {product.product_reviews.length > 2 && (
+                                <button
+                                    onClick={() => setReviewsModalVisible(true)}
+                                    className="w-full text-center py-3 text-[#fc2779] text-xs font-semibold flex items-center justify-center gap-1"
+                                >
+                                    View All {totalReviews} Reviews
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {(!product.product_reviews || product.product_reviews.length === 0) && (
+                        <button onClick={() => setReviewsModalVisible(true)} className="w-full text-center py-4 text-xs text-gray-400 mt-2">
+                            Be the first to review this product
+                        </button>
+                    )}
+                </div>
+
+                {/* Similar Products */}
+                {similarProducts.length > 0 && (
+                    <div className="py-4">
+                        <h3 className="text-sm font-semibold text-gray-900 px-4 mb-3">Similar Products</h3>
+                        <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar">
+                            {similarProducts.map((item: any) => (
+                                <div key={item.id} className="w-40 shrink-0">
+                                    <ProductCard product={item} />
+                                </div>
                             ))}
                         </div>
                     </div>
+                )}
+
+                {/* More from this brand */}
+                {brandProducts.length > 0 && product.brand && (
+                    <div className="py-4">
+                        <h3 className="text-sm font-semibold text-gray-900 px-4 mb-3">
+                            More from <span className="text-[#fc2779]">{product.brand}</span>
+                        </h3>
+                        <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar">
+                            {brandProducts.map((item: any) => (
+                                <div key={item.id} className="w-40 shrink-0">
+                                    <ProductCard product={item} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Fixed Bottom Bar */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 pb-5 flex items-center gap-3 shadow-lg z-40">
                     <button
-                        onClick={() => setReviewsModalVisible(true)}
-                        className="border border-[#fc2779] rounded-lg px-3 py-2 flex items-center gap-1 shrink-0"
+                        onClick={toggleWishlist}
+                        className="w-12 h-12 rounded-full border-2 border-gray-300 flex items-center justify-center shrink-0"
                     >
-                        <Star className="w-3.5 h-3.5 text-[#fc2779]" />
-                        <span className="text-[11px] font-bold text-[#fc2779]">Write</span>
+                        <Heart
+                            className={`w-5 h-5 ${isWishlisted ? "fill-[#fc2779] text-[#fc2779]" : "text-gray-600"}`}
+                        />
                     </button>
+                    {showOOSButton ? (
+                        <button onClick={() => setNotifyModalVisible(true)} className="flex-1 h-12 rounded-full bg-[#fc2779] text-white text-sm font-semibold flex items-center justify-center gap-2">
+                            <Bell className="w-4 h-4" />
+                            Notify Me
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleAddToBag}
+                            className="flex-1 h-12 rounded-full bg-gray-900 text-white text-sm font-semibold flex items-center justify-center gap-2"
+                        >
+                            <ShoppingBag className="w-4 h-4" />
+                            Add to Bag
+                        </button>
+                    )}
                 </div>
 
-                {product.product_reviews && product.product_reviews.length > 0 && (
-                    <div className="mt-4">
-                        {product.product_reviews.slice(0, 2).map((r: any) => (
-                            <ReviewCard key={r.id} review={r} />
-                        ))}
-                        {product.product_reviews.length > 2 && (
-                            <button
-                                onClick={() => setReviewsModalVisible(true)}
-                                className="w-full text-center py-3 text-[#fc2779] text-xs font-semibold flex items-center justify-center gap-1"
-                            >
-                                View All {totalReviews} Reviews
-                                <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                        )}
+                {/* Added toast */}
+                {showAddedToast && (
+                    <div className="fixed bottom-24 md:bottom-4 left-4 right-4 z-50 bg-gray-900 text-white text-sm font-semibold py-3 px-5 rounded-lg flex items-center justify-center gap-2 shadow-xl">
+                        <Check className="w-4 h-4" />
+                        Added to bag
                     </div>
                 )}
-
-                {(!product.product_reviews || product.product_reviews.length === 0) && (
-                    <button onClick={() => setReviewsModalVisible(true)} className="w-full text-center py-4 text-xs text-gray-400 mt-2">
-                        Be the first to review this product
-                    </button>
-                )}
-            </div>
-
-            {/* Similar Products */}
-            {similarProducts.length > 0 && (
-                <div className="py-4">
-                    <h3 className="text-sm font-semibold text-gray-900 px-4 mb-3">Similar Products</h3>
-                    <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar">
-                        {similarProducts.map((item: any) => (
-                            <div key={item.id} className="w-40 shrink-0">
-                                <ProductCard product={item} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* More from this brand */}
-            {brandProducts.length > 0 && product.brand && (
-                <div className="py-4">
-                    <h3 className="text-sm font-semibold text-gray-900 px-4 mb-3">
-                        More from <span className="text-[#fc2779]">{product.brand}</span>
-                    </h3>
-                    <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar">
-                        {brandProducts.map((item: any) => (
-                            <div key={item.id} className="w-40 shrink-0">
-                                <ProductCard product={item} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Fixed Bottom Bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 pb-5 flex items-center gap-3 shadow-lg z-40">
-                <button
-                    onClick={toggleWishlist}
-                    className="w-12 h-12 rounded-full border-2 border-gray-300 flex items-center justify-center shrink-0"
-                >
-                    <Heart
-                        className={`w-5 h-5 ${isWishlisted ? "fill-[#fc2779] text-[#fc2779]" : "text-gray-600"}`}
-                    />
-                </button>
-                {showOOSButton ? (
-                    <button onClick={() => setNotifyModalVisible(true)} className="flex-1 h-12 rounded-full bg-[#fc2779] text-white text-sm font-semibold flex items-center justify-center gap-2">
-                        <Bell className="w-4 h-4" />
-                        Notify Me
-                    </button>
-                ) : (
-                    <button
-                        onClick={handleAddToBag}
-                        className="flex-1 h-12 rounded-full bg-gray-900 text-white text-sm font-semibold flex items-center justify-center gap-2"
-                    >
-                        <ShoppingBag className="w-4 h-4" />
-                        Add to Bag
-                    </button>
-                )}
-            </div>
-
-            {/* Added toast */}
-            {showAddedToast && (
-                <div className="fixed bottom-24 md:bottom-4 left-4 right-4 z-50 bg-gray-900 text-white text-sm font-semibold py-3 px-5 rounded-lg flex items-center justify-center gap-2 shadow-xl">
-                    <Check className="w-4 h-4" />
-                    Added to bag
-                </div>
-            )}
             </div>
 
             {/* Desktop Layout */}
@@ -1047,9 +1047,8 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                         <button
                                             key={i}
                                             onClick={() => setActiveImage(i)}
-                                            className={`w-16 h-16 rounded-lg border-2 overflow-hidden shrink-0 ${
-                                                activeImage === i ? "border-[#fc2779]" : "border-gray-200"
-                                            }`}
+                                            className={`w-16 h-16 rounded-lg border-2 overflow-hidden shrink-0 ${activeImage === i ? "border-[#fc2779]" : "border-gray-200"
+                                                }`}
                                         >
                                             <img src={img} alt="Review photo" className="w-full h-full object-cover" loading="lazy" />
                                         </button>
@@ -1173,7 +1172,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                                         <Tag className="w-6 h-6 text-[#fc2779]" />
                                                     </div>
                                                 )}
-                                                <span className="absolute -top-1.5 -right-1.5 bg-[#fc2779] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">BOGO</span>
+                                                <span className="absolute -top-1.5 -right-1.5 bg-[#fc2779] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full max-w-[80px] truncate">{resolvedBXGY.name || "BOGO"}</span>
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-semibold text-gray-900 truncate">{resolvedBXGY.get_product?.name || resolvedBXGY.name}</p>
@@ -1246,9 +1245,9 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                 ) : deliveryStatus === "available" ? (
                                     <div className="flex items-center gap-2">
                                         <MapPin className="w-4 h-4 text-green-500 shrink-0" />
-<span className="flex-1 text-xs text-green-600 font-semibold">
-    {getDeliveryLine()}
-</span>
+                                        <span className="flex-1 text-xs text-green-600 font-semibold">
+                                            {getDeliveryLine()}
+                                        </span>
                                         <button onClick={() => setShowPincodeInput(true)} className="text-[#fc2779] text-xs font-bold">Change</button>
                                     </div>
                                 ) : (
@@ -1612,11 +1611,10 @@ function PincodeList({ pincodes, currentPincode, onSelect }: { pincodes: any[]; 
                                 key={z.pincode}
                                 type="button"
                                 onClick={() => onSelect(z.pincode)}
-                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                                    isSelected
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${isSelected
                                         ? "border-slate-900 bg-slate-50"
                                         : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50"
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center gap-2 min-w-0">
                                     {isSelected && <Check className="w-3.5 h-3.5 text-slate-900 shrink-0" />}

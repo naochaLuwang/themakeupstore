@@ -81,6 +81,7 @@ export async function updateSession(request: NextRequest) {
         path.startsWith('/skincare-accessories') ||
         path.startsWith('/brands') ||
         path.startsWith('/search') ||
+        path.startsWith('/careers') ||
         path.startsWith('/wholesale/register');
 
     if (!user && !isPublicRoute) {
