@@ -482,13 +482,14 @@ export function usePromotions() {
                     getType: rule.get_type,
                 })
 
-                if (totalQualifying < rule.buy_quantity) continue
+                // Each complete set = buy_quantity paid + 1 free (Buy 2 Get 1 = 3 items per set)
+                const sets = Math.floor(totalQualifying / minForProgress)
+                if (sets < 1) continue
 
-                // BOGO: "Buy X Get 1 Free" means you need X+1 items, 1 is free
-                const minForFree = rule.buy_quantity + 1
-                if (totalQualifying < minForFree) continue
-
-                const timesApplicable = rule.max_per_order || 1
+                // "Max / Order" caps the free units one order can receive; null = every complete set applies
+                const timesApplicable = rule.max_per_order != null && rule.max_per_order > 0
+                    ? Math.min(sets, rule.max_per_order)
+                    : sets
 
                 if (rule.get_type === "cheapest_free") {
                     const sorted = [...qualifyingItems].sort((a, b) => a.price - b.price)

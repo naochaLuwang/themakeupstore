@@ -105,7 +105,7 @@ export async function placeOrder(
         shipping_method_id?: string | null
     },
     promoDetails?: { code: string; discount: number; id?: string },
-    bxgyDetails?: { discount: number; freeItems?: { variantId: string; productId: string; ruleId?: string; quantity: number }[] },
+    bxgyDetails?: { discount: number; appliedRuleIds?: string[]; freeItems?: { variantId: string; productId: string; ruleId?: string; quantity: number }[] },
     giftDetails?: { variantId: string; productId: string; ruleId?: string; quantity: number }[],
     giftCardDetails?: { code: string; amount: number },
     coinRedemption?: { amount: number },
@@ -230,11 +230,16 @@ export async function placeOrder(
 
         // ── 2b. RE-VALIDATE BXGY DISCOUNT (comprehensive) ──
         let verifiedBXGYDiscount = 0;
-        if (bxgyDetails?.discount && bxgyDetails.discount > 0 && bxgyDetails.freeItems?.length) {
+        if (bxgyDetails?.discount && bxgyDetails.discount > 0) {
             const paidItems = cartItems.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
 
-            // Fetch full rule data for re-validation
-            const bxgyRuleIds = [...new Set(bxgyDetails.freeItems.map((f: any) => f.ruleId).filter(Boolean))]
+            // Fetch full rule data for re-validation.
+            // Rule IDs come from both free-item rows and discount-only rules (cheapest_free has no free items).
+            const bxgyRuleIds = [...new Set([
+                ...(bxgyDetails.freeItems || []).map((f: any) => f.ruleId),
+                ...(bxgyDetails.appliedRuleIds || []),
+            ].filter(Boolean))]
+            if (bxgyRuleIds.length === 0) throw new Error("BXGY rules could not be validated")
             let bxgyRuleMap = new Map<string, any>()
             if (bxgyRuleIds.length > 0) {
                 const [rulesRes, buyProductsRes, buyCategoriesRes, buyBrandsRes] = await Promise.all([
@@ -277,11 +282,11 @@ export async function placeOrder(
                 for (const r of rules) bxgyRuleMap.set(r.id, r)
             }
 
-            const bxgyVariantIds = bxgyDetails.freeItems.map((f: any) => f.variantId)
+            const bxgyVariantIds = (bxgyDetails.freeItems || []).map((f: any) => f.variantId)
             const bxgyVariants = await batchSimpleVariants(bxgyVariantIds)
             const bxgyVariantMap = new Map(bxgyVariants.map((v: any) => [v.id, v]))
 
-            const productIds = bxgyDetails.freeItems
+            const productIds = (bxgyDetails.freeItems || [])
                 .filter((f: any) => !bxgyVariantMap.has(f.variantId))
                 .map((f: any) => f.productId)
             let defaultFallbackMap = new Map<string, any>()
@@ -309,39 +314,45 @@ export async function placeOrder(
                 catMap.set(row.product_id, s)
             }
 
+            // Re-validate qualification for EVERY applied rule — discount-only rules
+            // (cheapest_free) have no free-item rows, so this cannot live inside the free-item loop
             const resolvedBXGYFreeItems = [];
-            for (const freeItem of bxgyDetails.freeItems) {
-                // Re-validate rule conditions
+            for (const rule of bxgyRuleMap.values()) {
+                if (!rule.is_active) throw new Error("BXGY rule is no longer active")
+                if (rule.usage_limit && rule.used_count >= rule.usage_limit) throw new Error("BXGY usage limit reached")
+                if (rule.starts_at && new Date(rule.starts_at) > new Date()) throw new Error("BXGY rule is not active yet")
+                if (rule.expires_at && new Date(rule.expires_at) < new Date()) throw new Error("BXGY rule has expired")
+
+                let qualifyingItems = paidItems
+                if (rule.buy_type === "specific_products") {
+                    const ids = new Set((rule.buy_products || []).map((p: any) => p.product_id))
+                    qualifyingItems = paidItems.filter((i: any) => ids.has(i.productId))
+                } else if (rule.buy_type === "specific_categories") {
+                    const catIds = new Set((rule.buy_categories || []).map((c: any) => c.category_id))
+                    qualifyingItems = paidItems.filter((i: any) => {
+                        const itemCats = catMap.get(i.productId)
+                        return itemCats && [...itemCats].some((cid: string) => catIds.has(cid))
+                    })
+                } else if (rule.buy_type === "specific_brands") {
+                    const { data: prods } = await supabase
+                        .from("products")
+                        .select("id, brand")
+                        .in("id", cartProductIds)
+                    const brands = new Set((rule.buy_brands || []).map((b: any) => b.brand))
+                    qualifyingItems = paidItems.filter((i: any) => {
+                        const p = prods?.find((pr: any) => pr.id === i.productId)
+                        return p && brands.has(p.brand)
+                    })
+                }
+
+                const totalQualifying = qualifyingItems.reduce((s: number, i: any) => s + i.quantity, 0)
+                if (totalQualifying < rule.buy_quantity + 1) throw new Error("BXGY conditions are no longer met")
+            }
+
+            for (const freeItem of bxgyDetails.freeItems || []) {
                 if (freeItem.ruleId) {
                     const rule = bxgyRuleMap.get(freeItem.ruleId)
                     if (!rule || !rule.is_active) throw new Error("BXGY rule is no longer active")
-                    if (rule.usage_limit && rule.used_count >= rule.usage_limit) throw new Error("BXGY usage limit reached")
-
-                    let qualifyingItems = paidItems
-                    if (rule.buy_type === "specific_products") {
-                        const ids = new Set((rule.buy_products || []).map((p: any) => p.product_id))
-                        qualifyingItems = paidItems.filter((i: any) => ids.has(i.productId))
-                    } else if (rule.buy_type === "specific_categories") {
-                        const catIds = new Set((rule.buy_categories || []).map((c: any) => c.category_id))
-                        qualifyingItems = paidItems.filter((i: any) => {
-                            const itemCats = catMap.get(i.productId)
-                            return itemCats && [...itemCats].some((cid: string) => catIds.has(cid))
-                        })
-                    } else if (rule.buy_type === "specific_brands") {
-                        const { data: prods } = await supabase
-                            .from("products")
-                            .select("id, brand")
-                            .in("id", cartProductIds)
-                        const brands = new Set((rule.buy_brands || []).map((b: any) => b.brand))
-                        qualifyingItems = paidItems.filter((i: any) => {
-                            const p = prods?.find((pr: any) => pr.id === i.productId)
-                            return p && brands.has(p.brand)
-                        })
-                    }
-
-                    const totalQualifying = qualifyingItems.reduce((s: number, i: any) => s + i.quantity, 0)
-                    if (totalQualifying < rule.buy_quantity + 1) throw new Error("BXGY conditions are no longer met")
-
                     // Verify the free item matches what the rule promises
                     if (rule.get_type === "specific_product" && rule.get_product_id) {
                         if (freeItem.productId !== rule.get_product_id) throw new Error("BXGY free item mismatch")

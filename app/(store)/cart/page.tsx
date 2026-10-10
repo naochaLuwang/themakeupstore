@@ -137,11 +137,11 @@ export default function CartPage() {
     const subtotal = useMemo(() => Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((acc: number, i: any) => acc + (i.price * i.quantity), 0)), [items])
     const totalMRP = useMemo(() => Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((acc: number, i: any) => acc + ((i.originalPrice || i.price) * i.quantity), 0)), [items])
     const totalDiscount = Math.max(0, totalMRP - subtotal)
-    const totalSaving = totalDiscount
     const outOfStockVariants = useMemo(() => items.filter((i: any) => (i.stock ?? 1) <= 0 && !i.is_gift && !i.is_bxgy_free), [items])
     const hasOutOfStock = outOfStockVariants.length > 0
     const giftItems = useMemo(() => items.filter((i: any) => i.is_gift), [items])
     const totalBXGYDiscount = useMemo(() => (bxgyDiscounts || []).reduce((sum: number, d: any) => sum + d.discount_amount, 0), [bxgyDiscounts])
+    const totalSaving = totalDiscount + totalBXGYDiscount
     const discountMap = useMemo(() => {
         const map: Record<string, { amount: number; freeQty: number }> = {}
         ;(bxgyDiscounts || []).forEach((d: any) => {
@@ -810,7 +810,7 @@ export default function CartPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-[10px] font-black tracking-wider text-gray-400">GRAND TOTAL</p>
-                            <p className="text-[22px] font-black text-gray-900">₹{subtotal.toLocaleString()}</p>
+                            <p className="text-[22px] font-black text-gray-900">₹{Math.max(0, subtotal - totalBXGYDiscount).toLocaleString()}</p>
                         </div>
                         {hasOutOfStock ? (
                             <div className="h-[42px] bg-gray-300 text-white text-[11px] font-black tracking-wider rounded-lg flex items-center justify-center gap-1.5 px-6 cursor-not-allowed">

@@ -66,7 +66,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
     useEffect(() => {
         if (profile?.id) {
-            getAvailableBalance(profile.id).then(setCoinBalance).catch(() => {})
+            getAvailableBalance(profile.id).then(setCoinBalance).catch(() => { })
         }
     }, [profile?.id])
 
@@ -114,12 +114,12 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const bxgyDiscount = mounted ? getBXGYTotalDiscount() : 0
     const discountMap = useMemo(() => {
         const map: Record<string, { amount: number; freeQty: number }> = {}
-        ;(bxgyDiscounts || []).forEach((d: any) => {
-            const existing = map[d.variant_id] || { amount: 0, freeQty: 0 }
-            existing.amount += d.discount_amount
-            existing.freeQty += d.free_quantity || 0
-            map[d.variant_id] = existing
-        })
+            ; (bxgyDiscounts || []).forEach((d: any) => {
+                const existing = map[d.variant_id] || { amount: 0, freeQty: 0 }
+                existing.amount += d.discount_amount
+                existing.freeQty += d.free_quantity || 0
+                map[d.variant_id] = existing
+            })
         return map
     }, [bxgyDiscounts])
     const giftItems = mounted ? getGiftItems() : []
@@ -223,6 +223,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
             const bxgyDetails = bxgyDiscount > 0 ? {
                 discount: bxgyDiscount,
+                appliedRuleIds: [...new Set((bxgyDiscounts || []).map((d: { rule_id: string }) => d.rule_id).filter(Boolean))],
                 freeItems: items.filter((i: any) => i.is_bxgy_free).map((i: any) => ({
                     variantId: i.variantId,
                     productId: i.productId,
@@ -513,13 +514,11 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         {/* Pay Online — first / default */}
                         <button
                             onClick={() => setPaymentMethod("razorpay")}
-                            className={`w-full flex items-center gap-4 px-4 py-4 transition-colors ${
-                                paymentMethod === "razorpay" ? "bg-pink-50/50" : ""
-                            } ${paymentMethod === "cod" ? "border-b border-gray-100" : ""}`}
+                            className={`w-full flex items-center gap-4 px-4 py-4 transition-colors ${paymentMethod === "razorpay" ? "bg-pink-50/50" : ""
+                                } ${paymentMethod === "cod" ? "border-b border-gray-100" : ""}`}
                         >
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                paymentMethod === "razorpay" ? "border-pink-500" : "border-gray-300"
-                            }`}>
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "razorpay" ? "border-pink-500" : "border-gray-300"
+                                }`}>
                                 {paymentMethod === "razorpay" && (
                                     <div className="w-2.5 h-2.5 rounded-full bg-pink-500" />
                                 )}
@@ -545,13 +544,11 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         {/* COD — second */}
                         <button
                             onClick={() => setPaymentMethod("cod")}
-                            className={`w-full flex items-center gap-4 px-4 py-4 transition-colors ${
-                                paymentMethod === "cod" ? "bg-pink-50/50" : ""
-                            }`}
+                            className={`w-full flex items-center gap-4 px-4 py-4 transition-colors ${paymentMethod === "cod" ? "bg-pink-50/50" : ""
+                                }`}
                         >
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                paymentMethod === "cod" ? "border-pink-500" : "border-gray-300"
-                            }`}>
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "cod" ? "border-pink-500" : "border-gray-300"
+                                }`}>
                                 {paymentMethod === "cod" && (
                                     <div className="w-2.5 h-2.5 rounded-full bg-pink-500" />
                                 )}
@@ -630,14 +627,12 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 <button
                                     onClick={handleToggleCoinRedemption}
                                     disabled={loadingCoins}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                        useCoins ? "bg-pink-500" : "bg-gray-200"
-                                    }`}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useCoins ? "bg-pink-500" : "bg-gray-200"
+                                        }`}
                                 >
                                     <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                                            useCoins ? "translate-x-6" : "translate-x-1"
-                                        }`}
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${useCoins ? "translate-x-6" : "translate-x-1"
+                                            }`}
                                     />
                                 </button>
                             </div>
@@ -674,12 +669,12 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
                         <div className={`transition-all duration-300 ease-in-out ${showBreakup ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}`}>
                             <div className="border-t border-gray-100">
-                                <div className="px-5 py-3.5 flex justify-between">
+                                <div className="px-5 py-2 flex justify-between">
                                     <span className="text-sm text-gray-500">MRP Subtotal</span>
                                     <span className="text-sm font-medium text-gray-700">₹{Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + i.mrp * i.quantity, 0))}</span>
                                 </div>
                                 <div className="h-px bg-gray-50 mx-5" />
-                                <div className="px-5 py-3.5 flex justify-between">
+                                <div className="px-5 py-2 flex justify-between">
                                     <span className="text-sm text-red-500 font-medium">
                                         Total Discount
                                         {(() => {
@@ -697,10 +692,10 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 <div className="h-px bg-gray-50 mx-5" />
                                 <div className="px-5 py-3.5 flex justify-between">
                                     <span className="text-sm text-gray-500">Subtotal after discount</span>
-                                    <span className="text-sm font-semibold text-gray-900">₹{Math.round(currentSubtotal)}</span>
+                                    <span className="text-sm font-semibold text-gray-900">₹{Math.round(Math.max(0, currentSubtotal - bxgyDiscount))}</span>
                                 </div>
                                 <div className="h-px bg-gray-50 mx-5" />
-                                <div className="px-5 py-3.5 flex justify-between">
+                                <div className="px-5 py-2 flex justify-between">
                                     <div>
                                         <span className="text-sm text-gray-500">
                                             Shipping{shippingLabel !== "Standard" && shippingLabel !== "FREE" ? ` (${shippingLabel})` : ""}
@@ -724,19 +719,10 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                         </div>
                                     </>
                                 )}
-                                {bxgyDiscount > 0 && (
-                                    <>
-                                        <div className="h-px bg-gray-50 mx-5" />
-                                        <div className="px-5 py-3.5 flex justify-between bg-pink-50/50">
-                                            <span className="text-sm font-medium text-pink-600">Buy X Get Y Discount</span>
-                                            <span className="text-sm font-bold text-pink-600">−₹{bxgyDiscount}</span>
-                                        </div>
-                                    </>
-                                )}
                                 {giftItems.length > 0 && (
                                     <>
                                         <div className="h-px bg-gray-50 mx-5" />
-                                        <div className="px-5 py-3.5 flex justify-between bg-purple-50/50">
+                                        <div className="px-5 py-2 flex justify-between bg-purple-50/50">
                                             <span className="text-sm font-medium text-purple-600">Free Gift{giftItems.length > 1 ? 's' : ''}</span>
                                             <span className="text-sm font-bold text-purple-600">₹0</span>
                                         </div>
@@ -745,7 +731,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 {giftCardDiscount > 0 && (
                                     <>
                                         <div className="h-px bg-gray-50 mx-5" />
-                                        <div className="px-5 py-3.5 flex justify-between bg-blue-50/50">
+                                        <div className="px-5 py-2 flex justify-between bg-blue-50/50">
                                             <span className="text-sm font-medium text-blue-600">Gift Card</span>
                                             <span className="text-sm font-bold text-blue-600">−₹{Math.round(giftCardDiscount)}</span>
                                         </div>
@@ -754,7 +740,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 {coinDiscount > 0 && (
                                     <>
                                         <div className="h-px bg-gray-50 mx-5" />
-                                        <div className="px-5 py-3.5 flex justify-between bg-pink-50/50">
+                                        <div className="px-5 py-2 flex justify-between bg-pink-50/50">
                                             <span className="text-sm font-medium text-pink-600">M Coins</span>
                                             <span className="text-sm font-bold text-pink-600">−₹{Math.round(coinDiscount)}</span>
                                         </div>
@@ -811,16 +797,14 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 <button
                                     key={addr.id}
                                     onClick={() => handleSelectAddress(addr)}
-                                    className={`w-full text-left rounded-xl p-4 border-2 transition-colors ${
-                                        selectedAddress?.id === addr.id
+                                    className={`w-full text-left rounded-xl p-4 border-2 transition-colors ${selectedAddress?.id === addr.id
                                             ? "border-gray-900 bg-gray-50"
                                             : "border-gray-200"
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex items-start gap-3">
-                                        <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
-                                            selectedAddress?.id === addr.id ? "border-pink-600" : "border-gray-300"
-                                        }`}>
+                                        <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${selectedAddress?.id === addr.id ? "border-pink-600" : "border-gray-300"
+                                            }`}>
                                             {selectedAddress?.id === addr.id && (
                                                 <div className="w-2.5 h-2.5 rounded-full bg-pink-600" />
                                             )}
@@ -884,11 +868,10 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                             <button
                                                 key={promo.id}
                                                 onClick={() => handleApplyPromo(promo)}
-                                                className={`w-full text-left rounded-xl border-2 p-4 mb-3 transition-colors ${
-                                                    appliedPromo?.code === promo.code
+                                                className={`w-full text-left rounded-xl border-2 p-4 mb-3 transition-colors ${appliedPromo?.code === promo.code
                                                         ? "border-green-400 bg-green-50"
                                                         : "border-gray-200"
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
@@ -902,11 +885,10 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-sm font-bold text-gray-900">{promo.code}</span>
-<span className={`text-[10px] font-bold ${
-                                                                    appliedPromo?.code === promo.code
-                                                                        ? "text-pink-600"
-                                                                        : "text-gray-900"
-                                                                    }`}>
+                                                            <span className={`text-[10px] font-bold ${appliedPromo?.code === promo.code
+                                                                    ? "text-pink-600"
+                                                                    : "text-gray-900"
+                                                                }`}>
                                                                 {discountLabel}
                                                             </span>
                                                         </div>
