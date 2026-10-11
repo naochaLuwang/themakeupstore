@@ -421,40 +421,54 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         <h2 className="text-sm font-bold text-gray-900">Items ({items.length})</h2>
                     </div>
                     <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
-                        {items.map((item: any, idx: number) => (
-                            <div
-                                key={item.variantId}
-                                className={`flex items-center gap-3 p-3 ${idx < items.length - 1 ? "border-b border-gray-50" : ""}`}
-                            >
-                                <img
-                                    src={item.image || "/placeholder.png"}
-                                    alt={item.name}
-                                    className="w-14 h-14 rounded-lg object-cover bg-gray-50"
-                                />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">{item.name}</p>
-                                    {item.variantTitle && (
-                                        <p className="text-xs text-gray-400 mt-0.5">{item.variantTitle}</p>
-                                    )}
-                                    <p className="text-xs text-gray-400 mt-0.5">Qty: {item.quantity}</p>
+                        {items.map((item: any, idx: number) => {
+                            const dm = discountMap[item.variantId]
+                            const bxgyLine = (dm?.amount || 0) > 0
+                            const lineTotal = Math.round(item.price * item.quantity)
+                            const payable = Math.round(lineTotal - (dm?.amount || 0))
+                            const freeQty = dm?.freeQty || 0
+                            const coversFullUnits = bxgyLine && freeQty > 0 && (dm?.amount || 0) >= item.price * freeQty
+                            return (
+                                <div
+                                    key={item.variantId}
+                                    className={`flex items-center gap-3 p-3 ${idx < items.length - 1 ? "border-b border-gray-50" : ""}`}
+                                >
+                                    <img
+                                        src={item.image || "/placeholder.png"}
+                                        alt={item.name}
+                                        className="w-14 h-14 rounded-lg object-cover bg-gray-50"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">{item.name}</p>
+                                        {item.variantTitle && (
+                                            <p className="text-xs text-gray-400 mt-0.5">{item.variantTitle}</p>
+                                        )}
+                                        <p className="text-xs text-gray-400 mt-0.5">Qty: {item.quantity}</p>
+                                        {coversFullUnits && item.quantity - freeQty > 0 && (
+                                            <p className="text-[10px] font-semibold text-pink-600 mt-0.5">{item.quantity - freeQty} paid + {freeQty} free</p>
+                                        )}
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        {bxgyLine ? (
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <p className="text-xs text-gray-400 line-through">₹{lineTotal}</p>
+                                                <p className="text-sm font-bold text-gray-900">₹{payable}</p>
+                                                <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">
+                                                    {coversFullUnits ? `${freeQty} FREE` : `SAVE ₹${Math.round(dm?.amount || 0)}`}
+                                                </span>
+                                            </div>
+                                        ) : item.mrp > item.price ? (
+                                            <>
+                                                <p className="text-xs text-gray-400 line-through">₹{Math.round(item.mrp * item.quantity)}</p>
+                                                <p className="text-sm font-bold text-gray-900">₹{lineTotal}</p>
+                                            </>
+                                        ) : (
+                                            <p className="text-sm font-bold text-gray-900">₹{lineTotal}</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="text-right shrink-0">
-                                    {discountMap[item.variantId]?.amount > 0 ? (
-                                        <>
-                                            <p className="text-xs text-gray-400 line-through">₹{Math.round(item.price * item.quantity)}</p>
-                                            <p className="text-xs font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded inline-block mt-0.5">FREE</p>
-                                        </>
-                                    ) : item.mrp > item.price ? (
-                                        <>
-                                            <p className="text-xs text-gray-400 line-through">₹{Math.round(item.mrp * item.quantity)}</p>
-                                            <p className="text-sm font-bold text-gray-900">₹{Math.round(item.price * item.quantity)}</p>
-                                        </>
-                                    ) : (
-                                        <p className="text-sm font-bold text-gray-900">₹{Math.round(item.price * item.quantity)}</p>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 </section>
 
@@ -679,16 +693,21 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                         Total Discount
                                         {(() => {
                                             const paidItems = items.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
-                                            const d = paidItems.reduce((a: number, i: any) => a + (i.mrp - i.price) * i.quantity, 0)
+                                            const d = paidItems.reduce((a: number, i: any) => a + Math.max(0, i.mrp - i.price) * i.quantity, 0) + bxgyDiscount
                                             const m = paidItems.reduce((a: number, i: any) => a + i.mrp * i.quantity, 0)
                                             const pct = m > 0 ? Math.round((d / m) * 100) : 0
                                             return pct > 0 ? ` (${pct}% off)` : ""
                                         })()}
                                     </span>
                                     <span className="text-sm font-semibold text-red-500">
-                                        −₹{Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + (i.mrp - i.price) * i.quantity, 0))}
+                                        −₹{Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + Math.max(0, i.mrp - i.price) * i.quantity, 0) + bxgyDiscount)}
                                     </span>
                                 </div>
+                                {bxgyDiscount > 0 && (
+                                    <p className="px-5 pb-2 -mt-0.5 text-[10px] font-semibold text-pink-600">
+                                        incl. {[...new Set((bxgyDiscounts || []).map((d: { rule_name: string }) => d.rule_name).filter(Boolean))].join(", ") || "Buy X Get Y"} −₹{Math.round(bxgyDiscount)}
+                                    </p>
+                                )}
                                 <div className="h-px bg-gray-50 mx-5" />
                                 <div className="px-5 py-3.5 flex justify-between">
                                     <span className="text-sm text-gray-500">Subtotal after discount</span>
