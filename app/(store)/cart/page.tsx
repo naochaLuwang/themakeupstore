@@ -130,6 +130,11 @@ export default function CartPage() {
 
     const handleUpdateQuantity = async (variantId: string, newQty: number) => {
         if (newQty < 1) return
+        const item = items.find((i: { variantId: string; quantity: number; stock?: number }) => i.variantId === variantId)
+        if (item && newQty > item.quantity && typeof item.stock === "number" && newQty > item.stock) {
+            toast.error("Uh Oh ! Thats all we have in stock.")
+            return
+        }
         updateQuantity(variantId, newQty)
         // DB sync handled by CartSync's debounced push
     }
@@ -310,6 +315,11 @@ export default function CartPage() {
                                 const unitPrice = Math.round(item.price)
                                 const unitMrp = Math.round(item.originalPrice || item.price)
                                 const hasDiscount = unitMrp > unitPrice
+                                const dm = discountMap[item.variantId]
+                                const bxgyLine = (dm?.amount || 0) > 0
+                                const freeQty = dm?.freeQty || 0
+                                const coversFullUnits = bxgyLine && freeQty > 0 && (dm?.amount || 0) >= item.price * freeQty
+                                const payableLine = Math.round(unitPrice * item.quantity - (dm?.amount || 0))
 
                                 return (
                                     <div key={item.variantId} className="py-6 lg:grid lg:grid-cols-[1fr_120px_140px_100px] lg:gap-4 flex gap-4">
@@ -354,8 +364,8 @@ export default function CartPage() {
                                                 <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">FREE</span>
                                             ) : discountMap[item.variantId]?.amount > 0 ? (
                                                 <div className="flex flex-col items-center gap-1">
-                                                    <span className="text-xs font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">FREE</span>
                                                     <p className="text-xs text-slate-400 line-through">{'₹' + unitPrice.toLocaleString()}</p>
+                                                    <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">{coversFullUnits ? `${freeQty} FREE` : `SAVE ₹${Math.round(dm?.amount || 0)}`}</span>
                                                 </div>
                                             ) : (
                                                 <>
@@ -368,7 +378,7 @@ export default function CartPage() {
                                         </div>
 
                                         {/* Quantity - desktop */}
-                                        <div className="hidden lg:flex items-center justify-center">
+                                        <div className="hidden lg:flex flex-col items-center justify-center gap-1.5">
                                             {item.is_gift || item.is_bxgy_free ? (
                                                 <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full">Qty: 1</span>
                                             ) : (
@@ -394,6 +404,9 @@ export default function CartPage() {
                                                 </button>
                                             </div>
                                             )}
+                                            {coversFullUnits && item.quantity - freeQty > 0 && (
+                                                <span className="text-[10px] font-semibold text-pink-600 whitespace-nowrap">{item.quantity - freeQty} paid + {freeQty} free</span>
+                                            )}
                                         </div>
 
                                         {/* Subtotal - desktop */}
@@ -403,7 +416,7 @@ export default function CartPage() {
                                             ) : discountMap[item.variantId]?.amount > 0 ? (
                                                 <div className="flex flex-col items-end gap-0.5">
                                                     <span className="text-xs text-slate-400 line-through">₹{Math.round(unitPrice * item.quantity).toLocaleString()}</span>
-                                                    <span className="text-xs font-semibold text-pink-600">₹{Math.round(unitPrice * (item.quantity - (discountMap[item.variantId]?.freeQty || 0))).toLocaleString()}</span>
+                                                    <span className="text-xs font-semibold text-pink-600">₹{payableLine.toLocaleString()}</span>
                                                 </div>
                                             ) : (
                                                 <p className="text-sm font-semibold text-slate-900">₹{Math.round(unitPrice * item.quantity).toLocaleString()}</p>
@@ -686,6 +699,11 @@ export default function CartPage() {
                         const unitMrp = Math.round(item.originalPrice || item.price)
                         const hasDiscount = unitMrp > unitPrice
                         const saving = hasDiscount ? Math.round((unitMrp - unitPrice) * item.quantity) : 0
+                        const dm = discountMap[item.variantId]
+                        const bxgyLine = (dm?.amount || 0) > 0
+                        const freeQty = dm?.freeQty || 0
+                        const coversFullUnits = bxgyLine && freeQty > 0 && (dm?.amount || 0) >= item.price * freeQty
+                        const payableLine = Math.round(unitPrice * item.quantity - (dm?.amount || 0))
 
                         return (
                             <div key={item.id || item.variantId} className="border border-gray-200 rounded-xl p-3">
@@ -754,6 +772,9 @@ export default function CartPage() {
                                             </button>
                                             </>
                                             )}
+                                            {coversFullUnits && item.quantity - freeQty > 0 && (
+                                                <span className="text-[10px] font-semibold text-pink-600">{item.quantity - freeQty} paid + {freeQty} free</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -766,9 +787,9 @@ export default function CartPage() {
                                             <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">FREE</span>
                                         ) : discountMap[item.variantId]?.amount > 0 ? (
                                             <>
-                                                <span className="text-xs font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">FREE</span>
+                                                <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">{coversFullUnits ? `${freeQty} FREE` : `SAVE ₹${Math.round(dm?.amount || 0)}`}</span>
                                                 <span className="text-xs font-medium text-gray-400 line-through">₹{Math.round(unitPrice * item.quantity)}</span>
-                                                <span className="text-xs font-bold text-pink-600">₹{Math.round(unitPrice * (item.quantity - (discountMap[item.variantId]?.freeQty || 0)))}</span>
+                                                <span className="text-xs font-bold text-pink-600">₹{payableLine}</span>
                                             </>
                                         ) : (
                                             <>
