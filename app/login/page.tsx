@@ -35,6 +35,9 @@ export default function AuthPage() {
     }, [supabase, router])
 
     const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()
+    const capPlatform = typeof window !== 'undefined'
+        ? (window as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.()
+        : undefined
 
 const handleGoogleLogin = useCallback(async () => {
         if (isCapacitor) {
@@ -76,6 +79,65 @@ const handleGoogleLogin = useCallback(async () => {
             if (error) toast.error(error.message)
         }
     }, [isCapacitor, supabase])
+
+const handleAppleLogin = useCallback(async () => {
+        try {
+            if (isCapacitor) {
+                // Native Apple sign-in (iOS only) — Android has no native Apple login
+                if (capPlatform?.toLowerCase() !== 'ios') return
+                const { SignInWithApple } = await import('@capacitor-community/apple-sign-in')
+                const bytes = new Uint8Array(32)
+                crypto.getRandomValues(bytes)
+                const rawNonce = btoa(String.fromCharCode(...bytes))
+                    .replace(/\+/g, '-')
+                    .replace(/\//g, '_')
+                    .replace(/=+$/, '')
+                const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawNonce))
+                const hashedNonce = Array.from(new Uint8Array(hashBuffer))
+                    .map(b => b.toString(16).padStart(2, '0')).join('')
+                const result = await SignInWithApple.authorize({
+                    clientId: 'com.themakeupstorewangkhei.twa',
+                    redirectURI: 'https://themakeupstorewangkhei.com',
+                    scopes: 'name email',
+                    nonce: hashedNonce,
+                })
+                const { error } = await supabase.auth.signInWithIdToken({
+                    provider: 'apple',
+                    token: result.response.identityToken,
+                    nonce: rawNonce,
+                })
+                if (error) {
+                    toast.error(error.message)
+                    return
+                }
+                // Apple only returns the full name on the first sign-in — save it now
+                const { givenName, familyName } = result.response
+                if (givenName || familyName) {
+                    const fullName = [givenName, familyName].filter(Boolean).join(' ')
+                    const { error: nameError } = await supabase.auth.updateUser({
+                        data: {
+                            full_name: fullName,
+                            given_name: givenName || undefined,
+                            family_name: familyName || undefined,
+                        },
+                    })
+                    if (nameError) console.warn('Failed to save Apple name:', nameError.message)
+                }
+            } else {
+                // Web — OAuth flow via Services ID
+                const { error } = await supabase.auth.signInWithOAuth({
+                    provider: 'apple',
+                    options: { redirectTo: `${window.location.origin}/auth/callback` },
+                })
+                if (error) toast.error(error.message)
+            }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err ?? '')
+            // ASAuthorizationError.canceled = error 1000
+            if (/1000|cancel/i.test(msg)) return
+            toast.error(msg || 'Sign in with Apple failed')
+        }
+    }, [isCapacitor, capPlatform, supabase])
 
     const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -124,10 +186,10 @@ const handleGoogleLogin = useCallback(async () => {
                 aria-hidden
                 animate={reduceMotion ? undefined : { y: [0, -10, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                className="pointer-events-none absolute inset-0 md:right-[60%] flex items-center justify-center"
             >
                 <span
-                    className="font-daciana text-[46vw] md:text-[400px] leading-none select-none bg-clip-text text-transparent"
+                    className="font-daciana text-[46vw] md:text-[26vw] xl:text-[360px] 2xl:text-[420px] leading-none select-none bg-clip-text text-transparent"
                     style={{
                         backgroundImage: "linear-gradient(180deg, rgba(252,39,121,0.16) 0%, rgba(252,39,121,0.05) 70%)",
                     }}
@@ -136,18 +198,18 @@ const handleGoogleLogin = useCallback(async () => {
                 </span>
             </motion.div>
 
-            <div className="relative flex flex-col min-h-[100dvh] max-w-md mx-auto w-full px-6">
-                {/* BRAND HEADER */}
+            <div className="relative flex flex-col min-h-[100dvh] max-w-md mx-auto w-full md:max-w-none md:mx-0 md:grid md:grid-cols-[2fr_3fr]">
+                {/* BRAND HEADER — top on mobile, left panel on md+ */}
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-                    className="pt-16 pb-9 text-center flex flex-col items-center"
+                    className="px-6 pt-16 pb-9 text-center flex flex-col items-center md:justify-center md:py-12 md:px-6 lg:px-10"
                 >
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fc2779] to-[#d91d64] shadow-lg shadow-pink-200 flex items-center justify-center mb-5">
-                        <span className="font-daciana text-[26px] text-white leading-none pt-0.5">M</span>
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#fc2779] to-[#d91d64] shadow-lg shadow-pink-200 flex items-center justify-center mb-5 md:mb-6">
+                        <span className="font-daciana text-[26px] md:text-[30px] text-white leading-none pt-0.5">M</span>
                     </div>
-                    <h1 className="text-2xl font-daciana text-slate-950 tracking-tight leading-none">
+                    <h1 className="text-2xl md:text-[26px] lg:text-3xl xl:text-4xl font-daciana text-slate-950 tracking-tight leading-none md:leading-tight">
                         THE MAKEUP STORE
                     </h1>
                     <p className="text-[10px] font-black uppercase tracking-[0.45em] text-[#fc2779] mt-1.5">
@@ -155,14 +217,14 @@ const handleGoogleLogin = useCallback(async () => {
                     </p>
                 </motion.div>
 
-                {/* FORM CARD */}
+                {/* FORM BLOCK — card + footer */}
                 <motion.div
                     initial={{ opacity: 0, y: 24 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex-1"
+                    className="flex-1 flex flex-col px-6 md:px-8 md:py-12 lg:px-10 md:justify-center"
                 >
-                    <div className="bg-white rounded-[2rem] border border-pink-50/70 p-6 pb-8 shadow-[0_24px_80px_-24px_rgba(252,39,121,0.25)]">
+                    <div className="bg-white rounded-[2rem] border border-pink-50/70 p-6 pb-8 shadow-[0_24px_80px_-24px_rgba(252,39,121,0.25)] md:max-w-[440px] md:w-full md:mx-auto md:p-8">
                         {/* MODE TOGGLE */}
                         <div className="flex bg-slate-50/80 rounded-2xl p-1 mb-7 border border-slate-100">
                             {(['login', 'signup'] as const).map((m) => (
@@ -239,6 +301,19 @@ const handleGoogleLogin = useCallback(async () => {
                         </div>
 
                         {/* SOCIAL LOGIN */}
+                        {(!isCapacitor || capPlatform === 'ios') && (
+                            <button
+                                type="button"
+                                onClick={handleAppleLogin}
+                                disabled={loading}
+                                className="w-full h-12 mb-3 rounded-2xl bg-black text-white hover:bg-slate-800 transition-all font-semibold text-[13px] flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                                </svg>
+                                Continue with Apple
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={handleGoogleLogin}
@@ -254,17 +329,17 @@ const handleGoogleLogin = useCallback(async () => {
                             Continue with Google
                         </button>
                     </div>
-                </motion.div>
 
-                {/* FOOTER */}
-                <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                    className="py-8 text-center text-[9px] font-bold text-slate-300 uppercase tracking-[0.4em]"
-                >
-                    The Makeup Store Wangkhei &copy; 2026
-                </motion.p>
+                    {/* FOOTER */}
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.6, delay: 0.3 }}
+                        className="mt-auto md:mt-0 py-8 text-center text-[9px] font-bold text-slate-300 uppercase tracking-[0.4em] md:max-w-[440px] md:w-full md:mx-auto"
+                    >
+                        The Makeup Store Wangkhei &copy; 2026
+                    </motion.p>
+                </motion.div>
             </div>
         </div>
     )

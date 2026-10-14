@@ -19,6 +19,7 @@
     "cap:release": "npm run cap:build && cd android && JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleRelease -Pandroid.injected.signing.store.file=../makeup-store.keystore -Pandroid.injected.signing.store.password=Autodesk@9749 -Pandroid.injected.signing.key.alias=makeup-alias -Pandroid.injected.signing.key.password=Autodesk@9749"
   },
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
     "@capacitor-firebase/messaging": "^8.3.0",
     "@capacitor/android": "^8.4.2",
     "@capacitor/app": "^8.1.1",
