@@ -54,7 +54,12 @@ export function NotificationSettings() {
                 toast.success("Notifications disabled")
             } else {
                 const { registerForFCM } = await import('@/lib/capacitor-push')
-                await registerForFCM()
+                const result = await registerForFCM()
+                if (!result.ok) {
+                    setIsSubscribed(false)
+                    toast.error(result.reason || "Permission was denied or token registration failed")
+                    return
+                }
                 const { data: { session } } = await supabase.auth.getSession()
                 if (session?.user) {
                     const { data } = await supabase
@@ -67,7 +72,7 @@ export function NotificationSettings() {
                         toast.success("Notifications enabled!")
                     } else {
                         setIsSubscribed(false)
-                        toast.error("Permission was denied or token registration failed")
+                        toast.error("Registration didn't save — try again")
                     }
                 }
             }

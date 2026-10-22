@@ -6,11 +6,6 @@ export function parseServiceAccountKey(rawValue: string | undefined | null): any
 
   let s = String(rawValue).trim()
 
-  // Log for debugging (remove in production)
-  console.log('[FCM_PARSER] Input length:', s.length)
-  console.log('[FCM_PARSER] First 50 chars:', s.substring(0, 50))
-  console.log('[FCM_PARSER] Last 50 chars:', s.substring(s.length - 50))
-
   // Step 1: Strip any \{ \} wrappers (Hostinger adds these)
   if (s.startsWith('\\{')) s = s.substring(1)
   if (s.endsWith('\\}')) s = s.substring(0, s.length - 1)
@@ -23,7 +18,7 @@ export function parseServiceAccountKey(rawValue: string | undefined | null): any
   const firstBrace = s.indexOf('{')
   const lastBrace = s.lastIndexOf('}')
   if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-    throw new Error(`No JSON object found. First 100 chars: ${s.substring(0, 100)}`)
+    throw new Error('No JSON object found in FIREBASE_SERVICE_ACCOUNT_KEY')
   }
   s = s.substring(firstBrace, lastBrace + 1)
 
@@ -53,11 +48,18 @@ export function parseServiceAccountKey(rawValue: string | undefined | null): any
     }
     throw new Error('Parsed JSON but missing valid private_key')
   } catch (e: any) {
-    throw new Error(`JSON parse failed: ${e.message}. Input starts with: ${s.substring(0, 100)}`)
+    throw new Error(`FIREBASE_SERVICE_ACCOUNT_KEY parse failed: ${e.message}`)
   }
 }
 
+// Cache the OAuth access token — minting one costs a JWT sign + HTTP roundtrip
+let cachedAccessToken: { value: string; expiresAt: number } | null = null
+
 async function getAccessToken(): Promise<string> {
+  if (cachedAccessToken && Date.now() < cachedAccessToken.expiresAt - 60_000) {
+    return cachedAccessToken.value
+  }
+
   const key = parseServiceAccountKey(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
   const { private_key, client_email } = key
 
@@ -76,7 +78,7 @@ async function getAccessToken(): Promise<string> {
 
   const jwt = `${encode(header)}.${encode(claim)}`
 
-  const { KeyObject, createSign } = await import('node:crypto')
+  const { createSign } = await import('node:crypto')
   const sign = createSign('RSA-SHA256')
   sign.update(jwt)
   const sig = sign.sign(private_key, 'base64')
@@ -91,8 +93,16 @@ async function getAccessToken(): Promise<string> {
     }),
   })
 
-  const data = await res.json()
-  return data.access_token
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || !data.access_token) {
+    throw new Error(`FCM auth failed (${res.status}): ${data.error || 'no access token'}`)
+  }
+
+  cachedAccessToken = {
+    value: data.access_token,
+    expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000,
+  }
+  return cachedAccessToken.value
 }
 
 export async function sendFcmNotification(token: string, title: string, body: string, url?: string) {
@@ -162,47 +172,55 @@ export async function sendFcmToTopic(topic: string, title: string, body: string,
 export async function sendFcmMulticast(tokens: string[], title: string, body: string, url?: string) {
   const accessToken = await getAccessToken()
 
-  const message: any = {
-    message: {
-      notification: { title, body },
-      android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true, channel_id: 'push-notifications' } },
-    },
+  const baseMessage: any = {
+    notification: { title, body },
+    android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true, channel_id: 'push-notifications' } },
   }
 
   if (url) {
-    message.message.data = { url }
+    baseMessage.data = { url }
   }
 
-  const results = await Promise.allSettled(
-    tokens.map(token =>
-      fetch(FCM_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ ...message, message: { ...message.message, token } }),
-      }).then(async r => {
-        if (!r.ok) {
-          if (r.status === 404 || r.status === 410) return { invalid: true, token }
-          throw new Error(`FCM error ${r.status}: ${await r.text()}`)
-        }
-        return { ok: true }
-      })
-    )
-  )
+  // Same device can appear under multiple accounts — send once per token
+  const uniqueTokens = [...new Set(tokens.filter(Boolean))]
 
   const invalidTokens: string[] = []
-  for (const r of results) {
-    if (r.status === 'fulfilled' && r.value && 'invalid' in r.value && r.value.invalid) {
-      invalidTokens.push((r.value as any).token)
+  let sentCount = 0
+  const CHUNK_SIZE = 100
+
+  for (let i = 0; i < uniqueTokens.length; i += CHUNK_SIZE) {
+    const chunk = uniqueTokens.slice(i, i + CHUNK_SIZE)
+    const results = await Promise.allSettled(
+      chunk.map(token =>
+        fetch(FCM_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ message: { ...baseMessage, token } }),
+        }).then(async r => {
+          if (!r.ok) {
+            if (r.status === 404 || r.status === 410) return { invalid: true, token }
+            throw new Error(`FCM error ${r.status}: ${await r.text()}`)
+          }
+          return { ok: true }
+        })
+      )
+    )
+
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) {
+        if ('invalid' in r.value && r.value.invalid) {
+          invalidTokens.push((r.value as any).token)
+        } else if ('ok' in r.value) {
+          sentCount++
+        }
+      } else if (r.status === 'rejected') {
+        console.error('[FCM] Send error:', r.reason)
+      }
     }
   }
 
-  return {
-    sentCount: results.filter(r =>
-      r.status === 'fulfilled' && r.value && 'ok' in r.value
-    ).length,
-    invalidTokens
-  }
+  return { sentCount, invalidTokens }
 }

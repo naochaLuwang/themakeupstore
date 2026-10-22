@@ -7,6 +7,15 @@ export async function POST(req: Request) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .single()
+        if (!profile?.is_admin) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+        }
+
         const results: any = {}
 
         const keyRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
@@ -14,9 +23,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "FIREBASE_SERVICE_ACCOUNT_KEY not set", step: "env_missing" }, { status: 200 })
         }
         results.envVarLength = keyRaw.length
-        results.envVarStartsWith = keyRaw.trim().substring(0, 30)
-        results.envVarEndsWith = keyRaw.trim().substring(keyRaw.trim().length - 30)
-        results.parserVersion = 3
+        results.parserVersion = 4
 
         let key: any
         try {
@@ -53,7 +60,6 @@ export async function POST(req: Request) {
 
         const jwtStr = `${encode(header)}.${encode(claim)}`
 
-        let accessToken: string
         try {
             const { createSign } = await import('node:crypto')
             const sign = createSign('RSA-SHA256')
@@ -79,9 +85,7 @@ export async function POST(req: Request) {
                     status: tokenRes.status,
                 }, { status: 200 })
             }
-            accessToken = tokenData.access_token
             results.tokenObtained = true
-            results.tokenPrefix = accessToken.substring(0, 20)
         } catch (e: any) {
             return NextResponse.json({ error: "JWT signing failed", step: "jwt_signing", detail: e.message }, { status: 200 })
         }

@@ -158,9 +158,13 @@ export default function AdminBroadcastForm() {
                 return
             }
             const { registerForFCM } = await import('@/lib/capacitor-push')
-            await registerForFCM()
-            setRegStatus("FCM registered successfully for this device.")
-            fetchNetworkStats()
+            const result = await registerForFCM()
+            if (result.ok) {
+                setRegStatus("FCM registered successfully for this device.")
+                fetchNetworkStats()
+            } else {
+                setRegStatus(`Registration failed: ${result.reason}`)
+            }
         } catch (e: any) {
             setRegStatus(`Failed: ${e.message}`)
         } finally {

@@ -835,6 +835,28 @@ export async function placeOrder(
             }
         } catch {}
 
+        // Push order confirmation (FCM)
+        try {
+            const { data: pushSubs } = await supabase
+                .from('push_subscriptions')
+                .select('fcm_token')
+                .eq('user_id', user.id)
+                .not('fcm_token', 'is', null)
+            const fcmTokens = (pushSubs || []).map((s: { fcm_token: string }) => s.fcm_token).filter(Boolean)
+            if (fcmTokens.length > 0) {
+                const { sendFcmMulticast } = await import('@/lib/fcm-send')
+                const result = await sendFcmMulticast(
+                    fcmTokens,
+                    'Order Confirmed',
+                    PUSH_MESSAGES.confirmed,
+                    `/profile/orders/${order.id}`
+                )
+                for (const token of result.invalidTokens) {
+                    await supabase.from('push_subscriptions').delete().eq('fcm_token', token)
+                }
+            }
+        } catch {}
+
         revalidatePath("/admin/orders")
         revalidatePath("/profile")
         return { success: true, orderId: order.id }

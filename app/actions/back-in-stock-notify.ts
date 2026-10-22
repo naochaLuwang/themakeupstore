@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { sendBackInStockEmail } from "@/lib/resend"
-import { sendFcmNotification } from "@/lib/fcm-send"
+import { sendFcmMulticast } from "@/lib/fcm-send"
 
 export async function notifyBackInStock(variantId: string) {
     const supabase = await createClient()
@@ -59,28 +59,34 @@ export async function notifyBackInStock(variantId: string) {
     let pushSent = 0
     let emailSent = 0
 
+    // Push — one multicast for every matched device (dedupes + cleans stale tokens)
+    const allTokens: string[] = []
     for (const n of pending) {
         const profile = n.email ? (profileByEmail.get(n.email) as any) : null
         const userId = profile?.id
-
-        // Push notification (only for logged-in users with push subscriptions)
         if (userId) {
-            const tokens = tokensByUser.get(userId) || []
-            for (const token of tokens) {
-                try {
-                    await sendFcmNotification(
-                        token,
-                        "Back in Stock!",
-                        `${productName}${variantName ? ` — ${variantName}` : ""} is available again`,
-                        productUrl
-                    )
-                    pushSent++
-                } catch (err) {
-                    console.error("[BackInStock] Push failed for token:", err)
-                }
-            }
+            for (const token of tokensByUser.get(userId) || []) allTokens.push(token)
         }
+    }
 
+    if (allTokens.length > 0) {
+        try {
+            const result = await sendFcmMulticast(
+                allTokens,
+                "Back in Stock!",
+                `${productName}${variantName ? ` — ${variantName}` : ""} is available again`,
+                productUrl
+            )
+            pushSent = result.sentCount
+            for (const token of result.invalidTokens) {
+                await supabase.from("push_subscriptions").delete().eq("fcm_token", token)
+            }
+        } catch (err) {
+            console.error("[BackInStock] Push failed:", err)
+        }
+    }
+
+    for (const n of pending) {
         // Email notification
         try {
             await sendBackInStockEmail({

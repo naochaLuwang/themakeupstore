@@ -1,5 +1,18 @@
 import { createClient } from "@/utils/supabase/server"
 import { NextResponse } from "next/server"
+import { rateLimit } from "@/lib/rate-limit"
+
+const broadcastLimiter = rateLimit("admin-broadcast", { windowMs: 60_000, max: 10 })
+
+function cleanString(value: unknown, max: number): string {
+    if (typeof value !== "string") return ""
+    return value.trim().slice(0, max)
+}
+
+function isSafeUrl(url: string): boolean {
+    if (!url) return true
+    return url.startsWith("/") || url.startsWith("https://themakeupstorewangkhei.com")
+}
 
 export async function POST(req: Request) {
     try {
@@ -19,9 +32,34 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
         }
 
-        const { title, body, url, targetUserIds } = await req.json()
+        const limit = broadcastLimiter.check(user.id)
+        if (!limit.success) {
+            return NextResponse.json(
+                { success: false, error: "Too many broadcasts — wait a minute and try again." },
+                { status: 429 }
+            )
+        }
 
-        let query = supabase
+        const raw = await req.json()
+        const title = cleanString(raw.title, 120)
+        const body = cleanString(raw.body, 600)
+        const url = cleanString(raw.url, 2048)
+        const targetUserIds = raw.targetUserIds
+
+        if (!title || !body) {
+            return NextResponse.json(
+                { success: false, error: "Title and message are required." },
+                { status: 400 }
+            )
+        }
+        if (!isSafeUrl(url)) {
+            return NextResponse.json(
+                { success: false, error: "Invalid notification link." },
+                { status: 400 }
+            )
+        }
+
+        const query = supabase
             .from('push_subscriptions')
             .select('fcm_token, user_id')
             .not('fcm_token', 'is', null)
