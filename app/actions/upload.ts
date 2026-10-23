@@ -1,35 +1,18 @@
 "use server"
 
-import { v2 as cloudinary } from 'cloudinary'
 import { requireAdmin } from "@/lib/admin"
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+import { uploadStoreImage } from "@/lib/storage"
 
 export async function uploadEditorImage(formData: FormData) {
     await requireAdmin()
     const file = formData.get('file') as File
     if (!file) throw new Error("No file provided")
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
-    if (!allowedTypes.includes(file.type)) throw new Error("Invalid file type. Allowed: JPEG, PNG, WebP, AVIF")
-    if (file.size > 5 * 1024 * 1024) throw new Error("File too large. Max 5MB")
-
-    const buffer = Buffer.from(await file.arrayBuffer())
-
     try {
-        const upload: any = await new Promise((resolve, reject) => {
-            cloudinary.uploader.upload_stream({
-                folder: 'products/description-assets',
-            }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
-        })
-
-        return { url: upload.secure_url }
+        const url = await uploadStoreImage('products/description-assets', file)
+        return { url }
     } catch (error) {
-        console.error("Cloudinary Upload Error:", error)
-        throw new Error("Upload failed")
+        console.error("Editor image upload failed:", error)
+        throw new Error(error instanceof Error ? error.message : "Upload failed")
     }
 }

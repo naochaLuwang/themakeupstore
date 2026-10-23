@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
+import { uploadStoreImage } from "@/lib/storage"
 
 export async function getGiftProducts() {
   const { supabase } = await requireAdmin()
@@ -32,23 +33,7 @@ export async function createGiftProduct(formData: FormData) {
   // Handle multiple file uploads
   const files = formData.getAll("files") as File[]
   if (files.length > 0) {
-    const { v2: cloudinary } = await import('cloudinary')
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    })
-    
-    // Upload all files in parallel
-    const uploadPromises = files.map(async (file) => {
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const upload: any = await new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream({ folder: 'gift-products' }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
-      })
-      return upload.secure_url
-    })
-    
-    images = await Promise.all(uploadPromises)
+    images = await Promise.all(files.map((file) => uploadStoreImage('gift-products', file)))
   }
 
   try {
@@ -78,23 +63,7 @@ export async function updateGiftProduct(id: string, formData: FormData) {
   // Handle new file uploads
   const files = formData.getAll("files") as File[]
   if (files.length > 0) {
-    const { v2: cloudinary } = await import('cloudinary')
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    })
-    
-    // Upload all new files in parallel
-    const uploadPromises = files.map(async (file) => {
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const upload: any = await new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream({ folder: 'gift-products' }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
-      })
-      return upload.secure_url
-    })
-    
-    const newUrls = await Promise.all(uploadPromises)
+    const newUrls = await Promise.all(files.map((file) => uploadStoreImage('gift-products', file)))
     images = [...images, ...newUrls]
   }
 

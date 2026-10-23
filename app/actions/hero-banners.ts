@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
+import { uploadStoreImage } from "@/lib/storage"
 
 export async function createHeroBanner(formData: FormData) {
     const { supabase } = await requireAdmin()
@@ -10,11 +11,17 @@ export async function createHeroBanner(formData: FormData) {
     const subtitle = formData.get("subtitle")
     if (!title || typeof title !== 'string' || title.trim().length === 0) throw new Error("Title is required")
 
+    let image_url = formData.get("image_url") as string || null
+    const file = formData.get("file") as File | null
+    if (file && file.size > 0) {
+        image_url = await uploadStoreImage("banners", file)
+    }
+
     const { error } = await supabase.from("hero_banners").insert({
         title: formData.get("title") as string,
         subtitle: formData.get("subtitle") as string,
         description: formData.get("description") as string,
-        image_url: formData.get("image_url") as string || null,
+        image_url,
         route: formData.get("route") as string || "/exclusive",
         position: parseInt(formData.get("position") as string) || 0,
         is_active: formData.get("is_active") === "on",
@@ -28,11 +35,17 @@ export async function createHeroBanner(formData: FormData) {
 export async function updateHeroBanner(id: string, formData: FormData) {
     const { supabase } = await requireAdmin()
 
+    let image_url = formData.get("image_url") as string || null
+    const file = formData.get("file") as File | null
+    if (file && file.size > 0) {
+        image_url = await uploadStoreImage("banners", file)
+    }
+
     const { error } = await supabase.from("hero_banners").update({
         title: formData.get("title") as string,
         subtitle: formData.get("subtitle") as string,
         description: formData.get("description") as string,
-        image_url: formData.get("image_url") as string || null,
+        image_url,
         route: formData.get("route") as string || "/exclusive",
         position: parseInt(formData.get("position") as string) || 0,
         is_active: formData.get("is_active") === "on",

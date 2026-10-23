@@ -1,16 +1,9 @@
 "use server"
 
-import { v2 as cloudinary } from 'cloudinary'
-import { createClient } from "@/utils/supabase/server"
 import { categorySchema } from "@/lib/validations/category"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+import { uploadStoreImage } from "@/lib/storage"
 
 export async function createCategory(formData: FormData) {
     const { supabase } = await requireAdmin()
@@ -30,16 +23,9 @@ export async function createCategory(formData: FormData) {
     try {
         let imageUrl = validatedFields.data.image_url || ""
 
-        // 3. Cloudinary Upload
+        // 3. Supabase Storage upload
         if (file && file.size > 0) {
-            const buffer = Buffer.from(await file.arrayBuffer())
-            const upload: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream(
-                    { folder: "categories" },
-                    (err, res) => err ? reject(err) : resolve(res)
-                ).end(buffer)
-            })
-            imageUrl = upload.secure_url
+            imageUrl = await uploadStoreImage("categories", file)
         }
 
         // 4. Insert into Supabase
@@ -80,14 +66,7 @@ export async function updateCategory(categoryId: string, formData: FormData) {
         let imageUrl = payload.image_url
 
         if (file && file.size > 0) {
-            const buffer = Buffer.from(await file.arrayBuffer())
-            const upload: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream(
-                    { folder: "categories" },
-                    (err, res) => err ? reject(err) : resolve(res)
-                ).end(buffer)
-            })
-            imageUrl = upload.secure_url
+            imageUrl = await uploadStoreImage("categories", file)
         }
 
         const { error } = await supabase

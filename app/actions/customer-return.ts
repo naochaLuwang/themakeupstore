@@ -1,14 +1,8 @@
 "use server"
 
-import { v2 as cloudinary } from "cloudinary"
 import { createClient } from "@/utils/supabase/server"
 import { rateLimit } from "@/lib/rate-limit"
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+import { uploadStoreImage } from "@/lib/storage"
 
 const returnLimiter = rateLimit("return-request", { windowMs: 60_000, max: 3 })
 
@@ -44,14 +38,8 @@ export async function submitReturnRequest(formData: FormData) {
     const imageUrls: string[] = []
     for (const file of imageFiles) {
         if (file.size === 0) continue
-        const buffer = Buffer.from(await file.arrayBuffer())
         try {
-            const upload: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream({
-                    folder: "returns/proof-images",
-                }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
-            })
-            imageUrls.push(upload.secure_url)
+            imageUrls.push(await uploadStoreImage("returns/proof-images", file))
         } catch (error) {
             console.error("Image upload failed:", error)
         }

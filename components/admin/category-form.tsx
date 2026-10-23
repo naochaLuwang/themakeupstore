@@ -139,7 +139,7 @@ export function CategoryForm({ categories }: { categories: { id: string, name: s
                     className="w-full bg-black text-white h-12 rounded-xl"
                     disabled={form.formState.isSubmitting}
                 >
-                    {form.formState.isSubmitting ? "Uploading to Cloudinary..." : "Create Category"}
+                    {form.formState.isSubmitting ? "Uploading..." : "Create Category"}
                 </Button>
             </form>
         </Form>

@@ -3,6 +3,7 @@
 import { v2 as cloudinary } from 'cloudinary'
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
+import { uploadStoreImage, deleteStoreImage, storagePathFromPublicUrl } from "@/lib/storage"
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -56,18 +57,13 @@ export async function createProduct(formData: FormData) {
         // 3. Image Uploads & Store URLs
         const uploadedUrls: string[] = []
         for (let i = 0; i < files.length; i++) {
-            const buffer = Buffer.from(await files[i].arrayBuffer())
-            const upload: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream({
-                    folder: `products/${product.id}`
-                }, (err, res) => err ? reject(err) : resolve(res)).end(buffer)
-            })
-            uploadedUrls.push(upload.secure_url)
+            const url = await uploadStoreImage(`products/${product.id}`, files[i])
+            uploadedUrls.push(url)
 
             // Insert into product_images
             await supabase.from("product_images").insert({
                 product_id: product.id,
-                url: upload.secure_url,
+                url,
                 position: i
             })
         }
@@ -150,25 +146,27 @@ export async function updateProduct(productId: string, formData: FormData) {
             )
         }
 
-        // 2. Image Management (Cloudinary sync)
+        // 2. Image Management (sync removed assets)
         const { data: oldImages } = await supabase.from("product_images").select("url").eq("product_id", productId)
         const oldUrls = oldImages?.map(img => img.url) || []
         const keptUrls = payload.existing_images || []
         const urlsToRemove = oldUrls.filter(url => !keptUrls.includes(url))
 
         for (const url of urlsToRemove) {
-            const fileName = url.split('/').pop()?.split('.')[0]
-            if (fileName) await cloudinary.uploader.destroy(`products/${productId}/${fileName}`).catch(() => null)
+            if (storagePathFromPublicUrl(url)) {
+                // Supabase Storage asset
+                await deleteStoreImage(url).catch(() => null)
+            } else if (url.includes('res.cloudinary.com')) {
+                // Legacy Cloudinary asset (kept until the Cloudinary account is cancelled)
+                const fileName = url.split('/').pop()?.split('.')[0]
+                if (fileName) await cloudinary.uploader.destroy(`products/${productId}/${fileName}`).catch(() => null)
+            }
         }
 
         // 3. Upload New Files
         const newUrls: string[] = []
         for (const file of files) {
-            const buffer = Buffer.from(await file.arrayBuffer())
-            const res: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream({ folder: `products/${productId}` }, (err, r) => err ? reject(err) : resolve(r)).end(buffer)
-            })
-            newUrls.push(res.secure_url)
+            newUrls.push(await uploadStoreImage(`products/${productId}`, file))
         }
 
         // Map indices to final array: [Existing Images, New Images]

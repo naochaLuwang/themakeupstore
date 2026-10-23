@@ -1,15 +1,9 @@
 "use server"
 
-import { v2 as cloudinary } from 'cloudinary'
 import { concernSchema } from "@/lib/validations/concern"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+import { uploadStoreImage } from "@/lib/storage"
 
 export async function createConcern(formData: FormData) {
     const { supabase } = await requireAdmin()
@@ -29,14 +23,7 @@ export async function createConcern(formData: FormData) {
         let imageUrl = validatedFields.data.image_url || ""
 
         if (file && file.size > 0) {
-            const buffer = Buffer.from(await file.arrayBuffer())
-            const upload: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream(
-                    { folder: "concerns" },
-                    (err, res) => err ? reject(err) : resolve(res)
-                ).end(buffer)
-            })
-            imageUrl = upload.secure_url
+            imageUrl = await uploadStoreImage("concerns", file)
         }
 
         const { data: concern, error } = await supabase
@@ -89,14 +76,7 @@ export async function updateConcern(concernId: string, formData: FormData) {
         let imageUrl = payload.image_url
 
         if (file && file.size > 0) {
-            const buffer = Buffer.from(await file.arrayBuffer())
-            const upload: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream(
-                    { folder: "concerns" },
-                    (err, res) => err ? reject(err) : resolve(res)
-                ).end(buffer)
-            })
-            imageUrl = upload.secure_url
+            imageUrl = await uploadStoreImage("concerns", file)
         }
 
         const { error } = await supabase

@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'pdfkikpoalylyufuprki.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**'
+      },
+      {
+        protocol: 'https',
         hostname: 'images.unsplash.com',
         port: '',
         pathname: '/**'
@@ -39,7 +45,7 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), payment=(self)' },
           { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.razorpay.com https://img.icons8.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://play-lh.googleusercontent.com https://img.icons8.com https://*.razorpay.com; font-src 'self' data:; connect-src 'self' https://*.razorpay.com https://pdfkikpoalylyufuprki.supabase.co wss://pdfkikpoalylyufuprki.supabase.co; frame-src https://*.razorpay.com; worker-src 'self' blob:; base-uri 'self'; form-action 'self'" },
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.razorpay.com https://img.icons8.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://play-lh.googleusercontent.com https://img.icons8.com https://*.razorpay.com https://pdfkikpoalylyufuprki.supabase.co; font-src 'self' data:; connect-src 'self' https://*.razorpay.com https://pdfkikpoalylyufuprki.supabase.co wss://pdfkikpoalylyufuprki.supabase.co; frame-src https://*.razorpay.com; worker-src 'self' blob:; base-uri 'self'; form-action 'self'" },
         ],
       },
       {

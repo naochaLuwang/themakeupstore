@@ -87,5 +87,8 @@ WHATSAPP_SETUP_GUIDE.md
 # Dev-only debug scripts (load secrets from .env.local)
 /scripts/
 
+# Cloudinary -> Supabase migration artifact (old_url -> storage path)
+/cloudinary-migration-mapping.jsonl
+
 # Boneyard generated bones
 /bones/

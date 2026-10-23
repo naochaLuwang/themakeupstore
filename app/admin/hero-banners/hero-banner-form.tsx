@@ -14,6 +14,7 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
     const router = useRouter()
     const isEdit = !!initialData
     const [loading, setLoading] = useState(false)
+    const [preview, setPreview] = useState<string | null>(null)
 
     return (
         <form
@@ -94,14 +95,34 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
                 </div>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Image URL</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Upload Image</label>
+                        <input
+                            type="file"
+                            name="file"
+                            accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
+                            onChange={(e) => {
+                                const f = e.target.files?.[0]
+                                if (preview) URL.revokeObjectURL(preview)
+                                setPreview(f ? URL.createObjectURL(f) : null)
+                            }}
+                            className="block w-full text-xs font-medium text-slate-500 file:mr-4 file:py-3 file:px-5 file:rounded-xl file:border-0 file:bg-slate-900 file:text-white file:text-[10px] file:font-black file:uppercase file:tracking-widest hover:file:bg-slate-700 cursor-pointer bg-slate-50 border-2 border-transparent rounded-2xl p-4 focus-within:bg-white"
+                        />
+                        <p className="text-[9px] text-slate-400 font-medium ml-1">JPEG, PNG, WebP, AVIF or GIF up to 8MB. A new upload replaces the current image.</p>
+                    </div>
+                    {preview && (
+                        <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden bg-slate-100">
+                            <img src={preview} alt="New banner preview" className="w-full h-full object-cover" />
+                        </div>
+                    )}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Or Image URL</label>
                         <input
                             name="image_url"
                             defaultValue={initialData?.image_url}
-                            placeholder="https://cloudinary.com/..."
+                            placeholder="https://..."
                             className="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-5 text-sm font-medium focus:bg-white focus:border-slate-900 transition-all outline-none shadow-inner"
                         />
-                        <p className="text-[9px] text-slate-400 font-medium ml-1">Full URL to the banner image. Upload via Cloudinary first.</p>
+                        <p className="text-[9px] text-slate-400 font-medium ml-1">Optional — keep an existing image by leaving this as-is and picking no file.</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">

@@ -1,24 +1,11 @@
 "use server"
 
-import { v2 as cloudinary } from 'cloudinary'
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
+import { uploadStoreImage } from "@/lib/storage"
 
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-})
-
-async function uploadToCloudinary(file: File): Promise<string> {
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const upload: any = await new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-            { folder: 'showcase' },
-            (err, res) => err ? reject(err) : resolve(res)
-        ).end(buffer)
-    })
-    return upload.secure_url
+async function uploadToShowcaseImage(file: File): Promise<string> {
+    return uploadStoreImage('showcase', file)
 }
 
 export async function createShowcaseItem(formData: FormData) {
@@ -28,7 +15,7 @@ export async function createShowcaseItem(formData: FormData) {
     let image_url = formData.get("image_url") as string | null
 
     if (file && file.size > 0) {
-        image_url = await uploadToCloudinary(file)
+        image_url = await uploadToShowcaseImage(file)
     }
 
     if (!image_url) return { success: false, message: "Image is required" }
@@ -55,7 +42,7 @@ export async function updateShowcaseItem(id: string, formData: FormData) {
     let image_url = formData.get("image_url") as string | null
 
     if (file && file.size > 0) {
-        image_url = await uploadToCloudinary(file)
+        image_url = await uploadToShowcaseImage(file)
     }
 
     const updateData: Record<string, any> = {
