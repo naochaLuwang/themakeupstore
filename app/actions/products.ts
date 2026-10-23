@@ -1,15 +1,8 @@
 "use server"
 
-import { v2 as cloudinary } from 'cloudinary'
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
-import { uploadStoreImage, deleteStoreImage, storagePathFromPublicUrl } from "@/lib/storage"
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+import { uploadStoreImage, deleteStoreImage } from "@/lib/storage"
 
 /**
  * CREATE PRODUCT
@@ -146,21 +139,15 @@ export async function updateProduct(productId: string, formData: FormData) {
             )
         }
 
-        // 2. Image Management (sync removed assets)
+        // 2. Image Management (delete removed assets from storage)
         const { data: oldImages } = await supabase.from("product_images").select("url").eq("product_id", productId)
         const oldUrls = oldImages?.map(img => img.url) || []
         const keptUrls = payload.existing_images || []
         const urlsToRemove = oldUrls.filter(url => !keptUrls.includes(url))
 
         for (const url of urlsToRemove) {
-            if (storagePathFromPublicUrl(url)) {
-                // Supabase Storage asset
-                await deleteStoreImage(url).catch(() => null)
-            } else if (url.includes('res.cloudinary.com')) {
-                // Legacy Cloudinary asset (kept until the Cloudinary account is cancelled)
-                const fileName = url.split('/').pop()?.split('.')[0]
-                if (fileName) await cloudinary.uploader.destroy(`products/${productId}/${fileName}`).catch(() => null)
-            }
+            // no-op for non-store-media URLs
+            await deleteStoreImage(url).catch(() => null)
         }
 
         // 3. Upload New Files
