@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { STATUS_LABELS, STATUS_TIMESTAMPS } from "@/lib/order-status"
@@ -67,7 +67,10 @@ function getTimelineSteps(order: any): string[] {
 
 export default async function PublicTrackingPage(props: { params: tParams }) {
     const { id } = await props.params
-    const supabase = await createClient()
+    // Admin client: public tracking works via unguessable order UUID, but the
+    // anon key must NOT be able to SELECT orders (RLS would need USING (true)
+    // which lets anyone dump every order + address via REST)
+    const supabase = await createAdminClient()
 
     const { data: order, error } = await supabase
         .from("orders")

@@ -105,8 +105,19 @@ export default function BatchLabelsPage() {
                         box-shadow: none !important;
                         background: white !important;
                         color: black !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
-                    .label-page .order-label * { color: black !important; background: transparent !important; }
+                    .label-page .order-label * {
+                        color: black !important;
+                        background: transparent !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .label-page .order-label .font-light,
+                    .label-page .order-label .font-thin,
+                    .label-page .order-label .font-normal,
+                    .label-page .order-label .font-medium { font-weight: 600 !important; }
                     .label-page .order-label img, .label-page .order-label svg { max-width: 100% !important; }
                 }
                 @media screen {

@@ -82,6 +82,8 @@ export async function updateSession(request: NextRequest) {
         path.startsWith('/brands') ||
         path.startsWith('/search') ||
         path.startsWith('/careers') ||
+        path.startsWith('/labels') ||
+        path.startsWith('/api/labels-verify') ||
         path.startsWith('/wholesale/register');
 
     if (!user && !isPublicRoute) {

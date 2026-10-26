@@ -53,8 +53,19 @@ export default function OrderLabelPage() {
                         box-shadow: none !important;
                         background: white !important;
                         color: black !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
-                    .order-label * { color: black !important; background: transparent !important; }
+                    .order-label * {
+                        color: black !important;
+                        background: transparent !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .order-label .font-light,
+                    .order-label .font-thin,
+                    .order-label .font-normal,
+                    .order-label .font-medium { font-weight: 600 !important; }
                     .order-label img, .order-label svg { max-width: 100% !important; }
                 }
                 @media screen {
