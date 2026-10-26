@@ -20,6 +20,8 @@ const emptyForm: ManualLabelData = {
     pincode: "",
     paymentMode: "cod",
     amount: 0,
+    hasDeliveryCharge: false,
+    deliveryCharge: 0,
 }
 
 const inputCls =
@@ -277,6 +279,28 @@ export function LabelMaker() {
                                 />
                             </Field>
                         )}
+
+                        <div className="col-span-2 sm:col-span-1">
+                            <label className={`${labelCls} flex items-center gap-2 cursor-pointer select-none`}>
+                                <input
+                                    type="checkbox"
+                                    checked={form.hasDeliveryCharge}
+                                    onChange={e => set("hasDeliveryCharge", e.target.checked)}
+                                    className="h-4 w-4 rounded border-slate-300 accent-slate-900 cursor-pointer"
+                                />
+                                Delivery Charge
+                            </label>
+                            {form.hasDeliveryCharge && (
+                                <input
+                                    className={inputCls}
+                                    value={form.deliveryCharge || ""}
+                                    onChange={e => set("deliveryCharge", Number(e.target.value.replace(/\D/g, "")) || 0)}
+                                    placeholder="e.g. 50"
+                                    inputMode="numeric"
+                                    autoFocus
+                                />
+                            )}
+                        </div>
                     </div>
 
                     <div className="mt-7 flex flex-col sm:flex-row gap-2.5">

@@ -17,6 +17,8 @@ export type ManualLabelData = {
     pincode: string
     paymentMode: "prepaid" | "cod"
     amount: number
+    hasDeliveryCharge: boolean
+    deliveryCharge: number
 }
 
 function telUri(phone: string): string {
@@ -32,6 +34,20 @@ function telUri(phone: string): string {
 export function ManualLabel({ data }: { data: ManualLabelData }) {
     const reference = data.reference.trim().toUpperCase()
     const qrValue = telUri(data.phone)
+    const deliveryRow = data.hasDeliveryCharge ? (
+        <div className="border-t-2 border-black py-2">
+            {data.deliveryCharge > 0 ? (
+                <>
+                    <span className="text-[16px] font-black tracking-tight">
+                        + ₹{Number(data.deliveryCharge).toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-[11px] font-black uppercase tracking-wider ml-1.5">Delivery</span>
+                </>
+            ) : (
+                <span className="text-[14px] font-black uppercase tracking-tight">+ Delivery Charge</span>
+            )}
+        </div>
+    ) : null
 
     return (
         <div className="manual-label flex flex-col">
@@ -97,15 +113,16 @@ export function ManualLabel({ data }: { data: ManualLabelData }) {
                 <div className="text-[7px] font-bold uppercase tracking-wider text-black mb-1">
                     {data.orderType === "delivery" ? "SHIP TO:" : "CUSTOMER:"}
                 </div>
-                <div className="text-[11px] font-black leading-snug">{data.name}</div>
-                <div className="text-[9px] font-bold mt-0.5">{data.phone}</div>
+                <div className="text-[14px] font-black leading-snug tracking-tight">{data.name}</div>
+                <div className="text-[12px] font-black mt-1 tracking-tight">{data.phone}</div>
                 {(data.street || data.area || data.pincode) && (
-                    <div className="text-[8px] font-semibold mt-1 leading-relaxed">
+                    <div className="text-[10px] font-bold mt-1.5 leading-relaxed">
                         {data.street}
                         {data.landmark && `, ${data.landmark}`}
-                        <br />
-                        {data.area}
-                        {data.pincode && ` - ${data.pincode}`}
+                        {(data.area || data.pincode) && <br />}
+                        {data.area
+                            ? `${data.area}${data.pincode ? ` - ${data.pincode}` : ""}`
+                            : data.pincode}
                     </div>
                 )}
             </div>
@@ -113,18 +130,24 @@ export function ManualLabel({ data }: { data: ManualLabelData }) {
             {/* PAYMENT */}
             <div className="flex-1 overflow-hidden flex flex-col justify-center">
                 {data.paymentMode === "prepaid" ? (
-                    <div className="border-2 border-black py-3 text-center">
-                        <div className="text-[7px] font-bold uppercase tracking-[0.3em] text-black">Payment</div>
-                        <div className="text-[24px] font-black uppercase tracking-tight leading-none mt-1">PREPAID</div>
-                        <div className="text-[7px] font-bold uppercase tracking-widest mt-1.5">Nothing to collect</div>
+                    <div className="border-2 border-black text-center">
+                        <div className="py-3">
+                            <div className="text-[7px] font-bold uppercase tracking-[0.3em] text-black">Payment</div>
+                            <div className="text-[30px] font-black uppercase tracking-tight leading-none mt-1">PREPAID</div>
+                            <div className="text-[7px] font-bold uppercase tracking-widest mt-1.5">Nothing to collect</div>
+                        </div>
+                        {deliveryRow}
                     </div>
                 ) : (
-                    <div className="border-2 border-black py-3 text-center">
-                        <div className="text-[7px] font-bold uppercase tracking-[0.3em] text-black">Amount to Collect</div>
-                        <div className="text-[30px] font-black tracking-tight leading-none mt-1">
-                            ₹{Number(data.amount || 0).toLocaleString("en-IN")}
+                    <div className="border-2 border-black text-center">
+                        <div className="py-3">
+                            <div className="text-[7px] font-bold uppercase tracking-[0.3em] text-black">Amount to Collect</div>
+                            <div className="text-[36px] font-black tracking-tight leading-none mt-1">
+                                ₹{Number(data.amount || 0).toLocaleString("en-IN")}
+                            </div>
+                            <div className="text-[7px] font-bold uppercase tracking-widest mt-1.5">Cash on Delivery</div>
                         </div>
-                        <div className="text-[7px] font-bold uppercase tracking-widest mt-1.5">Cash on Delivery</div>
+                        {deliveryRow}
                     </div>
                 )}
             </div>
