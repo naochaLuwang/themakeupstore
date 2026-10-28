@@ -1,7 +1,45 @@
 const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging'
 const FCM_ENDPOINT = 'https://fcm.googleapis.com/v1/projects/the-makeup-store-7dad3/messages:send'
 
-export function parseServiceAccountKey(rawValue: string | undefined | null): any {
+// HTTP v1 wire format (different from the Firebase Admin SDK's camelCase fields).
+function notificationPayload(title: string, body: string, url?: string) {
+  return {
+    notification: { title, body },
+    android: {
+      priority: 'HIGH',
+      notification: {
+        sound: 'default',
+        notification_priority: 'PRIORITY_HIGH',
+        default_sound: true,
+        channel_id: 'push-notifications',
+        icon: 'ic_stat_icon',
+      },
+    },
+    ...(url ? { data: { url } } : {}),
+  }
+}
+
+async function fcmError(response: Response) {
+  const payload = await response.json().catch(() => ({}))
+  const details = payload.error?.details as { '@type'?: string; errorCode?: string }[] | undefined
+  const code = details?.find(detail =>
+    detail['@type'] === 'type.googleapis.com/google.firebase.fcm.v1.FcmError'
+  )?.errorCode
+  return {
+    // A generic 404 can also mean a bad project/endpoint. Only delete tokens
+    // when Firebase explicitly says the registration has expired.
+    invalidToken: code === 'UNREGISTERED',
+    message: `FCM send failed (${response.status}, ${code || payload.error?.status || 'UNKNOWN'}): ${payload.error?.message || 'Request rejected'}`,
+  }
+}
+
+interface ServiceAccountKey {
+  private_key: string
+  client_email: string
+  project_id: string
+}
+
+export function parseServiceAccountKey(rawValue: string | undefined | null): ServiceAccountKey {
   if (!rawValue) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not set')
 
   let s = String(rawValue).trim()
@@ -47,8 +85,8 @@ export function parseServiceAccountKey(rawValue: string | undefined | null): any
       return parsed
     }
     throw new Error('Parsed JSON but missing valid private_key')
-  } catch (e: any) {
-    throw new Error(`FIREBASE_SERVICE_ACCOUNT_KEY parse failed: ${e.message}`)
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY parse failed: expected service account JSON with a valid private_key')
   }
 }
 
@@ -73,7 +111,7 @@ async function getAccessToken(): Promise<string> {
     iat: now,
   }
 
-  const encode = (obj: any) =>
+  const encode = (obj: Record<string, unknown>) =>
     btoa(JSON.stringify(obj)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
 
   const jwt = `${encode(header)}.${encode(claim)}`
@@ -108,17 +146,7 @@ async function getAccessToken(): Promise<string> {
 export async function sendFcmNotification(token: string, title: string, body: string, url?: string) {
   const accessToken = await getAccessToken()
 
-  const message: any = {
-    message: {
-      token,
-      notification: { title, body },
-      android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true, channel_id: 'push-notifications' } },
-    },
-  }
-
-  if (url) {
-    message.message.data = { url }
-  }
+  const message = { message: { token, ...notificationPayload(title, body, url) } }
 
   const res = await fetch(FCM_ENDPOINT, {
     method: 'POST',
@@ -130,8 +158,7 @@ export async function sendFcmNotification(token: string, title: string, body: st
   })
 
   if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`FCM send failed: ${res.status} ${err}`)
+    throw new Error((await fcmError(res)).message)
   }
 
   return res.json()
@@ -140,17 +167,7 @@ export async function sendFcmNotification(token: string, title: string, body: st
 export async function sendFcmToTopic(topic: string, title: string, body: string, url?: string) {
   const accessToken = await getAccessToken()
 
-  const message: any = {
-    message: {
-      topic,
-      notification: { title, body },
-      android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true, channel_id: 'push-notifications' } },
-    },
-  }
-
-  if (url) {
-    message.message.data = { url }
-  }
+  const message = { message: { topic, ...notificationPayload(title, body, url) } }
 
   const res = await fetch(FCM_ENDPOINT, {
     method: 'POST',
@@ -162,29 +179,21 @@ export async function sendFcmToTopic(topic: string, title: string, body: string,
   })
 
   if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`FCM topic send failed: ${res.status} ${err}`)
+    throw new Error((await fcmError(res)).message)
   }
 
   return res.json()
 }
 
 export async function sendFcmMulticast(tokens: string[], title: string, body: string, url?: string) {
-  const accessToken = await getAccessToken()
-
-  const baseMessage: any = {
-    notification: { title, body },
-    android: { priority: 'high', notification: { sound: 'default', priority: 'high', defaultSound: true, channel_id: 'push-notifications' } },
-  }
-
-  if (url) {
-    baseMessage.data = { url }
-  }
-
   // Same device can appear under multiple accounts — send once per token
   const uniqueTokens = [...new Set(tokens.filter(Boolean))]
+  if (!uniqueTokens.length) return { sentCount: 0, invalidTokens: [], failedCount: 0 }
+  const accessToken = await getAccessToken()
+  const baseMessage = notificationPayload(title, body, url)
 
   const invalidTokens: string[] = []
+  const errors: string[] = []
   let sentCount = 0
   const CHUNK_SIZE = 100
 
@@ -201,8 +210,9 @@ export async function sendFcmMulticast(tokens: string[], title: string, body: st
           body: JSON.stringify({ message: { ...baseMessage, token } }),
         }).then(async r => {
           if (!r.ok) {
-            if (r.status === 404 || r.status === 410) return { invalid: true, token }
-            throw new Error(`FCM error ${r.status}: ${await r.text()}`)
+            const failure = await fcmError(r)
+            if (failure.invalidToken) return { invalid: true, token }
+            throw new Error(failure.message)
           }
           return { ok: true }
         })
@@ -212,15 +222,19 @@ export async function sendFcmMulticast(tokens: string[], title: string, body: st
     for (const r of results) {
       if (r.status === 'fulfilled' && r.value) {
         if ('invalid' in r.value && r.value.invalid) {
-          invalidTokens.push((r.value as any).token)
+          invalidTokens.push(r.value.token)
         } else if ('ok' in r.value) {
           sentCount++
         }
       } else if (r.status === 'rejected') {
+        errors.push(r.reason instanceof Error ? r.reason.message : 'FCM request failed')
         console.error('[FCM] Send error:', r.reason)
       }
     }
   }
 
-  return { sentCount, invalidTokens }
+  if (!sentCount && errors.length) {
+    throw new Error(errors[0])
+  }
+  return { sentCount, invalidTokens, failedCount: uniqueTokens.length - sentCount }
 }

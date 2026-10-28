@@ -2,6 +2,7 @@ import { FirebaseMessaging } from '@capacitor-firebase/messaging'
 import { LocalNotifications, type ActionPerformed } from '@capacitor/local-notifications'
 import { Capacitor } from '@capacitor/core'
 import { createClient } from '@/utils/supabase/client'
+import { safePushUrl } from '@/lib/push-url'
 
 const CHANNEL_ID = 'push-notifications'
 
@@ -12,12 +13,12 @@ export interface PushRegisterResult {
 
 let listenersReady = false
 let inFlight: Promise<PushRegisterResult> | null = null
+let registeringUser: string | null = null
+let unregistering: Promise<void> | null = null
+const DISABLED_KEY = 'tms-push-disabled'
 
-function isAppUrl(url: unknown): url is string {
-  return (
-    typeof url === 'string' &&
-    (url.startsWith('/') || url.startsWith('https://themakeupstorewangkhei.com'))
-  )
+export function isPushDisabled() {
+  return window.localStorage.getItem(DISABLED_KEY) === 'true'
 }
 
 function extractUrl(data: unknown): string | undefined {
@@ -52,7 +53,8 @@ async function displayForeground(title: string, body: string, extra?: unknown) {
       {
         title,
         body,
-        id: Date.now(),
+        // Android requires a signed 32-bit integer, not a millisecond timestamp.
+        id: Math.floor(Math.random() * 2147483647),
         channelId: CHANNEL_ID,
         smallIcon: 'ic_stat_icon',
         extra: extra || {},
@@ -61,7 +63,10 @@ async function displayForeground(title: string, body: string, extra?: unknown) {
   })
 }
 
-export async function registerForFCM(): Promise<PushRegisterResult> {
+export async function registerForFCM(options: { enable?: boolean } = {}): Promise<PushRegisterResult> {
+  if (!Capacitor.isNativePlatform()) return { ok: false, reason: 'Push requires the mobile app' }
+  if (isPushDisabled() && !options.enable) return { ok: false, reason: 'Notifications disabled on this device' }
+  if (unregistering) await unregistering
   let supported = false
   try {
     supported = (await FirebaseMessaging.isSupported()).isSupported
@@ -76,11 +81,23 @@ export async function registerForFCM(): Promise<PushRegisterResult> {
   if (!session) return { ok: false, reason: 'Not signed in' }
 
   // Serialize concurrent calls (app start + SIGNED_IN can race)
-  if (inFlight) return inFlight
+  if (inFlight) {
+    if (registeringUser === session.user.id) {
+      const result = await inFlight
+      if (result.ok && options.enable) window.localStorage.removeItem(DISABLED_KEY)
+      return result
+    }
+    await inFlight
+    return registerForFCM(options)
+  }
+  registeringUser = session.user.id
   inFlight = completeRegistration(supabase, session.user.id).finally(() => {
     inFlight = null
+    registeringUser = null
   })
-  return inFlight
+  const result = await inFlight
+  if (result.ok && options.enable) window.localStorage.removeItem(DISABLED_KEY)
+  return result
 }
 
 async function completeRegistration(
@@ -127,15 +144,14 @@ async function completeRegistration(
   }
   if (!token) return { ok: false, reason: 'FCM returned no token' }
 
-  // Remove this user's previous rows AND any row already holding this token
-  // (same phone signed into a different account previously — otherwise the
-  // insert hits the fcm_token unique index and registration silently fails)
-  try {
-    await supabase.from('push_subscriptions').delete().eq('user_id', userId)
-    await supabase.from('push_subscriptions').delete().eq('fcm_token', token)
-  } catch (err) {
-    console.warn('[FCM] Old subscription cleanup failed:', errText(err))
-  }
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.user.id !== userId) return { ok: false, reason: 'Account changed during registration; please retry' }
+
+  // The existing schema permits one registered device per account.
+  const { error: cleanupError } = await supabase.from('push_subscriptions').delete().eq('user_id', userId)
+  if (cleanupError) return { ok: false, reason: `Could not replace device registration: ${cleanupError.message}` }
+  // The claim_fcm_token DB trigger handles reclaiming this token from another
+  // account; a client-side DELETE cannot cross that account's RLS boundary.
 
   const { error } = await supabase.from('push_subscriptions').insert({
     user_id: userId,
@@ -155,20 +171,25 @@ async function completeRegistration(
   console.log('[FCM] Registered successfully for user', userId)
 
   try {
-    await FirebaseMessaging.subscribeToTopic({ topic: 'admin' })
+    // Older versions subscribed every customer to "admin". Admin tests now
+    // target admin-owned device rows instead of this public, unprotected topic.
+    await FirebaseMessaging.unsubscribeFromTopic({ topic: 'admin' })
   } catch (err) {
-    console.warn('[FCM] Topic subscription failed:', errText(err))
+    console.warn('[FCM] Legacy topic cleanup failed:', errText(err))
   }
 
   return { ok: true }
 }
 
-export async function unregisterFCM() {
-  try {
+export async function unregisterFCM(options: { disable?: boolean } = {}) {
+  // Keep listeners alive so re-enabling in the same session still works.
+  if (options.disable !== false) window.localStorage.setItem(DISABLED_KEY, 'true')
+  if (unregistering) return unregistering
+  unregistering = (async () => {
+    if (inFlight) await inFlight.catch(() => {})
     await FirebaseMessaging.deleteToken()
-  } catch {}
-  // NOTE: listeners are intentionally NOT removed — they stay alive so that
-  // re-enabling notifications in the same session keeps working.
+  })().finally(() => { unregistering = null })
+  return unregistering
 }
 
 export function setupFCMListeners() {
@@ -177,33 +198,33 @@ export function setupFCMListeners() {
 
   FirebaseMessaging.addListener('notificationReceived', (event) => {
     console.log('[FCM] Received in foreground:', event.notification?.title)
+    if (Capacitor.getPlatform() !== 'android' || isPushDisabled()) return
     const title = event.notification?.title || ''
     const body = event.notification?.body || ''
     if (!title && !body) return
     displayForeground(title, body, event.notification?.data).catch((err) =>
       console.error('[FCM] Foreground display failed:', err)
     )
-  })
+  }).catch((err) => console.error('[FCM] Foreground listener failed:', errText(err)))
 
   // Tap on a notification shown by the system (background / killed app)
   FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
-    const url = extractUrl(event.notification?.data)
-    if (isAppUrl(url)) window.location.href = url
-  })
+    const url = safePushUrl(extractUrl(event.notification?.data))
+    if (url) window.location.href = url
+  }).catch((err) => console.error('[FCM] Push tap listener failed:', errText(err)))
 
   // Tap on a notification we scheduled ourselves while app was in foreground
   LocalNotifications.addListener('localNotificationActionPerformed', (action: ActionPerformed) => {
-    const url = extractUrl(action?.notification?.extra)
-    if (isAppUrl(url)) window.location.href = url
+    const url = safePushUrl(extractUrl(action?.notification?.extra))
+    if (url) window.location.href = url
   }).catch((err) => console.warn('[FCM] Local tap listener failed:', errText(err)))
 
   FirebaseMessaging.addListener('tokenReceived', (event) => {
-    console.log('[FCM] Token refreshed:', event.token?.substring(0, 30) + '...')
-    if (!event.token) return
+    if (!event.token || isPushDisabled()) return
     registerForFCM().then((result) => {
       if (!result.ok) console.warn('[FCM] Re-register after token refresh failed:', result.reason)
-    })
-  })
+    }).catch((err) => console.warn('[FCM] Token refresh registration failed:', errText(err)))
+  }).catch((err) => console.error('[FCM] Token listener failed:', errText(err)))
 }
 
 function errText(err: unknown): string {

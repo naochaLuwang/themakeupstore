@@ -44,17 +44,24 @@ export default function AdminBroadcastForm() {
         try {
             const { data, error } = await supabase
                 .from('push_subscriptions')
-                .select('id, user_id, fcm_token, platform, created_at, profiles!push_subscriptions_user_id_fkey(full_name)')
+                .select('id, user_id, fcm_token, platform, created_at')
 
             if (error) throw error
 
             if (data) {
+                const rows = data as { id: string; user_id: string; fcm_token: string | null; platform: string; created_at: string }[]
+                const ids = [...new Set(rows.map(device => device.user_id).filter(Boolean))]
+                const { data: profiles, error: profileError } = ids.length
+                    ? await supabase.from('profiles').select('id, full_name').in('id', ids)
+                    : { data: [], error: null }
+                if (profileError) throw profileError
+                const names = new Map(((profiles || []) as { id: string; full_name: string | null }[]).map(profile => [profile.id, profile]))
                 const uniqueIds = new Set(data.map((d: any) => d.user_id)).size
                 setStats({
                     devices: data.length,
                     users: uniqueIds
                 })
-                setDevices(data)
+                setDevices(rows.map(device => ({ ...device, profiles: names.get(device.user_id) })))
             }
         } catch (err) {
             console.error("Admin RLS fetch failed:", err)
@@ -82,8 +89,8 @@ export default function AdminBroadcastForm() {
             const data = await res.json()
             if (data.success) {
                 if (data.totalDevices === 0) setMsg("info", data.details || "No FCM devices found")
-                else if (data.targeted) setMsg("success", `Sent to ${data.totalDevices} device(s) for ${data.userCount} user(s): ${(data.users || []).join(", ")}${data.failedDevices ? ` · ${data.failedDevices} invalid removed` : ""}`)
-                else setMsg("success", `Broadcast delivered to ${data.totalDevices} device${data.totalDevices === 1 ? "" : "s"}${data.failedDevices ? ` · ${data.failedDevices} invalid removed` : ""}`)
+                else if (data.targeted) setMsg("success", `Firebase accepted ${data.totalDevices} device(s) for ${data.userCount} user(s): ${(data.users || []).join(", ")}${data.failedDevices ? ` · ${data.failedDevices} failed` : ""}`)
+                else setMsg("success", `Firebase accepted the broadcast for ${data.totalDevices} device${data.totalDevices === 1 ? "" : "s"}${data.failedDevices ? ` · ${data.failedDevices} failed` : ""}`)
                 setForm({ title: "", body: "", url: "" })
                 setTargetUserIds([])
                 fetchNetworkStats()
@@ -123,7 +130,7 @@ export default function AdminBroadcastForm() {
     const sendTopicTest = async () => {
         if (!form.title || !form.body) return
         setLoading(true)
-        setMsg("info", "Sending to admin topic...")
+        setMsg("info", "Sending to admin devices...")
         try {
             const res = await fetch('/api/admin/broadcast/test-topic', {
                 method: 'POST',
@@ -132,12 +139,12 @@ export default function AdminBroadcastForm() {
             })
             const data = await res.json()
             if (data.success) {
-                setMsg("success", "Sent to admin topic — all subscribed devices receive this")
+                setMsg(data.sent ? "success" : "info", data.message)
             } else {
-                setMsg("error", data.error || "Topic test failed.")
+                setMsg("error", data.error || "Admin device test failed.")
             }
         } catch {
-            setMsg("error", "Topic test failed.")
+            setMsg("error", "Admin device test failed.")
         } finally {
             setLoading(false)
         }
@@ -158,7 +165,7 @@ export default function AdminBroadcastForm() {
                 return
             }
             const { registerForFCM } = await import('@/lib/capacitor-push')
-            const result = await registerForFCM()
+            const result = await registerForFCM({ enable: true })
             if (result.ok) {
                 setRegStatus("FCM registered successfully for this device.")
                 fetchNetworkStats()
@@ -182,7 +189,7 @@ export default function AdminBroadcastForm() {
                 ? `[key len=${data.results.envVarLength} project=${data.results.projectId ?? "?"}]`
                 : ''
             if (data.success) {
-                setFcmTestResult({ ok: true, text: data.message || `FCM key valid — delivered to ${data.sentCount} device(s)` })
+                setFcmTestResult({ ok: true, text: data.message || `Firebase accepted the message for ${data.sentCount} device(s)` })
             } else if (data.warning) {
                 setFcmTestResult({ ok: true, text: `Key valid but: ${data.warning} ${diag}` })
             } else {
@@ -436,7 +443,7 @@ export default function AdminBroadcastForm() {
                                 className="h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
                             >
                                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />}
-                                Test via Topic
+                                Test Admin Devices
                             </button>
                         </div>
                     </div>

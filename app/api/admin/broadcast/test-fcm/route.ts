@@ -93,6 +93,7 @@ export async function POST(req: Request) {
         const { data: subs } = await supabase
             .from('push_subscriptions')
             .select('fcm_token')
+            .eq('user_id', user.id)
             .not('fcm_token', 'is', null)
 
         const fcmTokens = (subs || []).filter(s => s.fcm_token).map(s => s.fcm_token!)
@@ -102,7 +103,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ ...results, warning: "No FCM tokens found. Install the app and log in to register.", success: true, step: "no_fcm_tokens" })
         }
 
-        // Fan out to EVERY registered token so the admin's own device gets it too.
+        // A diagnostic test targets this admin's devices only.
         const { sendFcmMulticast } = await import('@/lib/fcm-send')
         const result = await sendFcmMulticast(fcmTokens, "Test Notification", "FCM is working!", "/")
 
@@ -117,10 +118,10 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             ...results,
-            success: true,
+            success: result.sentCount > 0,
             step: "fcm_sent",
             message: `Test notification sent to ${result.sentCount} of ${fcmTokens.length} device(s)${staleRemoved ? ` · ${staleRemoved} stale token(s) removed` : ""}`,
-            warning: result.sentCount === 0 ? "FCM returned no failures but nothing was delivered — check the app side." : undefined,
+            warning: result.sentCount === 0 ? "All saved tokens have expired. Register this device again in the app." : undefined,
         })
     } catch (error: any) {
         return NextResponse.json({ error: error.message, step: "unknown" }, { status: 200 })

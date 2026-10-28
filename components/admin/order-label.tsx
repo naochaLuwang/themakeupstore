@@ -69,18 +69,19 @@ export function OrderLabel({ order }: { order: any }) {
             {/* CUSTOMER ADDRESS (Large for courier visibility) */}
             <div className="flex flex-col border-b border-solid border-black pb-3 mb-3">
                 <div className="text-[7px] font-bold uppercase tracking-wider text-black mb-1">SHIP TO:</div>
-                <div className="text-[11px] font-black leading-snug">
+                <div className="text-[14px] font-black leading-snug tracking-tight">
                     {order.shipping_address?.full_name}
                 </div>
-                <div className="text-[9px] font-bold mt-0.5">
+                <div className="text-[12px] font-black mt-1 tracking-tight">
                     {order.shipping_address?.phone}
                 </div>
-                <div className="text-[8px] font-semibold mt-1 leading-relaxed">
+                <div className="text-[10px] font-bold mt-1.5 leading-relaxed">
                     {order.shipping_address?.street}
                     {order.shipping_address?.landmark && `, ${order.shipping_address.landmark}`}
-                    <br />
-                    {order.shipping_address?.area_name}
-                    {order.shipping_address?.pincode && ` - ${order.shipping_address.pincode}`}
+                    {(order.shipping_address?.area_name || order.shipping_address?.pincode) && <br />}
+                    {order.shipping_address?.area_name
+                        ? `${order.shipping_address.area_name}${order.shipping_address?.pincode ? ` - ${order.shipping_address.pincode}` : ""}`
+                        : order.shipping_address?.pincode}
                 </div>
             </div>
 
@@ -90,13 +91,13 @@ export function OrderLabel({ order }: { order: any }) {
                 {order.payment_status === "paid" ? (
                     <div className="border-2 border-black py-3 text-center">
                         <div className="text-[7px] font-bold uppercase tracking-[0.3em] text-black">Payment</div>
-                        <div className="text-[24px] font-black uppercase tracking-tight leading-none mt-1">PREPAID</div>
+                        <div className="text-[30px] font-black uppercase tracking-tight leading-none mt-1">PREPAID</div>
                         <div className="text-[7px] font-bold uppercase tracking-widest mt-1.5">Nothing to collect</div>
                     </div>
                 ) : (
                     <div className="border-2 border-black py-3 text-center">
                         <div className="text-[7px] font-bold uppercase tracking-[0.3em] text-black">Amount to Collect</div>
-                        <div className="text-[30px] font-black tracking-tight leading-none mt-1">₹{Number(order.total || 0).toLocaleString("en-IN")}</div>
+                        <div className="text-[36px] font-black tracking-tight leading-none mt-1">₹{Number(order.total || 0).toLocaleString("en-IN")}</div>
                         <div className="text-[7px] font-bold uppercase tracking-widest mt-1.5">
                             {order.payment_status === "refunded" ? "Refunded" : "Cash on Delivery"}
                         </div>

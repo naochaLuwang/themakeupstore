@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rate-limit"
+import { safePushUrl } from "@/lib/push-url"
 
 const broadcastLimiter = rateLimit("admin-broadcast", { windowMs: 60_000, max: 10 })
 
@@ -11,7 +12,7 @@ function cleanString(value: unknown, max: number): string {
 
 function isSafeUrl(url: string): boolean {
     if (!url) return true
-    return url.startsWith("/") || url.startsWith("https://themakeupstorewangkhei.com")
+    return !!safePushUrl(url)
 }
 
 export async function POST(req: Request) {
@@ -66,9 +67,9 @@ export async function POST(req: Request) {
 
         if (Array.isArray(targetUserIds) && targetUserIds.length > 0) {
             const { data, error } = await supabase
-                .from('push_subscriptions')
-                .select('user_id, profiles!push_subscriptions_user_id_fkey(full_name)')
-                .in('user_id', targetUserIds)
+                .from('profiles')
+                .select('id, full_name')
+                .in('id', targetUserIds)
 
             if (error) {
                 return NextResponse.json({ success: false, error: "Target lookup failed" }, { status: 500 })
@@ -103,14 +104,12 @@ export async function POST(req: Request) {
                 }
             }
 
-            const targetNames = (data as any[])
-                .filter((d: any) => d.profiles?.full_name)
-                .map((d: any) => d.profiles!.full_name as string)
+            const targetNames = data.map(profile => profile.full_name).filter(Boolean)
 
             return NextResponse.json({
                 success: true,
                 totalDevices: result.sentCount,
-                failedDevices: result.invalidTokens.length,
+                failedDevices: result.failedCount,
                 targeted: true,
                 userCount: data.length,
                 users: [...new Set(targetNames)],
@@ -147,7 +146,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             success: true,
             totalDevices: result.sentCount,
-            failedDevices: result.invalidTokens.length,
+            failedDevices: result.failedCount,
             details: `SUCCESS: ${result.sentCount} DEVICES REACHED`
         })
     } catch (err: any) {

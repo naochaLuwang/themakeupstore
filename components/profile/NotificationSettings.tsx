@@ -4,9 +4,10 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { Capacitor } from "@capacitor/core"
 
 function isCapacitor() {
-    return typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform()
+    return Capacitor.isNativePlatform()
 }
 
 export function NotificationSettings() {
@@ -27,17 +28,25 @@ export function NotificationSettings() {
         try {
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
+                const { isPushDisabled } = await import('@/lib/capacitor-push')
+                const { FirebaseMessaging } = await import('@capacitor-firebase/messaging')
+                if (isPushDisabled() || (await FirebaseMessaging.checkPermissions()).receive !== 'granted') {
+                    setIsSubscribed(false)
+                    return
+                }
+                const { token } = await FirebaseMessaging.getToken()
                 const { data } = await supabase
                     .from('push_subscriptions')
                     .select('fcm_token')
                     .eq('user_id', session.user.id)
-                    .not('fcm_token', 'is', null)
+                    .eq('fcm_token', token)
                 setIsSubscribed(!!data?.length)
             }
         } catch (err) {
             console.error('Failed to check push status:', err)
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
     async function togglePush() {
@@ -46,15 +55,16 @@ export function NotificationSettings() {
             if (isSubscribed) {
                 const { data: { session } } = await supabase.auth.getSession()
                 if (session?.user) {
-                    await supabase.from('push_subscriptions').delete().eq('user_id', session.user.id)
                     const { unregisterFCM } = await import('@/lib/capacitor-push')
                     await unregisterFCM()
+                    const { error } = await supabase.from('push_subscriptions').delete().eq('user_id', session.user.id)
+                    if (error) throw error
                 }
                 setIsSubscribed(false)
                 toast.success("Notifications disabled")
             } else {
                 const { registerForFCM } = await import('@/lib/capacitor-push')
-                const result = await registerForFCM()
+                const result = await registerForFCM({ enable: true })
                 if (!result.ok) {
                     setIsSubscribed(false)
                     toast.error(result.reason || "Permission was denied or token registration failed")
