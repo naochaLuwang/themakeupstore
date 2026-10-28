@@ -21,6 +21,63 @@ export function isPushDisabled() {
   return window.localStorage.getItem(DISABLED_KEY) === 'true'
 }
 
+export interface PushStatus {
+  state: 'enabled' | 'disabled' | 'blocked' | 'unregistered' | 'unavailable' | 'signed_out' | 'error'
+  message: string
+}
+
+// Status checks never request permission or opt the user into notifications.
+export async function getPushStatus(): Promise<PushStatus> {
+  if (!Capacitor.isNativePlatform()) return { state: 'unavailable', message: 'Open the mobile app to manage push notifications on your phone.' }
+  try {
+    if (isPushDisabled()) return { state: 'disabled', message: 'Notifications are turned off on this device.' }
+    const supabase = createClient()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+    if (!session) return { state: 'signed_out', message: 'Sign in to manage notifications on this device.' }
+    const { receive } = await FirebaseMessaging.checkPermissions()
+    if (receive !== 'granted') return { state: 'blocked', message: 'Notification permission is off. Tap Enable Notifications to allow it. If no prompt appears, allow notifications in your phone’s app settings, then return here.' }
+    const { value: allowed } = await LocalNotifications.areEnabled()
+    if (!allowed) return { state: 'blocked', message: 'Notifications are blocked in your phone’s settings. Allow notifications for The Makeup Store, then return here.' }
+    if (Capacitor.getPlatform() === 'android') {
+      const { channels } = await LocalNotifications.listChannels()
+      if (channels.some(channel => channel.id === CHANNEL_ID && Number(channel.importance) === 0)) {
+        return { state: 'blocked', message: 'The Notifications category is off in Android settings. Turn it on for The Makeup Store, then return here.' }
+      }
+    }
+    const { token } = await FirebaseMessaging.getToken()
+    if (!token) return { state: 'unregistered', message: 'This device is not registered. Enable notifications to receive order updates and announcements.' }
+    const { data, error } = await supabase.from('push_subscriptions').select('fcm_token')
+      .eq('user_id', session.user.id).eq('fcm_token', token)
+    if (error) throw error
+    if (!data?.length) return { state: 'unregistered', message: 'This device is not registered. Enable notifications to receive order updates and announcements.' }
+    return { state: 'enabled', message: 'Order updates and announcements are enabled on this device.' }
+  } catch (error) {
+    console.warn('[FCM] Status check failed:', errText(error))
+    return { state: 'error', message: 'Unable to check notification status. Check your connection and try again.' }
+  }
+}
+
+export async function disablePushForCurrentDevice() {
+  const supabase = createClient()
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error) throw error
+  if (!session) throw new Error('Sign in to manage notifications.')
+  const { token } = await FirebaseMessaging.getToken()
+  if (!token) throw new Error('Unable to identify this device. Please try again.')
+  let revokeError: unknown
+  try { await unregisterFCM() } catch (error) { revokeError = error }
+  // Never remove another phone's registration if the account has switched devices.
+  const { error: deleteError } = await supabase.from('push_subscriptions').delete()
+    .match({ user_id: session.user.id, fcm_token: token })
+  if (deleteError) throw new Error(`Could not remove device registration: ${deleteError.message}`)
+  if (revokeError) throw new Error('Could not finish disabling notifications. Please try again.')
+}
+
+function notifyPushChange() {
+  window.dispatchEvent(new Event('tms-push-change'))
+}
+
 function extractUrl(data: unknown): string | undefined {
   if (data && typeof data === 'object' && 'url' in data) {
     const u = (data as { url?: unknown }).url
@@ -85,6 +142,7 @@ export async function registerForFCM(options: { enable?: boolean } = {}): Promis
     if (registeringUser === session.user.id) {
       const result = await inFlight
       if (result.ok && options.enable) window.localStorage.removeItem(DISABLED_KEY)
+      if (result.ok) notifyPushChange()
       return result
     }
     await inFlight
@@ -97,6 +155,7 @@ export async function registerForFCM(options: { enable?: boolean } = {}): Promis
   })
   const result = await inFlight
   if (result.ok && options.enable) window.localStorage.removeItem(DISABLED_KEY)
+  if (result.ok) notifyPushChange()
   return result
 }
 
@@ -188,7 +247,7 @@ export async function unregisterFCM(options: { disable?: boolean } = {}) {
   unregistering = (async () => {
     if (inFlight) await inFlight.catch(() => {})
     await FirebaseMessaging.deleteToken()
-  })().finally(() => { unregistering = null })
+  })().finally(() => { unregistering = null; notifyPushChange() })
   return unregistering
 }
 

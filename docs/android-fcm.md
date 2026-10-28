@@ -41,3 +41,21 @@ An accepted Firebase API request confirms acceptance by Firebase, not delivery t
 - Broadcast queries now fetch profiles separately because the live schema has no direct `push_subscriptions` → `profiles` relationship.
 - Android debug and production web builds passed; 24 regression tests and TypeScript checks passed. Core push files are lint-clean; remaining lint issues in surrounding admin files predate this work.
 - No Android phone/emulator was connected, so delivery, permissions, and tap behavior still require the device test above.
+
+## Follow-up: missing order updates
+
+The customer reported no notification when order `6129068e-ee1e-469c-9931-eeea3f11eab5` was confirmed. Its Android token existed before confirmation and passed Firebase validation. With the user's explicit approval, one real diagnostic notification was sent to that exact device; Firebase accepted it and the user confirmed it appeared. This verifies delivery to that device, but does not establish why the earlier order-triggered notification was missed.
+
+Order creation and status updates now use `lib/order-push.ts`. It checks token-lookup errors and records Firebase acceptance, expired registrations, and sending failures under `[Order push]`, with the order ID and status, without logging tokens. The admin order list reports the result after status changes. An order can update successfully even when its push fails; the UI reports the failure separately.
+
+Deploy the web changes, refresh the admin page, and inspect the result on the next genuine order status change. A warning includes missing-device or expired-token guidance; a generic sending failure has details in the hosting server log. “Push accepted by Firebase” confirms server acceptance, not device delivery. Confirmation is a configured notification status; pending resets and payment-only changes do not send order-status pushes.
+
+Verification: 32 push regression/integration tests, TypeScript, and production web build passed. Native files were unchanged; this follow-up requires only a web deployment.
+
+## Notification preferences
+
+`/profile/notifications` and the notification section in profile settings share the same device control. It shows Enabled only when permission, OS notification settings, the Android notification channel, and the current account's exact device-token registration allow notifications. Explicit opt-out shows Disabled. A failed status lookup shows Unable to check rather than assuming Disabled.
+
+Users can enable/register or disable/revoke notifications manually. Disabling removes only the current user's current device token; it does not delete another phone's registration. The opt-out survives app restarts. If the phone blocks notifications, the page explains how to allow them in system settings. Status refreshes on return to the app, window focus, successful device registration, and Check again. Browser visitors see App only. Checking status does not request notification permission.
+
+These controls use existing native plugins. Deploy the web changes; no app rebuild is required.

@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
   insert: vi.fn(),
   cleanup: vi.fn(),
   getSession: vi.fn(),
+  lookup: vi.fn(),
+  permission: vi.fn(),
+  areEnabled: vi.fn(),
+  listChannels: vi.fn(),
 }))
 
 vi.mock('@capacitor/core', () => ({ Capacitor: {
@@ -16,7 +20,7 @@ vi.mock('@capacitor/core', () => ({ Capacitor: {
 } }))
 vi.mock('@capacitor-firebase/messaging', () => ({ FirebaseMessaging: {
   isSupported: async () => ({ isSupported: true }),
-  checkPermissions: async () => ({ receive: 'granted' }),
+  checkPermissions: mocks.permission,
   getToken: mocks.getToken, deleteToken: mocks.deleteToken,
   unsubscribeFromTopic: mocks.unsubscribeFromTopic,
   addListener: async (name: string, listener: (event: unknown) => void) => {
@@ -25,14 +29,18 @@ vi.mock('@capacitor-firebase/messaging', () => ({ FirebaseMessaging: {
   },
 } }))
 vi.mock('@capacitor/local-notifications', () => ({ LocalNotifications: {
-  listChannels: async () => ({ channels: [{ id: 'push-notifications' }] }),
+  listChannels: mocks.listChannels,
+  areEnabled: mocks.areEnabled,
   checkPermissions: async () => ({ display: 'granted' }),
   schedule: mocks.schedule,
   addListener: async () => ({ remove: async () => {} }),
 } }))
 vi.mock('@/utils/supabase/client', () => ({ createClient: () => ({
   auth: { getSession: mocks.getSession },
-  from: () => ({ delete: () => ({ eq: mocks.cleanup }), insert: mocks.insert }),
+  from: () => ({
+    delete: () => ({ eq: mocks.cleanup, match: mocks.cleanup }), insert: mocks.insert,
+    select: () => ({ eq: () => ({ eq: mocks.lookup }) }),
+  }),
 }) }))
 
 beforeEach(() => {
@@ -45,6 +53,10 @@ beforeEach(() => {
   mocks.insert.mockResolvedValue({ error: null })
   mocks.deleteToken.mockResolvedValue(undefined)
   mocks.schedule.mockResolvedValue(undefined)
+  mocks.permission.mockResolvedValue({ receive: 'granted' })
+  mocks.areEnabled.mockResolvedValue({ value: true })
+  mocks.listChannels.mockResolvedValue({ channels: [{ id: 'push-notifications', importance: 4 }] })
+  mocks.lookup.mockResolvedValue({ data: [{ fcm_token: 'device-token' }], error: null })
 })
 afterEach(() => vi.restoreAllMocks())
 
@@ -99,4 +111,46 @@ it('reports database cleanup errors instead of continuing a broken registration'
   mocks.cleanup.mockResolvedValue({ error: { message: 'permission denied' } })
   expect(await push.registerForFCM()).toEqual({ ok: false, reason: 'Could not replace device registration: permission denied' })
   expect(mocks.insert).not.toHaveBeenCalled()
+})
+
+it('reports enabled only when this exact device token is saved for the signed-in user', async () => {
+  const { getPushStatus } = await import('./capacitor-push')
+  expect((await getPushStatus()).state).toBe('enabled')
+  mocks.lookup.mockResolvedValue({ data: [], error: null })
+  expect((await getPushStatus()).state).toBe('unregistered')
+})
+
+it('reports database lookup failures as unknown, not disabled', async () => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const { getPushStatus } = await import('./capacitor-push')
+  mocks.lookup.mockResolvedValue({ data: null, error: { message: 'network error' } })
+  expect((await getPushStatus()).state).toBe('error')
+})
+
+it('detects OS-level blocking even when Android runtime permission reports granted', async () => {
+  const { getPushStatus } = await import('./capacitor-push')
+  mocks.areEnabled.mockResolvedValue({ value: false })
+  expect((await getPushStatus()).state).toBe('blocked')
+  expect(mocks.getToken).not.toHaveBeenCalled()
+})
+
+it('detects a disabled Android notification channel', async () => {
+  const { getPushStatus } = await import('./capacitor-push')
+  mocks.listChannels.mockResolvedValue({ channels: [{ id: 'push-notifications', importance: 0 }] })
+  expect(await getPushStatus()).toMatchObject({ state: 'blocked', message: expect.stringContaining('category is off') })
+})
+
+it('reads the persisted opt-out without creating a token', async () => {
+  const push = await import('./capacitor-push')
+  await push.unregisterFCM()
+  expect((await push.getPushStatus()).state).toBe('disabled')
+  expect(mocks.getToken).not.toHaveBeenCalled()
+})
+
+it('disables only the current user and device, preserving other device rows', async () => {
+  const push = await import('./capacitor-push')
+  await push.disablePushForCurrentDevice()
+  expect(mocks.cleanup).toHaveBeenCalledWith({ user_id: 'user-a', fcm_token: 'device-token' })
+  expect(mocks.deleteToken).toHaveBeenCalledOnce()
+  expect(push.isPushDisabled()).toBe(true)
 })

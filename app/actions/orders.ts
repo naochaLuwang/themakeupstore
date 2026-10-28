@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 import { OrderPOSSchema } from "@/lib/schemas"
 import { checkPromoEligibility } from "@/lib/promo-helper"
-import { VALID_TRANSITIONS, STATUS_TIMESTAMPS, PUSH_MESSAGES } from "@/lib/order-status"
+import { VALID_TRANSITIONS, STATUS_TIMESTAMPS } from "@/lib/order-status"
+import { sendOrderPush } from "@/lib/order-push"
 import { calculateDiscountedPrice } from "@/lib/price-helper"
 import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from "@/lib/cart-constants"
 import { notifyBackInStock } from "./back-in-stock-notify"
@@ -836,26 +837,7 @@ export async function placeOrder(
         } catch {}
 
         // Push order confirmation (FCM)
-        try {
-            const { data: pushSubs } = await supabase
-                .from('push_subscriptions')
-                .select('fcm_token')
-                .eq('user_id', user.id)
-                .not('fcm_token', 'is', null)
-            const fcmTokens = (pushSubs || []).map((s: { fcm_token: string }) => s.fcm_token).filter(Boolean)
-            if (fcmTokens.length > 0) {
-                const { sendFcmMulticast } = await import('@/lib/fcm-send')
-                const result = await sendFcmMulticast(
-                    fcmTokens,
-                    'Order Confirmed',
-                    PUSH_MESSAGES.confirmed,
-                    `/profile/orders/${order.id}`
-                )
-                for (const token of result.invalidTokens) {
-                    await supabase.from('push_subscriptions').delete().eq('fcm_token', token)
-                }
-            }
-        } catch {}
+        await sendOrderPush(supabase, order.id, user.id, 'confirmed')
 
         revalidatePath("/admin/orders")
         revalidatePath("/profile")
@@ -1619,33 +1601,7 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
         }
 
         // Push notification (FCM only)
-        const bodyText = PUSH_MESSAGES[newStatus]
-        if (bodyText && order.user_id) {
-            const { data: subs } = await supabase
-                .from('push_subscriptions')
-                .select('fcm_token')
-                .eq('user_id', order.user_id)
-                .not('fcm_token', 'is', null)
-
-            const fcmTokens = (subs || []).map((s: any) => s.fcm_token).filter(Boolean)
-
-            if (fcmTokens.length > 0) {
-                try {
-                    const { sendFcmMulticast } = await import('@/lib/fcm-send')
-                    const result = await sendFcmMulticast(
-                        fcmTokens,
-                        `Order Update: ${newStatus.toUpperCase()}`,
-                        bodyText,
-                        `/profile/orders/${orderId}`
-                    )
-                    if (result.invalidTokens.length > 0) {
-                        for (const token of result.invalidTokens) {
-                            await supabase.from('push_subscriptions').delete().eq('fcm_token', token)
-                        }
-                    }
-                } catch {}
-            }
-        }
+        const pushNotification = await sendOrderPush(supabase, orderId, order.user_id, newStatus)
 
         // WhatsApp notification
         if (newStatus !== oldStatus) {
@@ -1668,7 +1624,7 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
 
         revalidatePath('/admin/orders')
         revalidatePath(`/admin/orders/${orderId}`)
-        return { success: true, oldStatus, newStatus, userId: order.user_id }
+        return { success: true, oldStatus, newStatus, userId: order.user_id, pushNotification }
     } catch (error: any) {
         console.error("UPDATE_STATUS_ERROR:", error)
         return { success: false, message: error.message }
