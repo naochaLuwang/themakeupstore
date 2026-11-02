@@ -11,8 +11,8 @@ import {
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { Bone } from "@/components/store/bone"
-import { createClient } from "@/utils/supabase/client"
-import type { ActiveFlashSale } from "@/lib/active-flash-sales"
+import { productFlashPricing } from "@/lib/flash-sale-helper"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
 
@@ -30,82 +30,11 @@ const sortOptions: { key: SortOption; label: string }[] = [
     { key: "name", label: "Name: A-Z" },
 ]
 
-function computeEffectivePrice(product: any, activeFlashSale?: ActiveFlashSale | null): number {
-    const basePrice = product.has_variants && product.product_variants?.length > 0
-        ? Math.min(...product.product_variants.map((v: any) => v.price || 0))
-        : product.base_price || 0
-    
-    const dType = product.discount_type || "none"
-    const dVal = product.discount_value || 0
-    
-    let regularPrice = basePrice
-    if (dType === "percentage" && dVal > 0) regularPrice = basePrice * (1 - dVal / 100)
-    else if ((dType === "fixed" || dType === "amount") && dVal > 0) regularPrice = Math.max(0, basePrice - dVal)
-    
-    if (!activeFlashSale) return regularPrice
-    
-    const flashPrice = activeFlashSale.discount_type === 'percentage'
-        ? basePrice * (1 - activeFlashSale.discount_value / 100)
-        : Math.max(0, basePrice - activeFlashSale.discount_value)
-    
-    return Math.min(regularPrice, flashPrice)
-}
 
-function getProductCategoryIds(product: any): string[] {
-    const ids: string[] = []
-    if (product.category_id) ids.push(product.category_id)
-    if (product.product_categories) {
-        for (const pc of product.product_categories) {
-            if (pc?.category_id && !ids.includes(pc.category_id)) ids.push(pc.category_id)
-        }
-    }
-    if (product.categories) {
-        const cats = Array.isArray(product.categories) ? product.categories : [product.categories]
-        for (const c of cats) {
-            if (c?.id && !ids.includes(c.id)) ids.push(c.id)
-        }
-    }
-    return ids
-}
 
-function findBestFlashSale(
-    flashSales: ActiveFlashSale[],
-    product: any
-): ActiveFlashSale | null {
-    let best: ActiveFlashSale | null = null
-    let bestDiscount = 0
-    
-    const productId = product.id
-    const categoryIds = getProductCategoryIds(product)
-    const brand = product.brand || null
-    
-    for (const fs of flashSales) {
-        let match = false
-        switch (fs.scope) {
-            case 'all':
-                match = true
-                break
-            case 'product':
-                match = fs.product_id === productId
-                break
-            case 'category':
-                match = fs.category_id ? categoryIds.includes(fs.category_id) : false
-                break
-            case 'brand':
-                match = fs.brand === brand
-                break
-        }
-        if (!match) continue
-        
-        const discountValue = fs.discount_type === 'percentage' ? fs.discount_value : fs.discount_value * 100
-        if (!best || discountValue > bestDiscount) {
-            best = fs
-            bestDiscount = discountValue
-        }
-    }
-    
-    return best
-}
+
+
+
 
 export default function ShopClient({ initialProducts }: { initialProducts: any[] }) {
     const [products, setProducts] = React.useState(initialProducts)
@@ -119,26 +48,8 @@ export default function ShopClient({ initialProducts }: { initialProducts: any[]
     const [availableBrands, setAvailableBrands] = React.useState<string[]>([])
     const [tempBrands, setTempBrands] = React.useState<string[]>([])
     const [tempPriceRange, setTempPriceRange] = React.useState<number | null>(null)
-    const [flashSales, setFlashSales] = React.useState<ActiveFlashSale[]>([])
+    const {sales:flashSales,now:flashNow}=useFlashSales()
     const sortRef = React.useRef<HTMLDivElement>(null)
-
-    // Fetch active + scheduled flash sales
-    React.useEffect(() => {
-        const fetchFlashSales = async () => {
-            const supabase = createClient()
-            const now = new Date().toISOString()
-            const { data } = await supabase
-                .from('flash_sales')
-                .select('*')
-                .eq('is_active', true)
-                .gte('ends_at', now)
-            if (data) setFlashSales(data as ActiveFlashSale[])
-        }
-        fetchFlashSales()
-        // Refetch every 30 seconds
-        const interval = setInterval(fetchFlashSales, 30000)
-        return () => clearInterval(interval)
-    }, [])
 
     React.useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -158,22 +69,9 @@ export default function ShopClient({ initialProducts }: { initialProducts: any[]
     }, [initialProducts])
 
     React.useEffect(() => {
-        const nowMs = Date.now()
-        const liveSales = flashSales.filter((fs) => new Date(fs.starts_at).getTime() <= nowMs)
-        const upcomingSales = flashSales.filter((fs) => new Date(fs.starts_at).getTime() > nowMs)
-        let processed = [...products].map((p) => {
-            const bestFlashSale = findBestFlashSale(liveSales, p)
-            const upcomingFlashSale = bestFlashSale ? null : findBestFlashSale(upcomingSales, p)
-            return {
-                ...p,
-                _bestFlashSale: bestFlashSale,
-                _upcomingFlashSale: upcomingFlashSale,
-                _effectivePrice: computeEffectivePrice(p, bestFlashSale),
-                _outOfStock: p.product_variants?.length > 0
-                    ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
-                    : false,
-            }
-        })
+        let processed = [...products].map((p) => ({ ...p,
+            _effectivePrice:productFlashPricing(p,flashSales,flashNow).salePrice,
+            _outOfStock:p.product_variants?.length>0?p.product_variants.every((v:any)=>v.stock!=null&&Number(v.stock)<=0):false }))
 
         if (selectedBrands.length > 0) {
             processed = processed.filter((p) => selectedBrands.includes(p.brand))
@@ -218,7 +116,7 @@ export default function ShopClient({ initialProducts }: { initialProducts: any[]
 
         setFiltered(processed)
         setLoading(false)
-    }, [sort, selectedBrands, selectedPriceRange, products, flashSales])
+    }, [sort, selectedBrands, selectedPriceRange, products, flashSales, flashNow])
 
     const activeFilterCount = selectedBrands.length + (selectedPriceRange !== null ? 1 : 0)
 
@@ -392,7 +290,7 @@ export default function ShopClient({ initialProducts }: { initialProducts: any[]
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-white overflow-hidden">
                         {filtered.map((p, idx) => (
-                            <ProductCard key={p.id} product={p} priority={idx < 4} activeFlashSale={p._bestFlashSale} upcomingFlashSale={p._upcomingFlashSale} />
+                            <ProductCard key={p.id} product={p} priority={idx < 4} />
                         ))}
                     </div>
                 )}

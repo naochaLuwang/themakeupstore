@@ -28,7 +28,7 @@ export default function FunSizePage() {
 
                 let query = supabase
                     .from("products")
-                    .select("*, product_variants(id, price, stock, discount_type, discount_value, title, image_url)")
+                    .select("*, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, title, image_url)")
                     .eq("status", "active")
 
                 if (productIds.length > 0) {

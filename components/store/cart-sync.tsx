@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useCart } from "./use-cart"
 import { createClient } from "@/utils/supabase/client"
 import { CART_SYNC_DEBOUNCE_MS } from "@/lib/cart-constants"
-import { applyFlashSaleToPrice } from "@/lib/flash-sale-helper"
+import { variantFlashPricing, type FlashSaleRow } from "@/lib/flash-sale-helper"
 
 export function CartSync({ userId }: { userId: string | null }) {
     const { items, setItems, clearCart } = useCart()
@@ -58,8 +58,8 @@ export function CartSync({ userId }: { userId: string | null }) {
                     unit_price, 
                     product_id, 
                     product_variant_id, 
-                    products!inner(name, thumbnail_url, category_id, base_price), 
-                    product_variants!inner(title, stock, price, discount_type, discount_value, image_url)
+                    products!inner(name, thumbnail_url, category_id, base_price, brand, discount_type, discount_value),
+                    product_variants!inner(id,title, stock, price, discount_type, discount_value, image_url)
                 `)
                 .eq('cart_id', cart.id)
 
@@ -67,66 +67,34 @@ export function CartSync({ userId }: { userId: string | null }) {
                 // Fetch active flash sales (scope-based)
                 const now = new Date().toISOString()
                 const productIds = [...new Set(dbItems.map((ci: any) => ci.product_id))]
-                const { data: flashRows } = await supabase
-                    .from('flash_sales')
-                    .select('scope, product_id, category_id, brand, discount_type, discount_value')
-                    .eq('is_active', true)
-                    .lte('starts_at', now)
-                    .gte('ends_at', now)
-
-                // Product -> category links via junction table (flat products.category_id is often null)
+                const [{ data: flashRows }, { data: junctionRows }] = await Promise.all([
+                    supabase.from('flash_sales').select('*')
+                        .eq('is_active', true).lte('starts_at', now).gte('ends_at', now),
+                    supabase.from('product_categories').select('product_id, category_id').in('product_id', productIds),
+                ])
                 const prodCats = new Map<string, string[]>()
-                if (productIds.length > 0) {
-                    const { data: junctionRows } = await supabase
-                        .from('product_categories')
-                        .select('product_id, category_id')
-                        .in('product_id', productIds)
-                    for (const row of junctionRows || []) {
-                        const list = prodCats.get((row as any).product_id) || []
-                        list.push((row as any).category_id)
-                        prodCats.set((row as any).product_id, list)
-                    }
-                }
-
-                const prodMeta = new Map<string, { categoryId?: string; brand?: string | null }>()
-                for (const ci of dbItems as any[]) {
-                    if (!prodMeta.has(ci.product_id)) prodMeta.set(ci.product_id, { categoryId: ci.products?.category_id, brand: ci.products?.brand })
-                }
-                function getFlashForProduct(pid: string, catId?: string, br?: string | null) {
-                    let best: any = null; let bestVal = 0
-                    for (const f of flashRows || []) {
-                        let match = false
-                        if (f.scope === 'all') match = true
-                        else if (f.scope === 'product') match = f.product_id === pid
-                        else if (f.scope === 'category') match = f.category_id ? (f.category_id === catId || (prodCats.get(pid) || []).includes(f.category_id)) : false
-                        else if (f.scope === 'brand') match = f.brand === br
-                        if (!match) continue
-                        const val = f.discount_type === 'percentage' ? f.discount_value : f.discount_value * 100
-                        if (!best || val > bestVal) { best = f; bestVal = val }
-                    }
-                    return best
+                for (const row of junctionRows || []) {
+                    const list = prodCats.get(row.product_id) || []
+                    list.push(row.category_id)
+                    prodCats.set(row.product_id, list)
                 }
 
                 // Build formatted items using LIVE variant price/stock (not stale unit_price/stock)
                 const formatted = dbItems.map((ci: any) => {
                     const variant = ci.product_variants
                     const basePrice = Number(variant.price)
-                    const meta = prodMeta.get(ci.product_id)
-                    const flash = getFlashForProduct(ci.product_id, meta?.categoryId, meta?.brand)
-                    const { salePrice } = applyFlashSaleToPrice(
-                        basePrice,
-                        flash ? { discount_type: flash.discount_type, discount_value: flash.discount_value, label: '', ends_at: '' } : null,
-                        variant.discount_type || 'none',
-                        Number(variant.discount_value || 0)
-                    )
+                    const pricing = variantFlashPricing({ ...variant, id:ci.product_variant_id }, { ...ci.products, id:ci.product_id, categoryIds:prodCats.get(ci.product_id) || [] }, (flashRows || []) as FlashSaleRow[])
                     return {
                         id: ci.product_variant_id,
                         productId: ci.product_id,
                         variantId: ci.product_variant_id,
                         categoryId: ci.products.category_id,
+                        categoryIds: [...new Set([ci.products.category_id, ...(prodCats.get(ci.product_id) || [])].filter(Boolean))],
+                        brand: ci.products.brand || '',
                         name: ci.products.name,
                         variantTitle: variant.title,
-                        price: Math.round(salePrice),
+                        price: pricing.salePrice,
+                        regularPrice: pricing.regularPrice,
                         mrp: basePrice,
                         originalPrice: basePrice,
                         image: variant.image_url || ci.products.thumbnail_url,

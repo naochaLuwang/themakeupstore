@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { validatePromoCode, getPromosForProduct } from './promo'
+import { merchandiseQuote } from '@/lib/cart-quote'
 import { createClient } from '@/utils/supabase/server'
+
+vi.mock('@/lib/cart-quote',()=>({merchandiseQuote:vi.fn(async()=>({hasAutomaticOffer:false}))}))
+vi.mock('@/utils/supabase/admin',()=>({createAdminClient:async()=>({})}))
 
 // Mock the Supabase client
 vi.mock('@/utils/supabase/server', () => ({
@@ -29,6 +33,7 @@ describe('Promo Actions', () => {
         select: vi.fn(() => chain),
         eq: vi.fn(() => chain),
         single: vi.fn(() => chain),
+        maybeSingle:vi.fn(()=>chain),or:vi.fn(()=>chain),lte:vi.fn(()=>chain),
         order: vi.fn(() => chain),
         limit: vi.fn(() => chain),
         // This makes the chain 'awaitable'
@@ -48,6 +53,7 @@ describe('Promo Actions', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockReturnThis(),
+      maybeSingle:vi.fn().mockReturnThis(),or:vi.fn().mockReturnThis(),lte:vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       then: (resolve: any) => resolve({ data, error }),
@@ -96,7 +102,7 @@ describe('Promo Actions', () => {
       // Call 1: Fetch promoData
       setMockData(mockPromo)
       // Call 2: Check for redemption
-      setMockData({ id: 'redemption-1' })
+      setMockData({ id: 'redemption-1',order_id:'order-1' })
 
       const result = await validatePromoCode('ONCE', [])
       expect(result.success).toBe(false)

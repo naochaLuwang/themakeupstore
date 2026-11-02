@@ -1,4 +1,6 @@
 "use client"
+import { productFlashPricing } from "@/lib/flash-sale-helper"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
 
 import * as React from "react"
 import { createClient } from "@/utils/supabase/client"
@@ -9,6 +11,7 @@ import { Skeleton } from "boneyard-js/react"
 import { Breadcrumbs } from "@/components/store/breadcrumbs"
 
 export default function NewArrivalsPage() {
+    const {sales:flashSales,now:flashNow}=useFlashSales()
     const [products, setProducts] = React.useState<any[]>([])
     const [filteredProducts, setFilteredProducts] = React.useState<any[]>([])
     const [loading, setLoading] = React.useState(true)
@@ -35,7 +38,7 @@ export default function NewArrivalsPage() {
                 // Fetch products from BOTH the direct category_id column AND the junction table
                 let query = supabase
                     .from('products')
-                    .select('*, product_variants(id, price, stock, discount_type, discount_value, title, image_url)')
+                    .select('*, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, title, image_url)')
                     .eq('status', 'active')
 
                 if (productIds.length > 0) {
@@ -66,14 +69,14 @@ export default function NewArrivalsPage() {
 
         // Price Filter (Using base_price or default variant price)
         result = result.filter(p => {
-            const price = p.base_price || p.product_variants?.[0]?.price || 0
+            const price = productFlashPricing(p,flashSales,flashNow).salePrice
             return price >= priceRange[0] && price <= priceRange[1]
         })
 
         // Sorting Logic
         result.sort((a, b) => {
-            const priceA = a.base_price || a.product_variants?.[0]?.price || 0
-            const priceB = b.base_price || b.product_variants?.[0]?.price || 0
+            const priceA = productFlashPricing(a,flashSales,flashNow).salePrice
+            const priceB = productFlashPricing(b,flashSales,flashNow).salePrice
 
             if (sortBy === "price-low") return priceA - priceB
             if (sortBy === "price-high") return priceB - priceA
@@ -82,7 +85,7 @@ export default function NewArrivalsPage() {
         })
 
         setFilteredProducts(result)
-    }, [products, selectedBrands, priceRange, sortBy])
+    }, [products, selectedBrands, priceRange, sortBy, flashSales, flashNow])
 
     // Get Unique Brands for Filter UI
     const brands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean)

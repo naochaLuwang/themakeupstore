@@ -1,10 +1,10 @@
-import { createClient } from "@/utils/supabase/server"
+import { requireAdmin } from "@/lib/admin"
 import { Plus, Edit3, Gift } from "lucide-react"
 import { FreeGiftStatusToggle, DeleteFreeGiftButton } from "@/components/admin/PromoControls"
 import Link from "next/link"
 
 export default async function AdminFreeGiftsPage() {
-    const supabase = await createClient()
+    const {supabase} = await requireAdmin()
     const { data: rules } = await supabase
         .from('free_gifts')
         .select('*, gift_product:products!free_gifts_gift_product_id_fkey(name, thumbnail_url), gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(name, images)')

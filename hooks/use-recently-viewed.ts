@@ -10,6 +10,8 @@ interface ViewedProduct {
   base_price: number
   thumbnail_url: string
   brand: string
+  category_id?: string | null
+  product_categories?: { category_id: string }[]
   discount_type: string | null
   discount_value: number | null
   has_variants: boolean

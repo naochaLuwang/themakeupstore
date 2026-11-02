@@ -4,21 +4,21 @@ import { useCart } from "@/components/store/use-cart"
 import { Minus, Plus, ShoppingBag, X, Gift, Tag, Zap, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { toast } from "sonner"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
 import { ProductCard } from "@/components/store/product-card"
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/cart-constants"
-import { applyFlashSaleToPrice } from "@/lib/flash-sale-helper"
 import { validatePromoCode } from "@/app/actions/promo"
+import { roundMoney } from "@/lib/promotion-engine"
+import { lineSubtotal, linePriceLabel } from "@/lib/line-pricing"
 import { usePromotions } from "@/hooks/use-promotions"
 
 export default function CartPage() {
-    usePromotions()
-    const { items, removeItem, updateQuantity, setItems, bxgyDiscounts, giftProgress, bxgyProgress } = useCart() as any
+    const { checking: checkingOffers, error: offerError, refresh: refreshOffers } = usePromotions()
+    const { items, removeItem, updateQuantity, bxgyDiscounts, giftProgress, bxgyProgress, hasAutomaticOffer } = useCart() as any
     const [mounted, setMounted] = useState(false)
-    const [isSyncing, setIsSyncing] = useState(false)
     const [recommendations, setRecommendations] = useState<any[]>([])
     const [couponCode, setCouponCode] = useState("")
     const [applyingCoupon, setApplyingCoupon] = useState(false)
@@ -28,99 +28,7 @@ export default function CartPage() {
 
     useEffect(() => { document.title = "Shopping Cart | THE MAKEUP STORE WANGKHEI" }, [])
 
-    const syncCartPrices = useCallback(async () => {
-        if (!items || items.length === 0 || isSyncing) return
-        try {
-            const variantIds = items.map((i: any) => i.variantId)
-            const { data: freshVariants, error } = await supabase
-                .from("product_variants")
-                .select("id, price, discount_type, discount_value, stock, image_url, product_id")
-                .in("id", variantIds)
-            if (error) throw error
-
-            // Fetch active flash sales (scope-based)
-            const now = new Date().toISOString()
-            const productIds = [...new Set(freshVariants?.map((v: any) => v.product_id).filter(Boolean) || [])]
-            const { data: flashRows } = productIds.length > 0 ? await supabase
-                .from('flash_sales')
-                .select('scope, product_id, category_id, brand, discount_type, discount_value')
-                .eq('is_active', true)
-                .lte('starts_at', now)
-                .gte('ends_at', now) : { data: null }
-
-            // Product -> category links via junction table (flat products.category_id is often null)
-            const prodCats = new Map<string, string[]>()
-            if (productIds.length > 0) {
-                const { data: junctionRows } = await supabase
-                    .from('product_categories')
-                    .select('product_id, category_id')
-                    .in('product_id', productIds)
-                for (const row of junctionRows || []) {
-                    const list = prodCats.get((row as any).product_id) || []
-                    list.push((row as any).category_id)
-                    prodCats.set((row as any).product_id, list)
-                }
-            }
-
-            function getFlashForProduct(pid: string, catId?: string, br?: string | null) {
-                let best: any = null; let bestVal = 0
-                for (const f of flashRows || []) {
-                    let match = false
-                    if (f.scope === 'all') match = true
-                    else if (f.scope === 'product') match = f.product_id === pid
-                    else if (f.scope === 'category') match = f.category_id ? (f.category_id === catId || (prodCats.get(pid) || []).includes(f.category_id)) : false
-                    else if (f.scope === 'brand') match = f.brand === br
-                    if (!match) continue
-                    const val = f.discount_type === 'percentage' ? f.discount_value : f.discount_value * 100
-                    if (!best || val > bestVal) { best = f; bestVal = val }
-                }
-                return best
-            }
-
-            // Build product category/brand map from cart items
-            const itemMeta = new Map<string, { categoryId?: string; brand?: string | null }>()
-            items.forEach((ci: any) => {
-                if (!itemMeta.has(ci.productId)) itemMeta.set(ci.productId, { categoryId: ci.categoryId, brand: ci.brand })
-            })
-
-            const dedupedMap = new Map()
-            items.forEach((cartItem: any) => {
-                if (cartItem.is_gift || cartItem.is_bxgy_free) {
-                    dedupedMap.set(cartItem.variantId, { ...cartItem, price: 0 })
-                    return
-                }
-                const fresh = freshVariants?.find((v: any) => v.id === cartItem.variantId)
-                let sellingPrice = cartItem.price
-                let msrp = cartItem.originalPrice || cartItem.price
-                if (fresh) {
-                    msrp = Number(fresh.price)
-                    const meta = itemMeta.get(cartItem.productId)
-                    const flash = getFlashForProduct(fresh.product_id, meta?.categoryId, meta?.brand)
-                    const { salePrice } = applyFlashSaleToPrice(
-                        msrp,
-                        flash ? { discount_type: flash.discount_type, discount_value: flash.discount_value, label: '', ends_at: '' } : null,
-                        fresh.discount_type || 'none',
-                        Number(fresh.discount_value || 0)
-                    )
-                    sellingPrice = salePrice
-                }
-                const processedItem = { ...cartItem, price: Math.round(sellingPrice), originalPrice: Math.round(msrp), stock: fresh?.stock ?? cartItem.stock ?? 0 }
-                if (dedupedMap.has(cartItem.variantId)) {
-                    dedupedMap.get(cartItem.variantId).quantity += cartItem.quantity
-                } else {
-                    dedupedMap.set(cartItem.variantId, processedItem)
-                }
-            })
-            const finalArray = Array.from(dedupedMap.values())
-            if (JSON.stringify(finalArray) !== JSON.stringify(items)) {
-                setItems(finalArray)
-            }
-        } catch (err) {
-            console.error("Cart Sync Failed:", err)
-        }
-    }, [items, setItems, supabase, isSyncing])
-
-    useEffect(() => { setMounted(true); syncCartPrices() }, [mounted, items.length, syncCartPrices])
+    useEffect(() => { setMounted(true) }, [])
 
     const handleRemove = async (variantId: string) => {
         removeItem(variantId)
@@ -139,8 +47,8 @@ export default function CartPage() {
         // DB sync handled by CartSync's debounced push
     }
 
-    const subtotal = useMemo(() => Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((acc: number, i: any) => acc + (i.price * i.quantity), 0)), [items])
-    const totalMRP = useMemo(() => Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((acc: number, i: any) => acc + ((i.originalPrice || i.price) * i.quantity), 0)), [items])
+    const subtotal = useMemo(() => roundMoney(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((acc: number, i: any) => acc + lineSubtotal(i), 0)), [items])
+    const totalMRP = useMemo(() => roundMoney(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((acc: number, i: any) => acc + ((i.originalPrice || i.price) * i.quantity), 0)), [items])
     const totalDiscount = Math.max(0, totalMRP - subtotal)
     const outOfStockVariants = useMemo(() => items.filter((i: any) => (i.stock ?? 1) <= 0 && !i.is_gift && !i.is_bxgy_free), [items])
     const hasOutOfStock = outOfStockVariants.length > 0
@@ -149,12 +57,12 @@ export default function CartPage() {
     const totalSaving = totalDiscount + totalBXGYDiscount
     const discountMap = useMemo(() => {
         const map: Record<string, { amount: number; freeQty: number }> = {}
-        ;(bxgyDiscounts || []).forEach((d: any) => {
-            const existing = map[d.variant_id] || { amount: 0, freeQty: 0 }
-            existing.amount += d.discount_amount
-            existing.freeQty += d.free_quantity || 0
-            map[d.variant_id] = existing
-        })
+            ; (bxgyDiscounts || []).forEach((d: any) => {
+                const existing = map[d.variant_id] || { amount: 0, freeQty: 0 }
+                existing.amount += d.discount_amount
+                existing.freeQty += d.free_quantity || 0
+                map[d.variant_id] = existing
+            })
         return map
     }, [bxgyDiscounts])
 
@@ -163,7 +71,7 @@ export default function CartPage() {
             const productIds = [...new Set(items.map((i: any) => i.productId))]
             supabase
                 .from("products")
-                .select("*, product_variants(id, price, stock, title, image_url)")
+                .select("*, product_categories(category_id), product_variants(id, price, stock, title, image_url)")
                 .in("id", productIds)
                 .limit(1)
                 .then(({ data }: any) => {
@@ -172,7 +80,7 @@ export default function CartPage() {
                         if (brand) {
                             supabase
                                 .from("products")
-                                .select("*, product_variants(id, price, stock, title, image_url)")
+                                .select("*, product_categories(category_id), product_variants(id, price, stock, title, image_url)")
                                 .eq("brand", brand)
                                 .not("id", "in", `(${productIds.join(",")})`)
                                 .limit(6)
@@ -312,14 +220,14 @@ export default function CartPage() {
 
                         <div className="divide-y divide-slate-50">
                             {items.map((item: any) => {
-                                const unitPrice = Math.round(item.price)
-                                const unitMrp = Math.round(item.originalPrice || item.price)
-                                const hasDiscount = unitMrp > unitPrice
+                                const lineTotal = lineSubtotal(item)
+                                const unitMrp = (item.originalPrice || item.price)
+                                const hasDiscount = unitMrp * item.quantity > lineTotal
                                 const dm = discountMap[item.variantId]
                                 const bxgyLine = (dm?.amount || 0) > 0
                                 const freeQty = dm?.freeQty || 0
                                 const coversFullUnits = bxgyLine && freeQty > 0 && (dm?.amount || 0) >= item.price * freeQty
-                                const payableLine = Math.round(unitPrice * item.quantity - (dm?.amount || 0))
+                                const payableLine = roundMoney(lineTotal - (dm?.amount || 0))
 
                                 return (
                                     <div key={item.variantId} className="py-6 lg:grid lg:grid-cols-[1fr_120px_140px_100px] lg:gap-4 flex gap-4">
@@ -339,6 +247,9 @@ export default function CartPage() {
                                                     <p className="text-sm font-semibold text-slate-900 leading-snug line-clamp-2">{item.name}</p>
                                                     {item.variantTitle && (
                                                         <p className="text-xs text-slate-400 mt-0.5">{item.variantTitle}</p>
+                                                    )}
+                                                    {item.priceBreakdown?.some((g: { price: number }) => g.price !== item.price) && (
+                                                        <p className="text-[10px] text-slate-500 mt-1">Offer units use original prices · {linePriceLabel(item)}</p>
                                                     )}
                                                     {(item.stock ?? 1) <= 0 && (
                                                         <span className="mt-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
@@ -364,12 +275,12 @@ export default function CartPage() {
                                                 <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">FREE</span>
                                             ) : discountMap[item.variantId]?.amount > 0 ? (
                                                 <div className="flex flex-col items-center gap-1">
-                                                    <p className="text-xs text-slate-400 line-through">{'₹' + unitPrice.toLocaleString()}</p>
+                                                    <p className="text-xs text-slate-400 line-through">{linePriceLabel(item)}</p>
                                                     <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">{coversFullUnits ? `${freeQty} FREE` : `SAVE ₹${Math.round(dm?.amount || 0)}`}</span>
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <p className="text-sm font-semibold text-slate-900">{'₹' + unitPrice.toLocaleString()}</p>
+                                                    <p className="text-sm font-semibold text-slate-900">{linePriceLabel(item)}</p>
                                                     {hasDiscount && (
                                                         <p className="text-xs text-slate-400 line-through">{'₹' + unitMrp.toLocaleString()}</p>
                                                     )}
@@ -382,27 +293,27 @@ export default function CartPage() {
                                             {item.is_gift || item.is_bxgy_free ? (
                                                 <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full">Qty: 1</span>
                                             ) : (
-                                            <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
-                                                <button
-                                                    onClick={() => {
-                                                        if (item.quantity <= 1) {
-                                                            if (confirm("Remove this item from your bag?")) handleRemove(item.variantId)
-                                                        } else {
-                                                            handleUpdateQuantity(item.variantId, item.quantity - 1)
-                                                        }
-                                                    }}
-                                                    className="w-9 h-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
-                                                >
-                                                    <Minus className="w-3 h-3 text-slate-500" />
-                                                </button>
-                                                <span className="w-9 text-center text-sm font-semibold text-slate-900 select-none">{item.quantity}</span>
-                                                <button
-                                                    onClick={() => handleUpdateQuantity(item.variantId, item.quantity + 1)}
-                                                    className="w-9 h-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
-                                                >
-                                                    <Plus className="w-3 h-3 text-slate-500" />
-                                                </button>
-                                            </div>
+                                                <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
+                                                    <button
+                                                        onClick={() => {
+                                                            if (item.quantity <= 1) {
+                                                                if (confirm("Remove this item from your bag?")) handleRemove(item.variantId)
+                                                            } else {
+                                                                handleUpdateQuantity(item.variantId, item.quantity - 1)
+                                                            }
+                                                        }}
+                                                        className="w-9 h-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        <Minus className="w-3 h-3 text-slate-500" />
+                                                    </button>
+                                                    <span className="w-9 text-center text-sm font-semibold text-slate-900 select-none">{item.quantity}</span>
+                                                    <button
+                                                        onClick={() => handleUpdateQuantity(item.variantId, item.quantity + 1)}
+                                                        className="w-9 h-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        <Plus className="w-3 h-3 text-slate-500" />
+                                                    </button>
+                                                </div>
                                             )}
                                             {coversFullUnits && item.quantity - freeQty > 0 && (
                                                 <span className="text-[10px] font-semibold text-pink-600 whitespace-nowrap">{item.quantity - freeQty} paid + {freeQty} free</span>
@@ -415,11 +326,11 @@ export default function CartPage() {
                                                 <span className="text-xs font-bold text-purple-600">₹0</span>
                                             ) : discountMap[item.variantId]?.amount > 0 ? (
                                                 <div className="flex flex-col items-end gap-0.5">
-                                                    <span className="text-xs text-slate-400 line-through">₹{Math.round(unitPrice * item.quantity).toLocaleString()}</span>
+                                                    <span className="text-xs text-slate-400 line-through">₹{roundMoney(lineTotal).toLocaleString()}</span>
                                                     <span className="text-xs font-semibold text-pink-600">₹{payableLine.toLocaleString()}</span>
                                                 </div>
                                             ) : (
-                                                <p className="text-sm font-semibold text-slate-900">₹{Math.round(unitPrice * item.quantity).toLocaleString()}</p>
+                                                <p className="text-sm font-semibold text-slate-900">₹{roundMoney(lineTotal).toLocaleString()}</p>
                                             )}
                                         </div>
                                     </div>
@@ -439,6 +350,7 @@ export default function CartPage() {
                                 />
                                 <button
                                     onClick={async () => {
+                                        if (hasAutomaticOffer) return toast.error("Coupons cannot be combined with these offers")
                                         if (!couponCode.trim()) return
                                         setApplyingCoupon(true)
                                         try {
@@ -455,7 +367,7 @@ export default function CartPage() {
                                             setApplyingCoupon(false)
                                         }
                                     }}
-                                    disabled={applyingCoupon || !couponCode.trim()}
+                                    disabled={checkingOffers || hasAutomaticOffer || applyingCoupon || !couponCode.trim()}
                                     className="h-10 px-5 text-xs font-semibold uppercase tracking-wider text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
                                 >
                                     {applyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
@@ -622,10 +534,15 @@ export default function CartPage() {
 
     return (
         <>
+            {offerError && <div className="mx-5 my-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600" role="status">
+                {offerError}
+                {offerError && <button className="ml-3 font-bold text-pink-600" onClick={refreshOffers}>Try again</button>}
+            </div>}
+
             {desktop}
 
             {/* MOBILE — untouched */}
-                <div className="lg:hidden min-h-screen bg-white pb-24">
+            <div className="lg:hidden min-h-screen bg-white pb-24">
                 <div className="px-5 pt-6 pb-3">
                     <h1 className="text-xl font-semibold text-gray-900">
                         Bag Items ({totalQty})
@@ -695,15 +612,15 @@ export default function CartPage() {
                 )}
                 <div className="px-5 pb-4 space-y-3">
                     {items.map((item: any) => {
-                        const unitPrice = Math.round(item.price)
-                        const unitMrp = Math.round(item.originalPrice || item.price)
-                        const hasDiscount = unitMrp > unitPrice
-                        const saving = hasDiscount ? Math.round((unitMrp - unitPrice) * item.quantity) : 0
+                        const lineTotal = lineSubtotal(item)
+                        const unitMrp = (item.originalPrice || item.price)
+                        const hasDiscount = unitMrp * item.quantity > lineTotal
+                        const saving = hasDiscount ? roundMoney(unitMrp * item.quantity - lineTotal) : 0
                         const dm = discountMap[item.variantId]
                         const bxgyLine = (dm?.amount || 0) > 0
                         const freeQty = dm?.freeQty || 0
                         const coversFullUnits = bxgyLine && freeQty > 0 && (dm?.amount || 0) >= item.price * freeQty
-                        const payableLine = Math.round(unitPrice * item.quantity - (dm?.amount || 0))
+                        const payableLine = roundMoney(lineTotal - (dm?.amount || 0))
 
                         return (
                             <div key={item.id || item.variantId} className="border border-gray-200 rounded-xl p-3">
@@ -724,6 +641,9 @@ export default function CartPage() {
                                                     <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">{item.name}</p>
                                                     {item.variantTitle && (
                                                         <p className="text-[11px] font-medium text-gray-400 mt-0.5">Shade: {item.variantTitle}</p>
+                                                    )}
+                                                    {item.priceBreakdown?.some((g: { price: number }) => g.price !== item.price) && (
+                                                        <p className="text-[10px] text-slate-500 mt-1">Offer units use original prices · {linePriceLabel(item)}</p>
                                                     )}
                                                     {(item.stock ?? 1) <= 0 && (
                                                         <span className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
@@ -750,27 +670,27 @@ export default function CartPage() {
                                             {item.is_gift || item.is_bxgy_free ? (
                                                 <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full">Qty: 1</span>
                                             ) : (
-                                            <>
-                                            <button
-                                                onClick={() => {
-                                                    if (item.quantity <= 1) {
-                                                        if (confirm("Remove this item from your bag?")) handleRemove(item.variantId)
-                                                    } else {
-                                                        handleUpdateQuantity(item.variantId, item.quantity - 1)
-                                                    }
-                                                }}
-                                                className="w-[26px] h-[26px] rounded-full bg-gray-100 flex items-center justify-center border border-gray-200/50"
-                                            >
-                                                <Minus className="w-3 h-3 text-gray-600" />
-                                            </button>
-                                            <span className="text-sm font-extrabold text-gray-900 min-w-[20px] text-center">{item.quantity}</span>
-                                            <button
-                                                onClick={() => handleUpdateQuantity(item.variantId, item.quantity + 1)}
-                                                className="w-[26px] h-[26px] rounded-full bg-gray-100 flex items-center justify-center border border-gray-200/50"
-                                            >
-                                                <Plus className="w-3 h-3 text-gray-600" />
-                                            </button>
-                                            </>
+                                                <>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (item.quantity <= 1) {
+                                                                if (confirm("Remove this item from your bag?")) handleRemove(item.variantId)
+                                                            } else {
+                                                                handleUpdateQuantity(item.variantId, item.quantity - 1)
+                                                            }
+                                                        }}
+                                                        className="w-[26px] h-[26px] rounded-full bg-gray-100 flex items-center justify-center border border-gray-200/50"
+                                                    >
+                                                        <Minus className="w-3 h-3 text-gray-600" />
+                                                    </button>
+                                                    <span className="text-sm font-extrabold text-gray-900 min-w-[20px] text-center">{item.quantity}</span>
+                                                    <button
+                                                        onClick={() => handleUpdateQuantity(item.variantId, item.quantity + 1)}
+                                                        className="w-[26px] h-[26px] rounded-full bg-gray-100 flex items-center justify-center border border-gray-200/50"
+                                                    >
+                                                        <Plus className="w-3 h-3 text-gray-600" />
+                                                    </button>
+                                                </>
                                             )}
                                             {coversFullUnits && item.quantity - freeQty > 0 && (
                                                 <span className="text-[10px] font-semibold text-pink-600">{item.quantity - freeQty} paid + {freeQty} free</span>
@@ -788,12 +708,12 @@ export default function CartPage() {
                                         ) : discountMap[item.variantId]?.amount > 0 ? (
                                             <>
                                                 <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">{coversFullUnits ? `${freeQty} FREE` : `SAVE ₹${Math.round(dm?.amount || 0)}`}</span>
-                                                <span className="text-xs font-medium text-gray-400 line-through">₹{Math.round(unitPrice * item.quantity)}</span>
+                                                <span className="text-xs font-medium text-gray-400 line-through">₹{roundMoney(lineTotal)}</span>
                                                 <span className="text-xs font-bold text-pink-600">₹{payableLine}</span>
                                             </>
                                         ) : (
                                             <>
-                                                <span className="text-sm font-bold text-gray-900">₹{Math.round(unitPrice * item.quantity)}</span>
+                                                <span className="text-sm font-bold text-gray-900">₹{roundMoney(lineTotal)}</span>
                                                 {hasDiscount && (
                                                     <>
                                                         <span className="text-xs font-medium text-gray-400 line-through">₹{Math.round(unitMrp * item.quantity)}</span>

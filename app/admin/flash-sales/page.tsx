@@ -1,130 +1,54 @@
-import { createClient } from "@/utils/supabase/server"
-import { Plus, Edit3, Zap } from "lucide-react"
-import Link from "next/link"
-import { FlashSaleStatusToggle, DeleteFlashSaleButton } from "@/components/admin/flash-sale-controls"
-
-export default async function AdminFlashSalesPage() {
-  const supabase = await createClient()
-  
-  // Fetch flash sales first
-  const { data: sales, error: salesError } = await supabase
-    .from('flash_sales')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(500)
-  
-  if (salesError) throw new Error(salesError.message)
-
-  // Fetch related product and category data separately
-  const productIds = sales?.filter(s => s.scope === 'product' && s.product_id).map(s => s.product_id) || []
-  const categoryIds = sales?.filter(s => s.scope === 'category' && s.category_id).map(s => s.category_id) || []
-  
-  const [productsRes, categoriesRes] = await Promise.all([
-    productIds.length > 0 
-      ? supabase.from('products').select('id, name, thumbnail_url').in('id', productIds)
-      : { data: [], error: null },
-    categoryIds.length > 0
-      ? supabase.from('categories').select('id, name').in('id', categoryIds)
-      : { data: [], error: null }
+import { requireAdmin } from '@/lib/admin'
+import { Plus, Edit3 } from 'lucide-react'
+import Link from 'next/link'
+import Form from 'next/form'
+import { redirect } from 'next/navigation'
+import { flashReadIds } from '@/lib/flash-sale-data'
+import { FlashSaleControls } from '@/components/admin/flash-sale-controls'
+import { flashTargets, type FlashSaleRow } from '@/lib/flash-sale-helper'
+export default async function AdminFlashSalesPage({searchParams}:{searchParams:Promise<{q?:string;status?:string;scope?:string;page?:string}>}){
+  const params=await searchParams
+  const {supabase}=await requireAdmin()
+  const page=Math.max(1,Math.min(100000,Number.parseInt(params.page || '1',10)||1))
+  const q=(params.q || '').replace(/[,%()"\\]/g,' ').trim().slice(0,100)
+  const status=['draft','scheduled','live','paused','ended'].includes(params.status||'')?params.status:''
+  const scope=['product','category','brand','all'].includes(params.scope||'')?params.scope:''
+  const now=new Date().toISOString()
+  let query=supabase.from('flash_sales').select('*',{count:'exact'}).order('created_at',{ascending:false}).order('id')
+  const logical:string[]=[]
+  if(q)logical.push(`or(name.ilike.%${q}%,label.ilike.%${q}%)`)
+  if(scope)query=query.eq('scope',scope)
+  if(status==='draft')query=query.eq('lifecycle','draft')
+  if(status==='paused')query=query.eq('lifecycle','paused').gt('ends_at',now)
+  if(status==='scheduled')query=query.eq('lifecycle','published').gt('starts_at',now).gt('ends_at',now)
+  if(status==='live')query=query.eq('lifecycle','published').lte('starts_at',now).gt('ends_at',now)
+  if(status==='ended'){query=query.neq('lifecycle','draft');logical.push(`or(lifecycle.eq.ended,ends_at.lte.${now})`)}
+  if(logical.length)query=query.or(`and(${logical.join(',')})`)
+  const {data:sales,error,count}=await query.range((page-1)*25,page*25-1)
+  const pageHref=(target:number)=>`/admin/flash-sales?${new URLSearchParams({q,status:status||'',scope:scope||'',page:String(target)})}`
+  if(error?.code==='PGRST103'&&page>1)redirect(pageHref(1))
+  if(error)throw new Error(error.message)
+  if(page>1&&!sales?.length)redirect(pageHref(Math.max(1,Math.ceil((count||0)/25))))
+  const rows=(sales || []) as (FlashSaleRow & {id:string;updated_at:string})[]
+  const ids=[...new Set(rows.flatMap(s=>{const t=flashTargets(s);return [...t.product_ids,...t.variant_ids.map(v=>v.product_id)]}))]
+  const catIds=[...new Set(rows.flatMap(s=>flashTargets(s).category_ids))]
+  const variantIds=[...new Set(rows.flatMap(s=>flashTargets(s).variant_ids.map(v=>v.variant_id)))]
+  const [products,categories,variants]=await Promise.all([
+    flashReadIds(supabase,'products','id,name','id',ids),
+    flashReadIds(supabase,'categories','id,name','id',catIds),
+    flashReadIds(supabase,'product_variants','id,title','id',variantIds),
   ])
-
-  const productMap = new Map((productsRes.data || []).map(p => [p.id, p]))
-  const categoryMap = new Map((categoriesRes.data || []).map(c => [c.id, c]))
-
-  const now = new Date()
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Flash Sales</h1>
-          <p className="text-sm text-slate-500">Time-limited discounts that auto-revert</p>
-        </div>
-        <Link href="/admin/flash-sales/new" className="rounded-xl h-11 px-5 bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 inline-flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Flash Sale
-        </Link>
-      </div>
-
-      <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
-        <table className="w-full">
-          <thead className="bg-slate-50/50">
-            <tr className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-              <th className="py-4 px-6 text-left">Target</th>
-              <th className="py-4 px-6 text-left">Discount</th>
-              <th className="py-4 px-6 text-left">Schedule</th>
-              <th className="py-4 px-6 text-left">Status</th>
-              <th className="py-4 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {!sales?.length ? (
-              <tr><td colSpan={5} className="p-12 text-center text-slate-400 font-medium">No flash sales yet.</td></tr>
-            ) : (
-              sales.map((sale: any) => {
-                const start = new Date(sale.starts_at)
-                const end = new Date(sale.ends_at)
-                const isLive = sale.is_active && now >= start && now <= end
-                const isScheduled = sale.is_active && now < start
-                const isExpired = now > end
-                
-                const product = sale.scope === 'product' && sale.product_id ? productMap.get(sale.product_id) : null
-                const category = sale.scope === 'category' && sale.category_id ? categoryMap.get(sale.category_id) : null
-
-                return (
-                  <tr key={sale.id} className="hover:bg-slate-50/30 transition-all">
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        {sale.scope === 'product' && product?.thumbnail_url ? (
-                          <img src={product.thumbnail_url} className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><Zap className="w-4 h-4 text-slate-400" /></div>
-                        )}
-                        <div>
-                          <div className="font-semibold text-slate-900 text-sm">
-                            {sale.scope === 'product' ? product?.name || 'Unknown Product' :
-                             sale.scope === 'category' ? `Category: ${category?.name || 'Unknown'}` :
-                             sale.scope === 'brand' ? `Brand: ${sale.brand}` :
-                             'All Products'}
-                          </div>
-                          {sale.label && <div className="text-xs text-slate-400 mt-0.5">{sale.label}</div>}
-                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{sale.scope}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 font-semibold text-slate-900">
-                      {sale.discount_type === 'percentage' ? `${sale.discount_value}%` : `₹${sale.discount_value}`}
-                    </td>
-                    <td className="py-4 px-6 text-sm">
-                      <div className="text-slate-600 font-medium">
-                        {start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
-                      </div>
-                      <div className="text-slate-400 text-xs">
-                        → {end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
-                      </div>
-                      <div className="text-[10px] font-bold mt-1 uppercase tracking-wider"
-                        style={{ color: isLive ? '#059669' : isScheduled ? '#d97706' : isExpired ? '#94a3b8' : '#0f172a' }}
-                      >
-                        {isLive ? '● LIVE' : isScheduled ? '○ Scheduled' : isExpired ? '○ Expired' : sale.is_active ? '○ Active' : '○ Disabled'}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <FlashSaleStatusToggle id={sale.id} isActive={sale.is_active} />
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex justify-end gap-2">
-                        <Link href={`/admin/flash-sales/edit/${sale.id}`} className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400 inline-flex items-center justify-center">
-                          <Edit3 className="w-4 h-4" />
-                        </Link>
-                        <DeleteFlashSaleButton id={sale.id} />
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
+  if(products.error||categories.error)throw new Error('Could not load campaign target names')
+  const variantMap=new Map(variants.data.map(v=>[v.id,v.title]))
+  const productMap=new Map((products.data||[]).map(p=>[p.id,p.name]))
+  const categoryMap=new Map((categories.data||[]).map(c=>[c.id,c.name]))
+  const targetName=(sale:FlashSaleRow)=>{const t=flashTargets(sale);return sale.scope==='all'?'Whole store':sale.scope==='brand'?t.brands.join(', '):sale.scope==='category'?t.category_ids.map(id=>categoryMap.get(id)||'Unavailable category').join(', '):[...t.product_ids.map(id=>productMap.get(id)||'Unavailable product'),...t.variant_ids.map(v=>`${productMap.get(v.product_id)||'Unavailable product'} (${variantMap.get(v.variant_id)||'Unavailable variant'})`)].join(', ')}
+  const date=(value:string)=>new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value))
+  const href=pageHref
+  return <div className="space-y-6">
+    <div className="flex justify-between items-start gap-4"><div className="space-y-1"><h1 className="text-2xl font-black tracking-tight text-slate-900">Flash Sales</h1><p className="text-sm text-slate-500">Schedule campaigns, preview prices and manage eligibility. All times in IST.</p></div><Link href="/admin/flash-sales/new" className="rounded-xl h-11 px-5 bg-slate-900 text-white text-sm font-semibold inline-flex items-center gap-2 shrink-0"><Plus className="h-4 w-4"/>New campaign</Link></div>
+    <Form action="/admin/flash-sales" className="flex flex-wrap gap-3"><input name="q" aria-label="Search campaigns" defaultValue={q} placeholder="Search campaign names or labels" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm min-w-60 flex-1"/><select name="status" aria-label="Filter status" defaultValue={status} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="">All statuses</option>{['draft','scheduled','live','paused','ended'].map(s=><option key={s} value={s}>{s[0].toUpperCase()+s.slice(1)}</option>)}</select><select name="scope" aria-label="Filter scope" defaultValue={scope} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="">All scopes</option><option value="product">Products / variants</option><option value="category">Categories</option><option value="brand">Brands</option><option value="all">Whole store</option></select><button className="h-10 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white">Filter</button>{(q||status||scope)&&<Link href="/admin/flash-sales" className="h-10 inline-flex items-center px-3 text-sm text-slate-500">Clear</Link>}</Form>
+    <div className="rounded-2xl border bg-white overflow-hidden shadow-sm"><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-50"><tr className="text-xs font-bold uppercase tracking-wider text-slate-500">{['Campaign / targets','Discount','Schedule — IST','Status / controls','Edit'].map(s=><th key={s} className="py-4 px-6">{s}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{rows.map(sale=>{const t=flashTargets(sale);const exclusions=t.exclude_product_ids.length+t.exclude_variant_ids.length+t.exclude_category_ids.length+t.exclude_brands.length;return <tr key={sale.id} className="hover:bg-slate-50/40"><td className="py-4 px-6 max-w-xs"><p className="font-semibold text-sm text-slate-900">{sale.name||sale.label||'Flash sale'}</p><p className="mt-1 text-xs text-slate-500 line-clamp-2">{targetName(sale)}</p>{sale.label&&<p className="text-xs text-slate-400 mt-1">Label: {sale.label}</p>}{exclusions>0&&<p className="text-xs text-slate-400 mt-1">{exclusions} exclusions</p>}</td><td className="py-4 px-6 whitespace-nowrap text-sm font-semibold">{sale.discount_type==='percentage'?`${sale.discount_value}% off`:`₹${Number(sale.discount_value).toLocaleString('en-IN')} off`}</td><td className="py-4 px-6 text-xs text-slate-500 whitespace-nowrap"><p>{date(sale.starts_at)}</p><p className="mt-1">→ {date(sale.ends_at)}</p></td><td className="py-4 px-6 min-w-60"><FlashSaleControls sale={sale}/></td><td className="py-4 px-6"><Link aria-label={`Edit ${sale.name||'campaign'}`} href={`/admin/flash-sales/edit/${sale.id}`} className="rounded-lg h-9 w-9 border border-slate-200 inline-flex items-center justify-center text-slate-500"><Edit3 className="h-4 w-4"/></Link></td></tr>})}{!rows.length&&<tr><td colSpan={5} className="py-12 px-6 text-center text-sm text-slate-400">No campaigns match these filters.</td></tr>}</tbody></table></div></div>
+    <div className="flex items-center justify-between gap-4 text-sm text-slate-500"><p>{count||0} campaigns · Page {page} of {Math.max(1,Math.ceil((count||0)/25))}</p><div className="flex gap-3">{page>1&&<Link href={href(page-1)} className="rounded-lg border border-slate-200 bg-white px-4 py-2">Previous</Link>}{page*25<(count||0)&&<Link href={href(page+1)} className="rounded-lg border border-slate-200 bg-white px-4 py-2">Next</Link>}</div></div>
+  </div>
 }

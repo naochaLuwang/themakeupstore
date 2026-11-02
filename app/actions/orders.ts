@@ -3,15 +3,16 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
+import { createAdminClient } from "@/utils/supabase/admin"
+import { checkoutQuote, uuidPattern } from "@/lib/checkout-pricing"
+import { quoteFingerprint, requestFingerprint, verifyCapturedPayment } from "@/lib/verified-payment"
+import { randomUUID } from "node:crypto"
+import { refundPaymentOnce } from "@/lib/verified-payment"
+import { checkoutOrderItems } from "@/lib/checkout-order-items"
 import { OrderPOSSchema } from "@/lib/schemas"
-import { checkPromoEligibility } from "@/lib/promo-helper"
 import { VALID_TRANSITIONS, STATUS_TIMESTAMPS } from "@/lib/order-status"
 import { sendOrderPush } from "@/lib/order-push"
-import { calculateDiscountedPrice } from "@/lib/price-helper"
-import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from "@/lib/cart-constants"
 import { notifyBackInStock } from "./back-in-stock-notify"
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 async function atomicDecrementStock(supabase: Awaited<ReturnType<typeof createClient>>, variantId: string, quantity: number) {
     const { error: rpcErr } = await supabase.rpc('decrement_stock', {
@@ -95,6 +96,25 @@ async function incrementAndCheckRestock(
 
 
 
+async function withRestockNotifications<T extends {error:{message:string}|null}>(
+    db:Awaited<ReturnType<typeof createAdminClient>>,orderId:string,operation:()=>PromiseLike<T>
+):Promise<T> {
+    let before:{id:string;stock:number}[]=[]
+    try{
+        const {data:lines}=await db.from('order_items').select('product_variant_id').eq('order_id',orderId)
+        const ids=[...new Set((lines || []).map(i=>i.product_variant_id).filter(Boolean))]
+        if(ids.length){const {data}=await db.from('product_variants').select('id,stock').in('id',ids);before=(data || []).filter(v=>v.stock<=0)}
+    }catch{ /* Notification preparation must not block financial reconciliation. */ }
+    const result=await operation()
+    if(!result.error&&before.length){
+        try{
+            const {data}=await db.from('product_variants').select('id,stock').in('id',before.map(v=>v.id))
+            await Promise.all((data || []).filter(v=>v.stock>0).map(v=>notifyBackInStock(v.id).catch(error=>console.warn('Restock notification failed:',error))))
+        }catch(error){console.warn('Restock notification check failed:',error)}
+    }
+    return result
+}
+
 export async function placeOrder(
     formData: any,
     cartItems: any[],
@@ -103,854 +123,108 @@ export async function placeOrder(
         price: number;
         methodName: string;
         deliveryTimeLabel?: string;
-        shipping_method_id?: string | null
+        shipping_method_id?: string | null;
+        quoteFingerprint?: string
     },
     promoDetails?: { code: string; discount: number; id?: string },
     bxgyDetails?: { discount: number; appliedRuleIds?: string[]; freeItems?: { variantId: string; productId: string; ruleId?: string; quantity: number }[] },
     giftDetails?: { variantId: string; productId: string; ruleId?: string; quantity: number }[],
     giftCardDetails?: { code: string; amount: number },
     coinRedemption?: { amount: number },
-    paymentDetails?: { method: string; payment_id?: string; status: string }
+    paymentDetails?: { method: string; payment_id?: string; status: string; order_id?: string; signature?: string },
+    checkoutKey?: string
 ) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
     if (!user) throw new Error("User not authenticated")
-
-    // Hoisted for catch rollback access
-    const stockDecremented: { variantId: string; quantity: number; table?: string }[] = []
-    let createdOrderId: string | null = null
-    let capturedCartId: string | null = null
-
+    if (!checkoutKey || !uuidPattern.test(checkoutKey)) return { success: false, message: "Please refresh checkout before placing your order" }
+    const supabase = await createAdminClient()
+    if (!Array.isArray(cartItems) || !cartItems.length || cartItems.length > 100 || cartItems.some(i => !i || typeof i !== 'object') ||
+        !formData || typeof formData !== 'object' || !shippingDetails || typeof shippingDetails !== 'object' ||
+        (giftDetails && (!Array.isArray(giftDetails) || giftDetails.length > 100))) return { success: false, message: "Invalid checkout details" }
+    // The legacy argument is retained for existing callers; its amounts and rewards are untrusted.
+    void bxgyDetails
+    void giftDetails
+    const requestHash = requestFingerprint({
+        address: formData, items: cartItems.map(i => ({ variantId: i.variantId, quantity: i.quantity, gift: !!i.is_gift, bxgy: !!i.is_bxgy_free })),
+        shipping: shippingDetails.shipping_method_id, promo: promoDetails?.code || null,
+        giftCard: giftCardDetails?.code || null, coins: coinRedemption?.amount || 0,
+        payment: paymentDetails?.payment_id || null, quote: shippingDetails.quoteFingerprint || null,
+    })
     try {
-        // ── CAPTURE CART ID AT PLACEMENT TIME (before any async work) ──
-        const { data: existingCart } = await supabase
-            .from("carts")
-            .select("id")
-            .eq("user_id", user.id)
-            .maybeSingle()
-        capturedCartId = existingCart?.id || null
-
-        // ── HELPER: batch fetch variants ──
-        async function batchVariants(ids: string[]) {
-            const unique = [...new Set(ids)]
-            if (unique.length === 0) return []
-            const { data } = await supabase
-                .from("product_variants")
-                .select("id, price, stock, product_id, title, discount_type, discount_value, products(name, category_id, discount_type, discount_value)")
-                .in("id", unique)
-            return data || []
+        const { data: prior, error: priorError } = await supabase.from('orders').select('id,checkout_request_hash').eq('user_id', user.id).eq('checkout_key', checkoutKey).maybeSingle()
+        if (priorError) throw priorError
+        if (prior) {
+            if (prior.checkout_request_hash !== requestHash) throw new Error("This checkout attempt was already used for different details. Refresh checkout.")
+            return { success: true, orderId: prior.id }
         }
-
-        async function batchSimpleVariants(ids: string[]) {
-            const unique = [...new Set(ids)]
-            if (unique.length === 0) return []
-            const { data } = await supabase
-                .from("product_variants")
-                .select("id, stock, price")
-                .in("id", unique)
-            return data || []
+        const pricingInput = { shippingMethodId: shippingDetails.shipping_method_id || '', pincode: String(formData.pincode || ''), promoCode: promoDetails?.code, giftCardCode: giftCardDetails?.code, coinAmount: coinRedemption?.amount }
+        const quote = await checkoutQuote(supabase, user.id, cartItems, pricingInput)
+        const fingerprint = quoteFingerprint(quote,pricingInput)
+        if (!shippingDetails.quoteFingerprint || shippingDetails.quoteFingerprint !== fingerprint) throw new Error('Your basket or offers changed. Please review the updated checkout before paying.')
+        const orderItems = checkoutOrderItems(quote)
+        const stock = quote.items.map(item => ({ id: item.variantId, quantity: item.quantity, source: 'variant' }))
+        for (const gift of quote.freeItems) {
+            orderItems.push({ product_id: gift.productId, product_variant_id: gift.variantId,gift_product_id:gift.giftProductId,
+                product_name: gift.name, variant_title: 'Gift', quantity: 1, unit_price: 0, mrp: gift.mrp, is_gift: true,
+                line_discount_amount:0,promotion_allocations:[{rule_id:gift.ruleId,quantity:1,amount:0}] })
+            stock.push({ id: gift.variantId || gift.giftProductId!, quantity: 1, source: gift.giftProductId ? 'gift_products' : 'variant' })
         }
-
-        // ── 1. RE-VALIDATE PRICES AND STOCK (batched) ──
-        let calculatedSubtotal = 0;
-        const verifiedItems = [];
-        const paidItems = cartItems.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
-        const paidVariantIds = paidItems.map((i: any) => i.variantId)
-        const paidVariants = await batchVariants(paidVariantIds)
-        const paidVariantMap = new Map(paidVariants.map((v: any) => [v.id, v]))
-
-        // Batch category lookups for items missing category_id
-        const itemsMissingCat = paidItems.filter((i: any) => {
-            const v = paidVariantMap.get(i.variantId)
-            return !v?.products?.category_id
+        let paymentMethod = 'COD'
+        let paymentStatus = 'unpaid'
+        if (paymentDetails) {
+            if (paymentDetails.method !== 'razorpay' || !paymentDetails.payment_id || !paymentDetails.order_id || !paymentDetails.signature) throw new Error('Verified payment details are required')
+            await verifyCapturedPayment({ orderId: paymentDetails.order_id, paymentId: paymentDetails.payment_id,
+                signature: paymentDetails.signature, userId: user.id, amountPaise: Math.round(quote.total * 100),
+                purpose: 'checkout', fingerprint: quoteFingerprint(quote, pricingInput) })
+            paymentMethod = 'razorpay'
+            paymentStatus = 'paid'
+        }
+        const { data: committed, error: commitError } = await supabase.rpc('commit_secure_checkout', {
+            p_user_id: user.id, p_key: checkoutKey, p_hash: requestHash,
+            p_order: { payment_method: paymentMethod, payment_status: paymentStatus,
+                razorpay_payment_id: paymentDetails?.payment_id || null, total: quote.total,
+                shipping_price: quote.shippingPrice, shipping_label: quote.shippingLabel,
+                shipping_method_id: pricingInput.shippingMethodId,
+                shipping_address: { ...formData, delivery_label: quote.deliveryTimeLabel || quote.shippingLabel },
+                promo_code: pricingInput.promoCode || null, promo_discount_amount: quote.promoDiscount,
+                bxgy_discount_amount: quote.bxgyDiscount, gift_card_discount: quote.giftCardDiscount, coin_discount_amount: quote.coinDiscount,
+                offer_snapshot:{version:2,qualifying_subtotal:quote.qualifyingSubtotal,discounts:quote.discounts,gifts:quote.freeItems,bxgy_allocations:quote.bxgyAllocations,
+                    coupon_discount:quote.promoDiscount,merchandise_subtotal:quote.subtotal,fingerprint} },
+            p_items: orderItems, p_stock: stock,
+            p_promotions: quote.promotions,
+            p_gift_code: pricingInput.giftCardCode || null,
         })
-        const missingCatProductIds = [...new Set(itemsMissingCat.map((i: any) => i.productId || paidVariantMap.get(i.variantId)?.product_id))]
-        let catMap = new Map<string, string>()
-        if (missingCatProductIds.length > 0) {
-            const { data: catData } = await supabase
-                .from("product_categories")
-                .select("product_id, category_id")
-                .in("product_id", missingCatProductIds)
-            if (catData) {
-                for (const c of catData) {
-                    if (!catMap.has(c.product_id)) catMap.set(c.product_id, c.category_id)
-                }
-            }
-        }
-
-        for (const item of paidItems) {
-            const variant = paidVariantMap.get(item.variantId)
-            if (!variant) throw new Error(`Product not found: ${item.name}`)
-            if (variant.stock < item.quantity) throw new Error(`Insufficient stock for ${item.name}`)
-
-            const basePrice = Number(variant.price)
-            const variantDiscountType: string = variant.discount_type || "none"
-            const variantDiscountValue: number = Number(variant.discount_value) || 0
-            const prod = variant.products as any
-            const productDiscountType: string = prod?.discount_type || "none"
-            const productDiscountValue: number = Number(prod?.discount_value) || 0
-
-            const effectiveDiscountType = variantDiscountType !== "none" ? variantDiscountType : productDiscountType
-            const effectiveDiscountValue = variantDiscountType !== "none" ? variantDiscountValue : productDiscountValue
-            const salePrice = calculateDiscountedPrice(basePrice, effectiveDiscountType as 'percentage' | 'amount' | 'none', effectiveDiscountValue)
-
-            calculatedSubtotal += Math.round(salePrice * item.quantity)
-
-            let itemCatId = prod?.category_id
-            if (!itemCatId) itemCatId = catMap.get(variant.product_id)
-            verifiedItems.push({ ...item, price: salePrice, categoryId: itemCatId })
-        }
-
-        // ── 2. RE-VALIDATE PROMO ──
-        let verifiedDiscount = 0;
-        if (promoDetails?.code) {
-            const { data: promo, error: promoError } = await supabase
-                .from('promo_codes')
-                .select(`
-                    *,
-                    promo_code_products(product_id),
-                    promo_code_categories(category_id)
-                `)
-                .eq('code', promoDetails.code.toUpperCase())
-                .eq('is_active', true)
-                .single()
-
-            if (promoError || !promo) throw new Error("Invalid promo code")
-            const { isEligible, eligibleSubtotal } = checkPromoEligibility(promo, verifiedItems)
-            if (!isEligible) throw new Error("Promo code is no longer applicable")
-
-            if (promo.discount_type === 'percentage') {
-                verifiedDiscount = Math.round((eligibleSubtotal * Number(promo.discount_value)) / 100)
-                if (promo.max_discount_amount) {
-                    verifiedDiscount = Math.min(verifiedDiscount, Number(promo.max_discount_amount))
-                }
-            } else {
-                verifiedDiscount = Math.min(Number(promo.discount_value), eligibleSubtotal)
-            }
-        }
-
-        // ── 2b. RE-VALIDATE BXGY DISCOUNT (comprehensive) ──
-        let verifiedBXGYDiscount = 0;
-        if (bxgyDetails?.discount && bxgyDetails.discount > 0) {
-            const paidItems = cartItems.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
-
-            // Fetch full rule data for re-validation.
-            // Rule IDs come from both free-item rows and discount-only rules (cheapest_free has no free items).
-            const bxgyRuleIds = [...new Set([
-                ...(bxgyDetails.freeItems || []).map((f: any) => f.ruleId),
-                ...(bxgyDetails.appliedRuleIds || []),
-            ].filter(Boolean))]
-            if (bxgyRuleIds.length === 0) throw new Error("BXGY rules could not be validated")
-            let bxgyRuleMap = new Map<string, any>()
-            if (bxgyRuleIds.length > 0) {
-                const [rulesRes, buyProductsRes, buyCategoriesRes, buyBrandsRes] = await Promise.all([
-                    supabase
-                        .from("buy_x_get_y")
-                        .select(`
-                            id, buy_type, buy_quantity, get_type, get_product_id, get_variant_id,
-                            get_discount_type, get_discount_value,
-                            usage_limit, used_count, once_per_user, max_per_order,
-                            is_active, starts_at, expires_at,
-                            get_product:products!buy_x_get_y_get_product_id_fkey(name),
-                            get_variant:product_variants!buy_x_get_y_get_variant_id_fkey(stock, price)
-                        `)
-                        .in("id", bxgyRuleIds),
-                    supabase.from('bxgy_buy_products').select('bxgy_id, product_id').in('bxgy_id', bxgyRuleIds),
-                    supabase.from('bxgy_buy_categories').select('bxgy_id, category_id').in('bxgy_id', bxgyRuleIds),
-                    supabase.from('bxgy_buy_brands').select('bxgy_id, brand').in('bxgy_id', bxgyRuleIds),
-                ])
-                const buyProductMap = new Map<string, { product_id: string }[]>()
-                const buyCategoryMap = new Map<string, { category_id: string }[]>()
-                const buyBrandMap = new Map<string, { brand: string }[]>()
-                for (const r of buyProductsRes.data ?? []) {
-                    if (!buyProductMap.has(r.bxgy_id)) buyProductMap.set(r.bxgy_id, [])
-                    buyProductMap.get(r.bxgy_id)!.push({ product_id: r.product_id })
-                }
-                for (const r of buyCategoriesRes.data ?? []) {
-                    if (!buyCategoryMap.has(r.bxgy_id)) buyCategoryMap.set(r.bxgy_id, [])
-                    buyCategoryMap.get(r.bxgy_id)!.push({ category_id: r.category_id })
-                }
-                for (const r of buyBrandsRes.data ?? []) {
-                    if (!buyBrandMap.has(r.bxgy_id)) buyBrandMap.set(r.bxgy_id, [])
-                    buyBrandMap.get(r.bxgy_id)!.push({ brand: r.brand })
-                }
-                const rules = (rulesRes.data || []).map((r: any) => ({
-                    ...r,
-                    buy_products: buyProductMap.get(r.id) || [],
-                    buy_categories: buyCategoryMap.get(r.id) || [],
-                    buy_brands: buyBrandMap.get(r.id) || [],
-                }))
-                for (const r of rules) bxgyRuleMap.set(r.id, r)
-            }
-
-            const bxgyVariantIds = (bxgyDetails.freeItems || []).map((f: any) => f.variantId)
-            const bxgyVariants = await batchSimpleVariants(bxgyVariantIds)
-            const bxgyVariantMap = new Map(bxgyVariants.map((v: any) => [v.id, v]))
-
-            const productIds = (bxgyDetails.freeItems || [])
-                .filter((f: any) => !bxgyVariantMap.has(f.variantId))
-                .map((f: any) => f.productId)
-            let defaultFallbackMap = new Map<string, any>()
-            if (productIds.length > 0) {
-                const { data: defaults } = await supabase
-                    .from("product_variants")
-                    .select("id, stock, price, product_id")
-                    .in("product_id", productIds)
-                    .eq("is_default", true)
-                if (defaults) {
-                    for (const d of defaults) defaultFallbackMap.set(d.product_id, d)
-                }
-            }
-
-            // Build product→category map for category-based re-validation
-            const cartProductIds = [...new Set(paidItems.map((i: any) => i.productId))]
-            const { data: prodCats } = await supabase
-                .from("product_categories")
-                .select("product_id, category_id")
-                .in("product_id", cartProductIds)
-            const catMap = new Map<string, Set<string>>()
-            for (const row of (prodCats || [])) {
-                const s = catMap.get(row.product_id) || new Set()
-                s.add(row.category_id)
-                catMap.set(row.product_id, s)
-            }
-
-            // Re-validate qualification for EVERY applied rule — discount-only rules
-            // (cheapest_free) have no free-item rows, so this cannot live inside the free-item loop
-            const resolvedBXGYFreeItems = [];
-            for (const rule of bxgyRuleMap.values()) {
-                if (!rule.is_active) throw new Error("BXGY rule is no longer active")
-                if (rule.usage_limit && rule.used_count >= rule.usage_limit) throw new Error("BXGY usage limit reached")
-                if (rule.starts_at && new Date(rule.starts_at) > new Date()) throw new Error("BXGY rule is not active yet")
-                if (rule.expires_at && new Date(rule.expires_at) < new Date()) throw new Error("BXGY rule has expired")
-
-                let qualifyingItems = paidItems
-                if (rule.buy_type === "specific_products") {
-                    const ids = new Set((rule.buy_products || []).map((p: any) => p.product_id))
-                    qualifyingItems = paidItems.filter((i: any) => ids.has(i.productId))
-                } else if (rule.buy_type === "specific_categories") {
-                    const catIds = new Set((rule.buy_categories || []).map((c: any) => c.category_id))
-                    qualifyingItems = paidItems.filter((i: any) => {
-                        const itemCats = catMap.get(i.productId)
-                        return itemCats && [...itemCats].some((cid: string) => catIds.has(cid))
-                    })
-                } else if (rule.buy_type === "specific_brands") {
-                    const { data: prods } = await supabase
-                        .from("products")
-                        .select("id, brand")
-                        .in("id", cartProductIds)
-                    const brands = new Set((rule.buy_brands || []).map((b: any) => b.brand))
-                    qualifyingItems = paidItems.filter((i: any) => {
-                        const p = prods?.find((pr: any) => pr.id === i.productId)
-                        return p && brands.has(p.brand)
-                    })
-                }
-
-                const totalQualifying = qualifyingItems.reduce((s: number, i: any) => s + i.quantity, 0)
-                if (totalQualifying < rule.buy_quantity + 1) throw new Error("BXGY conditions are no longer met")
-            }
-
-            for (const freeItem of bxgyDetails.freeItems || []) {
-                if (freeItem.ruleId) {
-                    const rule = bxgyRuleMap.get(freeItem.ruleId)
-                    if (!rule || !rule.is_active) throw new Error("BXGY rule is no longer active")
-                    // Verify the free item matches what the rule promises
-                    if (rule.get_type === "specific_product" && rule.get_product_id) {
-                        if (freeItem.productId !== rule.get_product_id) throw new Error("BXGY free item mismatch")
-                    }
-                }
-
-                let variant = bxgyVariantMap.get(freeItem.variantId)
-                if (!variant) variant = defaultFallbackMap.get(freeItem.productId)
-                if (!variant || variant.stock < freeItem.quantity) {
-                    throw new Error(`Free gift item is no longer available`)
-                }
-                resolvedBXGYFreeItems.push({ ...freeItem, variantId: variant.id })
-            }
-            bxgyDetails.freeItems = resolvedBXGYFreeItems
-            verifiedBXGYDiscount = bxgyDetails.discount
-        }
-
-        // ── 2c. VALIDATE FREE GIFTS (comprehensive) ──
-        let verifiedGiftItems: any[] = [];
-        if (giftDetails && giftDetails.length > 0) {
-            const ruleIds = giftDetails.map((g: any) => g.ruleId).filter(Boolean)
-            let ruleMap = new Map<string, any>()
-            if (ruleIds.length > 0) {
-                const [rulesRes, qualProductsRes, qualCategoriesRes, qualBrandsRes] = await Promise.all([
-                    supabase
-                        .from("free_gifts")
-                        .select(`
-                            id, gift_product_id, gift_product_ref_id, gift_variant_id, gift_quantity,
-                            trigger_type, trigger_threshold, min_cart_amount,
-                            usage_limit, used_count, once_per_user,
-                            is_active, starts_at, expires_at,
-                            gift_product_ref:gift_products!free_gifts_gift_product_ref_id_fkey(stock),
-                            gift_variant:product_variants!free_gifts_gift_variant_id_fkey(stock, price)
-                        `)
-                        .in("id", ruleIds),
-                    supabase.from('free_gift_products').select('free_gift_id, product_id').in('free_gift_id', ruleIds),
-                    supabase.from('free_gift_categories').select('free_gift_id, category_id').in('free_gift_id', ruleIds),
-                    supabase.from('free_gift_brands').select('free_gift_id, brand').in('free_gift_id', ruleIds),
-                ])
-                const qualProductMap = new Map<string, { product_id: string }[]>()
-                const qualCategoryMap = new Map<string, { category_id: string }[]>()
-                const qualBrandMap = new Map<string, { brand: string }[]>()
-                for (const r of qualProductsRes.data ?? []) {
-                    if (!qualProductMap.has(r.free_gift_id)) qualProductMap.set(r.free_gift_id, [])
-                    qualProductMap.get(r.free_gift_id)!.push({ product_id: r.product_id })
-                }
-                for (const r of qualCategoriesRes.data ?? []) {
-                    if (!qualCategoryMap.has(r.free_gift_id)) qualCategoryMap.set(r.free_gift_id, [])
-                    qualCategoryMap.get(r.free_gift_id)!.push({ category_id: r.category_id })
-                }
-                for (const r of qualBrandsRes.data ?? []) {
-                    if (!qualBrandMap.has(r.free_gift_id)) qualBrandMap.set(r.free_gift_id, [])
-                    qualBrandMap.get(r.free_gift_id)!.push({ brand: r.brand })
-                }
-                const rules = (rulesRes.data || []).map((r: any) => ({
-                    ...r,
-                    qualifying_products: qualProductMap.get(r.id) || [],
-                    qualifying_categories: qualCategoryMap.get(r.id) || [],
-                    qualifying_brands: qualBrandMap.get(r.id) || [],
-                }))
-                for (const r of rules) ruleMap.set(r.id, r)
-            }
-
-            const giftVariantIds = giftDetails.map((g: any) => g.variantId)
-            const giftVariants = await batchSimpleVariants(giftVariantIds)
-            const giftVariantMap = new Map(giftVariants.map((v: any) => [v.id, v]))
-
-            const giftProductIds = giftDetails
-                .filter((g: any) => !giftVariantMap.has(g.variantId))
-                .map((g: any) => g.productId)
-            let giftDefaultMap = new Map<string, any>()
-            if (giftProductIds.length > 0) {
-                const { data: defaults } = await supabase
-                    .from("product_variants")
-                    .select("id, stock, price, product_id")
-                    .in("product_id", giftProductIds)
-                    .eq("is_default", true)
-                if (defaults) {
-                    for (const d of defaults) giftDefaultMap.set(d.product_id, d)
-                }
-            }
-
-            for (const gift of giftDetails) {
-                if (!gift.ruleId) throw new Error("Free gift rule ID is required")
-                const rule = ruleMap.get(gift.ruleId)
-                if (!rule || !rule.is_active) throw new Error("Free gift rule is no longer active")
-                if (rule.usage_limit && rule.used_count >= rule.usage_limit) throw new Error("Free gift usage limit reached")
-
-                // Check once_per_user
-                if (rule.once_per_user) {
-                    const { data: userOrders } = await supabase
-                        .from("orders")
-                        .select("id")
-                        .eq("user_id", user.id)
-                    const orderIds = (userOrders || []).map(o => o.id)
-                    if (orderIds.length > 0) {
-                        const { data: existingGift } = await supabase
-                            .from("order_items")
-                            .select("id")
-                            .in("order_id", orderIds)
-                            .eq("is_gift", true)
-                            // Match on store product ID — ref items store gift_product_id in product_id
-                            .eq("product_id", rule.gift_product_ref_id || rule.gift_product_id)
-                            .limit(1)
-                        if (existingGift && existingGift.length > 0) throw new Error("Free gift already claimed")
-                    }
-                }
-
-                // Re-validate trigger condition against current cart
-                const paidItems = cartItems.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
-                let conditionMet = false
-                if (rule.trigger_type === "cart_total") {
-                    const subtotal = paidItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
-                    conditionMet = subtotal >= rule.trigger_threshold
-                    if (conditionMet && rule.min_cart_amount && rule.min_cart_amount > 0) {
-                        conditionMet = subtotal >= rule.min_cart_amount
-                    }
-                } else if (rule.trigger_type === "specific_products") {
-                    const ids = new Set((rule.qualifying_products || []).map((p: any) => p.product_id))
-                    const matching = paidItems.filter((i: any) => ids.has(i.productId))
-                    const qty = matching.reduce((s: number, i: any) => s + i.quantity, 0)
-                    conditionMet = qty >= rule.trigger_threshold
-                    if (conditionMet && rule.min_cart_amount && rule.min_cart_amount > 0) {
-                        conditionMet = matching.reduce((s: number, i: any) => s + i.price * i.quantity, 0) >= rule.min_cart_amount
-                    }
-                } else if (rule.trigger_type === "specific_categories") {
-                    const catIds = new Set((rule.qualifying_categories || []).map((c: any) => c.category_id))
-                    const cartProductIds = [...new Set(paidItems.map((i: any) => i.productId))]
-                    const { data: prodCats } = await supabase
-                        .from("product_categories")
-                        .select("product_id, category_id")
-                        .in("product_id", cartProductIds)
-                    const catMap = new Map<string, Set<string>>()
-                    for (const row of (prodCats || [])) {
-                        const s = catMap.get(row.product_id) || new Set()
-                        s.add(row.category_id)
-                        catMap.set(row.product_id, s)
-                    }
-                    const matching = paidItems.filter((i: any) => {
-                        const itemCats = catMap.get(i.productId)
-                        return itemCats && [...itemCats].some((cid: string) => catIds.has(cid))
-                    })
-                    const qty = matching.reduce((s: number, i: any) => s + i.quantity, 0)
-                    conditionMet = qty >= rule.trigger_threshold
-                    if (conditionMet && rule.min_cart_amount && rule.min_cart_amount > 0) {
-                        conditionMet = matching.reduce((s: number, i: any) => s + i.price * i.quantity, 0) >= rule.min_cart_amount
-                    }
-                } else if (rule.trigger_type === "specific_brands") {
-                    const brands = new Set((rule.qualifying_brands || []).map((b: any) => b.brand))
-                    const cartProductIds = [...new Set(paidItems.map((i: any) => i.productId))]
-                    const { data: prods } = await supabase
-                        .from("products")
-                        .select("id, brand")
-                        .in("id", cartProductIds)
-                    const matching = paidItems.filter((i: any) => {
-                        const p = prods?.find((pr: any) => pr.id === i.productId)
-                        return p && brands.has(p.brand)
-                    })
-                    const qty = matching.reduce((s: number, i: any) => s + i.quantity, 0)
-                    conditionMet = qty >= rule.trigger_threshold
-                    if (conditionMet && rule.min_cart_amount && rule.min_cart_amount > 0) {
-                        conditionMet = matching.reduce((s: number, i: any) => s + i.price * i.quantity, 0) >= rule.min_cart_amount
-                    }
-                }
-                if (!conditionMet) throw new Error("Free gift conditions are no longer met")
-
-                // Verify gift product matches rule
-                const expectedId = rule.gift_product_ref_id || rule.gift_product_id
-                if (gift.productId !== expectedId) throw new Error("Free gift product mismatch")
-
-                // Check stock and mark source for later decrement
-                let giftSource: 'ref' | 'variant' = 'variant'
-                if (rule.gift_product_ref_id) {
-                    giftSource = 'ref'
-                    if (!rule.gift_product_ref || rule.gift_product_ref.stock < gift.quantity) {
-                        throw new Error("Free gift is out of stock")
-                    }
-                } else {
-                    let variant = giftVariantMap.get(gift.variantId)
-                    if (!variant) variant = giftDefaultMap.get(gift.productId)
-                    if (!variant || variant.stock < gift.quantity) {
-                        throw new Error("Free gift is no longer available")
-                    }
-                }
-                verifiedGiftItems.push({ ...gift, giftSource, giftStoreProductId: rule.gift_product_id || rule.gift_product_ref_id, verifiedPrice: 0 })
-            }
-        }
-
-        // ── 3. RE-VERIFY SHIPPING PRICE ──
-        let verifiedShippingPrice = 0;
-        if (shippingDetails.shipping_method_id) {
-            const { data: method } = await supabase
-                .from('shipping_methods')
-                .select('price')
-                .eq('id', shippingDetails.shipping_method_id)
-                .single()
-            if (method) {
-                const pincodeOk = FREE_SHIPPING_PINCODES.includes(formData.pincode)
-                verifiedShippingPrice = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD && pincodeOk ? 0 : Number(method.price);
-            }
-        }
-
-        // ── 3b. RE-VERIFY GIFT CARD ──
-        let verifiedGiftCardAmount = 0;
-        if (giftCardDetails?.code && giftCardDetails?.amount > 0) {
-            const { data: gc } = await supabase
-                .from('gift_cards')
-                .select('remaining_balance, status, expires_at')
-                .eq('code', giftCardDetails.code)
-                .single()
-            if (!gc) throw new Error("Gift card not found")
-            if (gc.status !== 'active') throw new Error("Gift card is no longer active")
-            if (gc.expires_at && new Date(gc.expires_at) < new Date()) throw new Error("Gift card has expired")
-            if (Number(gc.remaining_balance) <= 0) throw new Error("Gift card has no remaining balance")
-            const maxApplicable = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount + verifiedShippingPrice))
-            verifiedGiftCardAmount = Math.min(Number(gc.remaining_balance), maxApplicable)
-        }
-
-        // ── 3c. RE-VERIFY COIN REDEMPTION ──
-        let verifiedCoinDiscount = 0;
-        if (coinRedemption?.amount && coinRedemption.amount > 0) {
-            const { data: lp } = await supabase
-                .from('loyalty_points')
-                .select('balance')
-                .eq('user_id', user.id)
-                .maybeSingle()
-            const availableBalance = lp?.balance || 0
-            if (availableBalance < coinRedemption.amount) throw new Error("Insufficient M Coins")
-            const maxApplicable = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount + verifiedShippingPrice))
-            verifiedCoinDiscount = Math.min(coinRedemption.amount, maxApplicable)
-        }
-
-        // ── 3d. SHIPPING METHOD REQUIRED ──
-        if (!shippingDetails.shipping_method_id) {
-            throw new Error("Please select a delivery address with a valid shipping option")
-        }
-
-        // ── 4. FINAL TOTAL CALCULATION ──
-        const finalTotal = Math.max(0, Math.round(calculatedSubtotal - verifiedDiscount - verifiedBXGYDiscount - verifiedGiftCardAmount - verifiedCoinDiscount + verifiedShippingPrice))
-
-        // ── 5. Build order items array ──
-        const orderItems: any[] = verifiedItems.map(item => {
-            const variant = paidVariantMap.get(item.variantId)
-            // Use variant's raw price as true MRP (list price) instead of item.mrp which can be 0 for variant products
-            const trueMrp = variant ? Number(variant.price) : Number(item.mrp || item.price)
-            return {
-                product_id: item.productId,
-                product_variant_id: item.variantId,
-                product_name: item.name,
-                variant_title: item.variantTitle,
-                quantity: item.quantity,
-                unit_price: item.price,
-                mrp: trueMrp,
-                is_gift: false,
-            }
-        })
-
-        for (const gift of verifiedGiftItems) {
-            if (gift.giftSource === 'ref') {
-                if (!gift.giftStoreProductId) throw new Error("Free gift missing linked store product")
-                orderItems.push({
-                    product_id: gift.giftStoreProductId,
-                    product_variant_id: null,
-                    product_name: gift.product_name || 'Free Gift',
-                    variant_title: null,
-                    quantity: gift.quantity,
-                    unit_price: 0,
-                    mrp: 0,
-                    is_gift: true,
-                })
-            } else {
-                orderItems.push({
-                    product_id: gift.productId,
-                    product_variant_id: gift.variantId,
-                    product_name: gift.product_name || 'Free Gift',
-                    variant_title: null,
-                    quantity: gift.quantity,
-                    unit_price: 0,
-                    mrp: 0,
-                    is_gift: true,
-                })
-            }
-        }
-
-        if (bxgyDetails?.freeItems) {
-            for (const freeItem of bxgyDetails.freeItems) {
-                orderItems.push({
-                    product_id: freeItem.productId,
-                    product_variant_id: freeItem.variantId,
-                    product_name: 'Free Item',
-                    variant_title: null,
-                    quantity: freeItem.quantity,
-                    unit_price: 0,
-                    mrp: 0,
-                    is_gift: true,
-                })
-            }
-        }
-
-        // ── VERIFY RAZORPAY PAYMENT AMOUNT ──
-        if (paymentDetails?.method === 'razorpay' && paymentDetails?.payment_id) {
+        if (commitError || !committed?.order_id) throw new Error(commitError?.message || 'Checkout could not be committed')
+        const orderId = committed.order_id as string
+        if (!committed.replayed) {
+            // These follow-ups cannot roll back a successfully committed financial transaction.
             try {
-                const { default: Razorpay } = await import("razorpay")
-                const razorpay = new Razorpay({
-                    key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-                    key_secret: process.env.RAZORPAY_KEY_SECRET!,
-                })
-                const payment = await razorpay.payments.fetch(paymentDetails.payment_id)
-                const paidAmount = Math.round(Number(payment.amount) / 100)
-                if (paidAmount !== finalTotal) {
-                    throw new Error(`Payment amount mismatch: paid ₹${paidAmount}, expected ₹${finalTotal}`)
-                }
-            } catch (err: any) {
-                if (err.message?.includes('Payment amount mismatch')) throw err
-                console.error("Razorpay payment verification error:", err)
-                throw new Error("Could not verify payment — order not placed")
-            }
-        }
-
-        // ── Insert the main Order FIRST (before stock decrement) ──
-        const { data: order, error: orderError } = await supabase
-            .from('orders')
-            .insert([{
-                user_id: user.id,
-                status: 'pending',
-                order_type: 'delivery',
-                payment_status: paymentDetails?.status || 'unpaid',
-                payment_method: paymentDetails?.method || 'COD',
-                razorpay_payment_id: paymentDetails?.payment_id || null,
-                total: finalTotal,
-                shipping_price: verifiedShippingPrice,
-                shipping_label: shippingDetails.methodName,
-                shipping_method_id: shippingDetails.shipping_method_id || null,
-                shipping_address: { ...formData, delivery_label: shippingDetails.deliveryTimeLabel || shippingDetails.methodName },
-                promo_code: promoDetails?.code || null,
-                promo_discount_amount: verifiedDiscount,
-                bxgy_discount_amount: verifiedBXGYDiscount || 0,
-                gift_card_discount: verifiedGiftCardAmount,
-                coin_discount_amount: verifiedCoinDiscount || 0,
-            }])
-            .select()
-            .single()
-
-        if (orderError) throw orderError
-        createdOrderId = order.id
-
-        // Insert Order Items
-        const { error: itemsError } = await supabase
-            .from('order_items')
-            .insert(orderItems.map(item => ({ ...item, order_id: order.id })))
-
-        if (itemsError) throw itemsError
-
-        // STOCK DECREMENT AFTER ORDER COMMIT (parallel, all-or-nothing via Promise.allSettled)
-        const decrementOps: { variantId: string; quantity: number; source: 'variant' | 'gift_products'; label?: string }[] = []
-
-        for (const item of cartItems) {
-            if (item.is_gift || item.is_bxgy_free) continue
-            decrementOps.push({ variantId: item.variantId, quantity: item.quantity, source: 'variant', label: item.name })
-        }
-        for (const gift of verifiedGiftItems) {
-            decrementOps.push({
-                variantId: gift.variantId,
-                quantity: gift.quantity,
-                source: gift.giftSource === 'ref' ? 'gift_products' : 'variant',
-                label: gift.product_name || 'Free Gift',
-            })
-        }
-
-        const decResults = await Promise.allSettled(decrementOps.map(async (op) => {
-            if (op.source === 'gift_products') {
-                const { data: gp } = await supabase.from('gift_products').select('stock').eq('id', op.variantId).single()
-                if (!gp || gp.stock < op.quantity) throw new Error(`Free gift is no longer available`)
-                const { error: gpErr } = await supabase
-                    .from('gift_products')
-                    .update({ stock: Math.max(0, gp.stock - op.quantity) })
-                    .eq('id', op.variantId)
-                if (gpErr) throw new Error('Failed to decrement gift stock')
-            } else {
-                const ok = await atomicDecrementStock(supabase, op.variantId, op.quantity)
-                if (!ok) throw new Error(`Insufficient stock for ${op.label || op.variantId}`)
-            }
-        }))
-
-        const failedDec = decResults.filter(r => r.status === 'rejected')
-        if (failedDec.length > 0) {
-            // Track only the ones that succeeded for rollback
-            decResults.forEach((r, i) => {
-                if (r.status === 'fulfilled') {
-                    const op = decrementOps[i]
-                    stockDecremented.push({
-                        variantId: op.variantId,
-                        quantity: op.quantity,
-                        table: op.source === 'gift_products' ? 'gift_products' : undefined,
-                    })
-                }
-            })
-            throw new Error(`Stock decrement failed for ${failedDec.length} item(s)`)
-        }
-
-        // All succeeded — track for potential rollback
-        for (const op of decrementOps) {
-            stockDecremented.push({
-                variantId: op.variantId,
-                quantity: op.quantity,
-                table: op.source === 'gift_products' ? 'gift_products' : undefined,
-            })
-        }
-
-        // Non-critical follow-up (fire-and-forget, won't fail order)
-        // Increment used_count for free gift rules
-        if (verifiedGiftItems.length > 0) {
-            const giftRuleIds = [...new Set(verifiedGiftItems.map((g: any) => g.ruleId).filter(Boolean))]
-            for (const ruleId of giftRuleIds) {
-                try {
-                    const { data: gr } = await supabase.from('free_gifts').select('used_count').eq('id', ruleId).single()
-                    if (gr) await supabase.from('free_gifts').update({ used_count: (gr.used_count || 0) + 1 }).eq('id', ruleId)
-                } catch {}
-            }
-        }
-
-        // Increment used_count for BXGY rules
-        if (bxgyDetails?.freeItems && bxgyDetails.freeItems.length > 0) {
-            const bxgyRuleIds = [...new Set(bxgyDetails.freeItems.map((f: any) => f.ruleId).filter(Boolean))]
-            for (const ruleId of bxgyRuleIds) {
-                try {
-                    const { data: br } = await supabase.from('buy_x_get_y').select('used_count').eq('id', ruleId).single()
-                    if (br) await supabase.from('buy_x_get_y').update({ used_count: (br.used_count || 0) + 1 }).eq('id', ruleId)
-                } catch {}
-            }
-        }
-
-        if (promoDetails?.code) {
+                const { data: cart } = await supabase.from('carts').select('id').eq('user_id', user.id).maybeSingle()
+                if (cart) { await supabase.from('cart_items').delete().eq('cart_id', cart.id); await supabase.from('carts').delete().eq('id', cart.id) }
+            } catch (error) { console.warn('Checkout cart cleanup failed:', error) }
+            try { await sendOrderPush(supabase, orderId, user.id, 'confirmed') } catch (error) { console.warn('Order push failed:', error) }
             try {
-                const { data: promoRecord } = await supabase
-                    .from('promo_codes')
-                    .select('id, used_count')
-                    .eq('code', promoDetails.code)
-                    .single()
-                if (promoRecord) {
-                    await supabase.from('promo_codes').update({ used_count: (promoRecord.used_count || 0) + 1 }).eq('id', promoRecord.id)
-                    await supabase.from('promo_redemptions').insert({ promo_id: promoRecord.id, user_id: user.id, order_id: order.id })
-                }
-            } catch {}
+                const phone = formData.phone
+                if (phone) { const { sendOrderNotification } = await import('./whatsapp'); await sendOrderNotification(orderId, phone, 'confirmed', formData.full_name || 'Valued Customer') }
+            } catch (error) { console.warn('Order WhatsApp failed:', error) }
         }
-
-        if (giftCardDetails) {
-            try {
-                const { data: gc } = await supabase.from('gift_cards').select('id').eq('code', giftCardDetails.code).single()
-                if (gc) await supabase.from('gift_card_redemptions').insert({ gift_card_id: gc.id, order_id: order.id, amount: verifiedGiftCardAmount })
-            } catch {}
-        }
-
-        if (coinRedemption?.amount && coinRedemption.amount > 0) {
-            try { const { redeemCoinsAtCheckout } = await import("./loyalty"); await redeemCoinsAtCheckout(user.id, order.id, verifiedCoinDiscount) } catch {}
-        }
-
-        try { const { earnOrderPoints } = await import("./loyalty"); await earnOrderPoints(user.id, order.id, finalTotal) } catch {}
-
-        // ── CLEAN UP DB CART (only the cart that existed at order placement) ──
-        if (capturedCartId) {
-            try {
-                await supabase.from("cart_items").delete().eq("cart_id", capturedCartId)
-                await supabase.from("carts").delete().eq("id", capturedCartId)
-            } catch {}
-        }
-
-        // WhatsApp order confirmation
-        try {
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('phone, full_name')
-                .eq('id', user.id)
-                .single()
-            const addr = order.shipping_address as Record<string, any> | null
-            const phone = addr?.phone || profile?.phone
-            if (phone) {
-                const { sendOrderNotification } = await import('./whatsapp')
-                sendOrderNotification(order.id, phone, 'confirmed', profile?.full_name || 'Valued Customer')
-            }
-        } catch {}
-
-        // Push order confirmation (FCM)
-        await sendOrderPush(supabase, order.id, user.id, 'confirmed')
-
-        revalidatePath("/admin/orders")
-        revalidatePath("/profile")
-        return { success: true, orderId: order.id }
-
-    } catch (error: any) {
-        console.error("ORDER_PLACEMENT_ERROR:", error)
-        // Rollback stock that was decremented (will be partial if crash occurred mid-decrement)
-        for (const { variantId, quantity, table } of stockDecremented) {
-            if (table === 'gift_products') {
-                try {
-                    const { data: gp } = await supabase.from('gift_products').select('stock').eq('id', variantId).single()
-                    if (gp) await supabase.from('gift_products').update({ stock: gp.stock + quantity }).eq('id', variantId)
-                } catch {}
-            } else {
-                try { await supabase.rpc('increment_stock', { row_id: variantId, amount: quantity }) } catch {}
-            }
-        }
-        // Delete order if it was created (stock was decremented after order, so this prevents partial orders)
-        if (createdOrderId) {
-            try { await supabase.from('orders').delete().eq('id', createdOrderId) } catch {}
-        }
-        return { success: false, message: error.message }
+        revalidatePath('/admin/orders')
+        revalidatePath('/profile')
+        return { success: true, orderId }
+    } catch (error) {
+        console.error('ORDER_PLACEMENT_ERROR:', error)
+        return { success: false, message: error instanceof Error ? error.message : 'Order could not be placed' }
     }
 }
 
-// export async function cancelOrderAndRestoreStock(orderId: string) {
-//     const supabase = await createClient()
-
-//     try {
-//         // 1. Get current user for security check
-//         const { data: { user } } = await supabase.auth.getUser()
-//         if (!user) throw new Error("Authentication required")
-
-//         // 2. Fetch order, items, and user_id
-//         const { data: order, error: orderFetchErr } = await supabase
-//             .from('orders')
-//             .select('status, user_id, order_items(product_variant_id, quantity)')
-//             .eq('id', orderId)
-//             .single()
-
-//         if (orderFetchErr || !order) throw new Error("Order not found")
-
-//         // 3. SECURITY: Verify ownership
-//         // Only allow the person who placed the order or an admin to cancel it
-//         // If you have a specific way to identify admins, add that logic here
-//         if (order.user_id !== user.id) {
-//             throw new Error("Unauthorized: You do not have permission to cancel this order")
-//         }
-
-//         // 4. STATUS CHECK: Prevent cancelling shipped/delivered items
-//         const protectedStatuses = ['shipped', 'delivered']
-//         if (protectedStatuses.includes(order.status.toLowerCase())) {
-//             throw new Error(`Cannot cancel order once it has been ${order.status}.`)
-//         }
-
-//         if (order.status === 'cancelled') {
-//             throw new Error("Order is already cancelled")
-//         }
-
-//         // 5. UPDATE: Set status to cancelled
-//         const { error: updateErr } = await supabase
-//             .from('orders')
-//             .update({ status: 'cancelled' })
-//             .eq('id', orderId)
-
-//         if (updateErr) throw updateErr
-
-//         // 6. RESTORE STOCK: Loop through items and increment inventory
-//         const items = order.order_items
-//         for (const item of items) {
-//             const { error: rpcErr } = await supabase.rpc('increment_stock', {
-//                 row_id: item.product_variant_id,
-//                 amount: item.quantity
-//             })
-
-//             // Fallback if the RPC function isn't found in your Supabase DB
-//             if (rpcErr) {
-//                 const { data: v } = await supabase
-//                     .from('product_variants')
-//                     .select('stock')
-//                     .eq('id', item.product_variant_id)
-//                     .single()
-
-//                 if (v) {
-//                     await supabase
-//                         .from("product_variants")
-//                         .update({ stock: v.stock + item.quantity })
-//                         .eq("id", item.product_variant_id)
-//                 }
-//             }
-//         }
-
-//         // 7. CACHE CLEARING: Refresh all relevant routes
-//         revalidatePath("/admin/orders")
-//         revalidatePath("/admin/products")
-//         revalidatePath("/profile")
-//         revalidatePath(`/profile/orders/${orderId}`) // Refresh the specific details page
-
-//         return { success: true }
-//     } catch (error: any) {
-//         console.error("CANCEL_ORDER_ERROR:", error)
-//         return { success: false, message: error.message || "Failed to cancel order" }
-//     }
-// }
-
-
 export async function cancelOrderAndRestoreStock(orderId: string, reason?: string) {
-    const supabase = await createClient()
+    const authClient = await createClient()
+    const supabase = await createAdminClient()
 
     try {
         // 1. Get current user session
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user } } = await authClient.auth.getUser()
         if (!user) throw new Error("Authentication required")
 
         // 2. Fetch Order and Admin Status in parallel for speed
@@ -962,7 +236,7 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
                 .single(),
             supabase
                 .from('profiles')
-                .select('is_admin')
+                .select('is_admin,user_type')
                 .eq('id', user.id)
                 .single()
         ])
@@ -970,7 +244,7 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
         if (orderRes.error || !orderRes.data) throw new Error("Order not found")
 
         const order = orderRes.data
-        const isAdmin = profileRes.data?.is_admin || false
+        const isAdmin = profileRes.data?.is_admin || profileRes.data?.user_type==='admin'
 
         // 3. UPDATED SECURITY: Allow if owner OR Admin
         // This was the part blocking your admin previously
@@ -984,19 +258,26 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
             throw new Error(`Cannot cancel order once it has been ${order.status}.`)
         }
 
-        if (order.status === 'cancelled') {
-            throw new Error("Order is already cancelled")
+        if(order.status==='cancelled'){
+            const {error}=await withRestockNotifications(supabase,orderId,()=>supabase.rpc('reconcile_cancelled_order',{p_order_id:orderId}))
+            if(error)throw new Error(error.message)
+            return {success:true,message:'Order cancellation reconciled.'}
         }
 
+        const {error:cancelError}=await supabase.rpc('prepare_order_cancellation',{p_order_id:orderId})
+        if(cancelError)throw new Error(cancelError.message)
+
         // 4b. Process Razorpay refund if paid via Razorpay
-        if (order.payment_method === 'razorpay' && order.payment_status === 'paid' && order.razorpay_payment_id) {
+        if (order.payment_method === 'razorpay' && ['paid','partially_refunded'].includes(order.payment_status) && order.razorpay_payment_id) {
             try {
                 const { default: Razorpay } = await import("razorpay")
                 const razorpay = new Razorpay({
                     key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
                     key_secret: process.env.RAZORPAY_KEY_SECRET!,
                 })
-                await razorpay.payments.refund(order.razorpay_payment_id, {})
+                const payment=await razorpay.payments.fetch(order.razorpay_payment_id)
+                const remaining=Number(payment.amount)-Number(payment.amount_refunded || 0)
+                if(remaining>0)await refundPaymentOnce(order.razorpay_payment_id,remaining/100,`cancel-${orderId}-${remaining}`)
             } catch (refundErr) {
                 console.error("Razorpay refund error:", refundErr)
                 throw new Error("Failed to process Razorpay refund")
@@ -1020,55 +301,8 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
 
         if (updateErr) throw updateErr
 
-        // 6. RESTORE STOCK: Loop through items and increment inventory
-        const items = order.order_items || []
-
-        for (const item of items) {
-            if (!item.product_variant_id) continue;
-
-            await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
-        }
-
-        // 7. Void loyalty points for this order (pending + available earn transactions)
-        try {
-            const { data: earnTxs } = await supabase
-                .from("loyalty_transactions")
-                .select("id, user_id, amount, status")
-                .eq("reference_id", orderId)
-                .eq("reference_type", "order")
-                .in("type", ["earn", "bonus"])
-                .in("status", ["pending", "available"])
-
-            if (earnTxs && earnTxs.length > 0) {
-                const totalToDeduct = earnTxs.reduce((sum, tx) => sum + tx.amount, 0)
-
-                await supabase
-                    .from("loyalty_transactions")
-                    .update({ status: "cancelled", note: "Order cancelled — points voided" })
-                    .in("id", earnTxs.map(tx => tx.id))
-
-                // Decrement balance
-                const userId = earnTxs[0].user_id
-                const { data: lp } = await supabase
-                    .from("loyalty_points")
-                    .select("balance, lifetime_earned")
-                    .eq("user_id", userId)
-                    .maybeSingle()
-                if (lp) {
-                    await supabase.from("loyalty_points").update({
-                        balance: Math.max(0, lp.balance - totalToDeduct),
-                        lifetime_earned: Math.max(0, (lp.lifetime_earned || 0) - totalToDeduct),
-                        updated_at: new Date().toISOString(),
-                    }).eq("user_id", userId)
-                }
-            }
-        } catch {}
-
-        // 8. Reverse coin redemption if coins were used at checkout
-        try {
-            const { reverseCoinRedemption } = await import("./loyalty")
-            await reverseCoinRedemption(orderId)
-        } catch {}
+        const {error:reconcileError}=await withRestockNotifications(supabase,orderId,()=>supabase.rpc('reconcile_cancelled_order',{p_order_id:orderId}))
+        if(reconcileError)throw new Error(`Cancellation needs reconciliation: ${reconcileError.message}. Retry cancellation to finish it.`)
 
         // 8. CACHE CLEARING: Update the UI for both Admin and User
         revalidatePath("/admin/orders")
@@ -1085,120 +319,40 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
     }
 }
 
+export async function getPendingOrderRefund(orderId:string) {
+    const {supabase}=await requireAdmin()
+    const {data,error}=await supabase.from('promotion_refund_requests').select('request_key,items,method,reason').eq('order_id',orderId).eq('status','reserved').maybeSingle()
+    if(error)throw new Error(error.message)
+    return data
+}
+
 export async function processPartialRefund(
-    orderId: string,
-    items: { itemId: string; quantity: number }[],
-    reason: string,
-    refundMethod: "razorpay" | "gpay",
-    transactionId?: string
+    orderId:string,items:{itemId:string;quantity:number}[],reason:string,refundMethod:'razorpay'|'gpay',transactionId?:string,requestKey?:string
 ) {
-    const { supabase } = await requireAdmin()
-
+    const {supabase,user}=await requireAdmin()
     try {
-        const { data: order, error: orderErr } = await supabase
-            .from("orders")
-            .select("*, order_items(*)")
-            .eq("id", orderId)
-            .single()
-
-        if (orderErr || !order) throw new Error("Order not found")
-        if (order.payment_status !== "paid") throw new Error("Order must be paid to process refund")
-
-        let totalRefundAmount = 0
-        const refundedItems: any[] = []
-
-        for (const selected of items) {
-            const orderItem = order.order_items.find((oi: any) => oi.id === selected.itemId)
-            if (!orderItem) throw new Error(`Order item ${selected.itemId} not found`)
-
-            const alreadyRefunded = Number(orderItem.refunded_quantity || 0)
-            const available = orderItem.quantity - alreadyRefunded
-
-            if (selected.quantity <= 0) throw new Error(`Invalid quantity for item ${orderItem.product_name}`)
-            if (selected.quantity > available) throw new Error(`Only ${available} units available for refund on ${orderItem.product_name}`)
-
-            const refundAmount = Number(orderItem.unit_price) * selected.quantity
-            totalRefundAmount += refundAmount
-
-            refundedItems.push({
-                ...orderItem,
-                refundQuantity: selected.quantity,
-                refundAmount,
-            })
+        const key=requestKey || randomUUID()
+        if(!uuidPattern.test(key)||!Array.isArray(items)||!items.length||items.length>200||items.some(i=>!uuidPattern.test(i.itemId)||!Number.isSafeInteger(i.quantity)||i.quantity<1))throw new Error('Invalid refund selection')
+        const selection=[...items].sort((a,b)=>a.itemId.localeCompare(b.itemId))
+        const {data:reserved,error:reserveError}=await supabase.rpc('reserve_promotion_refund',{
+            p_order_id:orderId,p_key:key,p_items:selection,p_method:refundMethod,p_actor:user.id,p_reason:String(reason || '').slice(0,1000)})
+        if(reserveError||!reserved)throw new Error(reserveError?.message || 'Could not prepare refund')
+        if(reserved.status==='complete')return {success:true,amount:Number(reserved.amount)}
+        const amount=Number(reserved.amount)
+        let confirmation=transactionId?.trim() || null
+        if(amount>0){
+            if(refundMethod==='razorpay'){
+                if(!reserved.payment_id)throw new Error('No Razorpay payment is attached to this order')
+                confirmation=await refundPaymentOnce(reserved.payment_id,amount,reserved.id)
+            }else if(!confirmation)throw new Error('Enter the GPay transaction ID')
         }
-
-        if (totalRefundAmount <= 0) throw new Error("Refund amount must be greater than 0")
-
-        let razorpayRefundId: string | null = null
-
-        if (refundMethod === "razorpay") {
-            if (!order.razorpay_payment_id) throw new Error("No Razorpay payment ID found for this order")
-            try {
-                const { default: Razorpay } = await import("razorpay")
-                const razorpay = new Razorpay({
-                    key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-                    key_secret: process.env.RAZORPAY_KEY_SECRET!,
-                })
-                const refund = await razorpay.payments.refund(order.razorpay_payment_id, {
-                    amount: Math.round(totalRefundAmount * 100),
-                })
-                razorpayRefundId = refund.id || null
-            } catch (refundErr) {
-                console.error("Razorpay refund error:", refundErr)
-                throw new Error("Failed to process Razorpay refund")
-            }
-        }
-
-        const { data: { user } } = await supabase.auth.getUser()
-
-        const allFullyRefunded = order.order_items.every((oi: any) => {
-            const alreadyRefunded = Number(oi.refunded_quantity || 0)
-            const selectedItem = items.find((s: any) => s.itemId === oi.id)
-            const thisRefund = selectedItem ? selectedItem.quantity : 0
-            return (alreadyRefunded + thisRefund) >= oi.quantity
-        })
-
-        await supabase.from("orders").update({
-            payment_status: allFullyRefunded ? "refunded" : "partially_refunded",
-            updated_at: new Date().toISOString(),
-        }).eq("id", orderId)
-
-        for (const ri of refundedItems) {
-            const alreadyRefunded = Number(ri.refunded_quantity || 0)
-            const alreadyAmount = Number(ri.refunded_amount || 0)
-
-            await supabase.from("order_items").update({
-                refunded_quantity: alreadyRefunded + ri.refundQuantity,
-                refunded_amount: alreadyAmount + ri.refundAmount,
-            }).eq("id", ri.id)
-
-            if (ri.product_variant_id) {
-                await incrementAndCheckRestock(supabase, ri.product_variant_id, ri.refundQuantity)
-            }
-        }
-
-        await supabase.from("order_refunds").insert({
-            order_id: orderId,
-            amount: totalRefundAmount,
-            reason: reason || null,
-            refund_method: refundMethod,
-            transaction_id: refundMethod === "razorpay" ? razorpayRefundId : (transactionId || null),
-            processed_by: user?.id,
-        })
-
-        revalidatePath("/admin/orders")
-        revalidatePath(`/admin/orders/${orderId}`)
-
-        return {
-            success: true,
-            amount: totalRefundAmount,
-            refundMethod,
-            transactionId: refundMethod === "razorpay" ? razorpayRefundId : transactionId,
-            paymentStatus: allFullyRefunded ? "refunded" : "partially_refunded",
-        }
-    } catch (error: any) {
-        console.error("PARTIAL_REFUND_ERROR:", error)
-        return { success: false, message: error.message || "Failed to process refund" }
+        const {error}=await withRestockNotifications(supabase,orderId,()=>supabase.rpc('finish_promotion_refund',{p_request_id:reserved.id,p_transaction_id:confirmation}))
+        if(error)throw new Error(error.message)
+        revalidatePath('/admin/orders');revalidatePath(`/admin/orders/${orderId}`);revalidatePath(`/profile/orders/${orderId}`)
+        return {success:true,amount}
+    }catch(error){
+        console.error('ORDER_REFUND_ERROR:',error)
+        return {success:false,message:error instanceof Error ? error.message : 'Could not finish refund. Retry the same request.'}
     }
 }
 
@@ -1320,6 +474,9 @@ export async function updateOrderPOS(
     additionalChargesLabel: string = 'Extra Charges'
 ) {
     const { supabase } = await requireAdmin()
+    const {data:contract}=await supabase.from('orders').select('checkout_key').eq('id',orderId).single()
+    if(contract?.checkout_key)return {success:false,message:'Use an item refund or cancel this checkout order. Its original prices and offers are preserved.'}
+
 
     const { success, data, error: validationError } = OrderPOSSchema.safeParse({
         orderId, items, globalDiscount, additionalCharges, additionalChargesLabel
@@ -1408,6 +565,9 @@ export async function updateOrderPOS(
 
 export async function removeOrderItem(itemId: string, orderId: string) {
     const { supabase } = await requireAdmin()
+    const {data:contract}=await supabase.from('orders').select('checkout_key').eq('id',orderId).single()
+    if(contract?.checkout_key)return {success:false,message:'Use an item refund or cancel this checkout order. Its original prices and offers are preserved.'}
+
 
     try {
         const { data: item, error: fetchErr } = await supabase
@@ -1470,6 +630,9 @@ export async function removeOrderItem(itemId: string, orderId: string) {
 
 export async function updateOrderDiscount(orderId: string, discountAmount: number, discountRemark: string) {
     const { supabase } = await requireAdmin()
+    const {data:contract}=await supabase.from('orders').select('checkout_key').eq('id',orderId).single()
+    if(contract?.checkout_key)return {success:false,message:'Use an item refund or cancel this checkout order. Its original prices and offers are preserved.'}
+
 
     try {
         const { data: order } = await supabase
@@ -1652,16 +815,17 @@ export async function updateOrderDeliveryPartner(orderId: string, deliveryPartne
 }
 
 export async function deleteOrder(orderId: string) {
-    const supabase = await createClient()
+    const authClient = await createClient()
+    const supabase = await createAdminClient()
 
     try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user } } = await authClient.auth.getUser()
         if (!user) throw new Error("Authentication required")
 
         const [orderRes, profileRes] = await Promise.all([
             supabase
                 .from('orders')
-                .select('user_id, payment_method, payment_status, razorpay_payment_id, coin_discount_amount, order_items(product_variant_id, quantity)')
+                .select('user_id,status,checkout_key, payment_method, payment_status, razorpay_payment_id, coin_discount_amount, order_items(id,product_variant_id, quantity)')
                 .eq('id', orderId)
                 .single(),
             supabase
@@ -1677,6 +841,13 @@ export async function deleteOrder(orderId: string) {
         const isAdmin = profileRes.data?.is_admin || false
 
         if (!isAdmin) throw new Error("Admin access required")
+        if(order.checkout_key){
+            if(order.status!=='cancelled')throw new Error('Cancel this checkout order before deleting it so its stock and credits are returned correctly.')
+            const {error}=await withRestockNotifications(supabase,orderId,()=>supabase.rpc('reconcile_cancelled_order',{p_order_id:orderId}))
+            if(error)throw new Error(error.message)
+        }
+
+
 
         // 1. Process Razorpay refund if paid via Razorpay
         if (order.payment_method === 'razorpay' && order.payment_status === 'paid' && order.razorpay_payment_id) {
@@ -1739,16 +910,9 @@ export async function deleteOrder(orderId: string) {
             throw new Error("Failed to reverse coin redemption — order was not deleted")
         }
 
-        // 4. Restore stock
-        const items = order.order_items || []
-        for (const item of items) {
-            if (!item.product_variant_id) continue
-            try {
-                await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
-            } catch (err) {
-                console.error("Stock restore error during delete:", err)
-                throw new Error("Failed to restore stock — order was not deleted")
-            }
+        for(const item of (order.order_items || [])){
+            const {error}=await supabase.rpc('restore_order_item_inventory',{p_item_id:item.id,p_target_quantity:item.quantity})
+            if(error)throw new Error(`Failed to restore inventory: ${error.message}`)
         }
 
         // 5. Delete order items then the order itself
@@ -1775,4 +939,25 @@ export async function deleteOrder(orderId: string) {
         console.error("DELETE_ORDER_ERROR:", error)
         return { success: false, error: error.message }
     }
+}
+
+export async function updateOrderPaymentStatus(orderId: string, status: string) {
+    const { supabase } = await requireAdmin()
+    if (!['unpaid', 'paid', 'failed', 'refunded', 'partially_refunded', 'pending'].includes(status)) return { success: false, message: 'Invalid payment status' }
+    const { error } = await supabase.from('orders').update({ payment_status: status }).eq('id', orderId)
+    if (error) return { success: false, message: error.message }
+    revalidatePath('/admin/orders')
+    return { success: true }
+}
+
+export async function updateOrderTypeSecure(orderId: string, type: string, resetStatus = false) {
+    const { supabase } = await requireAdmin()
+    if (!['delivery', 'pickup'].includes(type)) return { success: false, message: 'Invalid order type' }
+    const { data: order, error: lookupError } = await supabase.from('orders').select('status').eq('id', orderId).single()
+    if (lookupError || !order) return { success: false, message: 'Order not found' }
+    const reset = resetStatus || !Object.keys(VALID_TRANSITIONS[type]).includes(order.status)
+    const { error } = await supabase.from('orders').update({ order_type: type, ...(reset ? { status: 'pending' } : {}) }).eq('id', orderId)
+    if (error) return { success: false, message: error.message }
+    revalidatePath('/admin/orders')
+    return { success: true, reset }
 }

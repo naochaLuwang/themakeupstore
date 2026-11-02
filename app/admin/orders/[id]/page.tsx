@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet, Coins, Tag } from "lucide-react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
-import { removeOrderItem, updateOrderDiscount, processPartialRefund, updateOrderDeliveryPartner } from "@/app/actions/orders"
+import { refundableLineAmount } from "@/lib/order-amounts"
+import { getPendingOrderRefund, removeOrderItem, updateOrderDiscount, processPartialRefund, updateOrderDeliveryPartner, updateOrderTypeSecure } from "@/app/actions/orders"
 import { getTypeStatuses, STATUS_LABELS } from "@/lib/order-status"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -35,6 +36,20 @@ export default function OrderInvoicePage() {
     const [refundMethod, setRefundMethod] = useState<"razorpay" | "gpay">("razorpay")
     const [refundTransactionId, setRefundTransactionId] = useState("")
     const [processingRefund, setProcessingRefund] = useState(false)
+    const refundAttempt=useRef<{fingerprint:string;key:string}|null>(null)
+    useEffect(()=>{
+        if(!showRefundModal || !id)return
+        let alive=true
+        void getPendingOrderRefund(id as string).then(pending=>{
+            if(!alive||!pending)return
+            const selection=pending.items.selection as {itemId:string;quantity:number}[]
+            setRefundSelections(Object.fromEntries(selection.map(i=>[i.itemId,i.quantity])))
+            setRefundMethod(pending.method);setRefundReason(pending.reason || '')
+            refundAttempt.current={fingerprint:JSON.stringify({selection,method:pending.method}),key:pending.request_key}
+            toast.info('An earlier refund is waiting for confirmation. Retry it to finish without sending another refund.')
+        }).catch(()=>{})
+        return ()=>{alive=false}
+    },[showRefundModal,id])
 
     // Helper to fetch actual catalog price if needed
     const [catalogPrices, setCatalogPrices] = useState<Record<string, number>>({})
@@ -119,8 +134,8 @@ export default function OrderInvoicePage() {
 
     async function toggleOrderType() {
         const newType = order.order_type === "delivery" ? "pickup" : "delivery"
-        const { error } = await supabase.from('orders').update({ order_type: newType, status: "pending" }).eq('id', id)
-        if (error) return toast.error("Failed to update order type")
+        const result = await updateOrderTypeSecure(id as string, newType, true)
+        if (!result.success) return toast.error("Failed to update order type")
         toast.success(`Order type changed to ${newType}, status reset to pending`)
         setOrder((o: any) => ({ ...o, order_type: newType, status: "pending" }))
     }
@@ -226,7 +241,7 @@ export default function OrderInvoicePage() {
                                 <RotateCcw className="w-4 h-4" /> Refund
                             </Button>
                         )}
-                        {order.status === 'pending' && !isEditing && (
+                        {order.status === 'pending' && !order.checkout_key && !isEditing && (
                             <Button onClick={() => setIsEditing(true)} className="rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider hover:bg-slate-50 hover:text-slate-900 transition-all px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1 sm:gap-2 bg-white shadow-sm flex-1 sm:flex-none">
                                 <Pencil className="w-4 h-4" /> Edit
                             </Button>
@@ -521,6 +536,8 @@ export default function OrderInvoicePage() {
                             )}
                         </div>
                     )}
+                    {Number(order.bxgy_discount_amount)>0 && <div className={`${isThermal?'flex justify-between':'w-full sm:w-64 flex justify-between'} text-xs font-bold text-pink-600 uppercase`}><span>Buy 2 Get 1 Free</span><span>-₹{Number(order.bxgy_discount_amount).toLocaleString()}</span></div>}
+                    {Number(order.gift_card_discount)>0 && <div className={`${isThermal?'flex justify-between':'w-full sm:w-64 flex justify-between'} text-xs font-bold text-slate-600 uppercase`}><span>Gift Card</span><span>-₹{Number(order.gift_card_discount).toLocaleString()}</span></div>}
                     {Number(order.coin_discount_amount) > 0 && (
                         <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-bold text-amber-600 uppercase`}>
                             <span className="flex items-center gap-1"><Coins className="w-3 h-3" /> M Coins</span>
@@ -629,6 +646,7 @@ export default function OrderInvoicePage() {
                             </button>
                         </div>
 
+                        <p className="text-xs text-slate-500">Refund amounts use the discounted amount paid. Free gifts have no cash refund. Check that any required gift is returned when accepting qualifying product returns.</p>
                         <div className="space-y-3">
                             {order.order_items?.map((item: any) => {
                                 const remaining = item.quantity - (item.refunded_quantity || 0)
@@ -719,7 +737,8 @@ export default function OrderInvoicePage() {
                         {(() => {
                             const total = order.order_items?.reduce((acc: number, item: any) => {
                                 const qty = refundSelections[item.id] || 0
-                                return acc + (Number(item.unit_price) * qty)
+                                if(!qty)return acc
+                                try{return acc+refundableLineAmount(item,qty)}catch{return acc}
                             }, 0) || 0
                             return total > 0 ? (
                                 <div className="flex items-center justify-between p-3 rounded-xl bg-rose-50 border border-rose-200">
@@ -737,7 +756,7 @@ export default function OrderInvoicePage() {
                                 onClick={async () => {
                                     const selectedItems = Object.entries(refundSelections)
                                         .filter(([_, qty]) => qty > 0)
-                                        .map(([itemId, quantity]) => ({ itemId, quantity }))
+                                        .map(([itemId, quantity]) => ({ itemId, quantity })).sort((a,b)=>a.itemId.localeCompare(b.itemId))
 
                                     if (selectedItems.length === 0) {
                                         toast.error("Select at least one item to refund")
@@ -748,13 +767,16 @@ export default function OrderInvoicePage() {
                                         return
                                     }
 
+                                    const fingerprint=JSON.stringify({selection:selectedItems,method:refundMethod})
+                                    if(refundAttempt.current?.fingerprint!==fingerprint)refundAttempt.current={fingerprint,key:crypto.randomUUID()}
                                     setProcessingRefund(true)
                                     const res = await processPartialRefund(
                                         id as string,
                                         selectedItems,
                                         refundReason,
                                         refundMethod,
-                                        refundMethod === "gpay" ? refundTransactionId.trim() : undefined
+                                        refundMethod === "gpay" ? refundTransactionId.trim() : undefined,
+                                        refundAttempt.current.key
                                     )
                                     setProcessingRefund(false)
 

@@ -1,257 +1,51 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createClient } from '@/utils/supabase/server'
-
-vi.mock('@/utils/supabase/server', () => ({
-  createClient: vi.fn(),
-}))
-
-vi.mock('@/lib/admin', () => ({
-  requireAdmin: vi.fn(),
-}))
-
-function createChain() {
-  const chain: any = {
-    select: vi.fn(() => chain),
-    eq: vi.fn(() => chain),
-    single: vi.fn(() => chain),
-    order: vi.fn(() => chain),
-    limit: vi.fn(() => chain),
-    in: vi.fn(() => chain),
-    lte: vi.fn(() => chain),
-    or: vi.fn(() => chain),
-    insert: vi.fn(() => chain),
-    delete: vi.fn(() => chain),
-    update: vi.fn(() => chain),
-    then: (resolve: any) => resolve({ data: null, error: null }),
-  }
-  return chain
-}
-
-describe('Promotions Server Actions', () => {
-  let mockSupabase: any
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockSupabase = {
-      from: vi.fn(() => createChain()),
-      auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
-      },
-    }
-    ;(createClient as any).mockResolvedValue(mockSupabase)
-  })
-
-  function setMockData(data: any, error: any = null) {
-    const chain = createChain()
-    chain.then = (resolve: any) => resolve({ data, error })
-    mockSupabase.from.mockReturnValueOnce(chain)
-  }
-
-  describe('evaluateFreeGifts', () => {
-    it('returns empty when no active rules', async () => {
-      setMockData(null, null)
-      const { evaluateFreeGifts } = await import('./promotions')
-      const result = await evaluateFreeGifts([])
-      expect(result).toEqual([])
-    })
-
-    it('returns empty when cart is empty', async () => {
-      const mockRule = {
-        id: 'r1',
-        name: 'Free Gift on Cart Total',
-        gift_product_id: 'gp1',
-        gift_variant_id: null,
-        gift_quantity: 1,
-        trigger_type: 'cart_total',
-        trigger_threshold: 1000,
-        min_cart_amount: null,
-        apply_to: 'all',
-        usage_limit: null,
-        used_count: 0,
-        once_per_user: false,
-        max_per_order: null,
-        starts_at: '2020-01-01',
-        expires_at: null,
-        is_active: true,
-        gift_product: { name: 'Free Lipstick', thumbnail_url: null, base_price: 500 },
-        gift_variant: null,
-        qualifying_products: [],
-        qualifying_categories: [],
-        qualifying_brands: [],
-      }
-      setMockData([mockRule])
-      const { evaluateFreeGifts } = await import('./promotions')
-      const result = await evaluateFreeGifts([])
-      expect(result).toEqual([])
-    })
-
-    it('triggers on cart_total when threshold is met', async () => {
-      const mockRule = {
-        id: 'r1', name: 'Free Gift on ₹1000', gift_product_id: 'gp1',
-        gift_variant_id: null, gift_quantity: 1, trigger_type: 'cart_total',
-        trigger_threshold: 1000, min_cart_amount: null, apply_to: 'all',
-        usage_limit: null, used_count: 0, once_per_user: false, max_per_order: null,
-        starts_at: '2020-01-01', expires_at: null, is_active: true,
-        gift_product: { name: 'Free Lipstick', thumbnail_url: null, base_price: 500 },
-        gift_variant: null,
-        qualifying_products: [], qualifying_categories: [], qualifying_brands: [],
-      }
-      setMockData([mockRule])
-      const { evaluateFreeGifts } = await import('./promotions')
-      const result = await evaluateFreeGifts([
-        { productId: 'p1', variantId: 'v1', price: 500, quantity: 2, name: 'Item' } as any,
-      ])
-      expect(result).toHaveLength(1)
-      expect(result[0].rule_id).toBe('r1')
-      expect(result[0].product_id).toBe('gp1')
-    })
-
-    it('does not trigger on cart_total when threshold is not met', async () => {
-      const mockRule = {
-        id: 'r1', name: 'Free Gift on ₹1000', gift_product_id: 'gp1',
-        gift_variant_id: null, gift_quantity: 1, trigger_type: 'cart_total',
-        trigger_threshold: 1000, min_cart_amount: null, apply_to: 'all',
-        usage_limit: null, used_count: 0, once_per_user: false, max_per_order: null,
-        starts_at: '2020-01-01', expires_at: null, is_active: true,
-        gift_product: { name: 'Free Lipstick', thumbnail_url: null, base_price: 500 },
-        gift_variant: null,
-        qualifying_products: [], qualifying_categories: [], qualifying_brands: [],
-      }
-      setMockData([mockRule])
-      const { evaluateFreeGifts } = await import('./promotions')
-      const result = await evaluateFreeGifts([
-        { productId: 'p1', variantId: 'v1', price: 500, quantity: 1, name: 'Item' } as any,
-      ])
-      expect(result).toHaveLength(0)
-    })
-
-    it('respects min_cart_amount for specific_products trigger', async () => {
-      const mockRule = {
-        id: 'r1', name: 'Free Gift on Products', gift_product_id: 'gp1',
-        gift_variant_id: null, gift_quantity: 1, trigger_type: 'specific_products',
-        trigger_threshold: 1, min_cart_amount: 1000, apply_to: 'all',
-        usage_limit: null, used_count: 0, once_per_user: false, max_per_order: null,
-        starts_at: '2020-01-01', expires_at: null, is_active: true,
-        gift_product: { name: 'Free Lipstick', thumbnail_url: null, base_price: 500 },
-        gift_variant: null,
-        qualifying_products: [{ product_id: 'p1' }],
-        qualifying_categories: [], qualifying_brands: [],
-      }
-      setMockData([mockRule])
-      const { evaluateFreeGifts } = await import('./promotions')
-      const result = await evaluateFreeGifts([
-        { productId: 'p1', variantId: 'v1', price: 500, quantity: 1, name: 'Item' } as any,
-      ])
-      expect(result).toHaveLength(0)
-    })
-
-    it('skips gift if already in cart', async () => {
-      const mockRule = {
-        id: 'r1', name: 'Free Gift', gift_product_id: 'gp1',
-        gift_variant_id: null, gift_quantity: 1, trigger_type: 'cart_total',
-        trigger_threshold: 100, min_cart_amount: null, apply_to: 'all',
-        usage_limit: null, used_count: 0, once_per_user: false, max_per_order: null,
-        starts_at: '2020-01-01', expires_at: null, is_active: true,
-        gift_product: { name: 'Free Lipstick', thumbnail_url: null, base_price: 500 },
-        gift_variant: null,
-        qualifying_products: [], qualifying_categories: [], qualifying_brands: [],
-      }
-      setMockData([mockRule])
-      const { evaluateFreeGifts } = await import('./promotions')
-      const result = await evaluateFreeGifts([
-        { productId: 'p1', variantId: 'v1', price: 500, quantity: 2, name: 'Item' } as any,
-        { productId: 'gp1', variantId: 'gp1', price: 0, quantity: 1, name: 'Free Lipstick', is_gift: true } as any,
-      ])
-      expect(result).toHaveLength(0)
-    })
-  })
-
-  describe('evaluateBXGY', () => {
-    it('returns empty when no active rules', async () => {
-      setMockData(null, null)
-      const { evaluateBXGY } = await import('./promotions')
-      const result = await evaluateBXGY([])
-      expect(result.discounts).toEqual([])
-      expect(result.freeItems).toEqual([])
-    })
-
-    it('returns cheapest_free discount for 3 qualifying items (Buy 2 Get 1)', async () => {
-      const mockRule = {
-        id: 'r1', name: 'Buy 2 Get 1 Free', buy_type: 'specific_products',
-        buy_quantity: 2, get_type: 'cheapest_free', get_product_id: null,
-        get_variant_id: null, get_discount_type: 'free', get_discount_value: 100,
-        apply_to: 'all', usage_limit: null, used_count: 0, once_per_user: false,
-        max_per_order: null, starts_at: '2020-01-01', expires_at: null, is_active: true,
-        buy_products: [{ product_id: 'p1' }], buy_categories: [], buy_brands: [],
-        get_product: null, get_variant: null,
-      }
-      setMockData([mockRule])
-      const { evaluateBXGY } = await import('./promotions')
-      const result = await evaluateBXGY([
-        { productId: 'p1', variantId: 'v1', price: 500, quantity: 2, name: 'Item A' } as any,
-        { productId: 'p1', variantId: 'v2', price: 700, quantity: 1, name: 'Item B' } as any,
-      ])
-      expect(result.discounts).toHaveLength(1)
-      // Cheapest is Item A (₹500), only 1 unit free (qty 2, free 1)
-      expect(result.discounts[0].variant_id).toBe('v1')
-      expect(result.discounts[0].discount_amount).toBe(500)
-      expect(result.discounts[0].free_quantity).toBe(1)
-    })
-
-    it('cheapest_free: 3 items → 1 free unit for Buy 2 Get 1', async () => {
-      const mockRule = {
-        id: 'r1', name: 'Buy 2 Get 1 Free', buy_type: 'specific_products',
-        buy_quantity: 2, get_type: 'cheapest_free', get_product_id: null,
-        get_variant_id: null, get_discount_type: 'free', get_discount_value: 100,
-        apply_to: 'all', usage_limit: null, used_count: 0, once_per_user: false,
-        max_per_order: null, starts_at: '2020-01-01', expires_at: null, is_active: true,
-        buy_products: [{ product_id: 'p1' }], buy_categories: [], buy_brands: [],
-        get_product: null, get_variant: null,
-      }
-      setMockData([mockRule])
-      const { evaluateBXGY } = await import('./promotions')
-      const result = await evaluateBXGY([
-        { productId: 'p1', variantId: 'v1', price: 700, quantity: 1, name: 'Item A' } as any,
-        { productId: 'p1', variantId: 'v2', price: 2100, quantity: 1, name: 'Item B' } as any,
-        { productId: 'p1', variantId: 'v3', price: 500, quantity: 1, name: 'Item C' } as any,
-      ])
-      expect(result.discounts).toHaveLength(1)
-      expect(result.discounts[0].variant_id).toBe('v3')
-    })
-  })
-
-  describe('createBXGY', () => {
-    it('creates a rule and inserts junction tables', async () => {
-      const { createBXGY } = await import('./promotions')
-
-      const mockRule = createChain()
-      mockRule.then = (resolve: any) => resolve({ data: { id: 'new-rule-1' }, error: null })
-      mockSupabase.from.mockReturnValueOnce(mockRule)
-
-      const buyProductsChain = createChain()
-      buyProductsChain.then = (resolve: any) => resolve({ data: null, error: null })
-      mockSupabase.from.mockReturnValueOnce(buyProductsChain)
-
-      const buyCatsChain = createChain()
-      buyCatsChain.then = (resolve: any) => resolve({ data: null, error: null })
-      mockSupabase.from.mockReturnValueOnce(buyCatsChain)
-
-      const buyBrandsChain = createChain()
-      buyBrandsChain.then = (resolve: any) => resolve({ data: null, error: null })
-      mockSupabase.from.mockReturnValueOnce(buyBrandsChain)
-
-      const getProductsChain = createChain()
-      getProductsChain.then = (resolve: any) => resolve({ data: null, error: null })
-      mockSupabase.from.mockReturnValueOnce(getProductsChain)
-
-      const result = await createBXGY({
-        name: 'Test Rule', buy_type: 'specific_products', buy_quantity: 2,
-        get_type: 'cheapest_free', get_discount_type: 'free', get_discount_value: 100,
-        apply_to: 'all', starts_at: '2020-01-01',
-        buy_product_ids: ['p1', 'p2'], buy_category_ids: ['c1'], buy_brands: ['BrandX'],
-        get_product_ids: ['gp1'],
-      })
-      expect(result.id).toBe('new-rule-1')
-    })
-  })
+// @vitest-environment node
+import { beforeEach, expect, it, vi } from 'vitest'
+import { createBXGY,updateBXGY,createFreeGift } from './promotions'
+import { revalidateTag } from 'next/cache'
+const mocks=vi.hoisted(()=>({admin:vi.fn(),rpc:vi.fn()}))
+vi.mock('@/lib/admin',()=>({requireAdmin:mocks.admin}))
+const id='00000000-0000-4000-8000-000000000001'
+const base={name:'Offer',starts_at:'2026-10-01T00:00:00Z',is_active:false}
+beforeEach(()=>{vi.clearAllMocks();mocks.admin.mockResolvedValue({supabase:{rpc:mocks.rpc}});mocks.rpc.mockResolvedValue({data:{id},error:null})})
+it('saves a repeating cheapest-free campaign with inactive state intact',async()=>{
+ await createBXGY({...base,buy_type:'specific_products',buy_product_ids:[id]})
+ expect(mocks.rpc).toHaveBeenCalledWith('save_promotion_rule',expect.objectContaining({p_kind:'bxgy',p_id:null,p_rule:expect.objectContaining({buy_quantity:2,get_type:'cheapest_free',get_discount_type:'free',max_per_order:null,is_active:false}),p_products:[id]}))
+ expect(revalidateTag).toHaveBeenCalledWith('store-promotion-definitions',{expire:0})
+})
+it('replaces rule and target links through one atomic operation',async()=>{
+ await updateBXGY(id,{...base,buy_type:'specific_categories',buy_category_ids:[id]})
+ expect(mocks.rpc).toHaveBeenCalledTimes(1)
+ expect(mocks.rpc).toHaveBeenCalledWith('save_promotion_rule',expect.objectContaining({p_id:id,p_products:[],p_categories:[id]}))
+})
+it.each(['replace_discounts','combine_discounts'])('saves the chosen %s mode and cross-brand pool atomically',async pricing_mode=>{
+ await createBXGY({...base,buy_type:'specific_brands',buy_brands:['Milani','RELOVE'],pricing_mode})
+ expect(mocks.rpc).toHaveBeenCalledWith('save_promotion_rule',expect.objectContaining({p_rule:expect.objectContaining({pricing_mode}),p_brands:['Milani','RELOVE']}))
+})
+it('saves one dedicated fixed gift with one source',async()=>{
+ await createFreeGift({...base,gift_product_ref_id:id,gift_quantity:1,trigger_type:'cart_total',trigger_threshold:2000})
+ expect(mocks.rpc).toHaveBeenCalledWith('save_promotion_rule',expect.objectContaining({p_kind:'gift',p_rule:expect.objectContaining({gift_product_id:null,gift_product_ref_id:id,gift_quantity:1,max_per_order:1})}))
+})
+it.each([
+ {...base,buy_type:'specific_products'},
+ {...base,buy_type:'specific_products',buy_product_ids:[id],buy_quantity:3},
+ {...base,buy_type:'specific_products',buy_product_ids:[id],get_discount_type:'percentage',get_discount_value:50},
+ {...base,buy_type:'specific_products',buy_product_ids:[id],expires_at:'2020-01-01T00:00:00Z'},
+ {...base,buy_type:'specific_products',buy_product_ids:[id],usage_limit:-1},
+ {...base,buy_type:'specific_products',buy_product_ids:[id],pricing_mode:'unknown'},
+])('rejects invalid or unsupported BXGY settings before saving',async input=>{
+ await expect(createBXGY(input)).rejects.toThrow();expect(mocks.rpc).not.toHaveBeenCalled()
+})
+it('rejects selecting both gift sources',async()=>{
+ await expect(createFreeGift({...base,gift_product_id:id,gift_product_ref_id:id,trigger_type:'cart_total',trigger_threshold:100})).rejects.toThrow('one gift product source')
+ expect(mocks.rpc).not.toHaveBeenCalled()
+})
+it('propagates an atomic save failure instead of reporting success',async()=>{
+ mocks.rpc.mockResolvedValue({data:null,error:{message:'Target product not found'}})
+ await expect(createBXGY({...base,buy_type:'specific_products',buy_product_ids:[id]})).rejects.toThrow('Target product not found')
+ expect(revalidateTag).not.toHaveBeenCalled()
+})
+it('checks administrator authorization before preparing a campaign',async()=>{
+ mocks.admin.mockRejectedValue(new Error('Admin required'))
+ await expect(createBXGY({...base,buy_type:'specific_products',buy_product_ids:[id]})).rejects.toThrow('Admin required')
+ expect(mocks.rpc).not.toHaveBeenCalled()
 })

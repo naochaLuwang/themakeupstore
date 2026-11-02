@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
-import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 
 export async function POST(req: NextRequest) {
     try {
@@ -22,12 +22,12 @@ export async function POST(req: NextRequest) {
             .update(body)
             .digest("hex")
 
-        if (signature !== expected) {
+        if (!/^[a-f0-9]{64}$/i.test(signature) || !crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
         }
 
         const event = JSON.parse(body)
-        const supabase = await createClient()
+        const supabase = await createAdminClient()
 
         switch (event.event) {
             case "payment.captured": {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
                     .eq("razorpay_payment_id", paymentId)
 
                 if (error) {
-                    console.error("Webhook: failed to update order:", error.message)
+                    throw new Error(`Webhook update failed: ${error.message}`)
                 }
                 break
             }
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
                     .eq("razorpay_payment_id", paymentId)
 
                 if (error) {
-                    console.error("Webhook: failed to mark payment failed:", error.message)
+                    throw new Error(`Webhook update failed: ${error.message}`)
                 }
                 break
             }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ status: "ok" })
-    } catch (err: any) {
+    } catch (err) {
         console.error("Razorpay webhook error:", err)
         return NextResponse.json({ error: "Internal error" }, { status: 500 })
     }

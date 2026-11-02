@@ -1,4 +1,5 @@
-import { createClient } from "@/utils/supabase/server"
+import { requireAdmin } from "@/lib/admin"
+import { flashEditorData } from "@/lib/flash-sale-data"
 import { notFound } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
@@ -6,11 +7,11 @@ import { FlashSaleForm } from "../../flash-sale-form"
 
 export default async function EditFlashSalePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const {supabase} = await requireAdmin()
 
-  const [saleResult, categoriesResult] = await Promise.all([
+  const [saleResult, data] = await Promise.all([
     supabase.from('flash_sales').select('*').eq('id', id).single(),
-    supabase.from('categories').select('id, name').order('name', { ascending: true }),
+    flashEditorData(supabase),
   ])
 
   if (!saleResult.data) notFound()
@@ -26,7 +27,7 @@ export default async function EditFlashSalePage({ params }: { params: Promise<{ 
           <p className="text-sm text-slate-500">Update discount schedule</p>
         </div>
       </div>
-      <FlashSaleForm initialData={saleResult.data} isEdit categories={categoriesResult.data || []} />
+      <FlashSaleForm initialData={saleResult.data} data={data} />
     </div>
   )
 }

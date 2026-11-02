@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2, Search, Check } from "lucide-react"
+import { fromStoreDateTime,toStoreDateTime } from "@/lib/store-time"
 import { createFreeGift, updateFreeGift } from "@/app/actions/promotions"
 
 interface FreeGiftFormProps {
@@ -22,10 +23,10 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [triggerType, setTriggerType] = useState(initialData?.trigger_type || 'cart_total')
-    const [applyTo, setApplyTo] = useState(initialData?.apply_to || 'all')
+    const [storeGiftId,setStoreGiftId]=useState(initialData?.gift_product_id || '')
+    const [dedicatedGiftId,setDedicatedGiftId]=useState(initialData?.gift_product_ref_id || '')
     const [selectedProductIds, setSelectedProductIds] = useState<string[]>(initialSelectedIds?.product_ids || [])
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(initialSelectedIds?.category_ids || [])
-    const [selectedBrands, setSelectedBrands] = useState<string[]>(initialSelectedIds?.brands || [])
     const [productSearch, setProductSearch] = useState('')
     const [categorySearch, setCategorySearch] = useState('')
 
@@ -52,13 +53,13 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
                 gift_product_id: formData.get('gift_product_id') as string,
                 gift_variant_id: formData.get('gift_variant_id') as string || undefined,
                 gift_product_ref_id: formData.get('gift_product_ref_id') as string || undefined,
-                gift_quantity: Number(formData.get('gift_quantity')) || 1,
+                gift_quantity: 1,
                 trigger_type: triggerType,
                 trigger_threshold: triggerType === 'cart_total'
                     ? (Number(formData.get('trigger_threshold')) || 0)
                     : (Number(formData.get('trigger_threshold')) || 1),
                 min_cart_amount: formData.get('min_cart_amount') ? Number(formData.get('min_cart_amount')) : null,
-                apply_to: applyTo,
+                apply_to: 'all',
                 qualifying_product_ids: triggerType === 'specific_products' ? selectedProductIds : undefined,
                 qualifying_category_ids: triggerType === 'specific_categories' ? selectedCategoryIds : undefined,
                 qualifying_brands: triggerType === 'specific_brands'
@@ -66,10 +67,10 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
                     : undefined,
                 usage_limit: Number(formData.get('usage_limit')) || undefined,
                 once_per_user: formData.get('once_per_user') === 'on',
-                max_per_order: Number(formData.get('max_per_order')) || 1,
-                starts_at: formData.get('starts_at') as string || new Date().toISOString(),
-                expires_at: formData.get('expires_at') as string || undefined,
-                is_active: formData.get('is_active') !== 'off',
+                max_per_order: 1,
+                starts_at: fromStoreDateTime(String(formData.get('starts_at') || '')) || new Date().toISOString(),
+                expires_at: fromStoreDateTime(String(formData.get('expires_at') || '')),
+                is_active: formData.get('is_active') === 'on',
             }
 
             if (!data.name || (!data.gift_product_id && !data.gift_product_ref_id)) {
@@ -114,10 +115,11 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
                 />
             </div>
 
+            <p className="rounded-xl border border-pink-100 bg-pink-50 p-4 text-sm text-slate-700">One fixed gift per order. Uses current selling prices before BXGY discounts, excluding delivery charges. The gift can be awarded alongside BXGY; coupons cannot be combined. If several gifts qualify, the highest-value available gift is selected.</p>
             {/* Gift Product */}
             <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Product <span className="text-slate-300 font-normal normal-case">(store product)</span></label>
-                <select name="gift_product_id" defaultValue={initialData?.gift_product_id}
+                <select name="gift_product_id" value={storeGiftId} onChange={e=>{setStoreGiftId(e.target.value);if(e.target.value)setDedicatedGiftId('')}}
                     className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none">
                     <option value="">None — use gift product below</option>
                     {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -127,7 +129,7 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
             {/* Gift Product (New Table) */}
             <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Product <span className="text-slate-300 font-normal normal-case">(dedicated gift inventory)</span></label>
-                <select name="gift_product_ref_id" defaultValue={initialData?.gift_product_ref_id}
+                <select name="gift_product_ref_id" value={dedicatedGiftId} onChange={e=>{setDedicatedGiftId(e.target.value);if(e.target.value)setStoreGiftId('')}}
                     className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none">
                     <option value="">None — use store product above</option>
                     {giftProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -138,7 +140,7 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
             {/* Gift Quantity */}
             <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Quantity</label>
-                <input name="gift_quantity" type="number" min={1} defaultValue={initialData?.gift_quantity || 1}
+                <input name="gift_quantity" type="number" readOnly value={1}
                     className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
                 />
             </div>
@@ -234,7 +236,7 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Max / Order</label>
-                    <input name="max_per_order" type="number" min={1} defaultValue={initialData?.max_per_order || 1}
+                    <input name="max_per_order" type="number" readOnly value={1}
                         className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none" />
                 </div>
                 <div className="space-y-2">
@@ -250,13 +252,13 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Date</label>
-                    <input name="starts_at" type="datetime-local" defaultValue={initialData?.starts_at?.slice(0, 16)}
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Date (IST)</label>
+                    <input name="starts_at" type="datetime-local" defaultValue={toStoreDateTime(initialData?.starts_at)}
                         className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none" />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Expiry Date</label>
-                    <input name="expires_at" type="datetime-local" defaultValue={initialData?.expires_at?.slice(0, 16)}
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Expiry Date (IST)</label>
+                    <input name="expires_at" type="datetime-local" defaultValue={toStoreDateTime(initialData?.expires_at)}
                         className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none" />
                 </div>
             </div>

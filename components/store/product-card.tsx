@@ -12,9 +12,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 import { useProductPromo } from "@/components/store/promotion-badge-context"
-import { applyFlashSaleToPrice, type FlashSaleOverride } from "@/lib/flash-sale-helper"
+import { productFlashPricing, variantFlashPricing, flashSaleMatchesTarget, flashSaleStatus, type FlashSaleRow } from "@/lib/flash-sale-helper"
 import type { ActiveFlashSale } from "@/lib/active-flash-sales"
-import { flashSaleMatchesTarget } from "@/lib/flash-sale-match"
 import { useFlashSales } from "@/components/store/flash-sales-provider"
 
 function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
@@ -88,44 +87,7 @@ function RatingStars({ rating, size = 10 }: { rating: number; size?: number }) {
     )
 }
 
-function getCheapestVariantPrice(product: any, flashSale?: FlashSaleOverride | null) {
-    const variants = product.product_variants || []
-    if (variants.length > 0) {
-        let minSale = Infinity
-        let minMrp = Infinity
-        let bestDiscPct = 0
-        let bestDiscAmount = 0
-        let hasDisc = false
-        for (const v of variants) {
-            const base = Number(v.price) || 0
-            const mrpVal = Number(v.mrp || base)
-            const dType = v.discount_type || product.discount_type || "none"
-            const dVal = Number(v.discount_value || product.discount_value || 0)
-            const { salePrice: sale } = applyFlashSaleToPrice(base, flashSale || null, dType, dVal)
-            const discAmt = Math.max(0, mrpVal - sale)
-            const pct = mrpVal > 0 ? Math.round((discAmt / mrpVal) * 100) : 0
-            if (sale < minSale) {
-                minSale = sale
-                minMrp = mrpVal
-            }
-            if (discAmt > 0) hasDisc = true
-            if (discAmt > bestDiscAmount) {
-                bestDiscAmount = discAmt
-                bestDiscPct = pct
-            }
-        }
-        if (flashSale && !hasDisc) hasDisc = true
-        return { salePrice: minSale, mrp: minMrp, discountPercentage: bestDiscPct, discountAmount: bestDiscAmount, hasDiscount: hasDisc }
-    }
-    const base = product.base_price || 0
-    const mrpVal = product.mrp || base
-    const dType = product.discount_type || "none"
-    const dVal = Number(product.discount_value || 0)
-    const { salePrice: sale, isFlashSale } = applyFlashSaleToPrice(base, flashSale || null, dType, dVal)
-    const discountAmount = Math.max(0, mrpVal - sale)
-    const discountPercentage = mrpVal > 0 ? Math.round((discountAmount / mrpVal) * 100) : 0
-    return { salePrice: sale, mrp: mrpVal, discountPercentage, discountAmount, hasDiscount: discountAmount > 0 || isFlashSale }
-}
+
 
 export function ProductCard({ product, priority, activeFlashSale, upcomingFlashSale }: { product: any; priority?: boolean; activeFlashSale?: ActiveFlashSale | null; upcomingFlashSale?: ActiveFlashSale | null }) {
     const [isWishlisted, setIsWishlisted] = useState(false)
@@ -140,31 +102,13 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
         : (product.category_id ? [product.category_id] : [])
     const { activePromo } = useProductPromo(product.id, product.category_id, product.brand, productCategoryIds)
 
-    // Self-discover flash sales from context when not passed explicitly as props
-    const { sales: contextSales, categoryMap: contextCategoryMap } = useFlashSales()
-    const { resolvedActive: flashSaleLive, resolvedUpcoming: flashSaleUpcoming } = useMemo(() => {
-        if (activeFlashSale !== undefined || upcomingFlashSale !== undefined) {
-            return { resolvedActive: activeFlashSale ?? null, resolvedUpcoming: upcomingFlashSale ?? null }
-        }
-        if (!contextSales?.length) return { resolvedActive: null, resolvedUpcoming: null }
-        const nowMs = Date.now()
-        // Fall back to the provider's product->category map for pages whose queries don't embed categories
-        const catIds = productCategoryIds.length > 0 ? productCategoryIds : (contextCategoryMap.get(product.id) || [])
-        let bestLive: ActiveFlashSale | null = null
-        let bestUpcoming: ActiveFlashSale | null = null
-        let bestLiveVal = 0
-        let bestUpcomingVal = 0
-        for (const fs of contextSales) {
-            if (!flashSaleMatchesTarget(fs, product.id, catIds, product.brand || null)) continue
-            const val = fs.discount_type === 'percentage' ? fs.discount_value : fs.discount_value * 100
-            if (new Date(fs.starts_at).getTime() <= nowMs) {
-                if (val > bestLiveVal) { bestLive = fs; bestLiveVal = val }
-            } else {
-                if (val > bestUpcomingVal) { bestUpcoming = fs; bestUpcomingVal = val }
-            }
-        }
-        return { resolvedActive: bestLive, resolvedUpcoming: bestLive ? null : bestUpcoming }
-    }, [activeFlashSale, upcomingFlashSale, contextSales, contextCategoryMap, product.id])
+    const { sales: contextSales, now, loaded } = useFlashSales()
+    const sales = useMemo(() => loaded ? contextSales : [activeFlashSale, upcomingFlashSale].filter((s): s is ActiveFlashSale => !!s), [loaded, contextSales, activeFlashSale, upcomingFlashSale])
+    const pricing = productFlashPricing(product, sales, now)
+    const flashSaleLive = pricing.flashSale
+    const flashSaleUpcoming = sales.filter(s => flashSaleStatus(s, now) === 'scheduled' &&
+        (product.product_variants || []).some((v: {id:string}) => flashSaleMatchesTarget(s, product.id, productCategoryIds, product.brand || null,v.id)))
+        .sort((a,b) => Date.parse(a.starts_at)-Date.parse(b.starts_at))[0]
 
     const supabase = createClient()
     const router = useRouter()
@@ -192,7 +136,6 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
 
     const variants = product.product_variants || []
     const hasVariants = product.has_variants && variants.length > 0
-    const pricing = getCheapestVariantPrice(product, flashSaleLive)
     const { salePrice, mrp, discountPercentage, discountAmount, hasDiscount } = pricing
 
     const productIsOutOfStock = variants.length > 0
@@ -223,18 +166,21 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
             setShowVariantSelector(true)
         } else {
             const result = addItem({
-                id: variants[0]?.id || product.id,
+                id: pricing.variant.id || product.id,
                 productId: product.id,
-                variantId: variants[0]?.id || product.id,
+                variantId: pricing.variant.id || product.id,
                 name: product.name,
-                price: salePrice,
+                price: pricing.salePrice,
+                regularPrice: pricing.regularPrice,
                 mrp: mrp,
                 originalPrice: mrp,
                 image: product.thumbnail_url,
                 quantity: 1,
-                variantTitle: variants.length === 1 ? variants[0].title : "Standard",
+                variantTitle: pricing.variant.title || "Standard",
                 categoryId: product.category_id,
-                stock: Number(variants[0]?.stock || product.stock || 0),
+                categoryIds: productCategoryIds,
+                brand: product.brand || '',
+                stock: Number(pricing.variant.stock || 0),
             })
             if (result?.capped) {
                 toast.info(`Only ${result.maxQty} in stock — quantity capped`)
@@ -511,9 +457,8 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                                         const isVOut = vStock <= 0
                                         const vBase = Number(v.price)
                                         const vMrp = Number(v.mrp || vBase)
-                                        const vSale = v.discount_type === "percentage"
-                                            ? vBase - vBase * (v.discount_value / 100)
-                                            : v.discount_type === "amount" ? vBase - v.discount_value : vBase
+                                        const variantPricing = variantFlashPricing(v, product, sales, now)
+                                        const vSale = variantPricing.salePrice
 
                                         return (
                                             <button
@@ -526,12 +471,15 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                                                         variantId: v.id,
                                                         name: product.name,
                                                         price: vSale,
+                                                        regularPrice: variantPricing.regularPrice,
                                                         mrp: vMrp,
                                                         originalPrice: vMrp,
                                                         image: v.image_url || product.thumbnail_url,
                                                         quantity: 1,
                                                         variantTitle: v.title,
                                                         categoryId: product.category_id,
+                categoryIds: productCategoryIds,
+                brand: product.brand || '',
                                                         stock: vStock,
                                                     })
                                                     setShowVariantSelector(false)

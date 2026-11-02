@@ -1,6 +1,6 @@
 "use client"
 
-import { cancelOrderAndRestoreStock, updateOrderStatus, deleteOrder } from "@/app/actions/orders"
+import { cancelOrderAndRestoreStock, updateOrderStatus, deleteOrder, updateOrderPaymentStatus, updateOrderTypeSecure } from "@/app/actions/orders"
 import { getDeliveryPartners } from "@/app/actions/delivery-partners"
 import { STATUS_LABELS, getValidNextStatuses, getTypeStatuses } from "@/lib/order-status"
 import { useState, useEffect, useMemo } from "react"
@@ -317,8 +317,8 @@ export default function AdminOrdersPage() {
         const update: Record<string, any> = { order_type: newType }
         const allowed = getTypeStatuses(newType)
         if (!allowed.includes(currentStatus)) update.status = "pending"
-        const { error } = await supabase.from('orders').update(update).eq('id', orderId)
-        if (error) return toast.error("Failed to update order type")
+        const result = await updateOrderTypeSecure(orderId, newType, !!update.status)
+        if (!result.success) return toast.error("Failed to update order type")
         toast.success(`Order type changed to ${newType}${update.status ? ", status reset" : ""}`)
         fetchOrders()
     }
@@ -340,8 +340,8 @@ export default function AdminOrdersPage() {
         }
 
         if (field === 'payment_status') {
-            const { error } = await supabase.from('orders').update({ payment_status: val }).eq('id', orderId)
-            if (error) toast.error("Payment status update failed")
+            const result = await updateOrderPaymentStatus(orderId, val)
+            if (!result.success) toast.error("Payment status update failed")
             else toast.success("Payment status updated")
             fetchOrders()
             return

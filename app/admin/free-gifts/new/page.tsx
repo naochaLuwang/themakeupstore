@@ -1,10 +1,10 @@
-import { createClient } from "@/utils/supabase/server"
+import { requireAdmin } from "@/lib/admin"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { FreeGiftForm } from "../free-gift-form"
 
 export default async function AdminFreeGiftNewPage() {
-    const supabase = await createClient()
+    const {supabase} = await requireAdmin()
     const [productsRes, giftProductsRes, categoriesRes] = await Promise.all([
         supabase.from('products').select('id, name').order('name'),
         (async () => { try { return await supabase.from('gift_products').select('id, name').eq('is_active', true).order('name') } catch { return { data: [] } } })(),

@@ -23,7 +23,7 @@ function calcPoints(total: number): number {
 }
 
 async function ensureLoyaltyPoints(userId: string, tier: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { data: existing } = await supabase
     .from("loyalty_points")
     .select("id")
@@ -63,7 +63,7 @@ export async function getLoyaltyData() {
   const tier = computeTier(totalSpend)
 
   if (pointsRes.data && pointsRes.data.tier !== tier) {
-    await supabase.from("loyalty_points").update({ tier, updated_at: new Date().toISOString() }).eq("user_id", user.id)
+    await (await createAdminClient()).from("loyalty_points").update({ tier, updated_at: new Date().toISOString() }).eq("user_id", user.id)
     pointsRes.data.tier = tier
   }
 
@@ -82,139 +82,37 @@ export async function getLoyaltyData() {
   }
 }
 
-// ─── Earn points from an order ───
-export async function earnOrderPoints(userId: string, orderId: string, total: number) {
-  const supabase = await createClient()
-
-  // Idempotency: skip if earn transaction already exists for this order (prevents concurrent double-earn)
-  const { data: existingTx } = await supabase
-    .from("loyalty_transactions")
-    .select("id")
-    .eq("reference_id", orderId)
-    .eq("reference_type", "order")
-    .eq("type", "earn")
-    .maybeSingle()
-  if (existingTx) return
-
-  const { data: points } = await supabase
-    .from("loyalty_points")
-    .select("tier")
-    .eq("user_id", userId)
-    .maybeSingle()
-
-  const tier = points?.tier || "bronze"
-  const amount = calcPoints(total)
-
-  if (!points) {
-    await ensureLoyaltyPoints(userId, tier)
-  }
-
-  await supabase.from("loyalty_transactions").insert({
-    user_id: userId,
-    type: "earn",
-    amount,
-    reference_type: "order",
-    reference_id: orderId,
-    status: "pending",
-    note: `${amount} M Coins earned from order #${orderId.toString().slice(-6).toUpperCase()}`,
-  })
-}
-
 // ─── Release pending points after delivery ───
 export async function releasePendingPoints(orderId: string) {
-  const supabase = await createAdminClient()
-
-  const { data: tx } = await supabase
-    .from("loyalty_transactions")
-    .select("id, user_id, amount")
-    .eq("reference_id", orderId)
-    .eq("status", "pending")
-    .maybeSingle()
-
-  if (!tx) return
-
-  await supabase.from("loyalty_transactions").update({
-    status: "available",
-    order_delivered_at: new Date().toISOString(),
-  }).eq("id", tx.id)
-
-  const { data: lp } = await supabase
-    .from("loyalty_points")
-    .select("lifetime_earned")
-    .eq("user_id", tx.user_id)
-    .maybeSingle()
-
-  await supabase.from("loyalty_points").update({
-    lifetime_earned: (lp?.lifetime_earned || 0) + tx.amount,
-    updated_at: new Date().toISOString(),
-  }).eq("user_id", tx.user_id)
+  const { supabase } = await requireAdmin()
+  const { error } = await supabase.rpc('release_fulfilled_order_points', { p_order_id: orderId })
+  if (error) throw new Error(error.message)
 }
 
 // ─── Get available coin balance for checkout ───
-export async function getAvailableBalance(userId: string) {
-  const supabase = await createAdminClient()
-
-  const { data: points } = await supabase
-    .from("loyalty_points")
-    .select("balance")
-    .eq("user_id", userId)
-    .maybeSingle()
-
+export async function getAvailableBalance(userId?: string) {
+  const auth = await createClient()
+  const { data: { user } } = await auth.auth.getUser()
+  if (!user) throw new Error('Authentication required')
+  if (userId && userId !== user.id) throw new Error('You can only access your own M Coin balance')
+  const db = await createAdminClient()
+  const { data: points, error } = await db.from('loyalty_points').select('balance').eq('user_id', user.id).maybeSingle()
+  if (error) throw new Error(error.message)
   return points?.balance || 0
-}
-
-// ─── Redeem coins at checkout ───
-export async function redeemCoinsAtCheckout(userId: string, orderId: string, amount: number) {
-  const supabase = await createClient()
-
-  if (amount <= 0) return { success: false, message: "Invalid amount" }
-
-  // Atomic balance check + insert in one locked transaction — prevents race condition double-spend
-  const { data: success, error } = await supabase.rpc("atomic_redeem_coins", {
-    p_user_id: userId,
-    p_amount: amount,
-    p_order_id: orderId,
-  })
-  if (error) {
-    console.error("[redeemCoinsAtCheckout] RPC failed:", error.message)
-    return { success: false, message: `Redemption error: ${error.message}` }
-  }
-  if (!success) return { success: false, message: "Insufficient coins" }
-
-  revalidatePath("/rewards")
-  revalidatePath("/checkout")
-  return { success: true }
 }
 
 // ─── Reverse coin redemption on order cancellation ───
 export async function reverseCoinRedemption(orderId: string) {
-  const supabase = await createClient()
-
-  const { data: tx } = await supabase
-    .from("loyalty_transactions")
-    .select("id, user_id, amount")
-    .eq("reference_id", orderId)
-    .eq("type", "spend")
-    .eq("reference_type", "order")
-    .maybeSingle()
-
-  if (!tx) return
-
-  const { data: points } = await supabase
-    .from("loyalty_points")
-    .select("balance")
-    .eq("user_id", tx.user_id)
-    .maybeSingle()
-
-  await supabase.from("loyalty_points").update({
-    balance: (points?.balance || 0) + tx.amount,
-    updated_at: new Date().toISOString(),
-  }).eq("user_id", tx.user_id)
-
-  await supabase.from("loyalty_transactions").update({
-    status: "cancelled",
-    note: "Order cancelled — coins refunded",
-  }).eq("id", tx.id)
+  const auth = await createClient()
+  const { data: { user } } = await auth.auth.getUser()
+  if (!user) throw new Error('Authentication required')
+  const supabase = await createAdminClient()
+  const { data: order } = await supabase.from('orders').select('user_id,status').eq('id', orderId).single()
+  if (!order) throw new Error('Order not found')
+  const allowActive = order.status !== 'cancelled'
+  if (allowActive || order.user_id !== user.id) await requireAdmin()
+  const { error } = await supabase.rpc('reverse_order_coin_redemption', { p_order_id: orderId, p_allow_active: allowActive })
+  if (error) throw new Error(error.message)
 }
 
 // ─── Get user's complete transaction history ───

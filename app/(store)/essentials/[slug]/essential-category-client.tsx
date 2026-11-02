@@ -1,4 +1,6 @@
 "use client"
+import { productFlashPricing } from "@/lib/flash-sale-helper"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
 
 import * as React from "react"
 import Link from "next/link"
@@ -29,25 +31,7 @@ const sortOptions: { key: SortOption; label: string }[] = [
     { key: "name", label: "Name: A-Z" },
 ]
 
-function computeEffectivePrice(product: any): number {
-    if (product.has_variants && product.product_variants?.length > 0) {
-        const prices = product.product_variants.map((v: any) => {
-            const base = v.price || 0
-            const dType = v.discount_type || product.discount_type || "none"
-            const dVal = v.discount_value || product.discount_value || 0
-            if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-            if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-            return base
-        })
-        return Math.min(...prices)
-    }
-    const base = product.base_price || 0
-    const dType = product.discount_type || "none"
-    const dVal = product.discount_value || 0
-    if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-    if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-    return base
-}
+
 
 interface Props {
     category: any
@@ -57,6 +41,7 @@ interface Props {
 }
 
 export default function EssentialCategoryClient({ category, siblings, products: initialProducts, parentSlug }: Props) {
+    const {sales:flashSales,now:flashNow}=useFlashSales()
     const [products, setProducts] = React.useState<any[]>(initialProducts)
     const [loading, setLoading] = React.useState(false)
     const [availableBrands, setAvailableBrands] = React.useState<string[]>([])
@@ -92,7 +77,7 @@ export default function EssentialCategoryClient({ category, siblings, products: 
     React.useEffect(() => {
         let processed = [...initialProducts].map((p) => ({
             ...p,
-            _effectivePrice: computeEffectivePrice(p),
+            _effectivePrice: productFlashPricing(p,flashSales,flashNow).salePrice,
         }))
 
         if (selectedBrands.length > 0) {
@@ -137,7 +122,7 @@ export default function EssentialCategoryClient({ category, siblings, products: 
         }
 
         setProducts(processed)
-    }, [sort, selectedBrands, selectedPriceRange, initialProducts])
+    }, [sort, selectedBrands, selectedPriceRange, initialProducts, flashSales, flashNow])
 
     const activeFilterCount = selectedBrands.length + (selectedPriceRange !== null ? 1 : 0)
 

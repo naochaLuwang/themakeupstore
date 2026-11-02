@@ -1,10 +1,10 @@
-import { createClient } from "@/utils/supabase/server"
+import { requireAdmin } from "@/lib/admin"
 import { Plus, Edit3, Zap } from "lucide-react"
 import { BXGYStatusToggle, DeleteBXGYButton } from "@/components/admin/PromoControls"
 import Link from "next/link"
 
 export default async function AdminBXGYPage() {
-    const supabase = await createClient()
+    const {supabase} = await requireAdmin()
     const { data: rules } = await supabase
         .from('buy_x_get_y')
         .select('*')
@@ -54,6 +54,7 @@ export default async function AdminBXGYPage() {
                                         <span className="text-xs font-semibold bg-pink-50 text-pink-600 px-2 py-1 rounded-md">
                                             {rule.get_type === 'cheapest_free' ? 'Cheapest Free' : rule.get_discount_type === 'free' ? 'Free Product' : `${rule.get_discount_value}${rule.get_discount_type === 'percentage' ? '% off' : '₹ off'}`}
                                         </span>
+                                        <p className="mt-2 text-xs text-slate-500">{rule.pricing_mode === 'replace_discounts' ? 'Replaces existing discounts' : 'Combines with existing discounts'}</p>
                                     </td>
                                     <td className="py-4 px-6 space-y-1 text-sm">
                                         <div className="text-slate-600">{rule.used_count} / {rule.usage_limit || '∞'} used</div>

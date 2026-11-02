@@ -1,5 +1,8 @@
 "use server"
 
+import { merchandiseQuote } from "@/lib/cart-quote"
+import { couponOfferMessage } from "@/lib/promotion-engine"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
@@ -87,6 +90,12 @@ export async function validatePromoCode(code: string, cartItems: any[]) {
             .single()
 
         if (error || !promo) return { success: false, message: "Invalid promo code" }
+
+        if (cartItems.length) {
+            const {data:{user:offerUser}}=await supabase.auth.getUser()
+            const offer=await merchandiseQuote(await createAdminClient(),offerUser?.id || null,cartItems)
+            if(offer.hasAutomaticOffer)return {success:false,message:couponOfferMessage}
+        }
 
         // 2. Check Expiry and Starts At
         const now = new Date()

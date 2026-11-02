@@ -1,14 +1,17 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { purchaseGiftCard } from "@/app/actions/gift-cards"
+import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
+import { createClient } from "@/utils/supabase/client"
+import type { AuthChangeEvent, Session, UserResponse } from "@supabase/supabase-js"
+import { purchaseGiftCard, completeGiftCardPurchase } from "@/app/actions/gift-cards"
+import { loadRazorpayCheckout, type PaymentConfirmation } from "@/lib/razorpay-checkout"
 import { Gift, Copy, Check, Loader2, ChevronLeft, Sparkles } from "lucide-react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
 
 const PRESETS = [500, 1000, 2000, 5000]
+type PendingGiftPayment = { userId: string; purchaseId: string; paymentId: string; signature: string }
 
 const currency = (n: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n)
@@ -89,7 +92,6 @@ function GiftCardPreview({ amount, recipientName, message, code }: {
 }
 
 export default function GiftCardsPage() {
-  const router = useRouter()
   const [amount, setAmount] = useState<number>(500)
   const [customAmount, setCustomAmount] = useState("")
   const [recipientName, setRecipientName] = useState("")
@@ -97,6 +99,37 @@ export default function GiftCardsPage() {
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ code: string } | null>(null)
+  const [pendingConfirmation, setPendingConfirmation] = useState<PendingGiftPayment | null>(null)
+  useEffect(() => {
+    const supabase = createClient()
+    const restore = (userId?: string) => {
+      setPendingConfirmation(null)
+      if (!userId) return
+      try {
+        const saved = sessionStorage.getItem(`gift-card-payment-confirmation:${userId}`)
+        if (saved) {
+          const confirmation = JSON.parse(saved)
+          if (confirmation.userId === userId) setPendingConfirmation(confirmation)
+        }
+      } catch { /* Storage may be unavailable in a WebView. */ }
+    }
+    void supabase.auth.getUser().then(({ data: { user } }: UserResponse) => restore(user?.id))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => restore(session?.user.id))
+    return () => subscription.unsubscribe()
+  }, [])
+  const confirmPayment = async (confirmation: PendingGiftPayment) => {
+    setLoading(true)
+    try {
+      const res = await completeGiftCardPurchase(confirmation)
+      if (!res.success) throw new Error(res.message)
+      try { sessionStorage.removeItem(`gift-card-payment-confirmation:${confirmation.userId}`) } catch { /* The card is already issued. */ }
+      setPendingConfirmation(null)
+      setResult({ code: res.giftCard.code })
+      toast.success('Payment verified. Your gift card is ready.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not confirm payment. Retry confirmation without paying again.')
+    } finally { setLoading(false) }
+  }
   const [copied, setCopied] = useState(false)
 
   const handlePreset = (val: number) => {
@@ -112,20 +145,33 @@ export default function GiftCardsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (amount < 100) return toast.error("Minimum gift card amount is ₹100")
-    if (amount > 25000) return toast.error("Maximum gift card amount is ₹25,000")
+    if (pendingConfirmation) { await confirmPayment(pendingConfirmation); return }
+    if (amount < 100 || amount > 25000) return toast.error('Choose an amount between ₹100 and ₹25,000')
     setLoading(true)
-    const fd = new FormData()
-    fd.set("amount", String(amount))
-    fd.set("recipient_name", recipientName)
-    fd.set("recipient_email", recipientEmail)
-    fd.set("message", message)
-    const res = await purchaseGiftCard(fd)
-    setLoading(false)
-    if (res.success) {
-      setResult({ code: res.giftCard.code })
-    } else {
-      toast.error(res.message || "Something went wrong")
+    try {
+      const Checkout = await loadRazorpayCheckout()
+      const fd = new FormData()
+      fd.set('amount', String(amount)); fd.set('recipient_name', recipientName)
+      fd.set('recipient_email', recipientEmail); fd.set('message', message)
+      const res = await purchaseGiftCard(fd)
+      if (!res.success) throw new Error(res.message)
+      const payment = new Checkout({ key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        order_id: res.orderId, amount: res.amountPaise, currency: 'INR', name: 'THE MAKEUP STORE',
+        description: 'Gift card purchase',
+        webview_intent: !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.(),
+        handler: (response: PaymentConfirmation) => {
+          const confirmation = { userId: res.userId, purchaseId: res.purchaseId, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature }
+          setPendingConfirmation(confirmation)
+          try { sessionStorage.setItem(`gift-card-payment-confirmation:${res.userId}`, JSON.stringify(confirmation)) }
+          catch { console.warn('Could not persist confirmation; keep this page open to retry') }
+          void confirmPayment(confirmation)
+        },
+        modal: { ondismiss: () => { setLoading(false); toast.info('Payment cancelled. No gift card was issued.') } },
+      })
+      payment.open()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to start payment')
+      setLoading(false)
     }
   }
 
@@ -186,12 +232,6 @@ export default function GiftCardsPage() {
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               {copied ? "Copied!" : "Copy Gift Card Code"}
             </button>
-
-            {recipientEmail && (
-              <p className="text-xs text-slate-400 text-center">
-                A confirmation was sent to {recipientEmail}
-              </p>
-            )}
 
             <div className="flex items-center justify-center gap-4 pt-2">
               <Link href="/" className="text-sm font-bold text-slate-800 underline underline-offset-2">
@@ -303,7 +343,8 @@ export default function GiftCardsPage() {
           </div>
 
           <button
-            type="submit"
+            type={pendingConfirmation ? 'button' : 'submit'}
+            onClick={pendingConfirmation ? () => confirmPayment(pendingConfirmation) : undefined}
             disabled={loading}
             className="w-full h-12 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider disabled:opacity-40 transition-all active:scale-[0.98] shadow-lg"
             style={{
@@ -315,7 +356,7 @@ export default function GiftCardsPage() {
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              <>Purchase Gift Card — {currency(amount)}</>
+              <>{pendingConfirmation ? "Retry Payment Confirmation" : `Pay ${currency(amount)} for Gift Card`}</>
             )}
           </button>
         </form>

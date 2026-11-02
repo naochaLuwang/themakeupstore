@@ -18,6 +18,8 @@ import { Share } from "@capacitor/share"
 import { submitStockNotification } from "@/app/actions/back-in-stock"
 import { ReviewModal } from "@/components/store/review-modal"
 import { ReviewCard } from "@/components/store/review-card"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
+import { useFlashSaleClock } from "@/hooks/use-flash-sale-clock"
 import { useProductPromo } from "@/components/store/promotion-badge-context"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
@@ -45,15 +47,7 @@ function stripHtml(html: string): string {
         .trim()
 }
 
-import { applyFlashSaleToPrice, type FlashSaleOverride } from "@/lib/flash-sale-helper"
-
-function getVariantPrice(variant: any, productDiscountType: string, productDiscountValue: number, flashSale?: FlashSaleOverride | null) {
-    const base = variant.price || 0
-    const dType = variant.discount_type && variant.discount_type !== "none" ? variant.discount_type : productDiscountType
-    const dVal = variant.discount_value || productDiscountValue || 0
-    const { salePrice } = applyFlashSaleToPrice(base, flashSale || null, dType, dVal)
-    return { salePrice, mrp: variant.mrp || variant.price || base }
-}
+import { variantFlashPricing, type FlashSaleRow } from "@/lib/flash-sale-helper"
 
 function calculateDiscountPercentage(finalPrice: number, originalPrice: number): number {
     if (originalPrice <= 0) return 0
@@ -92,9 +86,13 @@ function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
     )
 }
 
-export default function ProductClient({ initialProduct, activeBXGY, activeGift, activeFlashSale, brandLink }: { initialProduct: any; activeBXGY?: any; activeGift?: any; activeFlashSale?: FlashSaleOverride | null; brandLink?: string | null }) {
+export default function ProductClient({ initialProduct, activeBXGY, activeGift, initialFlashSales = [], brandLink }: { initialProduct: any; activeBXGY?: any; activeGift?: any; initialFlashSales?: FlashSaleRow[]; brandLink?: string | null }) {
     const router = useRouter()
     const supabase = createClient()
+    const { sales: liveFlashSales, loaded: flashLoaded } = useFlashSales()
+    const flashSales = flashLoaded ? liveFlashSales : initialFlashSales
+    const flashNow = useFlashSaleClock(flashSales)
+    const getVariantPrice = (variant: any) => variantFlashPricing(variant, initialProduct, flashSales, flashNow)
     const addItem = useCart((s) => s.addItem)
     const addToRecentlyViewed = useRecentlyViewed((s) => s.addItem)
 
@@ -104,7 +102,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
         ...(initialProduct.product_categories || []).map((pc: any) => pc.category_id).filter(Boolean)
     ]
     const { activePromo } = useProductPromo(initialProduct.id, initialProduct.category_id, initialProduct.brand, productCategoryIds)
-    const resolvedBXGY = activeBXGY || (activePromo?.type === 'bogo' ? { name: activePromo.ruleName, buy_quantity: 2 } : null)
+    const resolvedBXGY = activeBXGY || (activePromo?.type === 'bogo' ? { name: activePromo.ruleName, buy_quantity: 2, pricing_mode: activePromo.pricingMode } : null)
     const resolvedGift = activeGift || (activePromo?.type === 'gift' ? {
         name: activePromo.ruleName,
         min_cart_amount: activePromo.minCartAmount,
@@ -160,6 +158,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
         addToRecentlyViewed({
             id: initialProduct.id, name: initialProduct.name, slug: initialProduct.slug,
             base_price: initialProduct.base_price, thumbnail_url: initialProduct.thumbnail_url,
+            category_id: initialProduct.category_id, product_categories: initialProduct.product_categories || [],
             brand: initialProduct.brand, discount_type: initialProduct.discount_type,
             discount_value: initialProduct.discount_value, has_variants: initialProduct.has_variants,
             status: initialProduct.status, product_variants: initialProduct.product_variants || [],
@@ -217,7 +216,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         const ids = [...new Set(catProducts.map((c: any) => c.product_id))]
                         const { data: similar } = await supabase
                             .from("products")
-                            .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
+                            .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
                             .in("id", ids)
                             .limit(10)
                         if (similar) setSimilarProducts(similar.filter((p: any) => p.thumbnail_url))
@@ -227,7 +226,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                 if (initialProduct.brand) {
                     const { data: brandData } = await supabase
                         .from("products")
-                        .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
+                        .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
                         .eq("brand", initialProduct.brand)
                         .neq("id", initialProduct.id)
                         .limit(10)
@@ -243,7 +242,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
     useEffect(() => {
         if (product?.product_variants?.length > 0) {
             const first = product.product_variants.find((v: any) => v.stock > 0) || product.product_variants[0]
-            const vp = getVariantPrice(first, product.discount_type || "none", product.discount_value || 0, activeFlashSale)
+            const vp = getVariantPrice(first)
             const variantImages = (first.variant_images || [])
                 .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
                 .map((vi: any) => vi.url)
@@ -268,6 +267,10 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
         if (scrollRef.current) scrollRef.current.scrollLeft = 0
     }, [selectedVariant])
 
+    const currentVariant = product.product_variants?.find((v: any) => v.id === selectedVariantData?.id)
+    const currentPricing = currentVariant ? getVariantPrice(currentVariant) : null
+    const activeFlashSale = currentPricing?.flashSale || null
+    const currentSalePrice = currentPricing?.salePrice
     const sellingPrice = useMemo(() => {
         if (!product) return 0
         let price = product.base_price || 0
@@ -278,14 +281,12 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
         return price
     }, [product])
 
-    const discountType = product?.discount_type || "none"
-    const discountValue = product?.discount_value || 0
     const finalPrice = selectedVariantData
-        ? selectedVariantData.calculated_price
+        ? (currentSalePrice ?? selectedVariantData.calculated_price)
         : (calculateDiscountPercentage(0, 0) > 0 ? 0 : sellingPrice)
-    const displayMrp = selectedVariantData?.price || sellingPrice
+    const displayMrp = selectedVariantData?.price ?? sellingPrice
     const discountPct = calculateDiscountPercentage(
-        selectedVariantData?.calculated_price || sellingPrice,
+        currentSalePrice ?? sellingPrice,
         displayMrp
     )
 
@@ -335,13 +336,16 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
             productId: product.id,
             variantId: selectedVariant || product.id,
             name: product.name,
-            price: selectedVariantData?.calculated_price || selectedVariantData?.price || product.base_price || 0,
-            mrp: hasVariants ? (selectedVariantData?.price || product.base_price || 0) : (product.base_price || 0),
-            originalPrice: selectedVariantData?.price || product.base_price || 0,
+            price: currentSalePrice ?? selectedVariantData?.price ?? product.base_price ?? 0,
+            regularPrice: currentPricing?.regularPrice,
+            mrp: currentPricing?.mrp ?? selectedVariantData?.price ?? product.base_price ?? 0,
+            originalPrice: currentPricing?.mrp ?? selectedVariantData?.price ?? product.base_price ?? 0,
             image: selectedVariantData?.image_url || product.thumbnail_url,
             quantity: 1,
             variantTitle: selectedVariantData?.title || "Standard",
             categoryId: product.category_id,
+            categoryIds: productCategoryIds,
+            brand: product.brand || '',
             stock: selectedVariantData?.stock || 0,
         })
         if (result?.capped) {
@@ -666,7 +670,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xl font-black text-gray-900">
-                                ₹{Math.round(selectedVariantData?.calculated_price || finalPrice || sellingPrice)}
+                                ₹{Math.round(currentSalePrice ?? finalPrice ?? sellingPrice)}
                             </span>
                             {discountPct > 0 && (
                                 <>
@@ -713,7 +717,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                     <button
                                         key={v.id}
                                         onClick={() => {
-                                            const vp = getVariantPrice(v, discountType, discountValue, activeFlashSale)
+                                            const vp = getVariantPrice(v)
                                             const variantImages = (v.variant_images || [])
                                                 .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
                                                 .map((vi: any) => vi.url)
@@ -772,7 +776,8 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-semibold text-gray-900 truncate">{resolvedBXGY.get_product?.name || resolvedBXGY.name}</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">Buy {resolvedBXGY.buy_quantity} Get Y Free</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Buy 2 Get 1 Free · Cheapest eligible unit free</p>
+                                    {resolvedBXGY.pricing_mode === 'replace_discounts' && <p className="text-xs text-slate-500 mt-1">Offer units use original prices; extra units keep their discounts.</p>}
                                 </div>
                             </div>
                         )}
@@ -1089,7 +1094,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                             {/* Pricing */}
                             <div className="flex items-center gap-3 flex-wrap">
                                 <span className="text-2xl font-black text-gray-900">
-                                    ₹{Math.round(selectedVariantData?.calculated_price || finalPrice || sellingPrice)}
+                                    ₹{Math.round(currentSalePrice ?? finalPrice ?? sellingPrice)}
                                 </span>
                                 {discountPct > 0 && (
                                     <>
@@ -1117,7 +1122,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                                 <button
                                                     key={v.id}
                                                     onClick={() => {
-                                                        const vp = getVariantPrice(v, discountType, discountValue, activeFlashSale)
+                                                        const vp = getVariantPrice(v)
                                                         const variantImages = (v.variant_images || [])
                                                             .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
                                                             .map((vi: any) => vi.url)
@@ -1176,7 +1181,8 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-semibold text-gray-900 truncate">{resolvedBXGY.get_product?.name || resolvedBXGY.name}</p>
-                                                <p className="text-xs text-slate-500 mt-0.5">Buy {resolvedBXGY.buy_quantity} Get Y Free</p>
+                                                <p className="text-xs text-slate-500 mt-0.5">Buy 2 Get 1 Free · Cheapest eligible unit free</p>
+                                    {resolvedBXGY.pricing_mode === 'replace_discounts' && <p className="text-xs text-slate-500 mt-1">Offer units use original prices; extra units keep their discounts.</p>}
                                             </div>
                                         </div>
                                     )}
@@ -1415,7 +1421,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                             {product.product_variants.map((v: any) => {
                                 const isSelected = selectedVariant === v.id
                                 const isOOS = v.stock != null && Number(v.stock) <= 0
-                                const vp = getVariantPrice(v, discountType, discountValue, activeFlashSale)
+                                const vp = getVariantPrice(v)
                                 return (
                                     <button
                                         key={v.id}

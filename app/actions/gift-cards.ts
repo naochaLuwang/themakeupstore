@@ -5,57 +5,82 @@ import { createAdminClient } from "@/utils/supabase/admin"
 import { requireAdmin } from "@/lib/admin"
 import { revalidatePath } from "next/cache"
 import { rateLimit } from "@/lib/rate-limit"
+import { randomBytes, randomUUID } from "node:crypto"
+import { paymentClient, verifyCapturedPayment } from "@/lib/verified-payment"
+import { uuidPattern } from "@/lib/checkout-pricing"
 
 const giftCardLimiter = rateLimit("gift-card", { windowMs: 60_000, max: 10 })
 
 function generateCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-  let code = "GC-"
-  for (let i = 0; i < 10; i++) {
-    if (i === 4) code += "-"
-    code += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return code
+  return `GC-${randomBytes(12).toString('hex').toUpperCase()}`
 }
 
-// ─── User-facing: Purchase a gift card (creates an order) ───
+// Creates a provider payment order and a private pending purchase. No gift card
+// or spendable balance exists until completeGiftCardPurchase verifies payment.
 export async function purchaseGiftCard(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, message: "Please sign in" }
+  const auth = await createClient()
+  const { data: { user } } = await auth.auth.getUser()
+  if (!user) return { success: false as const, message: 'Please sign in' }
+  if (!giftCardLimiter.check(`purchase:${user.id}`).success) return { success: false as const, message: 'Too many attempts. Please try again later.' }
+  const amount = Number(formData.get('amount'))
+  if (!Number.isSafeInteger(amount) || amount < 100 || amount > 25000) return { success: false as const, message: 'Gift cards must be a whole amount between ₹100 and ₹25,000' }
+  const text = (key: string, max: number) => String(formData.get(key) || '').trim().slice(0, max)
+  const recipientEmail = text('recipient_email', 254)
+  if (recipientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) return { success: false as const, message: 'Enter a valid recipient email' }
+  try {
+    const purchaseId = randomUUID()
+    const order = await paymentClient().orders.create({ amount: amount * 100, currency: 'INR', receipt: `gift_${purchaseId.slice(0, 30)}`,
+      notes: { purpose: 'gift_card', user_id: user.id, fingerprint: purchaseId } })
+    const db = await createAdminClient()
+    const { error } = await db.from('gift_card_purchases').insert({ id: purchaseId, user_id: user.id, amount, currency: 'INR',
+      provider_order_id: order.id, recipient_email: recipientEmail || null, recipient_name: text('recipient_name', 120) || null, message: text('message', 1000) || null })
+    if (error) throw error
+    return { success: true as const, userId: user.id, purchaseId, orderId: order.id, amountPaise: amount * 100 }
+  } catch (error) {
+    console.error('Gift card purchase preparation failed:', error)
+    return { success: false as const, message: 'Could not prepare the gift card payment. Please try again.' }
+  }
+}
 
-  const amount = Number(formData.get("amount"))
-  const recipientEmail = formData.get("recipient_email") as string
-  const recipientName = formData.get("recipient_name") as string
-  const message = formData.get("message") as string
-
-  if (!amount || amount < 100) return { success: false, message: "Minimum gift card amount is ₹100" }
-  if (amount > 25000) return { success: false, message: "Maximum gift card amount is ₹25,000" }
-
-  const code = generateCode()
-
-  const { data: gc, error } = await supabase.from("gift_cards").insert({
-    code,
-    original_balance: amount,
-    remaining_balance: amount,
-    purchased_by: user.id,
-    recipient_email: recipientEmail || null,
-    recipient_name: recipientName || null,
-    message: message || null,
-    expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-  }).select().single()
-
-  if (error) return { success: false, message: "Failed to create gift card" }
-
-  return { success: true, giftCard: gc }
+export async function completeGiftCardPurchase(input: { purchaseId: string; paymentId: string; signature: string }) {
+  const auth = await createClient()
+  const { data: { user } } = await auth.auth.getUser()
+  if (!user) return { success: false as const, message: 'Please sign in' }
+  if (!input || !uuidPattern.test(input.purchaseId)) return { success: false as const, message: 'Invalid purchase' }
+  if (!giftCardLimiter.check(`confirm:${user.id}`).success) return { success: false as const, message: 'Too many attempts. Please try again later.' }
+  try {
+    const db = await createAdminClient()
+    const { data: purchase, error } = await db.from('gift_card_purchases').select('*').eq('id', input.purchaseId).eq('user_id', user.id).single()
+    if (error || !purchase) throw new Error('Gift card purchase not found')
+    if (purchase.gift_card_id && purchase.provider_payment_id === input.paymentId) {
+      const { data: card, error: cardError } = await db.from('gift_cards').select('id,code').eq('id', purchase.gift_card_id).single()
+      if (cardError || !card) throw new Error('Gift card not found')
+      return { success: true as const, giftCard: card as { id: string; code: string } }
+    }
+    await verifyCapturedPayment({ orderId: purchase.provider_order_id, paymentId: input.paymentId, signature: input.signature,
+      userId: user.id, amountPaise: Number(purchase.amount) * 100, purpose: 'gift_card', fingerprint: purchase.id })
+    const { data, error: activateError } = await db.rpc('activate_paid_gift_card', {
+      p_purchase_id: purchase.id, p_user_id: user.id, p_payment_id: input.paymentId, p_code: generateCode(),
+    })
+    if (activateError || !data?.code) throw new Error(activateError?.message || 'Gift card activation failed')
+    revalidatePath('/profile')
+    return { success: true as const, giftCard: data as { id: string; code: string } }
+  } catch (error) {
+    console.error('Gift card payment confirmation failed:', error)
+    return { success: false as const, message: error instanceof Error ? error.message : 'Could not confirm payment. Please retry confirmation; do not pay again.' }
+  }
 }
 
 // ─── User-facing: Validate a gift card code ───
 export async function validateGiftCard(code: string) {
-  const { success } = giftCardLimiter.check(`validate:${code}`)
+  const auth = await createClient()
+  const { data: { user } } = await auth.auth.getUser()
+  if (!user) return { success: false, message: 'Please sign in' }
+  if (typeof code !== 'string' || code.length > 80) return { success: false, message: 'Invalid gift card code' }
+  const { success } = giftCardLimiter.check(`validate:${user.id}`)
   if (!success) return { success: false, message: "Too many attempts. Please try again later." }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   const { data: gc } = await supabase
     .from("gift_cards")
@@ -70,32 +95,6 @@ export async function validateGiftCard(code: string) {
   if (gc.remaining_balance <= 0) return { success: false, message: "Gift card has no remaining balance" }
 
   return { success: true, giftCard: gc }
-}
-
-// ─── User-facing: Redeem gift card against an order ───
-export async function redeemGiftCard(code: string, orderId: string, amount: number) {
-  const { success } = giftCardLimiter.check(`redeem:${code}`)
-  if (!success) return { success: false, message: "Too many attempts. Please try again later." }
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, message: "Please sign in" }
-
-  const validation = await validateGiftCard(code)
-  if (!validation.success || !validation.giftCard) return validation
-
-  const gc = validation.giftCard
-  const redeemAmount = Math.min(amount, gc.remaining_balance)
-
-  const { error } = await supabase.from("gift_card_redemptions").insert({
-    gift_card_id: gc.id,
-    order_id: orderId,
-    amount: redeemAmount,
-  })
-
-  if (error) return { success: false, message: "Failed to redeem gift card" }
-
-  return { success: true, amount: redeemAmount }
 }
 
 // ─── User-facing: Get my purchased gift cards ───

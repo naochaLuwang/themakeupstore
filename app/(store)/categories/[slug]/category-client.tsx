@@ -1,4 +1,6 @@
 "use client"
+import { productFlashPricing } from "@/lib/flash-sale-helper"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
 
 import { useState, useMemo, useRef, useEffect } from "react"
 import Link from "next/link"
@@ -55,27 +57,10 @@ const SORT_OPTIONS: { key: SortOption; label: string }[] = [
     { key: "name", label: "Name: A-Z" },
 ]
 
-function computeEffectivePrice(product: StoreProduct): number {
-    if (product.has_variants && product.product_variants?.length > 0) {
-        const prices = product.product_variants.map((v) => {
-            const base = v.price || 0
-            const dType = v.discount_type || product.discount_type || "none"
-            const dVal = v.discount_value || product.discount_value || 0
-            if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-            if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-            return base
-        })
-        return Math.min(...prices)
-    }
-    const base = product.base_price || 0
-    const dType = product.discount_type || "none"
-    const dVal = product.discount_value || 0
-    if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-    if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-    return base
-}
+
 
 export function CategoryClient({ category, initialProducts, subcategories = [], subThumbnails = {} }: { category: any; initialProducts: StoreProduct[]; subcategories?: SubcategoryItem[]; subThumbnails?: Record<string, string> }) {
+    const {sales:flashSales,now:flashNow}=useFlashSales()
     const [sort, setSort] = useState<SortOption>("newest")
     const [showSort, setShowSort] = useState(false)
     const [showFilter, setShowFilter] = useState(false)
@@ -106,7 +91,7 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
         const filtered = initialProducts.filter(p => {
             if (selectedBrands.length > 0 && !selectedBrands.includes(p.brand)) return false
             if (selectedPriceRange !== null) {
-                const effective = computeEffectivePrice(p)
+                const effective = productFlashPricing(p,flashSales,flashNow).salePrice
                 const range = PRICE_RANGES[selectedPriceRange]
                 if (effective < range.min || effective >= range.max) return false
             }
@@ -121,7 +106,7 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
             const oos = p.product_variants?.length > 0
                 ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
                 : false
-            return { ...p, _effectivePrice: computeEffectivePrice(p), _outOfStock: oos }
+            return { ...p, _effectivePrice: productFlashPricing(p,flashSales,flashNow).salePrice, _outOfStock: oos }
         })
 
         switch (sort) {
@@ -154,7 +139,7 @@ export function CategoryClient({ category, initialProducts, subcategories = [], 
                     return 0;
                 })
         }
-    }, [initialProducts, sort, selectedBrands, selectedPriceRange, inStockOnly])
+    }, [initialProducts, sort, selectedBrands, selectedPriceRange, inStockOnly, flashSales, flashNow])
 
     const activeFilterCount = selectedBrands.length + (selectedPriceRange !== null ? 1 : 0)
 

@@ -1,572 +1,100 @@
-"use client"
+'use client'
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { Loader2, Search, X } from 'lucide-react'
+import { createFlashSale, updateFlashSale } from '@/app/actions/flash-sales'
+import { notifyFlashSalesChanged } from '@/lib/flash-sale-client'
+import { emptyFlashTargets, type FlashSaleRow, type FlashTargets } from '@/lib/flash-sale-helper'
+import { flashSaleSchema, normalizeFlashInput, type FlashSaleInput } from '@/lib/flash-sale-admin'
+import { previewFlashCampaign } from '@/lib/flash-sale-preview'
+import type { FlashEditorData } from '@/lib/flash-sale-data'
+import { fromStoreDateTime, toStoreDateTime } from '@/lib/store-time'
 
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
-import { createFlashSale, updateFlashSale } from "@/app/actions/flash-sales"
-import { toast } from "sonner"
-import { Search, Loader2, Zap, Check, ChevronDown, Calendar, Clock, Trash2, Eye, Shield, Sparkles, X } from "lucide-react"
-import { useDebouncedCallback } from "use-debounce"
-
-interface FlashSaleFormProps {
-  initialData?: any
-  isEdit?: boolean
-  categories?: { id: string; name: string }[]
-}
-
-const SCOPES = [
-  { value: 'product', label: 'Specific Product', description: 'One product or variant', icon: Zap },
-  { value: 'category', label: 'Entire Category', description: 'All products in a category', icon: Shield },
-  { value: 'brand', label: 'Entire Brand', description: 'All products from a brand', icon: Sparkles },
-  { value: 'all', label: 'All Products', description: 'Store-wide flash sale', icon: Calendar },
-] as const
-
-const toLocalInputValue = (iso: string) => {
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-export function FlashSaleForm({ initialData, isEdit = false, categories = [] }: FlashSaleFormProps) {
-  const router = useRouter()
-  const supabase = createClient()
-
-  const [scope, setScope] = useState<string>(initialData?.scope || 'product')
-  const [productId, setProductId] = useState(initialData?.product_id || "")
-  const [productName, setProductName] = useState(initialData?.products?.name || "")
-  const [productVariantId, setProductVariantId] = useState(initialData?.variant_id || "")
-  const [productVariantName, setProductVariantName] = useState(initialData?.variant_title || "")
-  const [categoryId, setCategoryId] = useState(initialData?.category_id || "")
-  const [categoryName, setCategoryName] = useState(initialData?.categories?.name || "")
-  const [brand, setBrand] = useState(initialData?.brand || "")
-  const [discountType, setDiscountType] = useState<"percentage" | "fixed">(initialData?.discount_type || "percentage")
-  const [discountValue, setDiscountValue] = useState(initialData?.discount_value || "")
-  const [label, setLabel] = useState(initialData?.label || "")
-  const [startsAt, setStartsAt] = useState(initialData?.starts_at ? toLocalInputValue(initialData.starts_at) : "")
-  const [endsAt, setEndsAt] = useState(initialData?.ends_at ? toLocalInputValue(initialData.ends_at) : "")
-  const [isPending, setIsPending] = useState(false)
-
-  // Search states
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searching, setSearching] = useState(false)
-  const [brandSearch, setBrandSearch] = useState("")
-  const [brandResults, setBrandResults] = useState<string[]>([])
-  const [brandOpen, setBrandOpen] = useState(false)
-  const [brandSearching, setBrandSearching] = useState(false)
-  const [variantOpen, setVariantOpen] = useState(false)
-  const [variants, setVariants] = useState<any[]>([])
-
-  const searchRef = useRef<HTMLDivElement>(null)
-  const brandRef = useRef<HTMLDivElement>(null)
-
-  // Initialize search query from existing data
-  useEffect(() => {
-    if (initialData?.products?.name) {
-      setSearchQuery(initialData.products.name)
-    }
-    if (initialData?.brand) {
-      setBrandSearch(initialData.brand)
-    }
-  }, [initialData])
-
-  // Fetch variants when product is selected
-  useEffect(() => {
-    if (productId) {
-      supabase.from('product_variants').select('id, title, price, stock').eq('product_id', productId).order('price').then(({ data }: { data: any[] | null }) => {
-        setVariants(data || [])
-        if (data && data.length > 0 && !productVariantId) {
-          // Don't auto-select variant, let user choose
-        }
-      })
-    } else {
-      setVariants([])
-      setProductVariantId("")
-      setProductVariantName("")
-    }
-  }, [productId, supabase])
-
-  // Click outside to close dropdowns
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false)
-      if (brandRef.current && !brandRef.current.contains(e.target as Node)) setBrandOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const handleSearch = useDebouncedCallback(async (term: string) => {
-    if (!term.trim()) { setSearchResults([]); setSearchOpen(false); return }
-    setSearching(true)
-    const { data } = await supabase.from('products').select('id, name, thumbnail_url').ilike('name', `%${term}%`).order('name').limit(10)
-    setSearchResults(data || [])
-    setSearchOpen(true)
-    setSearching(false)
-  }, 300)
-
-  const handleBrandSearch = useDebouncedCallback(async (term: string) => {
-    if (!term.trim()) { setBrandResults([]); setBrandOpen(false); return }
-    setBrandSearching(true)
-    const { data } = await supabase.from('products').select('brand').ilike('brand', `%${term}%`).order('brand')
-    const uniqueBrands = [...new Set((data as { brand: string }[] || []).map(p => p.brand).filter(Boolean))]
-    setBrandResults(uniqueBrands)
-    setBrandOpen(true)
-    setBrandSearching(false)
-  }, 300)
-
-  const selectProduct = (p: any) => {
-    setProductId(p.id)
-    setProductName(p.name)
-    setSearchQuery(p.name)
-    setSearchOpen(false)
+interface Props { data: FlashEditorData; initialData?: FlashSaleRow & { id: string; updated_at: string } }
+const field='w-full h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none focus:border-pink-500 focus:bg-white'
+const caption='block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2'
+export function FlashSaleForm({data,initialData}:Props){
+  const router=useRouter()
+  const initial=initialData?normalizeFlashInput(initialData):null
+  const [expectedVersion]=useState(initialData?.updated_at)
+  const [name,setName]=useState(initial?.name || '')
+  const [scope,setScope]=useState<FlashSaleInput['scope']>(initial?.scope || 'product')
+  const [targets,setTargets]=useState<FlashTargets>(initial?.target_config || emptyFlashTargets())
+  const [type,setType]=useState<FlashSaleInput['discount_type']>(initial?.discount_type || 'percentage')
+  const [value,setValue]=useState(String(initial?.discount_value || ''))
+  const [label,setLabel]=useState(initial?.label || '')
+  const [start,setStart]=useState(toStoreDateTime(initial?.starts_at))
+  const [end,setEnd]=useState(toStoreDateTime(initial?.ends_at))
+  const [search,setSearch]=useState('')
+  const [excludeSearch,setExcludeSearch]=useState('')
+  const [pending,setPending]=useState(false)
+  const [error,setError]=useState('')
+  const brands=useMemo(()=>[...new Set(data.products.map(p=>p.brand).filter((b):b is string=>!!b))].sort(),[data.products])
+  const filteredProducts=data.products.filter(p=>`${p.name} ${p.brand || ''}`.toLowerCase().includes(search.toLowerCase()))
+  const toggle=(key:Exclude<keyof FlashTargets,'variant_ids'>,id:string)=>setTargets(prev=>({...prev,[key]:(prev[key] as string[]).includes(id)?(prev[key] as string[]).filter(x=>x!==id):[...(prev[key] as string[]),id]}))
+  const toggleProduct=(id:string)=>setTargets(prev=>({...prev,product_ids:prev.product_ids.includes(id)?prev.product_ids.filter(x=>x!==id):[...prev.product_ids,id],variant_ids:prev.variant_ids.filter(v=>v.product_id!==id)}))
+  const toggleVariant=(productId:string,variantId:string)=>setTargets(prev=>{
+    const wasAll=prev.product_ids.includes(productId)
+    const variants=wasAll?[...prev.variant_ids.filter(v=>v.product_id!==productId),...(data.products.find(p=>p.id===productId)?.product_variants || []).map(v=>({product_id:productId,variant_id:v.id}))]:prev.variant_ids
+    return {...prev,product_ids:prev.product_ids.filter(id=>id!==productId),variant_ids:variants.some(v=>v.variant_id===variantId)?variants.filter(v=>v.variant_id!==variantId):[...variants,{product_id:productId,variant_id:variantId}]}
+  })
+  const input=useMemo<FlashSaleInput>(()=>{
+    let starts_at='',ends_at=''
+    try{starts_at=fromStoreDateTime(start)||'';ends_at=fromStoreDateTime(end)||''}catch{}
+    return {name,label,scope,target_config:targets,discount_type:type,discount_value:Number(value),starts_at,ends_at,lifecycle:'draft'}
+  },[name,label,scope,targets,type,value,start,end])
+  const preview=useMemo(()=>previewFlashCampaign(input,data.products,data.sales,data.bxgyRules,initialData?.id),[input,data,initialData?.id])
+  const submit=async(e:React.FormEvent<HTMLFormElement>)=>{
+    e.preventDefault();setError('')
+    const intent=(e.nativeEvent as SubmitEvent).submitter?.getAttribute('value') || initial?.lifecycle || 'draft'
+    const parsed=flashSaleSchema.safeParse({...input,lifecycle:intent})
+    if(!parsed.success){setError(parsed.error.issues.map(i=>i.message).join('. '));return}
+    if(intent==='published'&&!preview.variantCount){setError('This campaign has no eligible variants. Review its targets and exclusions.');return}
+    setPending(true)
+    try{
+      const form=new FormData();form.set('payload',JSON.stringify(parsed.data));if(expectedVersion)form.set('expected_updated_at',expectedVersion)
+      const result=initialData?await updateFlashSale(initialData.id,form):await createFlashSale(form)
+      if(!result.success){setError(result.error);return}
+      notifyFlashSalesChanged()
+      toast.success(intent==='draft'?'Draft saved':'Campaign saved');router.push('/admin/flash-sales');router.refresh()
+    }catch(err){setError(err instanceof Error?err.message:'Could not save campaign')}finally{setPending(false)}
   }
-
-  const selectBrand = (b: string) => {
-    setBrand(b)
-    setBrandSearch(b)
-    setBrandOpen(false)
-  }
-
-  const selectVariant = (v: any) => {
-    setProductVariantId(v.id)
-    setProductVariantName(v.title)
-    setVariantOpen(false)
-  }
-
-  const clearProduct = () => {
-    setProductId("")
-    setProductName("")
-    setSearchQuery("")
-    setProductVariantId("")
-    setProductVariantName("")
-  }
-
-  const clearCategory = () => {
-    setCategoryId("")
-    setCategoryName("")
-  }
-
-  const clearBrand = () => {
-    setBrand("")
-    setBrandSearch("")
-  }
-
-  const validate = () => {
-    const start = new Date(startsAt)
-    const end = new Date(endsAt)
-    
-    if (!startsAt || !endsAt) return "Start and end times are required"
-    if (end <= start) return "End time must be after start time"
-    if (isNaN(Number(discountValue)) || Number(discountValue) <= 0) return "Discount value must be positive"
-    if (discountType === 'percentage' && Number(discountValue) > 100) return "Percentage discount cannot exceed 100%"
-    if (scope === 'product' && !productId) return "Please select a product"
-    if (scope === 'category' && !categoryId) return "Please select a category"
-    if (scope === 'brand' && !brand) return "Please enter a brand name"
-    return null
-  }
-
-  const getPreviewPrice = () => {
-    if (!discountValue) return null
-    const base = 1999 // Example base price
-    if (discountType === 'percentage') {
-      return Math.round(base * (1 - Number(discountValue) / 100))
-    }
-    return Math.max(0, base - Number(discountValue))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const error = validate()
-    if (error) {
-      toast.error(error)
-      return
-    }
-
-    // Confirm before creating/updating
-    if (!confirm(isEdit ? "Update this flash sale?" : "Create this flash sale?")) return
-
-    setIsPending(true)
-    try {
-      const payload = {
-        scope,
-        product_id: scope === 'product' ? productId : undefined,
-        variant_id: scope === 'product' ? productVariantId || undefined : undefined,
-        category_id: scope === 'category' ? categoryId : undefined,
-        brand: scope === 'brand' ? brand : undefined,
-        discount_type: discountType,
-        discount_value: Number(discountValue),
-        label: label.trim() || undefined,
-        starts_at: new Date(startsAt).toISOString(),
-        ends_at: new Date(endsAt).toISOString(),
-      }
-
-      const formData = new FormData()
-      formData.append("payload", JSON.stringify(payload))
-
-      const result = isEdit && initialData?.id
-        ? await updateFlashSale(initialData.id, formData)
-        : await createFlashSale(formData)
-
-      if (!result.success) {
-        toast.error(result.error || "Failed to save")
-        return
-      }
-
-      toast.success(isEdit ? "Flash sale updated" : "Flash sale created")
-      router.push("/admin/flash-sales")
-      router.refresh()
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong")
-    } finally {
-      setIsPending(false)
-    }
-  }
-
-  const getScopeConfig = () => SCOPES.find(s => s.value === scope)
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Scope Selector */}
-      <div>
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Scope</label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-          {SCOPES.map((s) => {
-            const Icon = s.icon
-            return (
-              <button
-                type="button"
-                key={s.value}
-                onClick={() => setScope(s.value)}
-                className={`relative h-24 md:h-28 rounded-xl border-2 transition-all p-4 flex flex-col items-center justify-center text-center ${
-                  scope === s.value
-                    ? 'border-rose-500 bg-rose-50 shadow-lg shadow-rose-100'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${
-                  scope === s.value ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'
-                }`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className={`font-bold text-[10px] uppercase tracking-wider ${scope === s.value ? 'text-rose-600' : 'text-slate-700'}`}>
-                  {s.label}
-                </span>
-                <span className={`text-[9px] mt-1 ${scope === s.value ? 'text-rose-500' : 'text-slate-400'}`}>
-                  {s.description}
-                </span>
-                {scope === s.value && (
-                  <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-[9px] flex items-center justify-center">
-                    <Check className="w-3 h-3" />
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
+  return <form onSubmit={submit} className="space-y-6">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)] items-start">
+      <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm space-y-6 min-w-0">
+        <label className="block"><span className={caption}>Campaign name</span><input aria-label="Campaign name" required maxLength={120} value={name} onChange={e=>setName(e.target.value)} className={field} placeholder="Milani weekend sale"/></label>
+        <fieldset><legend className={caption}>Eligible products</legend><div className="flex flex-wrap gap-2">{(['product','category','brand','all'] as const).map(option=><button type="button" key={option} aria-pressed={scope===option} onClick={()=>{setScope(option);setSearch('')}} className={`h-10 px-4 rounded-xl border text-sm font-semibold ${scope===option?'border-pink-300 bg-pink-50 text-pink-700':'border-slate-200 text-slate-600'}`}>{option==='all'?'Whole store':option==='product'?'Products / variants':option==='category'?'Categories':'Brands'}</button>)}</div></fieldset>
+        {scope!=='all'&&<div className="space-y-3"><div className="relative"><Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400"/><input aria-label="Search targets" className={`${field} pl-9`} value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${scope==='product'?'products':scope==='brand'?'brands':'categories'}...`}/></div>
+          <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
+            {scope==='product'&&filteredProducts.map(p=><details key={p.id} className="p-3" open={!!search || targets.product_ids.includes(p.id) || targets.variant_ids.some(v=>v.product_id===p.id)}><summary className="cursor-pointer text-sm text-slate-800"><label onClick={e=>e.stopPropagation()} className="inline-flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={targets.product_ids.includes(p.id)} onChange={()=>toggleProduct(p.id)} className="accent-pink-600"/>{p.name}<span className="text-xs text-slate-400">All variants</span></label></summary><div className="pt-2 pl-5 space-y-2">{(p.product_variants || []).map(v=><label key={v.id} className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer"><input type="checkbox" checked={targets.product_ids.includes(p.id)||targets.variant_ids.some(x=>x.variant_id===v.id)} onChange={()=>toggleVariant(p.id,v.id)} className="accent-pink-600"/><span className="flex-1">{v.title || 'Default'}</span><span>₹{Number(v.price).toLocaleString('en-IN')} · {v.stock} in stock</span></label>)}</div></details>)}
+            {scope==='brand'&&brands.filter(b=>b.toLowerCase().includes(search.toLowerCase())).map(b=><label key={b} className="p-3 flex gap-3 text-sm cursor-pointer"><input type="checkbox" checked={targets.brands.includes(b)} onChange={()=>toggle('brands',b)} className="accent-pink-600"/>{b}</label>)}
+            {scope==='category'&&data.categories.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())).map(c=><label key={c.id} className="p-3 flex gap-3 text-sm cursor-pointer"><input type="checkbox" checked={targets.category_ids.includes(c.id)} onChange={()=>toggle('category_ids',c.id)} className="accent-pink-600"/>{c.name}</label>)}
+          </div><p className="text-xs text-slate-500">{scope==='product'?`${targets.product_ids.length} whole products + ${targets.variant_ids.length} individual variants`:scope==='brand'?`${targets.brands.length} brands`:`${targets.category_ids.length} categories`} selected.</p>
+          <div className="flex flex-wrap gap-2">{(scope==='product'?targets.product_ids:scope==='brand'?targets.brands:targets.category_ids).map(id=><button type="button" key={id} onClick={()=>scope==='product'?toggleProduct(id):toggle(scope==='brand'?'brands':'category_ids',id)} className="rounded-lg border px-2 py-1 text-xs text-slate-600 inline-flex gap-2 items-center">{scope==='product'?data.products.find(p=>p.id===id)?.name || 'Unavailable product':scope==='brand'?id:data.categories.find(c=>c.id===id)?.name || 'Unavailable category'}<X className="h-3 w-3"/></button>)}</div>
+          {scope==='product'&&<div className="flex flex-wrap gap-2">{targets.variant_ids.map(v=><button type="button" key={v.variant_id} onClick={()=>setTargets(prev=>({...prev,variant_ids:prev.variant_ids.filter(x=>x.variant_id!==v.variant_id)}))} className="rounded-lg border px-2 py-1 text-xs text-slate-600 inline-flex gap-2 items-center">{data.products.find(p=>p.id===v.product_id)?.name || 'Unavailable product'} · {data.products.find(p=>p.id===v.product_id)?.product_variants.find(x=>x.id===v.variant_id)?.title || 'Unavailable variant'}<X className="h-3 w-3"/></button>)}</div>}
+        </div>}
+        <details className="rounded-xl border border-slate-200 p-4"><summary className="text-sm font-semibold text-slate-800 cursor-pointer">Exclusions ({targets.exclude_product_ids.length+targets.exclude_variant_ids.length+targets.exclude_category_ids.length+targets.exclude_brands.length})</summary><p className="mt-2 text-xs text-slate-500">Exclusions always take precedence over selected targets.</p><input aria-label="Search exclusions" className={`${field} mt-3`} value={excludeSearch} onChange={e=>setExcludeSearch(e.target.value)} placeholder="Search products, brands or categories..."/><div className="mt-3 max-h-64 overflow-auto space-y-3">
+          <p className="text-xs font-bold text-slate-500">Products and variants</p>{data.products.filter(p=>p.name.toLowerCase().includes(excludeSearch.toLowerCase())).map(p=><details key={p.id}><summary className="text-xs cursor-pointer"><label onClick={e=>e.stopPropagation()} className="inline-flex gap-2 items-center"><input type="checkbox" checked={targets.exclude_product_ids.includes(p.id)} onChange={()=>toggle('exclude_product_ids',p.id)} className="accent-pink-600"/>{p.name}</label></summary><div className="pl-5 pt-2 space-y-2">{p.product_variants.map(v=><label key={v.id} className="flex gap-2 text-xs text-slate-500"><input type="checkbox" checked={targets.exclude_variant_ids.includes(v.id)} onChange={()=>toggle('exclude_variant_ids',v.id)} className="accent-pink-600"/>{v.title || 'Default'}</label>)}</div></details>)}
+          <p className="text-xs font-bold text-slate-500">Brands</p>{brands.filter(b=>b.toLowerCase().includes(excludeSearch.toLowerCase())).map(b=><label key={b} className="flex gap-2 text-xs"><input type="checkbox" checked={targets.exclude_brands.includes(b)} onChange={()=>toggle('exclude_brands',b)} className="accent-pink-600"/>{b}</label>)}
+          <p className="text-xs font-bold text-slate-500">Categories</p>{data.categories.filter(c=>c.name.toLowerCase().includes(excludeSearch.toLowerCase())).map(c=><label key={c.id} className="flex gap-2 text-xs"><input type="checkbox" checked={targets.exclude_category_ids.includes(c.id)} onChange={()=>toggle('exclude_category_ids',c.id)} className="accent-pink-600"/>{c.name}</label>)}
+        </div><div className="mt-3 flex flex-wrap gap-2">{(['exclude_product_ids','exclude_variant_ids','exclude_category_ids','exclude_brands'] as const).flatMap(key=>targets[key].map(id=><button type="button" key={`${key}:${id}`} onClick={()=>toggle(key,id)} className="rounded-lg border px-2 py-1 text-xs text-slate-600 inline-flex items-center gap-2">{key==='exclude_product_ids'?data.products.find(p=>p.id===id)?.name || 'Unavailable product':key==='exclude_variant_ids'?data.products.flatMap(p=>p.product_variants).find(v=>v.id===id)?.title || 'Unavailable variant':key==='exclude_category_ids'?data.categories.find(c=>c.id===id)?.name || 'Unavailable category':id}<X className="h-3 w-3"/></button>))}</div></details>
+        <div className="grid grid-cols-2 gap-4"><label><span className={caption}>Discount type</span><select aria-label="Discount type" className={field} value={type} onChange={e=>setType(e.target.value as 'percentage'|'fixed')}><option value="percentage">Percentage off</option><option value="fixed">Rupees off</option></select></label><label><span className={caption}>Discount value</span><input aria-label="Discount value" className={field} type="number" required min="0.01" max={type==='percentage'?100:100000000} step="0.01" value={value} onChange={e=>setValue(e.target.value)}/></label></div>
+        <p className="text-xs text-slate-500">Calculated from original variant prices. Customers keep their normal price when it is lower.</p>
+        <label className="block"><span className={caption}>Storefront label (optional)</span><input aria-label="Storefront label" className={field} value={label} maxLength={120} onChange={e=>setLabel(e.target.value)} placeholder="Weekend sale"/></label>
+        <div className="grid gap-4 md:grid-cols-2"><label><span className={caption}>Starts at — IST</span><input aria-label="Starts at — IST" className={field} type="datetime-local" required value={start} onChange={e=>setStart(e.target.value)}/></label><label><span className={caption}>Ends at — IST</span><input aria-label="Ends at — IST" className={field} type="datetime-local" required value={end} onChange={e=>setEnd(e.target.value)}/></label></div>
       </div>
-
-      {/* Target Selection */}
-      <div className="space-y-4">
-        {/* Product Search */}
-        {scope === 'product' && (
-          <div ref={searchRef}>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5" />
-              Product
-            </label>
-            <div className="relative mt-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search product by name..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); handleSearch(e.target.value) }}
-                onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
-                className="w-full h-11 pl-9 pr-4 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
-              />
-              {productName && !searchOpen && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-900">{productName}</span>
-                  <button type="button" onClick={clearProduct} className="text-slate-400 hover:text-slate-600 p-1">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-              {searchOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
-                  {searching ? (
-                    <div className="p-4 text-center text-slate-400"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>
-                  ) : searchResults.length === 0 ? (
-                    <div className="p-4 text-center text-slate-400 text-sm">No products found</div>
-                  ) : (
-                    searchResults.map((p: any) => (
-                      <button key={p.id} type="button" onClick={() => selectProduct(p)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left">
-                        {p.thumbnail_url ? <img src={p.thumbnail_url} className="w-8 h-8 rounded-lg object-cover border border-slate-100" /> : <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center"><Zap className="w-3 h-3 text-slate-400" /></div>}
-                        <span className="text-sm font-semibold text-slate-900">{p.name}</span>
-                        {p.id === productId && <Check className="w-4 h-4 text-emerald-500 ml-auto" />}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Variant Selector */}
-            {productId && variants.length > 0 && (
-              <div className="mt-3">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Variant (optional)
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setVariantOpen(true)}
-                  className="w-full h-11 px-4 mt-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm text-slate-900 outline-none focus:ring-2 focus:ring-rose-500/20 flex items-center justify-between"
-                >
-                  <span>{productVariantName || "Select variant (blank = all variants)"}</span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                </button>
-                {variantOpen && (
-                  <div className="absolute z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl w-full max-h-48 overflow-y-auto">
-                    <button type="button" onClick={() => { setProductVariantId(""); setProductVariantName(""); setVariantOpen(false) }} className="w-full px-4 py-3 text-left hover:bg-slate-50">
-                      <span className="text-sm font-semibold text-slate-900">All variants</span>
-                      {!productVariantId && <Check className="w-4 h-4 text-emerald-500 ml-auto float-right" />}
-                    </button>
-                    {variants.map((v: any) => (
-                      <button key={v.id} type="button" onClick={() => selectVariant(v)} className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center justify-between border-t border-slate-100">
-                        <span className="text-sm text-slate-700">{v.title}</span>
-                        <span className="text-sm font-semibold text-slate-900">₹{v.price}</span>
-                        {v.id === productVariantId && <Check className="w-4 h-4 text-emerald-500 ml-2" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Category Search */}
-        {scope === 'category' && (
-          <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5" />
-              Category
-            </label>
-            <select
-              value={categoryId}
-              onChange={(e) => {
-                const cat = categories.find(c => c.id === e.target.value)
-                setCategoryId(e.target.value)
-                setCategoryName(cat?.name || "")
-              }}
-              className="w-full h-11 mt-2 px-4 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
-              required
-            >
-              <option value="">Select a category</option>
-              {categories?.map((c: any) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            {categoryName && (
-              <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-emerald-50/40 rounded-xl">
-                <Shield className="w-4 h-4 text-emerald-500" />
-                <span className="text-sm font-semibold text-slate-900">{categoryName}</span>
-                <button type="button" onClick={clearCategory} className="ml-auto text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Brand Search */}
-        {scope === 'brand' && (
-          <div ref={brandRef}>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5" />
-              Brand
-            </label>
-            <div className="relative mt-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search brand..."
-                value={brandSearch}
-                onChange={(e) => { setBrandSearch(e.target.value); handleBrandSearch(e.target.value) }}
-                onFocus={() => brandResults.length > 0 && setBrandOpen(true)}
-                className="w-full h-11 pl-9 pr-4 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
-              />
-              {brand && !brandOpen && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-900">{brand}</span>
-                  <button type="button" onClick={clearBrand} className="text-slate-400 hover:text-slate-600 p-1"><X className="w-4 h-4" /></button>
-                </div>
-              )}
-              {brandOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto">
-                  {brandSearching ? (
-                    <div className="p-4 text-center text-slate-400"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>
-                  ) : brandResults.length === 0 ? (
-                    <div className="p-4 text-center text-slate-400 text-sm">No brands found</div>
-                  ) : (
-                    brandResults.map((b: string) => (
-                      <button key={b} type="button" onClick={() => selectBrand(b)} className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors">
-                        <span className="text-sm font-semibold text-slate-900">{b}</span>
-                        {b === brand && <Check className="w-4 h-4 text-emerald-500 ml-auto" />}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* All Products - no target needed */}
-        {scope === 'all' && (
-          <div className="p-6 bg-slate-50/50 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-rose-100 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-rose-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-slate-900">Store-wide Flash Sale</p>
-                <p className="text-sm text-slate-500 mt-0.5">All products in the store will receive this discount</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Discount Configuration */}
-      <div className="space-y-6">
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5" />
-            Discount
-          </label>
-          <div className="flex gap-3 mt-2">
-            {(['percentage', 'fixed'] as const).map((t) => (
-              <button
-                type="button"
-                key={t}
-                onClick={() => setDiscountType(t)}
-                className={`flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${discountType === t ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-              >
-                {t === 'percentage' ? '% Off' : '₹ Fixed'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Discount Value</label>
-          <div className="relative mt-2">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
-              {discountType === 'percentage' ? '%' : '₹'}
-            </span>
-            <input
-              type="number"
-              value={discountValue}
-              onChange={(e) => setDiscountValue(e.target.value)}
-              min="0"
-              max={discountType === 'percentage' ? 100 : undefined}
-              placeholder={discountType === 'percentage' ? "e.g. 25" : "e.g. 500"}
-              className="w-full h-11 pl-8 pr-4 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
-              required
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Label */}
-      <div>
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-900">Label <span className="text-slate-300 font-normal normal-case tracking-normal">(optional)</span></label>
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="e.g. Weekend Blast, Summer Sale"
-          className="w-full h-11 px-4 mt-2 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
-        />
-      </div>
-
-      {/* Schedule */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5" />
-            Starts At
-          </label>
-          <input
-            type="datetime-local"
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
-            className="w-full h-11 px-4 mt-2 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
-            required
-          />
-        </div>
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5" />
-            Ends At
-          </label>
-          <input
-            type="datetime-local"
-            value={endsAt}
-            onChange={(e) => setEndsAt(e.target.value)}
-            className="w-full h-11 px-4 mt-2 rounded-xl bg-slate-50 border-none font-bold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
-            required
-          />
-        </div>
-      </div>
-
-      {/* Live Preview */}
-      <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-200">
-        <div className="flex items-center gap-2 mb-3">
-          <Eye className="w-4 h-4 text-slate-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Preview</span>
-        </div>
-        <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
-          <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center">
-            <Zap className="w-6 h-6 text-slate-400" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-slate-900 text-sm">
-              {scope === 'product' ? (productName || "Selected Product") :
-               scope === 'category' ? (categoryName ? `Category: ${categoryName}` : "Selected Category") :
-               scope === 'brand' ? (brand ? `Brand: ${brand}` : "Selected Brand") :
-               "All Products"}
-            </p>
-            {discountValue && (
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-rose-600 font-bold text-lg">
-                  {getPreviewPrice() ? `₹${getPreviewPrice()}` : "—"}
-                </span>
-                <span className="text-slate-400 line-through text-sm">₹1,999</span>
-                <span className="bg-rose-100 text-rose-600 px-2 py-0.5 rounded text-xs font-bold">
-                  {discountType === 'percentage' ? `${discountValue}% OFF` : `₹${discountValue} OFF`}
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="text-right text-slate-500 text-xs">
-            <p>{startsAt ? new Date(startsAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "—"}</p>
-            <p>→</p>
-            <p>{endsAt ? new Date(endsAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "—"}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-        <button type="button" onClick={() => router.back()} className="rounded-xl h-11 px-6 border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-        <button type="submit" disabled={isPending} className="rounded-xl h-11 px-8 bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-2 disabled:opacity-50">
-          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {isEdit ? 'Update Flash Sale' : 'Create Flash Sale'}
-        </button>
-      </div>
-    </form>
-  )
+      <aside className="rounded-2xl border bg-white p-6 shadow-sm space-y-4 xl:sticky xl:top-6 min-w-0">
+        <h2 className="text-lg font-black tracking-tight text-slate-900">Real price preview</h2><p className="text-sm text-slate-500">{preview.productCount} products · {preview.variantCount} variants · {preview.rows.reduce((n,r)=>n+r.stock,0)} units in stock</p>
+        {preview.betterNormalCount>0&&<p className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">{preview.betterNormalCount} variants already have an equal or better normal price.</p>}
+        {!!preview.overlappingCampaigns.length&&<p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">Overlapping campaigns: {preview.overlappingCampaigns.join(', ')}. The lowest price wins for each variant.</p>}
+        {!!preview.zeroPriceCount&&<p className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">{preview.zeroPriceCount} variants will be free. Review this before publishing.</p>}
+        <div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-left text-slate-500 border-b"><th className="py-2 pr-2">Variant</th><th className="py-2 px-2 text-right">Original</th><th className="py-2 px-2 text-right">Normal</th><th className="py-2 pl-2 text-right">You pay</th></tr></thead><tbody>{preview.rows.slice(0,12).map(row=><tr key={row.variantId} className="border-b border-slate-100"><td className="py-3 pr-2"><p className="font-semibold text-slate-800">{row.name}</p><p className="text-slate-500">{row.title || 'Default'}</p>{row.bxgy&&<p className="text-[10px] text-pink-700 mt-1">3-unit BXGY example: ₹{row.threeUnitTotal.toLocaleString('en-IN')}{row.replaceBXGY?' · Original prices on offer units':''}</p>}</td><td className="px-2 text-right">₹{row.mrp.toLocaleString('en-IN')}</td><td className="px-2 text-right">₹{row.normal.toLocaleString('en-IN')}</td><td className="pl-2 text-right font-bold text-pink-700">₹{row.final.toLocaleString('en-IN')}</td></tr>)}</tbody></table></div>
+        {!preview.variantCount&&<p className="text-sm text-slate-400">Select targets to preview actual product prices.</p>}{preview.variantCount>12&&<p className="text-xs text-slate-400">Showing 12 of {preview.variantCount} eligible variants.</p>}
+        <p className="text-xs leading-relaxed text-slate-500">Preview uses current catalog prices at the planned start, or now if already started. Overlapping offers may change later. BXGY examples assume eligibility; mixed baskets can qualify differently. Recheck before publishing.</p>
+      </aside>
+    </div>
+    {error&&<p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+    <div className="flex flex-wrap justify-end gap-3"><button type="button" disabled={pending} onClick={()=>router.back()} className="h-11 rounded-xl border border-slate-200 px-5 text-sm font-semibold">Cancel</button><button type="submit" value="draft" disabled={pending} className="h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold disabled:opacity-50">Save draft</button>{initialData&&initial?.lifecycle!=='draft'&&<button type="submit" value={initial?.lifecycle} disabled={pending} className="h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold disabled:opacity-50">Save changes</button>}<button type="submit" value="published" disabled={pending} className="h-11 rounded-xl bg-slate-900 px-6 text-sm font-semibold text-white disabled:opacity-50 inline-flex items-center gap-2">{pending&&<Loader2 className="h-4 w-4 animate-spin"/>}{initial?.lifecycle==='published'?'Save and publish':'Publish campaign'}</button></div>
+  </form>
 }

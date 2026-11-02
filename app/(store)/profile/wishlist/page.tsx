@@ -30,7 +30,7 @@ export default function WishlistPage() {
 
         const { data } = await supabase
             .from('wishlist')
-            .select(`id, product:products (*, product_variants (*))`)
+            .select(`id, product:products (*, product_categories(category_id), product_variants (*))`)
             .eq('user_id', user.id)
 
         if (data) {

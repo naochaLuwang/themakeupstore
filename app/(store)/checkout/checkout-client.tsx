@@ -1,7 +1,11 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useCart } from "@/components/store/use-cart"
+import { lineSubtotal, linePriceLabel } from "@/lib/line-pricing"
+import { roundMoney } from "@/lib/promotion-engine"
+import { getCheckoutQuote } from "@/app/actions/offer-quote"
+import { paidCartKey } from "@/lib/cart-key"
 import { placeOrder } from "@/app/actions/orders"
 import { validatePromoCode } from "@/app/actions/promo"
 import { validateGiftCard } from "@/app/actions/gift-cards"
@@ -29,14 +33,14 @@ interface CheckoutClientProps {
 }
 
 export default function CheckoutClient({ profile, initialAddresses, allPromos = [] }: CheckoutClientProps) {
-    usePromotions()
+    const {error:offerError,refresh:refreshOffers} = usePromotions()
     const supabase = createClient()
     const router = useRouter()
     const {
         items, shippingPrice, selectedShippingId, shippingLabel, deliveryTimeLabel,
         setShippingMethod, getSubtotal, setShippingPincode,
         appliedPromo, setAppliedPromo, getDiscountAmount, getFinalTotal,
-        getGiftItems, getBXGYTotalDiscount, bxgyDiscounts,
+        getGiftItems, getBXGYTotalDiscount, bxgyDiscounts, hasAutomaticOffer,
     } = useCart()
 
     const [mounted, setMounted] = useState(false)
@@ -60,6 +64,32 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const [useCoins, setUseCoins] = useState(false)
     const [showCoinInfo, setShowCoinInfo] = useState(false)
     const [loadingCoins, setLoadingCoins] = useState(false)
+    const [pendingPaidOrder, setPendingPaidOrder] = useState<{ userId: string; args: Parameters<typeof placeOrder> } | null>(null)
+    useEffect(() => {
+        setPendingPaidOrder(null)
+        if (!profile?.id) return
+        try {
+            const raw = sessionStorage.getItem(`checkout-payment-confirmation:${profile.id}`)
+            if (raw) {
+                const saved = JSON.parse(raw)
+                if (saved.userId === profile.id && Array.isArray(saved.args) && saved.args.length === 10) setPendingPaidOrder(saved)
+            }
+        } catch { /* Confirmation remains retryable in memory when storage is unavailable. */ }
+    }, [profile?.id])
+    const confirmPaidOrder = async (pending: { userId: string; args: Parameters<typeof placeOrder> }) => {
+        if (pending.userId !== profile?.id) return toast.error('Sign in to the account used for this payment')
+        setLoading(true)
+        try {
+            const result = await placeOrder(...pending.args)
+            if (!result.success) throw new Error(result.message || 'Order confirmation failed')
+            try { sessionStorage.removeItem(`checkout-payment-confirmation:${profile.id}`) } catch { /* The order is already committed. */ }
+            setPendingPaidOrder(null)
+            router.push(`/checkout/success?orderId=${result.orderId}`)
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Could not confirm the paid order. Retry confirmation without paying again.')
+        } finally { setLoading(false) }
+    }
+    const checkoutAttempt = useRef<{ fingerprint: string; key: string } | null>(null)
     const [paymentMethod, setPaymentMethod] = useState<"cod" | "razorpay">("razorpay")
 
     useEffect(() => { setMounted(true) }, [])
@@ -125,8 +155,8 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const giftItems = mounted ? getGiftItems() : []
     const total = mounted ? getFinalTotal() : 0
     const giftCardDiscount = giftCard ? Math.min(Number(giftCard.remaining_balance), total) : 0
-    const coinDiscount = useCoins && coinBalance > 0 ? Math.min(coinBalance, total) : 0
-    const adjustedTotal = Math.max(0, total - giftCardDiscount - coinDiscount)
+    const coinDiscount = useCoins && coinBalance > 0 ? Math.min(coinBalance, Math.floor(Math.max(0, total - giftCardDiscount))) : 0
+    const adjustedTotal = Math.max(0, roundMoney(total - giftCardDiscount - coinDiscount))
     const isFreeShipping = currentSubtotal >= FREE_SHIPPING_THRESHOLD && selectedShippingId && FREE_SHIPPING_PINCODES.includes(selectedAddress?.pincode)
 
     const handleAddressAdded = (newAddr: any) => {
@@ -136,11 +166,14 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     }
 
     const handleSelectAddress = (addr: any) => {
+        if(loading)return
         setSelectedAddress(addr)
         setShowAddressPicker(false)
     }
 
     const handleApplyPromo = async (promo: any) => {
+        if(loading)return
+        if (hasAutomaticOffer) return toast.error("Coupons cannot be combined with these offers")
         try {
             const result = await validatePromoCode(promo.code, items)
             if (result.success) {
@@ -160,11 +193,13 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     }
 
     const handleRemovePromo = () => {
+        if(loading)return
         setAppliedPromo(null)
         toast.info("Promo code removed")
     }
 
     const handleApplyGiftCard = async () => {
+        if(loading)return
         if (!giftCardCode.trim()) return
         setApplyingGiftCard(true)
         setGiftCardError("")
@@ -181,6 +216,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     }
 
     const handleRemoveGiftCard = () => {
+        if(loading)return
         setGiftCard(null)
         toast.info("Gift card removed")
     }
@@ -207,6 +243,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     }
 
     const handlePlaceOrder = async () => {
+        if (pendingPaidOrder) { await confirmPaidOrder(pendingPaidOrder); return }
         if (!selectedAddress) {
             return toast.error("Please select a delivery address")
         }
@@ -215,44 +252,37 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
         }
         setLoading(true)
         try {
-            const promoDetails = appliedPromo ? {
-                code: appliedPromo.code,
-                discount: discountAmount,
-                id: appliedPromo.id
-            } : undefined
-
-            const bxgyDetails = bxgyDiscount > 0 ? {
-                discount: bxgyDiscount,
-                appliedRuleIds: [...new Set((bxgyDiscounts || []).map((d: { rule_id: string }) => d.rule_id).filter(Boolean))],
-                freeItems: items.filter((i: any) => i.is_bxgy_free).map((i: any) => ({
-                    variantId: i.variantId,
-                    productId: i.productId,
-                    ruleId: i.bxgy_rule_id,
-                    quantity: i.quantity,
-                })),
-            } : undefined
-
-            const giftDetails = giftItems.length > 0 ? giftItems.map((i: any) => ({
-                variantId: i.variantId,
-                productId: i.productId,
-                ruleId: i.gift_rule_id,
-                quantity: i.quantity,
-            })) : undefined
-
+            const inputKey=paidCartKey(items)
+            const checked=await getCheckoutQuote(items,{shippingMethodId:selectedShippingId,pincode:String(selectedAddress.pincode),
+                promoCode:appliedPromo?.code,giftCardCode:giftCard?.code,coinAmount:coinDiscount})
+            if(!checked.success)throw new Error(checked.message)
+            if(paidCartKey(useCart.getState().items)!==inputKey)throw new Error('Your basket changed. Please review it before placing your order.')
+            const quote=checked.quote
+            const oldGiftRules=items.filter(i=>i.is_gift).map(i=>i.gift_rule_id).sort().join(',')
+            const newGiftRules=quote.freeItems.map(g=>g.ruleId).sort().join(',')
+            useCart.getState().applyOfferQuote(quote)
+            setShippingMethod({id:selectedShippingId,name:quote.shippingLabel,price:quote.shippingBasePrice,delivery_time_label:quote.deliveryTimeLabel})
+            if(Math.round(adjustedTotal*100)!==Math.round(quote.total*100)||oldGiftRules!==newGiftRules||inputKey!==paidCartKey(quote.items)){
+                toast.info('Your prices or offers were updated. Please review the basket and place your order again.')
+                setLoading(false)
+                return
+            }
+            const canonicalItems=useCart.getState().items
             const commonOrderArgs = [
-                selectedAddress,
-                items,
-                { total, price: shippingPrice, methodName: shippingLabel, deliveryTimeLabel, shipping_method_id: selectedShippingId },
-                promoDetails,
-                bxgyDetails,
-                giftDetails,
-                giftCard ? { code: giftCard.code, amount: giftCardDiscount } : undefined,
-                useCoins && coinDiscount > 0 ? { amount: coinDiscount } : undefined,
+                selectedAddress, canonicalItems,
+                {total:quote.total,price:quote.shippingPrice,methodName:quote.shippingLabel,deliveryTimeLabel:quote.deliveryTimeLabel,
+                    shipping_method_id:selectedShippingId,quoteFingerprint:checked.fingerprint},
+                appliedPromo?{code:appliedPromo.code,discount:quote.promoDiscount}:undefined,
+                undefined,undefined,
+                giftCard?{code:giftCard.code,amount:quote.giftCardDiscount}:undefined,
+                useCoins&&quote.coinDiscount>0?{amount:quote.coinDiscount}:undefined,
             ] as const
-
-            if (paymentMethod === "cod") {
+            const fingerprint = JSON.stringify(commonOrderArgs)
+            if (checkoutAttempt.current?.fingerprint !== fingerprint) checkoutAttempt.current = { fingerprint, key: crypto.randomUUID() }
+            const checkoutKey = checkoutAttempt.current.key
+            if (paymentMethod === "cod" || adjustedTotal === 0) {
                 try {
-                    const res = await placeOrder(...commonOrderArgs, undefined)
+                    const res = await placeOrder(...commonOrderArgs, undefined, checkoutKey)
                     if (res.success) {
                         router.push(`/checkout/success?orderId=${res.orderId}`)
                     } else {
@@ -279,7 +309,8 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         amount: amountPaise,
-                        cartItems: items,
+                        cartItems: canonicalItems,
+                        quoteFingerprint: checked.fingerprint,
                         shippingPrice: isFreeShipping ? 0 : shippingPrice,
                         shippingMethodId: selectedShippingId,
                         pincode: selectedAddress?.pincode || null,
@@ -319,33 +350,13 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         contact: selectedAddress?.phone,
                     },
                     handler: async function (response: any) {
-                        try {
-                            const verifyRes = await fetch("/api/verify-payment", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                    razorpay_order_id: response.razorpay_order_id,
-                                    razorpay_payment_id: response.razorpay_payment_id,
-                                    razorpay_signature: response.razorpay_signature,
-                                }),
-                            })
-                            if (!verifyRes.ok) {
-                                toast.error("Payment verification failed")
-                                setLoading(false)
-                                return
-                            }
-
-                            const res = await placeOrder(...commonOrderArgs, { method: "razorpay", payment_id: response.razorpay_payment_id, status: "paid" })
-                            if (res.success) {
-                                router.push(`/checkout/success?orderId=${res.orderId}`)
-                            } else {
-                                toast.error(res.message || "Order failed")
-                            }
-                        } catch (err) {
-                            toast.error("Payment verified but order submission failed")
-                        } finally {
-                            setLoading(false)
-                        }
+                        const pending = { userId: profile.id, args: [...commonOrderArgs,
+                            { method: 'razorpay', payment_id: response.razorpay_payment_id, order_id: response.razorpay_order_id, signature: response.razorpay_signature, status: 'paid' },
+                            checkoutKey] as Parameters<typeof placeOrder> }
+                        setPendingPaidOrder(pending)
+                        try { sessionStorage.setItem(`checkout-payment-confirmation:${profile.id}`, JSON.stringify(pending)) }
+                        catch { console.warn('Could not persist payment confirmation; keep this page open to retry') }
+                        await confirmPaidOrder(pending)
                     },
                     modal: {
                         ondismiss: function () {
@@ -360,14 +371,14 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 setLoading(false)
             }
         } catch (err) {
-            toast.error("Process interrupted")
+            toast.error(err instanceof Error ? err.message : "Process interrupted")
             setLoading(false)
         }
     }
 
     if (!mounted) return null
 
-    const eligiblePromos = allPromos.filter((p: any) => {
+    const eligiblePromos = (hasAutomaticOffer ? [] : allPromos).filter((p: any) => {
         try { return checkPromoEligibility(p, items).isEligible } catch { return false }
     })
     const ineligiblePromos = allPromos.filter((p: any) => {
@@ -376,6 +387,20 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
     return (
         <div className="min-h-screen bg-gray-50/80 pb-24">
+            {pendingPaidOrder && (
+                <div className="mx-auto mb-4 max-w-5xl rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+                    <p>Your payment is waiting for order confirmation. Retry here without paying again.</p>
+                    <Button className="mt-3 bg-pink-600 text-white hover:bg-pink-700" disabled={loading} onClick={() => confirmPaidOrder(pendingPaidOrder)}>
+                        {loading ? 'Confirming…' : 'Confirm Paid Order'}
+                    </Button>
+                </div>
+            )}
+
+            {offerError && <div className="mx-5 my-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600" role="status">
+                {offerError}
+                {offerError && <button className="ml-3 font-bold text-pink-600" onClick={refreshOffers}>Try again</button>}
+            </div>}
+            {hasAutomaticOffer && <p className="mx-5 my-3 text-xs text-slate-500">Automatic offers applied. Coupons cannot be combined with these offers.</p>}
             {/* Spacer */}
             <div className="h-0" />
 
@@ -424,8 +449,8 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         {items.map((item: any, idx: number) => {
                             const dm = discountMap[item.variantId]
                             const bxgyLine = (dm?.amount || 0) > 0
-                            const lineTotal = Math.round(item.price * item.quantity)
-                            const payable = Math.round(lineTotal - (dm?.amount || 0))
+                            const lineTotal = lineSubtotal(item)
+                            const payable = roundMoney(lineTotal - (dm?.amount || 0))
                             const freeQty = dm?.freeQty || 0
                             const coversFullUnits = bxgyLine && freeQty > 0 && (dm?.amount || 0) >= item.price * freeQty
                             return (
@@ -444,6 +469,9 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                             <p className="text-xs text-gray-400 mt-0.5">{item.variantTitle}</p>
                                         )}
                                         <p className="text-xs text-gray-400 mt-0.5">Qty: {item.quantity}</p>
+                                        {item.priceBreakdown?.some((g: { price: number }) => g.price !== item.price) && (
+                                            <p className="text-[10px] text-gray-500 mt-0.5">{linePriceLabel(item)} · Offer units use original prices</p>
+                                        )}
                                         {coversFullUnits && item.quantity - freeQty > 0 && (
                                             <p className="text-[10px] font-semibold text-pink-600 mt-0.5">{item.quantity - freeQty} paid + {freeQty} free</p>
                                         )}
@@ -494,7 +522,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             </div>
                         ) : (
                             <button
-                                onClick={() => setShowPromoPicker(true)}
+                                onClick={() => {if(!loading&&!hasAutomaticOffer)setShowPromoPicker(true);else if(hasAutomaticOffer)toast.info("Coupons cannot be combined with these offers")}}
                                 className="w-full bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-3"
                             >
                                 <div className="w-9 h-9 bg-pink-50 rounded-lg flex items-center justify-center shrink-0">
@@ -527,7 +555,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                         {/* Pay Online — first / default */}
                         <button
-                            onClick={() => setPaymentMethod("razorpay")}
+                            disabled={loading} onClick={() => setPaymentMethod("razorpay")}
                             className={`w-full flex items-center gap-4 px-4 py-4 transition-colors ${paymentMethod === "razorpay" ? "bg-pink-50/50" : ""
                                 } ${paymentMethod === "cod" ? "border-b border-gray-100" : ""}`}
                         >
@@ -557,7 +585,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
 
                         {/* COD — second */}
                         <button
-                            onClick={() => setPaymentMethod("cod")}
+                            disabled={loading} onClick={() => setPaymentMethod("cod")}
                             className={`w-full flex items-center gap-4 px-4 py-4 transition-colors ${paymentMethod === "cod" ? "bg-pink-50/50" : ""
                                 }`}
                         >
@@ -671,7 +699,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 <p className="text-[11px] text-gray-400">{showBreakup ? "Tap to hide details" : "Tap to view details"}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-base font-extrabold text-gray-900">₹{Math.round(adjustedTotal)}</p>
+                                <p className="text-base font-extrabold text-gray-900">₹{adjustedTotal.toLocaleString('en-IN',{maximumFractionDigits:2})}</p>
                             </div>
                             <svg
                                 className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${showBreakup ? "rotate-180" : ""}`}
@@ -685,7 +713,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             <div className="border-t border-gray-100">
                                 <div className="px-5 py-2 flex justify-between">
                                     <span className="text-sm text-gray-500">MRP Subtotal</span>
-                                    <span className="text-sm font-medium text-gray-700">₹{Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + i.mrp * i.quantity, 0))}</span>
+                                    <span className="text-sm font-medium text-gray-700">₹{roundMoney(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + i.mrp * i.quantity, 0))}</span>
                                 </div>
                                 <div className="h-px bg-gray-50 mx-5" />
                                 <div className="px-5 py-2 flex justify-between">
@@ -693,25 +721,25 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                         Total Discount
                                         {(() => {
                                             const paidItems = items.filter((i: any) => !i.is_gift && !i.is_bxgy_free)
-                                            const d = paidItems.reduce((a: number, i: any) => a + Math.max(0, i.mrp - i.price) * i.quantity, 0) + bxgyDiscount
+                                            const d = paidItems.reduce((a: number, i: any) => a + Math.max(0, i.mrp * i.quantity - lineSubtotal(i)), 0) + bxgyDiscount
                                             const m = paidItems.reduce((a: number, i: any) => a + i.mrp * i.quantity, 0)
                                             const pct = m > 0 ? Math.round((d / m) * 100) : 0
                                             return pct > 0 ? ` (${pct}% off)` : ""
                                         })()}
                                     </span>
                                     <span className="text-sm font-semibold text-red-500">
-                                        −₹{Math.round(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + Math.max(0, i.mrp - i.price) * i.quantity, 0) + bxgyDiscount)}
+                                        −₹{roundMoney(items.filter((i: any) => !i.is_gift && !i.is_bxgy_free).reduce((a: number, i: any) => a + Math.max(0, i.mrp * i.quantity - lineSubtotal(i)), 0) + bxgyDiscount)}
                                     </span>
                                 </div>
                                 {bxgyDiscount > 0 && (
                                     <p className="px-5 pb-2 -mt-0.5 text-[10px] font-semibold text-pink-600">
-                                        incl. {[...new Set((bxgyDiscounts || []).map((d: { rule_name: string }) => d.rule_name).filter(Boolean))].join(", ") || "Buy X Get Y"} −₹{Math.round(bxgyDiscount)}
+                                        incl. {[...new Set((bxgyDiscounts || []).map((d: { rule_name: string }) => d.rule_name).filter(Boolean))].join(", ") || "Buy X Get Y"} −₹{roundMoney(bxgyDiscount)}
                                     </p>
                                 )}
                                 <div className="h-px bg-gray-50 mx-5" />
                                 <div className="px-5 py-3.5 flex justify-between">
                                     <span className="text-sm text-gray-500">Subtotal after discount</span>
-                                    <span className="text-sm font-semibold text-gray-900">₹{Math.round(Math.max(0, currentSubtotal - bxgyDiscount))}</span>
+                                    <span className="text-sm font-semibold text-gray-900">₹{roundMoney(Math.max(0, currentSubtotal - bxgyDiscount))}</span>
                                 </div>
                                 <div className="h-px bg-gray-50 mx-5" />
                                 <div className="px-5 py-2 flex justify-between">
@@ -768,7 +796,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 <div className="h-px bg-gray-200 mx-5" />
                                 <div className="px-5 py-4 flex justify-between">
                                     <span className="text-sm font-bold text-gray-900">Total</span>
-                                    <span className="text-lg font-extrabold text-gray-900">₹{Math.round(adjustedTotal)}</span>
+                                    <span className="text-lg font-extrabold text-gray-900">₹{adjustedTotal.toLocaleString('en-IN',{maximumFractionDigits:2})}</span>
                                 </div>
                             </div>
                         </div>
@@ -780,19 +808,21 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex items-center gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-50">
                 <div>
                     <p className="text-[10px] font-black tracking-wider text-gray-400 uppercase">Total</p>
-                    <p className="text-xl font-extrabold text-gray-900">₹{Math.round(adjustedTotal)}</p>
+                    <p className="text-xl font-extrabold text-gray-900">₹{adjustedTotal.toLocaleString('en-IN',{maximumFractionDigits:2})}</p>
                     <p className="text-[10px] text-gray-400">incl. taxes & fees</p>
                 </div>
                 <div className="flex-1">
                     <button
                         onClick={handlePlaceOrder}
-                        disabled={loading || !selectedAddress}
+                        disabled={loading || (!pendingPaidOrder && !selectedAddress)}
                         className="w-full h-[46px] bg-pink-600 text-white text-xs font-black tracking-wider rounded-full flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-pink-700 transition-colors"
                     >
                         {loading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : paymentMethod === "razorpay" ? (
-                            <span>Pay ₹{Math.round(adjustedTotal).toLocaleString()}</span>
+                        ) : pendingPaidOrder ? (
+                            <span>Confirm Paid Order</span>
+                        ) : paymentMethod === "razorpay" && adjustedTotal > 0 ? (
+                            <span>Pay ₹{adjustedTotal.toLocaleString('en-IN',{maximumFractionDigits:2})}</span>
                         ) : (
                             <span>Place Order • COD</span>
                         )}

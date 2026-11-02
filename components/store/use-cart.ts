@@ -2,16 +2,24 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { roundMoney } from '@/lib/promotion-engine';
+import { paidCartKey } from '@/lib/cart-key';
+import type { merchandiseQuote } from '@/lib/cart-quote';
+import { lineSubtotal, type PriceGroup } from '@/lib/line-pricing';
+import { evaluatePromotionSnapshot, type PromotionSnapshot } from '@/lib/promotion-preview';
 import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from '@/lib/cart-constants';
 
 export interface CartItem {
     id: string;
     productId: string;
     categoryId: string;
+    categoryIds?: string[];
+    brand?: string;
     variantId: string;
     name: string;
     variantTitle: string;
     price: number;
+    regularPrice?: number;
     mrp: number;
     originalPrice: number;
     image: string;
@@ -21,6 +29,9 @@ export interface CartItem {
     gift_rule_id?: string;
     is_bxgy_free?: boolean;
     bxgy_rule_id?: string;
+    gift_product_ref_id?: string;
+    inventoryVariantId?: string;
+    priceBreakdown?: PriceGroup[];
 }
 
 export interface BXGYDiscount {
@@ -69,6 +80,16 @@ interface CartStore {
     bxgyDiscounts: BXGYDiscount[];
     giftProgress: GiftProgress[];
     bxgyProgress: BXGYProgress[];
+    offerStatus: 'idle' | 'loading' | 'ready' | 'preview' | 'error';
+    offerCatalog: PromotionSnapshot | null;
+    offerVerifiedUntil: number;
+    offerQuoteRevision: number;
+    offerError: string;
+    offerInputKey: string;
+    hasAutomaticOffer: boolean;
+    applyOfferQuote: (quote: Awaited<ReturnType<typeof merchandiseQuote>>) => void;
+    setOfferCatalog: (catalog: PromotionSnapshot | null) => void;
+    setOfferState: (status: 'idle' | 'loading' | 'ready' | 'preview' | 'error', error?: string) => void;
 
     // Shipping State
     shippingPrice: number;
@@ -106,6 +127,26 @@ interface CartStore {
     clearShipping: () => void;
 }
 
+function quotedCart(quote: ReturnType<typeof evaluatePromotionSnapshot>) {
+    const paid: CartItem[] = quote.items.map(i=>({...i,id:i.variantId,originalPrice:i.mrp}));
+    const gifts: CartItem[] = quote.freeItems.map(g=>({id:`gift:${g.ruleId}`,variantId:`gift:${g.ruleId}`,
+        inventoryVariantId:g.variantId || undefined,productId:g.productId || g.giftProductId || '',gift_product_ref_id:g.giftProductId || undefined,
+        categoryId:'',name:g.name,variantTitle:'Gift',price:0,mrp:g.mrp,originalPrice:g.mrp,image:g.image,quantity:1,stock:1,is_gift:true,gift_rule_id:g.ruleId}));
+    return {items:[...paid,...gifts],bxgyDiscounts:quote.discounts,giftProgress:quote.giftProgress,bxgyProgress:quote.bxgyProgress,
+        hasAutomaticOffer:quote.hasAutomaticOffer,offerInputKey:paidCartKey(paid)};
+}
+
+// Runs synchronously inside each cart mutation, before subscribers render the new quantities.
+function previewCart(items: CartItem[], catalog: PromotionSnapshot | null) {
+    const paid = items.filter(i=>!i.is_gift&&!i.is_bxgy_free).map(i=>({...i,priceBreakdown:undefined}));
+    if (catalog && paid.every(i=>i.brand !== undefined && i.categoryIds !== undefined)) {
+        const quote = evaluatePromotionSnapshot(paid.map(i=>({...i,brand:i.brand!,categoryIds:i.categoryIds!})),catalog);
+        return {...quotedCart(quote),offerStatus:'preview' as const,offerVerifiedUntil:0,offerError:''};
+    }
+    return {items:paid,bxgyDiscounts:[],giftProgress:[],bxgyProgress:[],hasAutomaticOffer:false,
+        offerStatus:'idle' as const,offerVerifiedUntil:0,offerInputKey:'',offerError:''};
+}
+
 export const useCart = create<CartStore>()(
     persist(
         (set, get) => ({
@@ -114,6 +155,22 @@ export const useCart = create<CartStore>()(
             bxgyDiscounts: [],
             giftProgress: [],
             bxgyProgress: [],
+            offerStatus: 'idle', offerError: '', offerInputKey: '', hasAutomaticOffer: false,
+            offerCatalog: null, offerVerifiedUntil: 0, offerQuoteRevision: 0,
+            setOfferState: (status,error='') => set({offerStatus:status,offerError:error}),
+            applyOfferQuote: (quote) => {
+                set({...quotedCart(quote),offerCatalog:quote.previewCatalog || get().offerCatalog,
+                    offerQuoteRevision:get().offerQuoteRevision+1,
+                    appliedPromo:quote.hasAutomaticOffer?null:get().appliedPromo,offerStatus:'ready',offerError:'',offerVerifiedUntil:quote.expiresAt});
+                get().autoCalculateShipping();
+                get().autoRevalidatePromo();
+            },
+            setOfferCatalog: (catalog) => {
+                const preview = previewCart(get().items,catalog);
+                set({...preview,offerCatalog:catalog,appliedPromo:preview.hasAutomaticOffer?null:get().appliedPromo});
+                get().autoCalculateShipping();
+                get().autoRevalidatePromo();
+            },
             shippingPrice: 0,
             baseShippingPrice: 0,
             shippingLabel: '',
@@ -122,9 +179,9 @@ export const useCart = create<CartStore>()(
             shippingPincode: '',
 
             getSubtotal: () => {
-                return get().items
+                return roundMoney(get().items
                     .filter(item => !item.is_gift && !item.is_bxgy_free)
-                    .reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                    .reduce((acc, item) => acc + lineSubtotal(item), 0));
             },
 
             pincodeQualifiesForFree: (pincode: string) => {
@@ -186,7 +243,7 @@ export const useCart = create<CartStore>()(
                     const alreadyExists = currentItems.some(i => i.variantId === newItem.variantId);
                     if (alreadyExists) return { capped: false, maxQty: 0 };
                     const updatedItems = [...currentItems, { ...newItem, quantity: newItem.quantity || 1 }];
-                    set({ items: updatedItems });
+                    set({ items: updatedItems,offerStatus:'idle' });
                     get().autoCalculateShipping();
                     return { capped: false, maxQty: 0 };
                 }
@@ -216,19 +273,19 @@ export const useCart = create<CartStore>()(
                     updatedItems = [...currentItems, { ...newItem, quantity: cappedQty }];
                 }
 
-                set({ items: updatedItems });
+                const preview = previewCart(updatedItems,get().offerCatalog);
+                set({...preview,appliedPromo:preview.hasAutomaticOffer?null:get().appliedPromo});
                 get().autoCalculateShipping();
                 return { capped, maxQty };
             },
 
             updateQuantity: (variantId, quantity) => {
-                set({
-                    items: get().items.map(item =>
+                const preview = previewCart(get().items.map(item =>
                         item.variantId === variantId
                             ? { ...item, quantity: Math.max(1, Math.min(quantity, item.stock)) }
                             : item
-                    )
-                });
+                    ),get().offerCatalog);
+                set({...preview,appliedPromo:preview.hasAutomaticOffer?null:get().appliedPromo});
                 get().autoCalculateShipping();
                 get().autoRevalidatePromo();
             },
@@ -238,19 +295,21 @@ export const useCart = create<CartStore>()(
                 // Also remove any gift items linked to this product's gifts
                 const remainingItems = items.filter(item => item.variantId !== variantId);
                 // Remove gifts whose trigger product was removed ( gifts with gift_rule_id still in cart from other items remain)
-                set({ items: remainingItems });
+                const preview = previewCart(remainingItems,get().offerCatalog);
+                set({...preview,appliedPromo:preview.hasAutomaticOffer?null:get().appliedPromo});
                 if (remainingItems.length === 0) get().clearShipping();
                 else get().autoCalculateShipping();
                 get().autoRevalidatePromo();
             },
 
             setItems: (newItems) => {
-                set({ items: newItems });
+                const preview = previewCart(newItems,get().offerCatalog);
+                set({...preview,appliedPromo:preview.hasAutomaticOffer?null:get().appliedPromo});
                 get().autoCalculateShipping();
                 get().autoRevalidatePromo();
             },
 
-            setAppliedPromo: (promo) => set({ appliedPromo: promo }),
+            setAppliedPromo: (promo) => set({ appliedPromo: get().hasAutomaticOffer ? null : promo }),
 
             // Re-validates applied promo against current cart. Clears promo if no longer eligible.
             autoRevalidatePromo: () => {
@@ -286,7 +345,7 @@ export const useCart = create<CartStore>()(
 
             clearCart: () => set({
                 items: [],
-                appliedPromo: null,
+                appliedPromo: null,bxgyDiscounts:[],giftProgress:[],bxgyProgress:[],hasAutomaticOffer:false,offerStatus:'ready',offerInputKey:paidCartKey([]),offerError:'',offerVerifiedUntil:0,
                 selectedShippingId: null,
                 shippingPrice: 0,
                 baseShippingPrice: 0,
@@ -318,7 +377,7 @@ export const useCart = create<CartStore>()(
 
             getDiscountAmount: () => {
                 const { items, appliedPromo } = get();
-                if (!appliedPromo) return 0;
+                if (!appliedPromo || get().hasAutomaticOffer) return 0;
 
                 // 1. Filter eligible items
                 const eligibleItems = items.filter(item => {
@@ -355,7 +414,8 @@ export const useCart = create<CartStore>()(
                     discount = Math.min(discount, eligibleSubtotal);
                 }
 
-                return Math.round(discount);
+                discount=Math.min(discount,eligibleSubtotal,appliedPromo.max_discount_amount==null?Infinity:Number(appliedPromo.max_discount_amount));
+                return roundMoney(discount);
             },
 
             getFinalTotal: () => {
@@ -363,7 +423,7 @@ export const useCart = create<CartStore>()(
                 const discount = get().getDiscountAmount();
                 const bxgyDiscount = get().getBXGYTotalDiscount();
                 const shipping = get().shippingPrice;
-                return Math.max(0, subtotal - discount - bxgyDiscount + shipping);
+                return Math.max(0, roundMoney(subtotal - discount - bxgyDiscount + shipping));
             },
 
             totalItems: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
@@ -371,7 +431,15 @@ export const useCart = create<CartStore>()(
         {
             name: 'shopping-cart',
             storage: createJSONStorage(() => localStorage),
-            version: 10, // Bumped to 9 for free_gifts/bxgy fields
+            version: 11,
+            partialize: (state) => ({items:state.items.filter(i=>!i.is_gift&&!i.is_bxgy_free).map(i=>({...i,priceBreakdown:undefined})),appliedPromo:state.appliedPromo,
+                shippingPrice:state.shippingPrice,baseShippingPrice:state.baseShippingPrice,shippingLabel:state.shippingLabel,
+                deliveryTimeLabel:state.deliveryTimeLabel,selectedShippingId:state.selectedShippingId,shippingPincode:state.shippingPincode}),
+            migrate: (persisted) => {
+                const old=(persisted || {}) as Partial<CartStore>;
+                return {...old,items:(old.items || []).filter(i=>!i.is_gift&&!i.is_bxgy_free).map(i=>({...i,priceBreakdown:undefined})),bxgyDiscounts:[],giftProgress:[],bxgyProgress:[],
+                    hasAutomaticOffer:false,offerStatus:'idle' as const,offerInputKey:'',offerError:''};
+            },
         }
     )
 );

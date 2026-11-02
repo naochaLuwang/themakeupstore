@@ -1,12 +1,12 @@
-import { createClient } from "@/utils/supabase/server"
+import { requireAdmin } from "@/lib/admin"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { BXGYForm } from "../bxgy-form"
 
 export default async function AdminBXGYNewPage() {
-    const supabase = await createClient()
+    const {supabase} = await requireAdmin()
     const [productsRes, categoriesRes] = await Promise.all([
-        supabase.from('products').select('id, name').order('name'),
+        supabase.from('products').select('id, name, brand').order('name'),
         supabase.from('categories').select('id, name').order('name'),
     ])
 

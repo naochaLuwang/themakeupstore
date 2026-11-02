@@ -1,11 +1,12 @@
-import { createClient } from "@/utils/supabase/server"
+import { requireAdmin } from "@/lib/admin"
+import { flashEditorData } from "@/lib/flash-sale-data"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { FlashSaleForm } from "../flash-sale-form"
 
 export default async function NewFlashSalePage() {
-  const supabase = await createClient()
-  const { data: categories } = await supabase.from('categories').select('id, name').order('name', { ascending: true })
+  const {supabase} = await requireAdmin()
+  const data = await flashEditorData(supabase)
 
   return (
     <div className="space-y-6">
@@ -18,7 +19,7 @@ export default async function NewFlashSalePage() {
           <p className="text-sm text-slate-500">Schedule a time-limited discount</p>
         </div>
       </div>
-      <FlashSaleForm categories={categories || []} />
+      <FlashSaleForm data={data} />
     </div>
   )
 }

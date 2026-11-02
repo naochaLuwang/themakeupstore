@@ -4,13 +4,15 @@ import { useState, useMemo, useEffect } from "react"
 import { Minus, Plus, ShoppingBag, MapPin, AlertCircle, Loader2, Truck, Sparkles, Search, Palette } from "lucide-react"
 import { toast } from "sonner"
 import { useCart, CartItem } from "@/components/store/use-cart"
-import { calculateDiscountedPrice } from "@/lib/price-helper"
+import { variantFlashPricing } from "@/lib/flash-sale-helper"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
 import { createClient } from "@/utils/supabase/client"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function VariantSelector({ product, variants = [], onVariantChange }: any) {
     const addItem = useCart((state) => state.addItem)
     const supabase = createClient()
+    const { sales, now } = useFlashSales()
 
     const hasVariants = product.has_variants && variants && variants.length > 0;
 
@@ -48,11 +50,8 @@ export default function VariantSelector({ product, variants = [], onVariantChang
     const currentPrice = Number(selectedVariant?.price ?? product?.base_price ?? 0)
     const currentMrp = Number(selectedVariant?.mrp ?? product?.mrp ?? currentPrice)
 
-    const salePrice = calculateDiscountedPrice(
-        currentPrice,
-        selectedVariant?.discount_type ?? product?.discount_type ?? 'none',
-        Number(selectedVariant?.discount_value ?? product?.discount_value ?? 0)
-    )
+    const pricing = variantFlashPricing({ ...selectedVariant, id:selectedVariant?.id || product.id, price:currentPrice }, product, sales, now)
+    const salePrice = pricing.salePrice
 
     const savingsAmount = currentMrp - salePrice
     const savingsPercent = Math.round((savingsAmount / currentMrp) * 100)
@@ -71,10 +70,13 @@ export default function VariantSelector({ product, variants = [], onVariantChang
             id: hasVariants ? `${product.id}-${selectedVariant.id}` : product.id,
             productId: product.id,
             categoryId: product.category_id,
+            categoryIds: [...new Set<string>([product.category_id, ...(product.product_categories || []).map((c: { category_id: string }) => c.category_id)].filter(Boolean))],
+            brand: product.brand || '',
             variantId: hasVariants ? selectedVariant.id : (variants[0]?.id || product.id),
             name: product.name,
             variantTitle: hasVariants ? selectedVariant.title : "Standard",
             price: salePrice,
+            regularPrice: pricing.regularPrice,
             mrp: currentMrp,
             originalPrice: currentMrp,
             image: hasVariants ? (selectedVariant.image_url || product.thumbnail_url) : product.thumbnail_url,

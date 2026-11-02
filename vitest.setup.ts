@@ -4,6 +4,8 @@ import { vi } from 'vitest'
 // Mock Next.js cache
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  unstable_cache: (fn: unknown) => fn,
 }))
 
 // Mock Supabase Auth

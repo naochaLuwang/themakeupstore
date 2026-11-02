@@ -26,13 +26,14 @@ interface Order {
     promo_code: string | null
     promo_discount_amount: number
     bxgy_discount_amount: number
+    gift_card_discount?: number
     coin_discount_amount: number
     shipping_address: any
     order_items: OrderItem[]
 }
 
 function formatCurrency(n: number) {
-    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n)
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(n)
 }
 
 function formatDate(iso: string) {
@@ -279,6 +280,8 @@ export function ReceiptPage({ order }: { order: Order }) {
                                 <span className="tabular-nums" style={{ color: "#77736B" }}>-{formatCurrency(promoDiscount)}</span>
                             </div>
                         )}
+                        {Number(order.bxgy_discount_amount)>0 && <div className="flex justify-between text-sm"><span>Buy 2 Get 1 Free</span><span>-{formatCurrency(Number(order.bxgy_discount_amount))}</span></div>}
+                        {Number(order.gift_card_discount)>0 && <div className="flex justify-between text-sm"><span>Gift Card</span><span>-{formatCurrency(Number(order.gift_card_discount))}</span></div>}
                         {Number(order.coin_discount_amount) > 0 && (
                             <div className="flex justify-between mb-2">
                                 <span style={{ color: "#77736B" }}>M Coins</span>

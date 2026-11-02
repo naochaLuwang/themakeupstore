@@ -1,6 +1,8 @@
 "use client"
+import { pricedFlashCatalog } from "@/lib/flash-sale-helper"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -33,7 +35,7 @@ export default function SearchPage() {
     useEffect(() => { document.title = "Search Products | THE MAKEUP STORE WANGKHEI" }, [])
 
     const [query, setQuery] = useState("")
-    const [results, setResults] = useState<any[]>([])
+    const [rawResults, setResults] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
 
     const [categories, setCategories] = useState<any[]>([])
@@ -106,25 +108,10 @@ export default function SearchPage() {
         }
     }
 
-    const computeEffectivePrice = (product: any): number => {
-        if (product.has_variants && product.product_variants?.length > 0) {
-            const prices = product.product_variants.map((v: any) => {
-                const base = v.price || 0
-                const dType = v.discount_type || product.discount_type || "none"
-                const dVal = v.discount_value || product.discount_value || 0
-                if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-                if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-                return base
-            })
-            return Math.min(...prices)
-        }
-        const base = product.base_price || 0
-        const dType = product.discount_type || "none"
-        const dVal = product.discount_value || 0
-        if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-        if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-        return base
-    }
+    const {sales:flashSales,now:flashNow}=useFlashSales()
+    const results=useMemo(()=>pricedFlashCatalog(rawResults,flashSales,flashNow,{sort,outOfStockLast:false,
+        min:selectedPriceRange===null?0:PRICE_RANGES[selectedPriceRange].min,
+        max:selectedPriceRange===null?Infinity:PRICE_RANGES[selectedPriceRange].max}),[rawResults,flashSales,flashNow,sort,selectedPriceRange])
 
     const doSearch = useCallback(async (
         searchText: string,
@@ -133,7 +120,6 @@ export default function SearchPage() {
         const text = searchText.trim()
         const activeCategories = opts?.categories ?? selectedCategories
         const activeBrands = opts?.brands ?? selectedBrands
-        const activePriceIdx = opts?.priceRangeIdx !== undefined ? opts.priceRangeIdx : selectedPriceRange
         const activeSort = opts?.sortOption ?? sort
 
         if (text.length < 2 && activeCategories.length === 0 && activeBrands.length === 0) {
@@ -191,7 +177,7 @@ export default function SearchPage() {
                 // Step 3: build final query
                 let query = supabase
                     .from("products")
-                    .select("*, product_variants(id, price, stock, discount_type, discount_value, title, image_url)")
+                    .select("*, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, title, image_url)")
                     .eq("status", "active")
 
                 if (matchIds !== null) {
@@ -210,25 +196,7 @@ export default function SearchPage() {
 
                 const { data } = await query.limit(200)
             if (data) {
-                let processed = data.map((p: any) => ({
-                    ...p,
-                    _effectivePrice: computeEffectivePrice(p),
-                }))
-
-                if (activePriceIdx !== null) {
-                    const range = PRICE_RANGES[activePriceIdx]
-                    processed = processed.filter(
-                        (p: any) => p._effectivePrice >= range.min && (range.max === Infinity || p._effectivePrice < range.max)
-                    )
-                }
-
-                if (activeSort === "price_asc") {
-                    processed.sort((a: any, b: any) => a._effectivePrice - b._effectivePrice)
-                } else if (activeSort === "price_desc") {
-                    processed.sort((a: any, b: any) => b._effectivePrice - a._effectivePrice)
-                }
-
-                setResults(processed)
+                setResults(data)
             } else {
                 setResults([])
             }

@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import { createClient } from "@/utils/supabase/server"
 import { notFound } from "next/navigation"
 import ProductClient from "./product-client"
-import { pickBestFlashSale, type FlashSaleRow } from "@/lib/flash-sale-helper"
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
     const { id } = await params
@@ -172,17 +171,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     // Fetch active flash sales (scope-based matching)
     const { data: allFlashSales } = await supabase
         .from('flash_sales')
-        .select('scope, product_id, category_id, brand, discount_type, discount_value, label, ends_at, starts_at')
+        .select('*')
         .eq('is_active', true)
-        .lte('starts_at', now)
-        .gte('ends_at', now)
-
-    const activeFlashSale = pickBestFlashSale(
-        (allFlashSales || []) as FlashSaleRow[],
-        id,
-        productCategoryIds,
-        productBrand || null
-    )
+        .gt('ends_at', now)
 
     // Find brand link
     let brandLink = null
@@ -200,5 +191,5 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         }
     }
 
-    return <ProductClient key={id} initialProduct={initialProduct} activeBXGY={activeBXGY} activeGift={activeGift} activeFlashSale={activeFlashSale} brandLink={brandLink} />
+    return <ProductClient key={id} initialProduct={initialProduct} activeBXGY={activeBXGY} activeGift={activeGift} initialFlashSales={allFlashSales || []} brandLink={brandLink} />
 }

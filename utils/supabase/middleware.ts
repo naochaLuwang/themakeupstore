@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+    // This read-only guest endpoint validates its own session. Avoid a duplicate auth round trip.
+    if (request.nextUrl.pathname === '/api/cart/quote') return NextResponse.next({ request })
     let supabaseResponse = NextResponse.next({
         request,
     })
@@ -84,6 +86,8 @@ export async function updateSession(request: NextRequest) {
         path.startsWith('/careers') ||
         path.startsWith('/labels') ||
         path.startsWith('/api/labels-verify') ||
+        path === '/api/cart/quote' ||
+        path === '/api/webhooks/razorpay' ||
         path.startsWith('/wholesale/register');
 
     if (!user && !isPublicRoute) {

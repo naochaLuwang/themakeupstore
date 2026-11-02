@@ -1,63 +1,16 @@
-"use client"
-
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { createClient } from "@/utils/supabase/client"
-import type { ActiveFlashSale } from "@/lib/active-flash-sales"
-
-interface FlashSalesData {
-    sales: ActiveFlashSale[]
-    categoryMap: Map<string, string[]>
-}
-
-const FlashSalesContext = createContext<FlashSalesData>({ sales: [], categoryMap: new Map() })
-
+'use client'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { useCart } from '@/components/store/use-cart'
+import { useFlashSaleClock } from '@/hooks/use-flash-sale-clock'
+import type { FlashSaleRow } from '@/lib/flash-sale-helper'
+const emptySales: FlashSaleRow[] = []
+const categoryMap = new Map<string, string[]>()
+const FlashSalesContext = createContext({ sales: emptySales, categoryMap, now: 0, loaded: false })
 export function FlashSalesProvider({ children }: { children: ReactNode }) {
-    const [data, setData] = useState<FlashSalesData>({ sales: [], categoryMap: new Map() })
-
-    useEffect(() => {
-        let cancelled = false
-        const fetchSales = async () => {
-            try {
-                const supabase = createClient()
-                const now = new Date().toISOString()
-                const { data: sales } = await supabase
-                    .from("flash_sales")
-                    .select("*")
-                    .eq("is_active", true)
-                    .gte("ends_at", now)
-                if (!sales || cancelled) return
-                const activeSales = sales as ActiveFlashSale[]
-
-                // Category-scoped sales need product -> category links,
-                // since many pages don't embed product_categories in their queries
-                let categoryMap = new Map<string, string[]>()
-                if (activeSales.some((s) => s.scope === "category" && s.category_id)) {
-                    const { data: junction } = await supabase
-                        .from("product_categories")
-                        .select("product_id, category_id")
-                    if (junction && !cancelled) {
-                        for (const row of junction) {
-                            const list = categoryMap.get(row.product_id) || []
-                            list.push(row.category_id)
-                            categoryMap.set(row.product_id, list)
-                        }
-                    }
-                }
-
-                if (!cancelled) setData({ sales: activeSales, categoryMap })
-            } catch {}
-        }
-        fetchSales()
-        const interval = setInterval(fetchSales, 30000)
-        return () => {
-            cancelled = true
-            clearInterval(interval)
-        }
-    }, [])
-
-    return <FlashSalesContext.Provider value={data}>{children}</FlashSalesContext.Provider>
+  const catalog = useCart(s => s.offerCatalog)
+  const sales = catalog?.flashSales || emptySales
+  const now = useFlashSaleClock(sales)
+  const value = useMemo(() => ({ sales, categoryMap, now, loaded: !!catalog?.flashSales }), [sales, now, catalog?.flashSales])
+  return <FlashSalesContext.Provider value={value}>{children}</FlashSalesContext.Provider>
 }
-
-export function useFlashSales() {
-    return useContext(FlashSalesContext)
-}
+export function useFlashSales() { return useContext(FlashSalesContext) }

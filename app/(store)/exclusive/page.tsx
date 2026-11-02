@@ -1,4 +1,6 @@
 "use client"
+import { pricedFlashCatalog } from "@/lib/flash-sale-helper"
+import { useFlashSales } from "@/components/store/flash-sales-provider"
 
 import * as React from "react"
 import Link from "next/link"
@@ -31,31 +33,13 @@ const sortOptions: { key: SortOption; label: string }[] = [
     { key: "name", label: "Name: A-Z" },
 ]
 
-function computeEffectivePrice(product: any): number {
-    if (product.has_variants && product.product_variants?.length > 0) {
-        const prices = product.product_variants.map((v: any) => {
-            const base = v.price || 0
-            const dType = v.discount_type || product.discount_type || "none"
-            const dVal = v.discount_value || product.discount_value || 0
-            if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-            if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-            return base
-        })
-        return Math.min(...prices)
-    }
-    const base = product.base_price || 0
-    const dType = product.discount_type || "none"
-    const dVal = product.discount_value || 0
-    if (dType === "percentage" && dVal > 0) return base * (1 - dVal / 100)
-    if ((dType === "fixed" || dType === "amount") && dVal > 0) return Math.max(0, base - dVal)
-    return base
-}
+
 
 export default function ExclusivePage() {
     const supabase = createClient()
 
     const [subcategories, setSubcategories] = React.useState<any[]>([])
-    const [products, setProducts] = React.useState<any[]>([])
+    const [rawProducts, setRawProducts] = React.useState<any[]>([])
     const [loading, setLoading] = React.useState(true)
     const [availableBrands, setAvailableBrands] = React.useState<string[]>([])
 
@@ -68,6 +52,10 @@ export default function ExclusivePage() {
     const [tempBrands, setTempBrands] = React.useState<string[]>([])
     const [tempPriceRange, setTempPriceRange] = React.useState<number | null>(null)
 
+    const {sales:flashSales,now:flashNow}=useFlashSales()
+    const products=React.useMemo(()=>pricedFlashCatalog(rawProducts,flashSales,flashNow,{sort,
+        min:selectedPriceRange===null?0:PRICE_RANGES[selectedPriceRange].min,
+        max:selectedPriceRange===null?Infinity:PRICE_RANGES[selectedPriceRange].max}),[rawProducts,flashSales,flashNow,sort,selectedPriceRange])
     const sortRef = React.useRef<HTMLDivElement>(null)
 
     React.useEffect(() => {
@@ -110,7 +98,7 @@ export default function ExclusivePage() {
 
             let query = supabase
                 .from("products")
-                .select("*, product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)")
+                .select("*, product_categories(category_id), product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)")
                 .eq("status", "active")
 
             if (linkedProductIds.length > 0) {
@@ -130,52 +118,7 @@ export default function ExclusivePage() {
             }
 
             const { data: prodData } = await query
-            let processed = [...(prodData || [])].map((p) => ({
-                ...p,
-                _effectivePrice: computeEffectivePrice(p),
-                outOfStock: p.product_variants?.length > 0
-                    ? p.product_variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
-                    : (p.stock != null && Number(p.stock) <= 0),
-            }))
-
-            if (selectedPriceRange !== null) {
-                const range = PRICE_RANGES[selectedPriceRange]
-                processed = processed.filter(
-                    (p) => p._effectivePrice >= range.min && (range.max === Infinity || p._effectivePrice < range.max)
-                )
-            }
-
-            if (sort === "name") {
-                processed.sort((a, b) => {
-                    const aOOS = a.outOfStock ? 1 : 0
-                    const bOOS = b.outOfStock ? 1 : 0
-                    if (aOOS !== bOOS) return aOOS - bOOS
-                    return a.name.localeCompare(b.name)
-                })
-            } else if (sort === "newest") {
-                processed.sort((a, b) => {
-                    const aOOS = a.outOfStock ? 1 : 0
-                    const bOOS = b.outOfStock ? 1 : 0
-                    if (aOOS !== bOOS) return aOOS - bOOS
-                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                })
-            } else if (sort === "price_asc") {
-                processed.sort((a, b) => {
-                    const aOOS = a.outOfStock ? 1 : 0
-                    const bOOS = b.outOfStock ? 1 : 0
-                    if (aOOS !== bOOS) return aOOS - bOOS
-                    return a._effectivePrice - b._effectivePrice
-                })
-            } else if (sort === "price_desc") {
-                processed.sort((a, b) => {
-                    const aOOS = a.outOfStock ? 1 : 0
-                    const bOOS = b.outOfStock ? 1 : 0
-                    if (aOOS !== bOOS) return aOOS - bOOS
-                    return b._effectivePrice - a._effectivePrice
-                })
-            }
-
-            setProducts(processed)
+            setRawProducts(prodData || [])
 
             if (availableBrands.length === 0) {
                 const brands = Array.from(

@@ -102,7 +102,7 @@ export default function OrderDetailPage() {
                 *,
                 order_items (
                     id, product_id, product_variant_id, product_name, variant_title, sku,
-                    quantity, unit_price, mrp,
+                    quantity, unit_price, mrp, is_gift, line_discount_amount,
                     products:product_id (thumbnail_url, slug)
                 )
             `)
@@ -156,24 +156,28 @@ export default function OrderDetailPage() {
 
             const { data: variants } = await supabase
                 .from("product_variants")
-                .select("id, stock, product_id, products!inner(category_id)")
+                .select("id, stock, product_id, products!inner(category_id,brand,product_categories(category_id))")
                 .in("id", variantIds)
 
             const stockMap: Record<string, number> = {}
             const catMap: Record<string, string> = {}
+            const metaMap = new Map<string, { brand: string; categoryIds: string[] }>()
             if (variants) {
                 for (const v of variants) {
                     stockMap[v.id] = v.stock
-                    catMap[v.product_id] = (v.products as any).category_id
+                    const product = v.products as unknown as { category_id: string | null; brand: string | null; product_categories: { category_id: string }[] }
+                    catMap[v.product_id] = product.category_id || ''
+                    metaMap.set(v.product_id, { brand: product.brand || '', categoryIds: [...new Set([product.category_id, ...(product.product_categories || []).map(c=>c.category_id)].filter((id): id is string => !!id))] })
                 }
             }
 
             for (const item of order.order_items) {
-                if (!item.product_variant_id) continue
+                if (item.is_gift || !item.product_variant_id) continue
                 addItem({
                     id: item.product_variant_id,
                     productId: item.product_id,
                     categoryId: catMap[item.product_id] || "",
+                    ...metaMap.get(item.product_id),
                     variantId: item.product_variant_id,
                     name: item.product_name,
                     variantTitle: item.variant_title || "",
@@ -421,7 +425,7 @@ export default function OrderDetailPage() {
                                                     <p className="text-[11px] text-green-600">−₹{Math.round((Number(item.mrp) - Number(item.unit_price)) * item.quantity)}</p>
                                                 </>
                                             )}
-                                            <p className="text-[13px] font-semibold text-gray-900">₹{Math.round(item.unit_price * item.quantity)}</p>
+                                            <p className="text-[13px] font-semibold text-gray-900">₹{Math.max(0,Number(item.unit_price)*item.quantity-Number(item.line_discount_amount || 0)).toLocaleString('en-IN',{maximumFractionDigits:2})}</p>
                                         </div>
                                     </div>
                                     {isDelivered && !hasReturn && (
