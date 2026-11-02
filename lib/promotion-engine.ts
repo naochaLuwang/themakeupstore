@@ -9,6 +9,7 @@ export interface ActiveOffer {
   usage_limit?: number | null; used_count?: number; once_per_user?: boolean
 }
 export interface BXGYRule extends ActiveOffer {
+  targetNames?: string[]
   pricing_mode?: 'replace_discounts' | 'combine_discounts'
   buy_type: string; buy_quantity: number; get_type: string
   get_product_id?: string | null; get_variant_id?: string | null
@@ -98,10 +99,15 @@ export function calculateBXGY(items: PromotionItem[], rules: BXGYRule[], used = 
   }
   const progress: BXGYProgress[] = eligibleRules.map(rule => {
     const matching = items.filter(i => matchesOffer(i, rule.buy_type, rule))
-    const currentQty = matching.reduce((n, i) => n + i.quantity, 0)
+    const assigned = allocations.filter(a => a.ruleId === rule.id)
+    const freeQtyApplied = assigned.reduce((n, a) => n + a.freeQuantity, 0)
+    // Units used by another campaign cannot advance this campaign's next reward.
+    const remainingQty = matching.reduce((n, i) => n + (available.get(i.variantId) || 0), 0)
+    const currentQty = freeQtyApplied * 3 + remainingQty
     return { ruleId: rule.id, ruleName: rule.name || 'Buy 2 Get 1 Free', qualifies: promotions.some(p => p.id === rule.id),
+      freeQtyApplied, setProgress: remainingQty % 3, pricingMode: rule.pricing_mode || 'combine_discounts',
       qualifyingVariantIds: matching.map(i => i.variantId), qualifyingLabel: rule.buy_type === 'specific_brands' ? rule.brands.join(', ') : 'eligible products',
-      getLabel: rule.pricing_mode === 'replace_discounts' ? 'Cheapest original-price item FREE for every 3; participating items use original prices' : 'Cheapest eligible item FREE for every 3 items', getImage: '', currentQty, neededQty: Math.max(0, 3 - currentQty), buyQuantity: 2, getType: 'cheapest_free' }
+      getLabel: rule.pricing_mode === 'replace_discounts' ? 'Cheapest original-price item FREE for every 3; participating items use original prices' : 'Cheapest eligible item FREE for every 3 items', getImage: '', currentQty, neededQty: 3 - remainingQty % 3, buyQuantity: 2, getType: 'cheapest_free' }
   })
   return { discount: roundMoney(discounts.reduce((n, l) => n + l.discount_amount, 0)), discounts, allocations, promotions, progress, rewards: [] }
 }

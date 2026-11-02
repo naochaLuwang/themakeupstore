@@ -14,17 +14,36 @@ export async function loadPromotionDefinitions(db: SupabaseClient): Promise<Prom
   ])
   if (bx.error || gift.error) throw new Error('Could not load current offers')
   const bIds = (bx.data || []).map(r => r.id), gIds = (gift.data || []).map(r => r.id)
-  const read = (table: string, key: string, field: string, ids: string[]) => ids.length
-    ? db.from(table).select(`${key},${field}`).in(key, ids) : Promise.resolve({ data: [], error: null })
+  const read = async (table: string, key: string, field: string, ids: string[]) => {
+    const data: Record<string, unknown>[] = []
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      for (let from = 0; ; from += 500) {
+        const result = await db.from(table).select(`${key},${field}`).in(key, ids.slice(offset, offset + 100))
+          .order(key).order(field.split(',')[0]).range(from, from + 499)
+        if (result.error) return { data: [], error: result.error }
+        const rows = (result.data || []) as unknown as Record<string, unknown>[]
+        data.push(...rows)
+        if (rows.length < 500) break
+      }
+    }
+    return { data, error: null }
+  }
   const [bp, bc, bb, gp, gc, gb] = await Promise.all([
-    read('bxgy_buy_products', 'bxgy_id', 'product_id', bIds), read('bxgy_buy_categories', 'bxgy_id', 'category_id', bIds), read('bxgy_buy_brands', 'bxgy_id', 'brand', bIds),
+    read('bxgy_buy_products', 'bxgy_id', 'product_id,products(brand)', bIds), read('bxgy_buy_categories', 'bxgy_id', 'category_id,categories(name)', bIds), read('bxgy_buy_brands', 'bxgy_id', 'brand', bIds),
     read('free_gift_products', 'free_gift_id', 'product_id', gIds), read('free_gift_categories', 'free_gift_id', 'category_id', gIds), read('free_gift_brands', 'free_gift_id', 'brand', gIds),
   ])
   if ([bp, bc, bb, gp, gc, gb].some(r => r.error)) throw new Error('Could not load offer targets')
   const links = (res: { data: unknown }, key: string, field: string, id: string) =>
     ((res.data || []) as Record<string, string>[]).filter(r => r[key] === id).map(r => r[field])
   return {
-    bxgyRules: (bx.data || []).map(r => ({ ...r, products: links(bp, 'bxgy_id', 'product_id', r.id), categories: links(bc, 'bxgy_id', 'category_id', r.id), brands: links(bb, 'bxgy_id', 'brand', r.id) })) as BXGYRule[],
+    bxgyRules: (bx.data || []).map(r => {
+      const rows = ((r.buy_type === 'specific_products' ? bp.data : bc.data) || []) as unknown as { bxgy_id: string; products?: { brand: string }; categories?: { name: string } }[]
+      const names = rows.filter(row => row.bxgy_id === r.id).map(row => {
+        return r.buy_type === 'specific_products' ? row.products?.brand : row.categories?.name
+      })
+      return { ...r, targetNames: names.length && names.every(Boolean) ? [...new Set(names)] : [],
+        products: links(bp, 'bxgy_id', 'product_id', r.id), categories: links(bc, 'bxgy_id', 'category_id', r.id), brands: links(bb, 'bxgy_id', 'brand', r.id) }
+    }) as BXGYRule[],
     giftRules: (gift.data || []).map(r => ({ ...r, products: links(gp, 'free_gift_id', 'product_id', r.id), categories: links(gc, 'free_gift_id', 'category_id', r.id), brands: links(gb, 'free_gift_id', 'brand', r.id) })) as GiftRule[],
   }
 }

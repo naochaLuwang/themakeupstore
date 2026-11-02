@@ -1,7 +1,7 @@
 "use client"
 
 import { useCart } from "@/components/store/use-cart"
-import { Minus, Plus, ShoppingBag, X, Gift, Tag, Zap, Loader2 } from "lucide-react"
+import { Minus, Plus, ShoppingBag, X, Gift, Tag, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useState, useMemo } from "react"
@@ -14,10 +14,15 @@ import { validatePromoCode } from "@/app/actions/promo"
 import { roundMoney } from "@/lib/promotion-engine"
 import { lineSubtotal, linePriceLabel } from "@/lib/line-pricing"
 import { usePromotions } from "@/hooks/use-promotions"
+import dynamic from "next/dynamic"
+import { CartOfferCards } from "@/components/store/cart-offer-cards"
+
+const OfferProductsPanel = dynamic(() => import("@/components/store/offer-products-panel"), { ssr: false })
 
 export default function CartPage() {
+    const [offerRuleId, setOfferRuleId] = useState<string | null>(null)
     const { checking: checkingOffers, error: offerError, refresh: refreshOffers } = usePromotions()
-    const { items, removeItem, updateQuantity, bxgyDiscounts, giftProgress, bxgyProgress, hasAutomaticOffer } = useCart() as any
+    const { items, removeItem, updateQuantity, bxgyDiscounts, giftProgress, hasAutomaticOffer } = useCart() as any
     const [mounted, setMounted] = useState(false)
     const [recommendations, setRecommendations] = useState<any[]>([])
     const [couponCode, setCouponCode] = useState("")
@@ -177,35 +182,7 @@ export default function CartPage() {
                     </div>
                 )}
 
-                {/* BXGY progress banners - desktop */}
-                {(bxgyProgress || []).filter((bp: any) => !bp.qualifies && bp.neededQty > 0 && bp.qualifyingVariantIds.length > 0).length > 0 && (
-                    <div className="mb-6 space-y-3">
-                        {(bxgyProgress || []).filter((bp: any) => !bp.qualifies && bp.neededQty > 0 && bp.qualifyingVariantIds.length > 0).map((bp: any) => {
-                            const totalForProgress = bp.currentQty + bp.neededQty
-                            const progressPct = totalForProgress > 0 ? Math.min(100, (bp.currentQty / totalForProgress) * 100) : 0
-                            return (
-                                <div key={bp.ruleId} className="bg-white border border-pink-200 rounded-xl overflow-hidden shadow-sm">
-                                    <div className="flex items-center gap-4 p-4">
-                                        <div className="w-16 h-16 rounded-xl bg-pink-100 flex items-center justify-center shrink-0">
-                                            <Zap className="w-6 h-6 text-pink-500" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-slate-900">
-                                                FREE: {bp.getLabel}
-                                            </p>
-                                            <p className="text-xs text-pink-700 mt-0.5">
-                                                Add <strong>{bp.neededQty} more</strong>{bp.neededQty > 0 && bp.qualifyingLabel ? <> from <strong>{bp.qualifyingLabel}</strong></> : null} to get it free
-                                            </p>
-                                            <div className="mt-2.5 h-1.5 bg-pink-100 rounded-full overflow-hidden">
-                                                <div className="h-full bg-pink-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
+                <CartOfferCards onShop={setOfferRuleId} className="mb-6" />
 
                 <div className="flex gap-10 items-start">
                     {/* Items Column */}
@@ -581,35 +558,7 @@ export default function CartPage() {
                         })}
                     </div>
                 )}
-                {/* BXGY progress banners - mobile */}
-                {(bxgyProgress || []).filter((bp: any) => !bp.qualifies && bp.neededQty > 0 && bp.qualifyingVariantIds.length > 0).length > 0 && (
-                    <div className="px-5 mb-3 space-y-2">
-                        {(bxgyProgress || []).filter((bp: any) => !bp.qualifies && bp.neededQty > 0 && bp.qualifyingVariantIds.length > 0).map((bp: any) => {
-                            const totalForProgress = bp.currentQty + bp.neededQty
-                            const progressPct = totalForProgress > 0 ? Math.min(100, (bp.currentQty / totalForProgress) * 100) : 0
-                            return (
-                                <div key={bp.ruleId} className="bg-white border border-pink-200 rounded-xl overflow-hidden shadow-sm">
-                                    <div className="flex items-center gap-3 p-3">
-                                        <div className="w-12 h-12 rounded-lg bg-pink-100 flex items-center justify-center shrink-0">
-                                            <Zap className="w-5 h-5 text-pink-500" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-semibold text-slate-900 leading-tight">
-                                                FREE: {bp.getLabel}
-                                            </p>
-                                            <p className="text-[11px] text-pink-700 mt-0.5">
-                                                Add <strong>{bp.neededQty} more</strong>{bp.qualifyingLabel ? <> from <strong>{bp.qualifyingLabel}</strong></> : null}
-                                            </p>
-                                            <div className="mt-1.5 h-1 bg-pink-100 rounded-full overflow-hidden">
-                                                <div className="h-full bg-pink-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
+                <CartOfferCards onShop={setOfferRuleId} className="px-5 mb-3" />
                 <div className="px-5 pb-4 space-y-3">
                     {items.map((item: any) => {
                         const lineTotal = lineSubtotal(item)
@@ -771,6 +720,7 @@ export default function CartPage() {
                     </div>
                 </div>
             </div>
+            {offerRuleId && <OfferProductsPanel ruleId={offerRuleId} onClose={() => setOfferRuleId(null)} />}
         </>
     )
 }

@@ -61,6 +61,9 @@ export interface GiftProgress {
 }
 
 export interface BXGYProgress {
+    freeQtyApplied?: number;
+    setProgress?: number;
+    pricingMode?: 'replace_discounts' | 'combine_discounts';
     ruleId: string;
     ruleName: string;
     qualifies: boolean;

@@ -13,7 +13,7 @@ const ids=Array.from({length:10},(_,i)=>`00000000-0000-4000-8000-${String(i+1).p
 let tables:Record<string,Row[]>
 function db():SupabaseClient{
  return {from(table:string){let rows=tables[table]||[];const q={select:()=>q,eq:(k:string,v:unknown)=>{rows=rows.filter(r=>r[k]===v);return q},in:(k:string,v:unknown[])=>{rows=rows.filter(r=>v.includes(r[k]));return q},lte:()=>q,gte:()=>q,
- single:()=>Promise.resolve({data:rows[0]||null,error:rows[0]?null:{message:'not found'}}),maybeSingle:()=>Promise.resolve({data:rows[0]||null,error:null}),then:(resolve:(v:unknown)=>unknown)=>Promise.resolve({data:rows,error:null}).then(resolve)};return q}} as unknown as SupabaseClient
+ order:()=>q,range:(from:number,to:number)=>{rows=rows.slice(from,to+1);return q},single:()=>Promise.resolve({data:rows[0]||null,error:rows[0]?null:{message:'not found'}}),maybeSingle:()=>Promise.resolve({data:rows[0]||null,error:null}),then:(resolve:(v:unknown)=>unknown)=>Promise.resolve({data:rows,error:null}).then(resolve)};return q}} as unknown as SupabaseClient
 }
 beforeEach(()=>{
  vi.useRealTimers()

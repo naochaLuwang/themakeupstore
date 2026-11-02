@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
     // This read-only guest endpoint validates its own session. Avoid a duplicate auth round trip.
-    if (request.nextUrl.pathname === '/api/cart/quote') return NextResponse.next({ request })
+    if (request.nextUrl.pathname === '/api/cart/quote' || /^\/api\/offers\/[^/]+\/products$/.test(request.nextUrl.pathname)) return NextResponse.next({ request })
     let supabaseResponse = NextResponse.next({
         request,
     })
