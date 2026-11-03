@@ -8,6 +8,7 @@ import {checkoutOrderItems} from './checkout-order-items'
 import {lineSubtotal} from './line-pricing'
 import {evaluatePromotionSnapshot} from './promotion-preview'
 import {emptyFlashTargets} from './flash-sale-helper'
+import {CartStockError} from './cart-stock'
 type Row=Record<string,unknown>
 const ids=Array.from({length:10},(_,i)=>`00000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`)
 let tables:Record<string,Row[]>
@@ -27,6 +28,25 @@ beforeEach(()=>{
 })
 const cart=(qty:number)=>[{variantId:ids[0],quantity:qty,price:1,productId:'forged'}]
 const input=()=>({shippingMethodId:ids[6],pincode:'795001'})
+it.each([0,2])('returns current variant stock when %i units cannot cover the cart, and rejects checkout',async stock=>{
+ tables.product_variants[0].stock=stock
+ await expect(merchandiseQuote(db(),null,cart(3))).rejects.toMatchObject({name:'CartStockError',stock:[{variantId:ids[0],stock}]})
+ await expect(checkoutQuote(db(),ids[8],cart(3),input())).rejects.toBeInstanceOf(CartStockError)
+})
+it('reports a removed variant as unavailable instead of retaining its old cart stock',async()=>{
+ tables.product_variants=[]
+ await expect(merchandiseQuote(db(),null,cart(1))).rejects.toMatchObject({stock:[{variantId:ids[0],stock:0}]})
+})
+it('collects stock for all cart lines before rejecting an unavailable one',async()=>{
+ tables.product_variants.push({...tables.product_variants[0],id:ids[9],stock:0})
+ await expect(merchandiseQuote(db(),null,[...cart(1),{variantId:ids[9],quantity:1}])).rejects.toMatchObject({stock:[{variantId:ids[0],stock:100},{variantId:ids[9],stock:0}]})
+})
+it('reports unavailable stock even when promotion definitions also fail',async()=>{
+ tables.product_variants[0].stock=0
+ const original=db()
+ const broken={from:(table:string)=>table==='buy_x_get_y'?{select:()=>({eq:async()=>({data:null,error:{message:'Missing promotion column'}})})}:original.from(table)} as unknown as SupabaseClient
+ await expect(merchandiseQuote(broken,null,cart(3))).rejects.toBeInstanceOf(CartStockError)
+})
 it('quotes the agreed 3-item example using selling prices and one fixed gift',async()=>{
  const q=await checkoutQuote(db(),ids[8],cart(3),input())
  expect(q).toMatchObject({subtotal:2400,bxgyDiscount:800,total:1650,hasAutomaticOffer:true})

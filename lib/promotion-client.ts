@@ -6,9 +6,10 @@ import { FLASH_CHANGE_EVENT, FLASH_CHANGE_KEY } from '@/lib/flash-sale-client'
 import { createClient } from '@/utils/supabase/client'
 import type { merchandiseQuote } from '@/lib/cart-quote'
 import type { PromotionSnapshot } from '@/lib/promotion-preview'
+import type { CartStockUpdate } from '@/lib/cart-stock'
 
 type QuoteResponse = { success: true; quote?: Awaited<ReturnType<typeof merchandiseQuote>>; previewCatalog?: PromotionSnapshot }
-  | { success: false; message: string }
+  | { success: false; message: string; stock?: CartStockUpdate[] }
 let consumers = 0
 let dispose: (() => void) | undefined
 let refreshCurrent: (() => void) | undefined
@@ -71,7 +72,14 @@ function mountSync() {
         scheduleRefresh(useCart.getState().offerVerifiedUntil || Date.now() + 30_000)
         return
       }
-      if (!result.success) throw new Error(result.message)
+      if (!result.success) {
+        if (result.stock) {
+          useCart.getState().applyCartStock(result.stock, result.message)
+          scheduleRefresh(Date.now() + 15_000)
+          return
+        }
+        throw new Error(result.message)
+      }
       const catalog = result.quote?.previewCatalog || result.previewCatalog
       if (catalog && owner !== undefined && catalog.ownerId !== owner) throw new Error('Your account changed. Please refresh your offers.')
       if (catalog) owner = catalog.ownerId

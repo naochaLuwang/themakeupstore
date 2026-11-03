@@ -31,3 +31,9 @@ it('lets the read-only guest quote route authenticate once inside its own handle
   const result = await updateSession(new NextRequest('https://store.example/api/cart/quote'))
   expect(result.headers.get('location')).toBeNull(); expect(mocks.authClient).not.toHaveBeenCalled()
 })
+it('preserves stock details in a failed quote response so the cart can update unavailable rows',async()=>{
+  mocks.quote.mockResolvedValue({success:false,message:'Out of stock',stock:[{variantId:'v',stock:0}]})
+  const response=await POST(request([{variantId:'v',quantity:3}]))
+  expect(response.status).toBe(400)
+  expect(await response.json()).toMatchObject({stock:[{variantId:'v',stock:0}]})
+})

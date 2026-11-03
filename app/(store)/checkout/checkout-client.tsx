@@ -6,6 +6,7 @@ import { lineSubtotal, linePriceLabel } from "@/lib/line-pricing"
 import { roundMoney } from "@/lib/promotion-engine"
 import { getCheckoutQuote } from "@/app/actions/offer-quote"
 import { paidCartKey } from "@/lib/cart-key"
+import { cartStockIssue } from "@/lib/cart-stock"
 import { placeOrder } from "@/app/actions/orders"
 import { validatePromoCode } from "@/app/actions/promo"
 import { validateGiftCard } from "@/app/actions/gift-cards"
@@ -33,18 +34,26 @@ interface CheckoutClientProps {
 }
 
 export default function CheckoutClient({ profile, initialAddresses, allPromos = [] }: CheckoutClientProps) {
-    const {error:offerError,refresh:refreshOffers} = usePromotions()
+    const {checking:checkingOffers,error:offerError,refresh:refreshOffers} = usePromotions()
     const supabase = createClient()
     const router = useRouter()
     const {
         items, shippingPrice, selectedShippingId, shippingLabel, deliveryTimeLabel,
         setShippingMethod, getSubtotal, setShippingPincode,
         appliedPromo, setAppliedPromo, getDiscountAmount, getFinalTotal,
-        getGiftItems, getBXGYTotalDiscount, bxgyDiscounts, hasAutomaticOffer,
+        getGiftItems, getBXGYTotalDiscount, bxgyDiscounts, hasAutomaticOffer, removeItem, updateQuantity,
     } = useCart()
 
     const [mounted, setMounted] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [reviewRequired, setReviewRequired] = useState(() => useCart.getState().items.some(item => !!cartStockIssue(item)))
+    const correctionFocus = useRef(false)
+    const checkoutItemsRef = useRef<HTMLDivElement>(null)
+    const reviewTotalRef = useRef<HTMLButtonElement>(null)
+    const continueShoppingRef = useRef<HTMLButtonElement>(null)
+    useEffect(() => useCart.subscribe(state => {
+        if (state.items.some(item => !!cartStockIssue(item))) setReviewRequired(true)
+    }), [])
     const [savedAddresses, setSavedAddresses] = useState(initialAddresses)
     const [selectedAddress, setSelectedAddress] = useState<any | null>(
         initialAddresses.find((a: any) => a.is_default) || initialAddresses[0] || null
@@ -157,6 +166,17 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     const giftCardDiscount = giftCard ? Math.min(Number(giftCard.remaining_balance), total) : 0
     const coinDiscount = useCoins && coinBalance > 0 ? Math.min(coinBalance, Math.floor(Math.max(0, total - giftCardDiscount))) : 0
     const adjustedTotal = Math.max(0, roundMoney(total - giftCardDiscount - coinDiscount))
+    const hasPaidItems = items.some(item => !item.is_gift && !item.is_bxgy_free)
+    const hasStockProblems = items.some(item => !!cartStockIssue(item))
+    const checkoutBlocked = !hasPaidItems || hasStockProblems || checkingOffers || !!offerError || reviewRequired
+    const stockControlLocked = loading || !!pendingPaidOrder
+    useEffect(() => {
+        if (!correctionFocus.current || loading) return
+        const target = hasStockProblems ? checkoutItemsRef.current?.querySelector<HTMLButtonElement>('[data-stock-correction]:not([disabled])')
+            : !hasPaidItems ? continueShoppingRef.current
+            : !checkingOffers && !offerError ? reviewTotalRef.current : null
+        if (target && !target.disabled) { target.focus(); correctionFocus.current = false }
+    }, [items, hasStockProblems, hasPaidItems, checkingOffers, offerError, loading, reviewRequired])
     const isFreeShipping = currentSubtotal >= FREE_SHIPPING_THRESHOLD && selectedShippingId && FREE_SHIPPING_PINCODES.includes(selectedAddress?.pincode)
 
     const handleAddressAdded = (newAddr: any) => {
@@ -222,6 +242,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
     }
 
     const handleToggleCoinRedemption = async () => {
+        if (stockControlLocked) return
         if (useCoins) {
             setUseCoins(false)
             toast.info("M Coins removed")
@@ -242,8 +263,61 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
         setLoadingCoins(false)
     }
 
+    const checkCurrentCheckout = async () => {
+        const inputKey = paidCartKey(items)
+        const quoteRevision = useCart.getState().offerQuoteRevision
+        const checked = await getCheckoutQuote(items, {shippingMethodId:selectedShippingId!,pincode:String(selectedAddress.pincode),
+            promoCode:appliedPromo?.code,giftCardCode:giftCard?.code,coinAmount:coinDiscount})
+        if (paidCartKey(useCart.getState().items) !== inputKey) throw new Error('Your basket changed. Please review it before placing your order.')
+        if (useCart.getState().offerQuoteRevision !== quoteRevision) {
+            setReviewRequired(true)
+            throw new Error('Your basket availability changed. Please review checkout again.')
+        }
+        if (!checked.success) {
+            if (checked.stock) {
+                useCart.getState().applyCartStock(checked.stock, checked.message)
+                setReviewRequired(true)
+                return null
+            }
+            throw new Error(checked.message)
+        }
+        const quote = checked.quote
+        const oldGiftRules = items.filter(i=>i.is_gift).map(i=>i.gift_rule_id).sort().join(',')
+        const newGiftRules = quote.freeItems.map(g=>g.ruleId).sort().join(',')
+        useCart.getState().applyOfferQuote(quote)
+        setShippingMethod({id:selectedShippingId!,name:quote.shippingLabel,price:quote.shippingBasePrice,delivery_time_label:quote.deliveryTimeLabel})
+        const changed = Math.round(adjustedTotal*100)!==Math.round(quote.total*100) || oldGiftRules!==newGiftRules || inputKey!==paidCartKey(quote.items)
+        return {...checked, changed}
+    }
+
+    const handleStockCorrection = (variantId: string, quantity?: number) => {
+        if (stockControlLocked) return
+        correctionFocus.current = true
+        setReviewRequired(true)
+        if (quantity === undefined) removeItem(variantId)
+        else updateQuantity(variantId, quantity)
+    }
+
+    const handleReviewTotal = async () => {
+        if (stockControlLocked || hasStockProblems || !hasPaidItems || !selectedAddress || !selectedShippingId) return
+        setLoading(true)
+        try {
+            const checked = await checkCurrentCheckout()
+            if (!checked) return
+            if (checked.changed) {
+                toast.info('Your total or offers changed. Please review the updated amount.')
+                return
+            }
+            setReviewRequired(false)
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Could not verify the updated total')
+        } finally { setLoading(false) }
+    }
+
     const handlePlaceOrder = async () => {
+        if (loading) return
         if (pendingPaidOrder) { await confirmPaidOrder(pendingPaidOrder); return }
+        if (checkoutBlocked || useCart.getState().items.some(item => !!cartStockIssue(item))) return
         if (!selectedAddress) {
             return toast.error("Please select a delivery address")
         }
@@ -252,17 +326,11 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
         }
         setLoading(true)
         try {
-            const inputKey=paidCartKey(items)
-            const checked=await getCheckoutQuote(items,{shippingMethodId:selectedShippingId,pincode:String(selectedAddress.pincode),
-                promoCode:appliedPromo?.code,giftCardCode:giftCard?.code,coinAmount:coinDiscount})
-            if(!checked.success)throw new Error(checked.message)
-            if(paidCartKey(useCart.getState().items)!==inputKey)throw new Error('Your basket changed. Please review it before placing your order.')
-            const quote=checked.quote
-            const oldGiftRules=items.filter(i=>i.is_gift).map(i=>i.gift_rule_id).sort().join(',')
-            const newGiftRules=quote.freeItems.map(g=>g.ruleId).sort().join(',')
-            useCart.getState().applyOfferQuote(quote)
-            setShippingMethod({id:selectedShippingId,name:quote.shippingLabel,price:quote.shippingBasePrice,delivery_time_label:quote.deliveryTimeLabel})
-            if(Math.round(adjustedTotal*100)!==Math.round(quote.total*100)||oldGiftRules!==newGiftRules||inputKey!==paidCartKey(quote.items)){
+            const checked = await checkCurrentCheckout()
+            if (!checked) { setLoading(false); return }
+            const quote = checked.quote
+            if (checked.changed) {
+                setReviewRequired(true)
                 toast.info('Your prices or offers were updated. Please review the basket and place your order again.')
                 setLoading(false)
                 return
@@ -286,6 +354,8 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                     if (res.success) {
                         router.push(`/checkout/success?orderId=${res.orderId}`)
                     } else {
+                        setReviewRequired(true)
+                        refreshOffers()
                         toast.error(res.message || "Order failed")
                     }
                 } catch (err) {
@@ -324,6 +394,12 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 })
                 if (!orderRes.ok) {
                     const errData = await orderRes.json()
+                    if (errData.stock && paidCartKey(useCart.getState().items) === paidCartKey(canonicalItems)) {
+                        useCart.getState().applyCartStock(errData.stock, errData.error)
+                        setReviewRequired(true)
+                        setLoading(false)
+                        return
+                    }
                     throw new Error(errData.error || "Failed to create payment order")
                 }
                 const { order_id, amount } = await orderRes.json()
@@ -396,7 +472,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 </div>
             )}
 
-            {offerError && <div className="mx-5 my-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600" role="status">
+            {offerError && !hasStockProblems && !pendingPaidOrder && <div className="mx-5 my-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600" role="status">
                 {offerError}
                 {offerError && <button className="ml-3 font-bold text-pink-600" onClick={refreshOffers}>Try again</button>}
             </div>}
@@ -445,7 +521,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                         <ShoppingBag className="w-[18px] h-[18px] text-gray-700" />
                         <h2 className="text-sm font-bold text-gray-900">Items ({items.length})</h2>
                     </div>
-                    <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+                    <div ref={checkoutItemsRef} className="bg-white rounded-xl overflow-hidden border border-gray-100">
                         {items.map((item: any, idx: number) => {
                             const dm = discountMap[item.variantId]
                             const bxgyLine = (dm?.amount || 0) > 0
@@ -456,6 +532,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                             return (
                                 <div
                                     key={item.variantId}
+                                    data-checkout-variant={item.variantId}
                                     className={`flex items-center gap-3 p-3 ${idx < items.length - 1 ? "border-b border-gray-50" : ""}`}
                                 >
                                     <img
@@ -469,6 +546,13 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                             <p className="text-xs text-gray-400 mt-0.5">{item.variantTitle}</p>
                                         )}
                                         <p className="text-xs text-gray-400 mt-0.5">Qty: {item.quantity}</p>
+                                        {cartStockIssue(item) && <div className="mt-2" role="status">
+                                            <p className="text-xs font-semibold text-red-600">{item.stock <= 0 ? 'Just sold out' : cartStockIssue(item)}</p>
+                                            {!pendingPaidOrder && <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                                                {item.stock > 0 && item.quantity > item.stock && <button type="button" disabled={stockControlLocked} onClick={() => handleStockCorrection(item.variantId, item.stock)} className="min-h-8 text-xs font-semibold text-pink-700 underline underline-offset-2 disabled:opacity-40">Use {item.stock}</button>}
+                                                <button type="button" data-stock-correction aria-label={`Remove item: ${item.name}`} disabled={stockControlLocked} onClick={() => handleStockCorrection(item.variantId)} className="min-h-8 text-xs font-semibold text-pink-700 underline underline-offset-2 disabled:opacity-40">Remove item</button>
+                                            </div>}
+                                        </div>}
                                         {item.priceBreakdown?.some((g: { price: number }) => g.price !== item.price) && (
                                             <p className="text-[10px] text-gray-500 mt-0.5">{linePriceLabel(item)} · Offer units use original prices</p>
                                         )}
@@ -668,7 +752,7 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                                 </div>
                                 <button
                                     onClick={handleToggleCoinRedemption}
-                                    disabled={loadingCoins}
+                                    disabled={loadingCoins || stockControlLocked}
                                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useCoins ? "bg-pink-500" : "bg-gray-200"
                                         }`}
                                 >
@@ -683,6 +767,17 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 </section>
 
                 {/* Price Breakup Accordion */}
+                {!hasPaidItems && !pendingPaidOrder && <section className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600" role="status">
+                    <p>Your bag is empty. Add a product to continue.</p>
+                    <button ref={continueShoppingRef} type="button" onClick={() => router.push('/shop')} className="mt-2 min-h-9 text-sm font-semibold text-pink-700">Continue shopping</button>
+                </section>}
+                {reviewRequired && !hasStockProblems && hasPaidItems && !pendingPaidOrder && <section className="rounded-xl border border-pink-100 bg-white p-4" aria-label="Review updated checkout">
+                    <p className="text-sm font-semibold text-gray-900">Your basket has been updated</p>
+                    <p className="mt-1 text-xs text-gray-500">Review your offers and delivery charges before continuing.</p>
+                    <button ref={reviewTotalRef} type="button" onClick={handleReviewTotal} disabled={loading || checkingOffers || !!offerError || !selectedAddress || !selectedShippingId} className="mt-3 min-h-10 rounded-lg bg-pink-600 px-4 text-xs font-semibold text-white disabled:opacity-40">
+                        {loading ? 'Checking total…' : `Confirm updated total · ${currency(adjustedTotal)}`}
+                    </button>
+                </section>}
                 <section>
                     <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden">
                         <button
@@ -814,13 +909,21 @@ export default function CheckoutClient({ profile, initialAddresses, allPromos = 
                 <div className="flex-1">
                     <button
                         onClick={handlePlaceOrder}
-                        disabled={loading || (!pendingPaidOrder && !selectedAddress)}
+                        disabled={loading || (!pendingPaidOrder && (!selectedAddress || !selectedShippingId || checkoutBlocked))}
                         className="w-full h-[46px] bg-pink-600 text-white text-xs font-black tracking-wider rounded-full flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-pink-700 transition-colors"
                     >
                         {loading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
                         ) : pendingPaidOrder ? (
                             <span>Confirm Paid Order</span>
+                        ) : !hasPaidItems ? (
+                            <span>Add items to continue</span>
+                        ) : hasStockProblems ? (
+                            <span>Update items to continue</span>
+                        ) : checkingOffers || offerError ? (
+                            <span>Checking availability</span>
+                        ) : reviewRequired ? (
+                            <span>Review updated total</span>
                         ) : paymentMethod === "razorpay" && adjustedTotal > 0 ? (
                             <span>Pay ₹{adjustedTotal.toLocaleString('en-IN',{maximumFractionDigits:2})}</span>
                         ) : (

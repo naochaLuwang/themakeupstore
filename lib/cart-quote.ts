@@ -3,6 +3,7 @@ import { variantFlashPricing, type FlashSaleRow } from '@/lib/flash-sale-helper'
 import type { PriceGroup } from '@/lib/line-pricing'
 import { loadPromotionDefinitions, loadPromotionSnapshot } from '@/lib/promotion-data'
 import { evaluatePromotionSnapshot, type PromotionSnapshot } from '@/lib/promotion-preview'
+import { CartStockError } from '@/lib/cart-stock'
 
 
 export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -37,13 +38,30 @@ export async function merchandiseQuote(db: SupabaseClient, userId: string | null
     return item.variantId as string
   })
   if (new Set(ids).size !== ids.length) throw new Error('Duplicate product variant in cart')
-  const [variantRes, definitions, flashRes] = await Promise.all([
+  const [variantResult, definitionResult, flashResult] = await Promise.allSettled([
     db.from('product_variants').select('id,product_id,title,price,stock,image_url,discount_type,discount_value,products(name,brand,thumbnail_url,category_id,discount_type,discount_value)').in('id', ids),
     loadPromotionDefinitions(db),
     db.from('flash_sales').select('*').eq('is_active', true).gte('ends_at', new Date().toISOString()),
   ])
-  if ([variantRes, flashRes].some(r => r.error)) throw new Error('Could not check current prices and offers. Please try again.')
+  if (variantResult.status === 'rejected' || variantResult.value.error) throw new Error('Could not check current stock. Please try again.')
+  const variantRes = variantResult.value
   const rows = variantRes.data || []
+  const stock = ids.map(variantId => {
+    const variant = rows.find(r => r.id === variantId)
+    return { variantId, stock: variant?.products && Number.isFinite(Number(variant.stock)) ? Math.max(0, Math.floor(Number(variant.stock))) : 0 }
+  })
+  const unavailable = paid.find(item => stock.find(s => s.variantId === item.variantId)!.stock < item.quantity)
+  if (unavailable) {
+    const variant = rows.find(r => r.id === unavailable.variantId)
+    const product = variant?.products as unknown as { name?: string } | undefined
+    const available = stock.find(s => s.variantId === unavailable.variantId)!.stock
+    throw new CartStockError(available <= 0 ? `${product?.name || 'An item in your bag'} is out of stock. Please remove it.`
+      : `Only ${available} available for ${product?.name || 'an item in your bag'}. Please reduce the quantity.`, stock)
+  }
+  // Inventory failures take precedence even if an unrelated promotion lookup also failed.
+  if (definitionResult.status === 'rejected') throw definitionResult.reason
+  if (flashResult.status === 'rejected' || flashResult.value.error) throw new Error('Could not check current prices and offers. Please try again.')
+  const definitions = definitionResult.value, flashRes = flashResult.value
   const productIds = [...new Set(rows.map(r => r.product_id))]
   const [{ data: categories, error: categoryError }, snapshot] = await Promise.all([
     db.from('product_categories').select('product_id,category_id').in('product_id', productIds),
@@ -55,7 +73,6 @@ export async function merchandiseQuote(db: SupabaseClient, userId: string | null
     if (!variant) throw new Error('Product not found')
     const product = variant.products as unknown as { name: string; brand: string; thumbnail_url: string; category_id: string | null; discount_type: 'percentage' | 'amount' | 'none'; discount_value: number }
     if (!product) throw new Error('Product not found')
-    if (variant.stock < item.quantity) throw new Error(`Not enough stock for ${product.name}. Please reduce the quantity.`)
     const categoryIds = [...new Set([product.category_id, ...(categories || []).filter(c => c.product_id === variant.product_id).map(c => c.category_id)].filter(Boolean))] as string[]
     const mrp = monetaryAmount(variant.price)
     const pricing = variantFlashPricing({ ...variant, price: mrp }, { ...product, id: variant.product_id, categoryIds }, (flashRes.data || []) as FlashSaleRow[])

@@ -68,3 +68,14 @@ it('never persists customer offer eligibility or derived price groups',()=>{
  expect(stored.offerCatalog).toBeUndefined();expect(stored.offerVerifiedUntil).toBeUndefined()
  expect(stored.items[0].priceBreakdown).toBeUndefined()
 })
+it('keeps unavailable quantities visible while clearing gifts and stale offer discounts',()=>{
+ useCart.getState().setOfferCatalog(catalog())
+ useCart.getState().addItem({...item,brand:'B',categoryIds:['c']})
+ const revision=useCart.getState().offerQuoteRevision
+ useCart.getState().applyCartStock([{variantId:'v',stock:0}],'Out of stock')
+ expect(useCart.getState().items[0]).toMatchObject({stock:0,quantity:3})
+ expect(useCart.getState().getBXGYTotalDiscount()).toBe(0)
+ expect(useCart.getState().offerQuoteRevision).toBe(revision+1)
+ useCart.getState().setOfferCatalog(catalog())
+ expect(useCart.getState().getBXGYTotalDiscount()).toBe(0)
+})

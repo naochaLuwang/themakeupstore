@@ -16,6 +16,7 @@ import { lineSubtotal, linePriceLabel } from "@/lib/line-pricing"
 import { usePromotions } from "@/hooks/use-promotions"
 import dynamic from "next/dynamic"
 import { CartOfferCards } from "@/components/store/cart-offer-cards"
+import { cartStockIssue } from "@/lib/cart-stock"
 
 const OfferProductsPanel = dynamic(() => import("@/components/store/offer-products-panel"), { ssr: false })
 
@@ -57,6 +58,11 @@ export default function CartPage() {
     const totalDiscount = Math.max(0, totalMRP - subtotal)
     const outOfStockVariants = useMemo(() => items.filter((i: any) => (i.stock ?? 1) <= 0 && !i.is_gift && !i.is_bxgy_free), [items])
     const hasOutOfStock = outOfStockVariants.length > 0
+    const hasStockProblems = items.some((item: any) => !!cartStockIssue(item))
+    const checkoutBlocked = hasStockProblems || checkingOffers || !!offerError
+    const checkoutBlockLabel = hasOutOfStock ? 'Some items are out of stock'
+        : hasStockProblems ? 'Check item quantities'
+        : offerError ? 'Unable to verify availability' : 'Checking availability…'
     const giftItems = useMemo(() => items.filter((i: any) => i.is_gift), [items])
     const totalBXGYDiscount = useMemo(() => (bxgyDiscounts || []).reduce((sum: number, d: any) => sum + d.discount_amount, 0), [bxgyDiscounts])
     const totalSaving = totalDiscount + totalBXGYDiscount
@@ -228,9 +234,9 @@ export default function CartPage() {
                                                     {item.priceBreakdown?.some((g: { price: number }) => g.price !== item.price) && (
                                                         <p className="text-[10px] text-slate-500 mt-1">Offer units use original prices · {linePriceLabel(item)}</p>
                                                     )}
-                                                    {(item.stock ?? 1) <= 0 && (
+                                                    {cartStockIssue(item) && (
                                                         <span className="mt-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
-                                                            Out of Stock
+                                                            {cartStockIssue(item)}
                                                         </span>
                                                     )}
                                                 </div>
@@ -415,10 +421,10 @@ export default function CartPage() {
                                     </div>
                                 )}
                             </div>
-                            {hasOutOfStock ? (
-                                <div className="mt-6 w-full h-12 bg-slate-300 text-white text-sm font-medium tracking-wide rounded-lg flex items-center justify-center gap-2 cursor-not-allowed">
-                                    Some items are out of stock
-                                </div>
+                            {checkoutBlocked ? (
+                                <button type="button" disabled className="mt-6 w-full h-12 bg-slate-300 text-white text-sm font-medium tracking-wide rounded-lg flex items-center justify-center gap-2 cursor-not-allowed">
+                                    {checkoutBlockLabel}
+                                </button>
                             ) : (
                                 <Link
                                     href="/checkout"
@@ -511,7 +517,7 @@ export default function CartPage() {
 
     return (
         <>
-            {offerError && <div className="mx-5 my-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600" role="status">
+            {offerError && !hasStockProblems && <div className="mx-5 my-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600" role="status">
                 {offerError}
                 {offerError && <button className="ml-3 font-bold text-pink-600" onClick={refreshOffers}>Try again</button>}
             </div>}
@@ -594,9 +600,9 @@ export default function CartPage() {
                                                     {item.priceBreakdown?.some((g: { price: number }) => g.price !== item.price) && (
                                                         <p className="text-[10px] text-slate-500 mt-1">Offer units use original prices · {linePriceLabel(item)}</p>
                                                     )}
-                                                    {(item.stock ?? 1) <= 0 && (
+                                                    {cartStockIssue(item) && (
                                                         <span className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
-                                                            Out of Stock
+                                                            {cartStockIssue(item)}
                                                         </span>
                                                     )}
                                                 </div>
@@ -702,10 +708,10 @@ export default function CartPage() {
                             <p className="text-[10px] font-black tracking-wider text-gray-400">GRAND TOTAL</p>
                             <p className="text-[22px] font-black text-gray-900">₹{Math.max(0, subtotal - totalBXGYDiscount).toLocaleString()}</p>
                         </div>
-                        {hasOutOfStock ? (
-                            <div className="h-[42px] bg-gray-300 text-white text-[11px] font-black tracking-wider rounded-lg flex items-center justify-center gap-1.5 px-6 cursor-not-allowed">
-                                SOME ITEMS OUT OF STOCK
-                            </div>
+                        {checkoutBlocked ? (
+                            <button type="button" disabled className="h-[42px] bg-gray-300 text-white text-[11px] font-black uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 px-6 cursor-not-allowed">
+                                {checkoutBlockLabel}
+                            </button>
                         ) : (
                             <Link
                                 href="/checkout"

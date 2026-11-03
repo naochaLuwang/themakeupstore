@@ -8,6 +8,7 @@ import type { merchandiseQuote } from '@/lib/cart-quote';
 import { lineSubtotal, type PriceGroup } from '@/lib/line-pricing';
 import { evaluatePromotionSnapshot, type PromotionSnapshot } from '@/lib/promotion-preview';
 import { FREE_SHIPPING_THRESHOLD, FREE_SHIPPING_PINCODES } from '@/lib/cart-constants';
+import { cartStockIssue, type CartStockUpdate } from '@/lib/cart-stock';
 
 export interface CartItem {
     id: string;
@@ -91,6 +92,7 @@ interface CartStore {
     offerInputKey: string;
     hasAutomaticOffer: boolean;
     applyOfferQuote: (quote: Awaited<ReturnType<typeof merchandiseQuote>>) => void;
+    applyCartStock: (stock: CartStockUpdate[], message: string) => void;
     setOfferCatalog: (catalog: PromotionSnapshot | null) => void;
     setOfferState: (status: 'idle' | 'loading' | 'ready' | 'preview' | 'error', error?: string) => void;
 
@@ -142,7 +144,7 @@ function quotedCart(quote: ReturnType<typeof evaluatePromotionSnapshot>) {
 // Runs synchronously inside each cart mutation, before subscribers render the new quantities.
 function previewCart(items: CartItem[], catalog: PromotionSnapshot | null) {
     const paid = items.filter(i=>!i.is_gift&&!i.is_bxgy_free).map(i=>({...i,priceBreakdown:undefined}));
-    if (catalog && paid.every(i=>i.brand !== undefined && i.categoryIds !== undefined)) {
+    if (catalog && paid.every(i=>i.brand !== undefined && i.categoryIds !== undefined && !cartStockIssue(i))) {
         const quote = evaluatePromotionSnapshot(paid.map(i=>({...i,brand:i.brand!,categoryIds:i.categoryIds!})),catalog);
         return {...quotedCart(quote),offerStatus:'preview' as const,offerVerifiedUntil:0,offerError:''};
     }
@@ -161,6 +163,13 @@ export const useCart = create<CartStore>()(
             offerStatus: 'idle', offerError: '', offerInputKey: '', hasAutomaticOffer: false,
             offerCatalog: null, offerVerifiedUntil: 0, offerQuoteRevision: 0,
             setOfferState: (status,error='') => set({offerStatus:status,offerError:error}),
+            applyCartStock: (stock, message) => {
+                const inventory = new Map(stock.map(s => [s.variantId, s.stock]));
+                const items = get().items.filter(i => !i.is_gift && !i.is_bxgy_free).map(i => ({...i,
+                    stock: inventory.has(i.variantId) ? Math.max(0, inventory.get(i.variantId)!) : i.stock, priceBreakdown: undefined}));
+                set({items,bxgyDiscounts:[],giftProgress:[],bxgyProgress:[],hasAutomaticOffer:false,
+                    offerStatus:'error',offerError:message,offerVerifiedUntil:0,offerInputKey:paidCartKey(items),offerQuoteRevision:get().offerQuoteRevision+1});
+            },
             applyOfferQuote: (quote) => {
                 set({...quotedCart(quote),offerCatalog:quote.previewCatalog || get().offerCatalog,
                     offerQuoteRevision:get().offerQuoteRevision+1,

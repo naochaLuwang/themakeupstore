@@ -8,6 +8,7 @@ import { checkoutQuote, type PricingInput } from '@/lib/checkout-pricing'
 import { cachedFlashSales } from '@/lib/flash-sale-cache'
 import { cachedPromotionDefinitions } from '@/lib/promotion-cache'
 import { loadPromotionSnapshot } from '@/lib/promotion-data'
+import { CartStockError } from '@/lib/cart-stock'
 
 export async function getPromotionPreview() {
   try {
@@ -31,6 +32,7 @@ export async function getOfferQuote(rawItems: unknown) {
     const quote = await merchandiseQuote(await createAdminClient(),user?.id || null,rawItems)
     return { success:true as const,quote }
   } catch (error) {
+    if (error instanceof CartStockError) return { success: false as const, message: error.message, stock: error.stock }
     return { success:false as const,message:error instanceof Error ? error.message : 'Could not check offers. Please try again.' }
   }
 }
@@ -43,6 +45,7 @@ export async function getCheckoutQuote(rawItems: unknown,input: PricingInput) {
     const quote = await checkoutQuote(await createAdminClient(),user.id,rawItems,input)
     return { success:true as const,quote,fingerprint:quoteFingerprint(quote,input) }
   } catch (error) {
+    if (error instanceof CartStockError) return { success: false as const, message: error.message, stock: error.stock }
     return { success:false as const,message:error instanceof Error ? error.message : 'Could not check checkout. Please try again.' }
   }
 }

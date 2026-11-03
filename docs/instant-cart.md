@@ -14,7 +14,19 @@ Shared server caching is limited to public campaign definitions and target links
 
 Account changes discard customer eligibility and invalidate pending work. Request revisions and basket keys reject stale responses. A separate quote revision also prevents an older background response from overwriting a newer checkout quote for an unchanged basket. Neither customer snapshots nor derived price groups persist in browser cart storage.
 
-Customers can navigate to checkout immediately and enter an address while verification finishes. Pressing the order/payment button always obtains a fresh server checkout quote. An amount, gift, or selling-price change requires review before continuing. Existing payment signatures, amount fingerprints, inventory transactions, and order idempotency remain enforced.
+Customers with a usable current quote can navigate to checkout immediately. A cold, unverified cart waits for the first availability check, and a failed verification blocks checkout until retry succeeds. Local offer totals still update instantly. Pressing the order/payment button always obtains a fresh server checkout quote. An amount, gift, or selling-price change requires review before continuing. Existing payment signatures, amount fingerprints, inventory transactions, and order idempotency remain enforced.
+
+## Stock synchronization — 3 November 2026
+
+The [checkout recovery follow-up](checkout-stock-recovery.md) adds inline removal/quantity correction, preserved checkout selections and explicit confirmation of updated totals.
+
+Previously, an unavailable variant caused the server quote to throw before sending any item data. The browser retained its saved positive stock count, so neither the Out of Stock badge nor checkout blocking activated. The server still rejected checkout/order pricing; the cart presentation and navigation were stale.
+
+`CartStockError` now carries current `product_variants.stock` for every requested paid variant when any line is unavailable or exceeds stock. Missing variants are reported as zero. Inventory is checked before handling promotion-definition failures, using the same existing parallel reads; this adds no stock-fetch request. `getOfferQuote` serializes the report as a failed quote, and the shared runtime applies it only after its basket/request/quote-revision guards pass.
+
+The store updates stock without silently reducing quantities and clears gifts, discounts and price groups derived from an invalid cart. Local previews cannot re-award those rewards while a line remains unavailable. Both cart layouts show **Out of Stock**, **Only N available**, or **Stock unavailable** and render disabled checkout buttons. The duplicate top-of-cart error sentence and Try again row are hidden when item-level stock problems already explain the block; generic verification/network failures retain their retry banner and also block navigation. Reducing/removing the affected item or restocking followed by a successful quote restores checkout. Healthy warmed carts retain immediate navigation. Canonical checkout/payment/order quotes continue to reject insufficient inventory.
+
+Regression coverage includes zero/reduced/deleted stock, complete stock reports, simultaneous promotion lookup errors, failed-response serialization, stale-response protection, restocking, reward clearing, cold/network-error navigation, rendered desktop/mobile buttons, and immediate warm-cart checkout. Local browser fixtures at 390px and 1440px verify saved stock 20 changing to zero, no checkout links, disabled controls, and recovery after a simulated restock; no production inventory was changed.
 
 ## Verification and rollout
 
