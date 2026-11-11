@@ -68,14 +68,14 @@ export function EditCategoryForm({ initialData, categories }: EditCategoryFormPr
                             <div className="relative w-32 h-32 rounded-xl overflow-hidden border">
                                 <Image fill src={preview} alt="Preview" className="object-cover" />
                                 <button type="button" onClick={() => { setPreview(""); setSelectedFile(null); form.setValue("image_url", "") }}
-                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-lg p-1"
                                 >
-                                    <X className="w-3 h-3" />
+                                    <X className="w-4 h-4 stroke-[1.5]" />
                                 </button>
                             </div>
                         ) : (
                             <label className="w-32 h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50">
-                                <ImagePlus className="w-6 h-6 text-gray-400" />
+                                <ImagePlus className="w-6 h-6 text-gray-400 stroke-[1.5]" />
                                 <input type="file" className="hidden" accept="image/*" onChange={onImageSelect} />
                             </label>
                         )}
@@ -107,7 +107,7 @@ export function EditCategoryForm({ initialData, categories }: EditCategoryFormPr
                 )} />
 
                 <Button type="submit" className="w-full bg-black text-white h-12" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : "Save Changes"}
+                    {form.formState.isSubmitting ? <Loader2 className="animate-spin stroke-[1.5]" /> : "Save Changes"}
                 </Button>
             </form>
         </Form>

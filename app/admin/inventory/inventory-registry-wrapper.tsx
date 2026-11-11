@@ -169,7 +169,7 @@ export default function InventoryRegistryWrapper({
             {/* Toolbar */}
             <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
                     <Input
                         placeholder="Search products or SKU..."
                         value={searchQuery}
@@ -178,7 +178,7 @@ export default function InventoryRegistryWrapper({
                     />
                 </div>
                 <div className="relative shrink-0">
-                    <FilterIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <FilterIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
                     <select
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
@@ -205,36 +205,36 @@ export default function InventoryRegistryWrapper({
                 {selectedCount > 0 && (
                     <button
                         onClick={() => setBulkOpen(true)}
-                        className="h-9 px-4 rounded-lg bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
+                        className="h-9 px-4 rounded-lg bg-slate-900 text-white text-xs font-semibold tracking-normal flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
                     >
-                        <Zap className="w-3.5 h-3.5" />
+                        <Zap className="w-4 h-4 stroke-[1.5]" />
                         Bulk ({selectedCount})
                     </button>
                 )}
             </div>
 
             {/* Table */}
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-b border-slate-100 bg-slate-50/50">
                             <th className="py-3 px-4 w-10">
-                                <button onClick={toggleSelectAll} className="text-slate-300 hover:text-slate-500 transition-colors">
-                                    {selectedCount > 0 ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                                <button onClick={toggleSelectAll} className="text-slate-400 hover:text-slate-500 transition-colors">
+                                    {selectedCount > 0 ? <CheckSquare className="w-4 h-4 stroke-[1.5]" /> : <Square className="w-4 h-4 stroke-[1.5]" />}
                                 </button>
                             </th>
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Product</th>
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Variant</th>
-                            <th className="py-3 px-4 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider">MRP / Price</th>
-                            <th className="py-3 px-4 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Stock</th>
-                            <th className="py-3 px-4 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Adjust</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 tracking-normal">Product</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 tracking-normal">Variant</th>
+                            <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 tracking-normal">MRP / Price</th>
+                            <th className="py-3 px-4 text-center text-xs font-semibold text-slate-500 tracking-normal">Stock</th>
+                            <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 tracking-normal">Adjust</th>
                             <th className="py-3 px-4 w-14"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                         {filteredProducts.length === 0 && (
                             <tr>
-                                <td colSpan={7} className="h-24 text-center text-xs text-slate-400">
+                                <td colSpan={7} className="h-24 text-center text-xs text-slate-500 tabular-nums">
                                     No inventory items found.
                                 </td>
                             </tr>
@@ -247,25 +247,25 @@ export default function InventoryRegistryWrapper({
                                 <Fragment key={product.id}>
                                     {/* Product group row */}
                                     <tr className="bg-slate-50/30">
-                                        <td className="py-2.5 px-4" />
-                                        <td className="py-2.5 px-4" colSpan={2}>
+                                        <td className="py-2.5 px-4 tabular-nums" />
+                                        <td className="py-2.5 px-4 tabular-nums" colSpan={2}>
                                             <div className="flex items-center gap-2.5">
                                                 {product.thumbnail_url ? (
                                                     <img src={product.thumbnail_url} alt={product.name || "Product"} className="w-7 h-7 rounded-lg object-cover bg-slate-100 shrink-0" />
                                                 ) : (
                                                     <div className="w-7 h-7 rounded-lg bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
-                                                        <Package className="w-3.5 h-3.5 text-slate-300" />
+                                                        <Package className="w-4 h-4 text-slate-400 stroke-[1.5]" />
                                                     </div>
                                                 )}
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800">{product.name}</p>
                                                     {product.brand && (
-                                                        <p className="text-[10px] text-slate-400">{product.brand}</p>
+                                                        <p className="text-xs text-slate-500">{product.brand}</p>
                                                     )}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="py-2.5 px-4 text-right">
+                                        <td className="py-2.5 px-4 text-right tabular-nums">
                                             {variants.length > 0 && (() => {
                                                 const minSelling = Math.min(...variants.map(computeSellingPrice))
                                                 const minMrp = Math.min(...variants.map((v) => v.price || 0))
@@ -273,7 +273,7 @@ export default function InventoryRegistryWrapper({
                                                 return (
                                                     <span className="text-xs text-slate-500 inline-flex items-center gap-1.5 justify-end">
                                                         {hasDiscount && (
-                                                            <span className="line-through text-slate-400">₹{minMrp.toFixed(2)}</span>
+                                                            <span className="line-through text-slate-500">₹{minMrp.toFixed(2)}</span>
                                                         )}
                                                         <span className={hasDiscount ? "text-emerald-600 font-semibold" : ""}>
                                                             ₹{minSelling.toFixed(2)}
@@ -283,16 +283,16 @@ export default function InventoryRegistryWrapper({
                                                 )
                                             })()}
                                         </td>
-                                        <td className="py-2.5 px-4 text-center">
+                                        <td className="py-2.5 px-4 text-center tabular-nums">
                                             <div className="flex items-center justify-center gap-2">
-                                                <span className={`text-sm font-bold tabular-nums ${
+                                                <span className={`text-sm font-semibold tabular-nums ${
                                                     totalStock === 0 ? "text-red-600" :
                                                     totalStock <= 10 ? "text-amber-600" :
                                                     "text-emerald-600"
                                                 }`}>
                                                     {totalStock}
                                                 </span>
-                                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
                                                     totalStock === 0 ? "bg-red-50 text-red-600" :
                                                     totalStock <= 10 ? "bg-amber-50 text-amber-600" :
                                                     "bg-emerald-50 text-emerald-600"
@@ -301,8 +301,8 @@ export default function InventoryRegistryWrapper({
                                                 </span>
                                             </div>
                                         </td>
-                                        <td colSpan={2} className="py-2.5 px-4 text-right">
-                                            <span className="text-xs text-slate-400">{variants.length} variant{variants.length !== 1 ? "s" : ""}</span>
+                                        <td colSpan={2} className="py-2.5 px-4 text-right tabular-nums">
+                                            <span className="text-xs text-slate-500">{variants.length} variant{variants.length !== 1 ? "s" : ""}</span>
                                         </td>
                                     </tr>
                                     {/* Variant rows */}
@@ -317,50 +317,50 @@ export default function InventoryRegistryWrapper({
                                                 key={v.id}
                                                 className={`group transition-colors ${isSelected ? "bg-blue-50/30" : ""}`}
                                             >
-                                                <td className="py-3 px-4">
+                                                <td className="py-3 px-4 tabular-nums">
                                                     <button
                                                         onClick={() => toggleSelect(v.id)}
-                                                        className={`${isSelected ? "text-blue-600" : "text-slate-200"} hover:text-blue-400 transition-colors`}
+                                                        className={`${isSelected ? "text-slate-700" : "text-slate-200"} hover:text-blue-400 transition-colors`}
                                                     >
-                                                        {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                                                        {isSelected ? <CheckSquare className="w-4 h-4 stroke-[1.5]" /> : <Square className="w-4 h-4 stroke-[1.5]" />}
                                                     </button>
                                                 </td>
-                                                <td className="py-3 px-4" />
-                                                <td className="py-3 px-4">
+                                                <td className="py-3 px-4 tabular-nums" />
+                                                <td className="py-3 px-4 tabular-nums">
                                                     <div className="flex items-center gap-2">
-                                                        <Package className="w-3 h-3 text-slate-300 shrink-0" />
+                                                        <Package className="w-4 h-4 text-slate-400 shrink-0 stroke-[1.5]" />
                                                         <span className="text-xs text-slate-700 font-medium">{v.title || "Default"}</span>
                                                         {v.sku && (
-                                                            <code className="text-[9px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{v.sku}</code>
+                                                            <code className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{v.sku}</code>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4 text-right">
+                                                <td className="py-3 px-4 text-right tabular-nums">
                                                     <span className="text-xs inline-flex items-center gap-1.5 justify-end">
                                                         {(v.price || 0) > sellingPrice && (
-                                                            <span className="line-through text-slate-400">₹{(v.price || 0).toFixed(2)}</span>
+                                                            <span className="line-through text-slate-500">₹{(v.price || 0).toFixed(2)}</span>
                                                         )}
                                                         <span className={(v.price || 0) > sellingPrice ? "text-emerald-600 font-semibold" : "text-slate-600"}>
                                                             ₹{sellingPrice.toFixed(2)}
                                                         </span>
                                                     </span>
                                                 </td>
-                                                <td className="py-3 px-4 text-center">
+                                                <td className="py-3 px-4 text-center tabular-nums">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <span className={`text-sm font-bold font-mono ${level.color}`}>{v.stock}</span>
-                                                        <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded ${level.bg} ${level.color}`}>
+                                                        <span className={`text-sm font-semibold font-mono ${level.color}`}>{v.stock}</span>
+                                                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${level.bg} ${level.color}`}>
                                                             {level.label}
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4 text-right">
+                                                <td className="py-3 px-4 text-right tabular-nums">
                                                     <StockInput
                                                         currentStock={v.stock}
                                                         onSave={(input) => handleSave(v.id, v.stock, input)}
                                                         isSaving={isSaving}
                                                     />
                                                 </td>
-                                                <td className="py-3 px-4 text-right" />
+                                                <td className="py-3 px-4 text-right tabular-nums" />
                                             </tr>
                                         )
                                     })}
@@ -375,7 +375,7 @@ export default function InventoryRegistryWrapper({
             <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
                 <DialogContent className="sm:max-w-sm rounded-2xl">
                     <DialogHeader>
-                        <DialogTitle className="text-sm font-bold text-slate-900">Bulk Stock Update</DialogTitle>
+                        <DialogTitle className="text-sm font-semibold text-slate-900">Bulk Stock Update</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         <div className="flex gap-2">
@@ -383,7 +383,7 @@ export default function InventoryRegistryWrapper({
                                 <button
                                     key={action}
                                     onClick={() => setBulkAction(action)}
-                                    className={`flex-1 h-10 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                                    className={`flex-1 h-10 rounded-xl text-xs font-semibold tracking-normal transition-colors ${
                                         bulkAction === action
                                             ? "bg-slate-900 text-white shadow-sm"
                                             : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
@@ -394,7 +394,7 @@ export default function InventoryRegistryWrapper({
                             ))}
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                            <label className="text-xs font-semibold text-slate-500 tracking-normal">
                                 {bulkAction === "set" ? "Stock Value" : "Amount"}
                             </label>
                             <Input
@@ -410,22 +410,22 @@ export default function InventoryRegistryWrapper({
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between text-xs text-slate-500">
                                     <span className="flex items-center gap-2">
-                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
                                         Saving {bulkProgress.current} of {bulkProgress.total}
                                     </span>
-                                    <span className="font-mono text-slate-400">
+                                    <span className="font-mono text-slate-500">
                                         {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
                                     </span>
                                 </div>
                                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-slate-900 rounded-full transition-all duration-300"
+                                        className="h-full bg-slate-900 rounded-full transition-colors duration-300"
                                         style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
                                     />
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-slate-500">
                                 Apply to <strong className="text-slate-700">{selectedIds.size} variant{selectedIds.size !== 1 ? "s" : ""}</strong>
                             </p>
                         )}
@@ -441,9 +441,9 @@ export default function InventoryRegistryWrapper({
                         <button
                             onClick={handleBulkApply}
                             disabled={isBulkUpdating}
-                            className="h-9 px-5 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2"
+                            className="h-9 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold tracking-normal hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2"
                         >
-                            {isBulkUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                            {isBulkUpdating ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Zap className="w-4 h-4 stroke-[1.5]" />}
                             {isBulkUpdating ? "Saving..." : "Apply"}
                         </button>
                     </DialogFooter>
@@ -493,21 +493,20 @@ function StockInput({
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className={`w-20 h-8 text-xs font-mono text-right rounded-lg border transition-all px-2
+                className={`w-20 h-8 text-xs font-mono text-right rounded-lg border transition-colors px-2
                     ${hasValue ? "border-amber-400 bg-white ring-2 ring-amber-100" : "border-slate-200 bg-slate-50"}
-                    [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
-                    focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300`}
+                    [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300`}
                 placeholder="+N / -N"
             />
             {hasChanges && (
-                <span className="text-[10px] font-semibold text-amber-600 whitespace-nowrap">→{preview}</span>
+                <span className="text-xs font-semibold text-amber-600 whitespace-nowrap">→{preview}</span>
             )}
             <button
                 onClick={() => { onSave(input); setInput("") }}
                 disabled={isSaving || !hasChanges}
-                className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all disabled:opacity-30 disabled:pointer-events-none"
+                className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
-                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Save className="w-4 h-4 stroke-[1.5]" />}
             </button>
         </div>
     )

@@ -23,7 +23,7 @@ function ProductSearchInner() {
 
     return (
         <div className="relative w-full max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500 stroke-[1.5]" />
             <Input
                 type="search"
                 placeholder="Search products or SKUs..."
@@ -37,7 +37,7 @@ function ProductSearchInner() {
 
 export function ProductSearch() {
     return (
-        <Suspense fallback={<div className="h-9 w-full max-w-sm bg-slate-100 rounded-lg animate-pulse" />}>
+        <Suspense fallback={<div className="h-9 w-full max-w-sm bg-slate-100 rounded-lg" />}>
             <ProductSearchInner />
         </Suspense>
     )

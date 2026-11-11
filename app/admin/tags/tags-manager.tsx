@@ -140,7 +140,7 @@ export default function TagsManager({ initialProducts, categories }: { initialPr
             <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
                 <div className="flex flex-col sm:flex-row gap-3 flex-1 sm:items-center">
                     <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
                         <Input
                             placeholder="Search products..."
                             value={searchQuery}
@@ -168,25 +168,25 @@ export default function TagsManager({ initialProducts, categories }: { initialPr
                     <button
                         onClick={handleSave}
                         disabled={saving || changedCount === 0}
-                        className="h-10 px-5 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="h-10 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold tracking-normal flex items-center gap-2 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Save className="w-4 h-4 stroke-[1.5]" />}
                         {saving ? "Saving..." : "Save All"}
                     </button>
                 </div>
             </div>
 
             {/* Bulk Apply Bar */}
-            <div className="px-4 py-4 border-b border-slate-100 bg-gradient-to-r from-[#fdf2f8] to-white flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="px-4 py-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 sm:items-center bg-slate-50">
                 <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#fc2779]">Bulk Tag</span>
+                    <span className="text-xs font-semibold tracking-normal text-pink-700">Bulk Tag</span>
                     <div className="relative">
                         <Input
                             value={bulkTag}
                             onChange={(e) => setBulkTag(e.target.value.toUpperCase())}
                             placeholder="e.g. BESTSELLER"
                             onKeyDown={(e) => { if (e.key === "Enter") applyTagToSelected() }}
-                            className="h-9 rounded-lg bg-white border border-[#fbcfe8] text-xs font-bold uppercase tracking-wider w-44 focus:border-[#fc2779] focus:ring-2 focus:ring-[#fc2779]/20"
+                            className="h-9 rounded-lg bg-white border border-[#fbcfe8] text-xs font-semibold tracking-normal w-44 focus:border-[#fc2779] focus:ring-2 focus:ring-[#fc2779]/20"
                         />
                     </div>
                 </div>
@@ -194,28 +194,28 @@ export default function TagsManager({ initialProducts, categories }: { initialPr
                     <button
                         onClick={applyTagToSelected}
                         disabled={selectedCount === 0}
-                        className="h-9 px-4 rounded-lg bg-[#fc2779] text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 hover:bg-[#e01567] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="h-9 px-4 rounded-lg bg-[#fc2779] text-white text-xs font-semibold tracking-normal flex items-center gap-1.5 hover:bg-[#e01567] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
-                        <Check className="w-3.5 h-3.5" /> Apply to {selectedCount > 0 ? `${selectedCount} selected` : "selection"}
+                        <Check className="w-4 h-4 stroke-[1.5]" /> Apply to {selectedCount > 0 ? `${selectedCount} selected` : "selection"}
                     </button>
                     <button
                         onClick={applyToFiltered}
-                        className="h-9 px-4 rounded-lg border border-[#fbcfe8] text-[#fc2779] text-[10px] font-black uppercase tracking-wider hover:bg-[#fdf2f8] transition-all"
+                        className="h-9 px-4 rounded-lg border border-[#fbcfe8] text-pink-700 text-xs font-semibold tracking-normal hover:bg-[#fdf2f8] transition-colors"
                     >
                         Apply to all {filtered.length} filtered
                     </button>
                     <button
                         onClick={clearTagForSelected}
                         disabled={selectedCount === 0}
-                        className="h-9 px-4 rounded-lg border border-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="h-9 px-4 rounded-lg border border-slate-200 text-slate-500 text-xs font-semibold tracking-normal hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
-                        <X className="w-3 h-3 inline mr-1" /> Clear for selected
+                        <X className="w-4 h-4 inline mr-1 stroke-[1.5]" /> Clear for selected
                     </button>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto min-w-0 max-w-full">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-b border-slate-100">
@@ -226,16 +226,16 @@ export default function TagsManager({ initialProducts, categories }: { initialPr
                                     title={selectedCount > 0 ? "Deselect all" : "Select all"}
                                 >
                                     {selectedCount > 0 ? (
-                                        <CheckSquare className="w-4 h-4 text-[#fc2779]" />
+                                        <CheckSquare className="w-4 h-4 text-pink-700 stroke-[1.5]" />
                                     ) : (
-                                        <Square className="w-4 h-4 text-slate-300" />
+                                        <Square className="w-4 h-4 text-slate-400 stroke-[1.5]" />
                                     )}
                                 </button>
                             </th>
-                            <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Product</th>
-                            <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Brand</th>
-                            <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 w-40">Current Tag</th>
-                            <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 w-24">Status</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold tracking-normal text-slate-500">Product</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold tracking-normal text-slate-500">Brand</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold tracking-normal text-slate-500 w-40">Current Tag</th>
+                            <th className="text-left py-3 px-4 text-xs font-semibold tracking-normal text-slate-500 w-24">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -250,42 +250,42 @@ export default function TagsManager({ initialProducts, categories }: { initialPr
                                     onClick={() => toggleSelect(product.id)}
                                     className={`border-b border-slate-50 transition-colors cursor-pointer ${isSelected ? "bg-[#fdf2f8]" : isChanged ? "bg-amber-50/30" : "hover:bg-slate-50/50"}`}
                                 >
-                                    <td className="py-3 px-4">
+                                    <td className="py-3 px-4 tabular-nums">
                                         <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-[#fc2779] border-[#fc2779]" : "border-slate-300 bg-white"}`}>
-                                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                                            {isSelected && <Check className="w-4 h-4 text-white stroke-[1.5]" />}
                                         </div>
                                     </td>
-                                    <td className="py-3 px-4">
+                                    <td className="py-3 px-4 tabular-nums">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0">
                                                 {product.thumbnail_url ? (
                                                     <img src={product.thumbnail_url} alt="" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
-                                                        <Tag className="w-4 h-4 text-slate-300" />
+                                                        <Tag className="w-4 h-4 text-slate-400 stroke-[1.5]" />
                                                     </div>
                                                 )}
                                             </div>
-                                            <p className="text-xs font-bold text-slate-900 truncate max-w-[200px]">{product.name}</p>
+                                            <p className="text-xs font-semibold text-slate-900 truncate max-w-[200px]">{product.name}</p>
                                         </div>
                                     </td>
-                                    <td className="py-3 px-4">
+                                    <td className="py-3 px-4 tabular-nums">
                                         <span className="text-xs text-slate-500">{product.brand || "—"}</span>
                                     </td>
-                                    <td className="py-3 px-4">
+                                    <td className="py-3 px-4 tabular-nums">
                                         {product.tag ? (
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-[#fc2779] bg-[#fdf2f8] px-2.5 py-1 rounded-full">{product.tag}</span>
+                                            <span className="text-xs font-semibold tracking-normal text-pink-700 bg-[#fdf2f8] px-2.5 py-1 rounded-full">{product.tag}</span>
                                         ) : (
-                                            <span className="text-[10px] text-slate-300">—</span>
+                                            <span className="text-xs text-slate-400">—</span>
                                         )}
                                     </td>
-                                    <td className="py-3 px-4">
+                                    <td className="py-3 px-4 tabular-nums">
                                         {isChanged ? (
-                                            <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modified</span>
+                                            <span className="text-xs font-semibold tracking-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modified</span>
                                         ) : product.tag ? (
-                                            <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Set</span>
+                                            <span className="text-xs font-semibold tracking-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Set</span>
                                         ) : (
-                                            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-300">—</span>
+                                            <span className="text-xs font-semibold tracking-normal text-slate-400">—</span>
                                         )}
                                     </td>
                                 </tr>
@@ -297,8 +297,8 @@ export default function TagsManager({ initialProducts, categories }: { initialPr
 
             {filtered.length === 0 && (
                 <div className="py-12 text-center">
-                    <Tag className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-                    <p className="text-xs text-slate-400">No products found</p>
+                    <Tag className="w-8 h-8 text-slate-200 mx-auto mb-3 stroke-[1.5]" />
+                    <p className="text-xs text-slate-500">No products found</p>
                 </div>
             )}
         </div>

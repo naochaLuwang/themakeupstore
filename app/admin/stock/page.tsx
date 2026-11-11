@@ -12,7 +12,7 @@ export default async function InventoryPage() {
     return (
         <div className="space-y-6">
             <div className="space-y-1">
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Stock Intelligence</h1>
+                <h1 className="text-slate-900 text-2xl font-black tracking-tight">Stock Intelligence</h1>
                 <p className="text-sm text-slate-500">Global inventory overview</p>
             </div>
             <InventoryClient initialData={stats || []} />

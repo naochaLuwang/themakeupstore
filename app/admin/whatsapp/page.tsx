@@ -45,7 +45,7 @@ export default async function AdminWhatsAppPage() {
       {config && (
         <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-700">Webhook URL</h2>
+            <h2 className="text-sm font-semibold text-slate-700">Webhook URL</h2>
           </div>
           <div className="px-6 py-4">
             <p className="text-xs text-slate-500 mb-2">Set this as the webhook callback URL in your Meta Business App:</p>
@@ -56,7 +56,7 @@ export default async function AdminWhatsAppPage() {
                 {config.is_active ? 'Active' : 'Inactive'}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               Verify token: <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono">{config.verify_token || '(not set)'}</code>
             </p>
           </div>

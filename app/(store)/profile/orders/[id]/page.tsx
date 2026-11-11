@@ -121,9 +121,12 @@ export default function OrderDetailPage() {
                     .eq("order_id", id),
                 supabase
                     .from("loyalty_transactions")
-                    .select("amount as points, status, created_at")
+                    .select("points:amount, status, created_at")
                     .eq("reference_id", id)
                     .eq("type", "earn")
+                    .in("status", ["pending", "available"])
+                    .order("created_at", { ascending: false })
+                    .limit(1)
                     .maybeSingle(),
             ])
             if (returns) setReturnRequests(returns)
@@ -139,7 +142,8 @@ export default function OrderDetailPage() {
             const result = await cancelOrderAndRestoreStock(id)
             if (!result.success) throw new Error(result.message)
             setOrder((prev: any) => ({ ...prev, status: "cancelled" }))
-            toast.success("Order cancelled")
+            await fetchOrder()
+            toast.success(result.message || "Order cancelled")
         } catch (e: any) {
             toast.error(e.message || "Failed to cancel order")
         } finally {
@@ -279,7 +283,8 @@ export default function OrderDetailPage() {
     const giftCardDiscount = Number(order.gift_card_discount) || 0
     const coinDiscount = Number(order.coin_discount_amount) || 0
     const shipping = Number(order.shipping_price) || 0
-    const subtotal = Number(order.total) + discount + bxgyDiscount + giftCardDiscount + coinDiscount - shipping
+    const additionalCharges = Number(order.additional_charges || 0)
+    const subtotal = Number(order.total) + discount + bxgyDiscount + giftCardDiscount + coinDiscount - shipping - additionalCharges
 
     const statusColors: Record<string, string> = {
         pending: "#F59E0B",
@@ -467,6 +472,7 @@ export default function OrderDetailPage() {
                                 {shipping ? `₹${shipping}` : "FREE"}
                             </span>
                         </div>
+                        {additionalCharges > 0 && <div className="flex justify-between mb-1.5"><span className="text-[13px] text-gray-500">{order.additional_charges_label || 'Extra charges'}</span><span className="text-[13px] font-medium text-gray-900">₹{additionalCharges.toLocaleString('en-IN')}</span></div>}
                         {discount > 0 && (
                             <div className="flex justify-between mb-1.5">
                                 <span className="text-[13px] text-green-600">
@@ -475,6 +481,7 @@ export default function OrderDetailPage() {
                                 <span className="text-[13px] font-medium text-green-600">-₹{discount}</span>
                             </div>
                         )}
+                        {bxgyDiscount > 0 && <div className="flex justify-between mb-1.5"><span className="text-[13px] text-green-600">Buy 2 Get 1 savings</span><span className="text-[13px] font-medium text-green-600">-₹{bxgyDiscount.toLocaleString('en-IN')}</span></div>}
                         {giftCardDiscount > 0 && (
                             <div className="flex justify-between mb-1.5">
                                 <span className="text-[13px] text-emerald-500">Gift Card</span>
@@ -492,6 +499,12 @@ export default function OrderDetailPage() {
                             <span className="text-[17px] font-extrabold text-gray-900">TOTAL</span>
                             <span className="text-xl font-extrabold text-[#FC2779]">₹{Math.round(Number(order.total))}</span>
                         </div>
+                        {Number(order.edit_version)>0 && <div className="mt-3 rounded-lg border border-gray-200 p-3 text-[13px]">
+                            <p className="font-semibold text-gray-900">Order updated by the store</p>
+                            <p className="mt-1 text-gray-500">Received: ₹{Number(order.edit_paid_amount || 0).toLocaleString('en-IN')}</p>
+                            {Number(order.edit_balance_due)>0 && <p className="mt-1 font-semibold text-amber-700">Remaining to pay: ₹{Number(order.edit_balance_due).toLocaleString('en-IN')}</p>}
+                            {Number(order.edit_refund_due)>0 && <p className="mt-1 font-semibold text-rose-700">Refund due: ₹{Number(order.edit_refund_due).toLocaleString('en-IN')}</p>}
+                        </div>}
                         {rewardPoints && (
                             <div className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-green-50 mt-1">
                                 <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -28,15 +28,15 @@ export default async function AdminLayout({
     }
 
     return (
-        <SidebarProvider>
+        <SidebarProvider className="min-w-0 bg-slate-50">
             <AdminSidebar />
-            <SidebarInset>
+            <SidebarInset className="min-w-0 bg-slate-50">
                 {/* Header Bar */}
-                <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b px-3 sm:px-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:h-16 sm:px-6">
                     <SidebarTrigger className="-ml-1" />
                     <Separator orientation="vertical" className="mr-2 h-4 hidden sm:block" />
                     <div className="flex-1 flex justify-between items-center min-w-0">
-                        <h2 className="text-xs sm:text-sm font-semibold tracking-tight truncate">Admin Dashboard</h2>
+                        <h2 className="text-sm font-semibold text-slate-700 truncate">Admin Dashboard</h2>
 
                         {/* Displaying logged in user name */}
                         <div className="flex items-center gap-3">
@@ -52,8 +52,8 @@ export default async function AdminLayout({
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 p-4 sm:p-6 bg-slate-50/50">
-                    <div className="max-w-7xl mx-auto">
+                <main className="min-w-0 flex-1 bg-slate-50/70 p-4 sm:p-6 lg:p-8">
+                    <div className="mx-auto w-full min-w-0 max-w-[1440px]">
                         {children}
                     </div>
                 </main>

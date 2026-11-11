@@ -39,10 +39,10 @@ export default async function EditPromoPage({ params }: PageProps) {
                     href="/admin/promos"
                     className="rounded-xl h-10 w-10 border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors shrink-0"
                 >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-5 h-5 stroke-[1.5]" />
                 </Link>
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Edit Promo</h1>
+                    <h1 className="text-slate-900 text-2xl font-black tracking-tight">Edit Promo</h1>
                     <p className="text-sm text-slate-500">
                         <span className="font-semibold">{promo.code}</span> — {promo.description || 'No description'}
                     </p>
@@ -61,8 +61,8 @@ export default async function EditPromoPage({ params }: PageProps) {
 
                 <div className="lg:col-span-1">
                     <div className="sticky top-24 rounded-2xl border bg-white p-6 shadow-sm">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
-                            <Clock className="w-4 h-4" /> Recent Redemptions
+                        <h3 className="text-xs font-semibold text-slate-500 tracking-normal mb-5 flex items-center gap-2">
+                            <Clock className="w-4 h-4 stroke-[1.5]" /> Recent Redemptions
                         </h3>
 
                         {history && history.length > 0 ? (
@@ -72,18 +72,18 @@ export default async function EditPromoPage({ params }: PageProps) {
                                         <div className="min-w-0">
                                             <p className="text-sm font-medium text-slate-900 truncate">{usage.user_name || "User"}</p>
                                             <div className="flex items-center gap-3 mt-0.5">
-                                                <span className="text-[11px] text-slate-400">#{usage.order_id?.slice(0, 8)}</span>
-                                                <span className="text-[11px] text-slate-400">{new Date(usage.redeemed_at).toLocaleDateString()}</span>
+                                                <span className="text-xs text-slate-500">#{usage.order_id?.slice(0, 8)}</span>
+                                                <span className="text-xs text-slate-500">{new Date(usage.redeemed_at).toLocaleDateString()}</span>
                                             </div>
                                         </div>
-                                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md shrink-0 ml-3">
+                                        <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md shrink-0 ml-3">
                                             ₹{usage.order_total}
                                         </span>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-slate-400 py-4 text-center">No redemptions yet</p>
+                            <p className="text-sm text-slate-500 py-4 text-center">No redemptions yet</p>
                         )}
                     </div>
                 </div>

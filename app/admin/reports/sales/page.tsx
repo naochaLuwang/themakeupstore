@@ -97,7 +97,7 @@ export default async function SalesReportPage({
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Sales Report</h1>
+                    <h1 className="text-slate-900 text-2xl font-black tracking-tight">Sales Report</h1>
                     <p className="text-sm text-slate-500">
                         {format(new Date(startDate), "MMM dd, yyyy")} — {format(new Date(endDate), "MMM dd, yyyy")}
                     </p>
@@ -112,52 +112,52 @@ export default async function SalesReportPage({
             <div className="grid grid-cols-4 gap-4">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Units Sold</span>
+                        <span className="text-xs font-semibold text-slate-500 tracking-normal">Units Sold</span>
                         <div className="w-6 h-6 flex items-center justify-center rounded-md bg-slate-50 border border-slate-100">
-                            <Package className="w-3.5 h-3.5 text-slate-500" />
+                            <Package className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                         </div>
                     </div>
-                    <p className="text-2xl font-bold text-slate-900 tracking-tight">{totalQuantity.toLocaleString()}</p>
+                    <p className="text-2xl font-semibold text-slate-900 tracking-tight">{totalQuantity.toLocaleString()}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Orders</span>
+                        <span className="text-xs font-semibold text-slate-500 tracking-normal">Orders</span>
                         <div className="w-6 h-6 flex items-center justify-center rounded-md bg-slate-50 border border-slate-100">
-                            <ShoppingCart className="w-3.5 h-3.5 text-slate-500" />
+                            <ShoppingCart className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                         </div>
                     </div>
-                    <p className="text-2xl font-bold text-slate-900 tracking-tight">{orderCount.toLocaleString()}</p>
+                    <p className="text-2xl font-semibold text-slate-900 tracking-tight">{orderCount.toLocaleString()}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Avg Daily</span>
+                        <span className="text-xs font-semibold text-slate-500 tracking-normal">Avg Daily</span>
                         <div className="w-6 h-6 flex items-center justify-center rounded-md bg-slate-50 border border-slate-100">
-                            <TrendingUp className="w-3.5 h-3.5 text-slate-500" />
+                            <TrendingUp className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                         </div>
                     </div>
-                    <p className="text-2xl font-bold text-slate-900 tracking-tight">{avgDaily}</p>
+                    <p className="text-2xl font-semibold text-slate-900 tracking-tight">{avgDaily}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Revenue</span>
+                        <span className="text-xs font-semibold text-slate-500 tracking-normal">Revenue</span>
                         <div className="w-6 h-6 flex items-center justify-center rounded-md bg-slate-50 border border-slate-100">
-                            <BarChart3 className="w-3.5 h-3.5 text-slate-500" />
+                            <BarChart3 className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                         </div>
                     </div>
-                    <p className="text-2xl font-bold text-slate-900 tracking-tight">₹{totalRevenue.toLocaleString('en-IN')}</p>
+                    <p className="text-2xl font-semibold text-slate-900 tracking-tight">₹{totalRevenue.toLocaleString('en-IN')}</p>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-b border-slate-100 bg-slate-50/50">
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Variant</th>
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Category</th>
-                            <th className="py-3 px-4 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wider">In Stock</th>
-                            <th className="py-3 px-4 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Sold</th>
-                            <th className="py-3 px-4 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 tracking-normal">Variant</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 tracking-normal">Category</th>
+                            <th className="py-3 px-4 text-center text-xs font-semibold text-slate-500 tracking-normal">In Stock</th>
+                            <th className="py-3 px-4 text-center text-xs font-semibold text-slate-500 tracking-normal">Sold</th>
+                            <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 tracking-normal">Status</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -165,21 +165,21 @@ export default async function SalesReportPage({
                             const isDanger = item.unitsSold > item.currentStock
                             return (
                                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="py-3 px-4">
+                                    <td className="py-3 px-4 tabular-nums">
                                         <p className="text-sm font-semibold text-slate-800">{item.productName}</p>
                                         {item.name !== item.productName && (
-                                            <p className="text-xs text-slate-400">{item.name.replace(item.productName, '').trim()}</p>
+                                            <p className="text-xs text-slate-500">{item.name.replace(item.productName, '').trim()}</p>
                                         )}
                                     </td>
-                                    <td className="py-3 px-4">
+                                    <td className="py-3 px-4 tabular-nums">
                                         <span className="text-xs text-slate-500 font-medium">{item.category || "—"}</span>
                                     </td>
-                                    <td className="py-3 px-4 text-center font-mono text-sm text-slate-500">{item.currentStock}</td>
-                                    <td className="py-3 px-4 text-center">
-                                        <span className="text-sm font-bold text-slate-900">{item.unitsSold}</span>
+                                    <td className="py-3 px-4 text-center font-mono text-sm text-slate-500 tabular-nums">{item.currentStock}</td>
+                                    <td className="py-3 px-4 text-center tabular-nums">
+                                        <span className="text-sm font-semibold text-slate-900">{item.unitsSold}</span>
                                     </td>
-                                    <td className="py-3 px-4 text-right">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                                    <td className="py-3 px-4 text-right tabular-nums">
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold border ${
                                             isDanger
                                                 ? 'bg-orange-50 text-orange-600 border-orange-200'
                                                 : 'bg-emerald-50 text-emerald-600 border-emerald-200'
@@ -192,7 +192,7 @@ export default async function SalesReportPage({
                         })}
                         {sortedVelocity.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="h-24 text-center text-xs text-slate-400">
+                                <td colSpan={5} className="h-24 text-center text-xs text-slate-500 tabular-nums">
                                     No sales data found for this period.
                                 </td>
                             </tr>

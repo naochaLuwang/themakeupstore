@@ -16,7 +16,7 @@ export default async function SkuPage() {
     return (
         <div className="space-y-6">
             <div className="space-y-1">
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">SKU Management</h1>
+                <h1 className="text-slate-900 text-2xl font-black tracking-tight">SKU Management</h1>
                 <p className="text-sm text-slate-500">Edit stock-keeping unit codes for products and variants</p>
             </div>
 

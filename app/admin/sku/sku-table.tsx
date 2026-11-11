@@ -51,7 +51,7 @@ export default function SkuTable({ initialProducts }: { initialProducts: any[] }
             {/* Toolbar */}
             <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                 <div className="relative flex-1 max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
                     <Input
                         placeholder="Search products or SKUs..."
                         value={searchQuery}
@@ -62,13 +62,13 @@ export default function SkuTable({ initialProducts }: { initialProducts: any[] }
             </div>
 
             {/* Table */}
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-b border-slate-100 bg-slate-50/50">
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Product</th>
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Variant</th>
-                            <th className="py-3 px-4 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">SKU</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 tracking-normal">Product</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 tracking-normal">Variant</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 tracking-normal">SKU</th>
                             <th className="py-3 px-4 text-right"></th>
                         </tr>
                     </thead>
@@ -88,7 +88,7 @@ export default function SkuTable({ initialProducts }: { initialProducts: any[] }
                         ))}
                         {filteredProducts.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="h-24 text-center text-xs text-slate-400">
+                                <td colSpan={4} className="h-24 text-center text-xs text-slate-500 tabular-nums">
                                     No products found matching your search.
                                 </td>
                             </tr>
@@ -111,33 +111,33 @@ function SkuRow({ variant, productName, onSave, isLoading }: any) {
 
     return (
         <tr className="group transition-colors hover:bg-slate-50/50">
-            <td className="py-3 px-4">
+            <td className="py-3 px-4 tabular-nums">
                 <div className="flex items-center gap-2">
-                    <Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <Tag className="w-4 h-4 text-slate-500 shrink-0 stroke-[1.5]" />
                     <span className="text-sm font-semibold text-slate-800">{productName}</span>
                 </div>
             </td>
-            <td className="py-3 px-4">
+            <td className="py-3 px-4 tabular-nums">
                 <div className="flex items-center gap-2">
-                    <Package className="w-3 h-3 text-slate-300 shrink-0" />
+                    <Package className="w-4 h-4 text-slate-400 shrink-0 stroke-[1.5]" />
                     <span className="text-xs text-slate-500">{variant.title || "Default"}</span>
                 </div>
             </td>
-            <td className="py-3 px-4">
+            <td className="py-3 px-4 tabular-nums">
                 <Input
                     value={sku}
                     onChange={(e) => setSku(e.target.value)}
                     placeholder="Enter SKU..."
-                    className="w-44 h-8 text-xs font-mono border-slate-200 bg-slate-50 rounded-lg px-2 uppercase"
+                    className="w-44 h-8 text-xs font-mono border-slate-200 bg-slate-50 rounded-lg px-2"
                 />
             </td>
-            <td className="py-3 px-4 text-right">
+            <td className="py-3 px-4 text-right tabular-nums">
                 <button
                     onClick={() => onSave(variant.id, sku)}
                     disabled={isLoading || !hasChanges}
-                    className="w-9 h-9 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all disabled:opacity-30 disabled:pointer-events-none"
+                    className="w-9 h-9 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                 >
-                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Save className="w-4 h-4 stroke-[1.5]" />}
                 </button>
             </td>
         </tr>

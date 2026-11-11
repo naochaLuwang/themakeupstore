@@ -77,11 +77,12 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
         .select(`
             id, status, created_at, shipping_label, shipping_price,
             shipping_address, total, payment_status, payment_method,
+            edit_version, edit_paid_amount, edit_balance_due, edit_refund_due,
             order_type, promo_code, promo_discount_amount,
             delivery_partner_id, tracking_number,
             delivered_at, confirmed_at, out_for_delivery_at,
             failed_delivery_at, ready_for_pickup_at, picked_up_at, no_show_at,
-            order_items(id, product_name, variant_title, quantity, unit_price, mrp)
+            order_items(id, product_name, variant_title, quantity, unit_price, mrp, line_discount_amount)
         `)
         .eq("id", id)
         .single()
@@ -235,7 +236,7 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
                                 <p className="font-medium text-slate-900 capitalize">{order.order_type}</p>
                             </div>
                         )}
-                        {order.promo_code && (
+                        {order.promo_code && Number(order.promo_discount_amount)>0 && (
                             <div className="col-span-2">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Promo Code</p>
                                 <p className="font-medium text-slate-900">
@@ -248,6 +249,12 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
                         )}
                     </div>
 
+                    {Number(order.edit_version)>0 && <div className="rounded-xl border border-slate-200 p-4 text-sm">
+                        <p className="font-bold text-slate-900">Order updated by the store</p>
+                        <p className="mt-1 text-slate-500">Received: ₹{Number(order.edit_paid_amount || 0).toLocaleString('en-IN')}</p>
+                        {Number(order.edit_balance_due)>0 && <p className="mt-1 font-semibold text-amber-700">Remaining to pay: ₹{Number(order.edit_balance_due).toLocaleString('en-IN')}</p>}
+                        {Number(order.edit_refund_due)>0 && <p className="mt-1 font-semibold text-rose-700">Refund due: ₹{Number(order.edit_refund_due).toLocaleString('en-IN')}</p>}
+                    </div>}
                     {address.full_name && (
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
@@ -283,7 +290,7 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
                                         </div>
                                         <div className="text-right flex-shrink-0">
                                             <p className="font-bold text-sm text-slate-900">
-                                                ₹{Number(item.unit_price).toLocaleString()}
+                                                ₹{Math.max(0,Number(item.unit_price)*item.quantity-Number(item.line_discount_amount || 0)).toLocaleString('en-IN',{maximumFractionDigits:2})}
                                             </p>
                                             <p className="text-xs text-slate-400">x{item.quantity}</p>
                                         </div>

@@ -41,8 +41,8 @@ export function LegalForm({ settingKey, title, initialContent }: LegalFormProps)
     return (
         <form onSubmit={handleSave} className="space-y-4 bg-white p-6 md:p-8 rounded-2xl border border-slate-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{title}</h3>
-                <span className="text-[9px] text-slate-300 font-mono hidden md:block">{settingKey}</span>
+                <h3 className="text-xs font-semibold tracking-normal text-slate-500">{title}</h3>
+                <span className="text-xs text-slate-400 font-mono hidden md:block">{settingKey}</span>
             </div>
 
             <Textarea
@@ -55,9 +55,9 @@ export function LegalForm({ settingKey, title, initialContent }: LegalFormProps)
             <div className="flex justify-end pt-2">
                 <Button
                     disabled={loading || content === initialContent}
-                    className="bg-slate-900 text-white px-8 h-12 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all"
+                    className="bg-slate-900 text-white px-8 h-12 rounded-xl font-semibold tracking-normal text-xs hover:bg-black transition-colors"
                 >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" /> : <Save className="w-4 h-4 mr-2 stroke-[1.5]" />}
                     Save {title}
                 </Button>
             </div>

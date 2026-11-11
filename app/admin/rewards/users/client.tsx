@@ -70,7 +70,7 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-black tracking-tight text-slate-900">Reward Users</h1>
+        <h1 className="text-slate-900 text-2xl font-black tracking-tight">Reward Users</h1>
         <p className="text-sm text-slate-500">
           {users.length} total users · {activeUsers} with active coins
         </p>
@@ -81,44 +81,44 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-              <Coins className="w-5 h-5 text-amber-600" />
+              <Coins className="w-5 h-5 text-amber-600 stroke-[1.5]" />
             </div>
             <div>
-              <div className="text-2xl font-black text-slate-900">{totalBalance.toLocaleString("en-IN")}</div>
-              <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Total Coins</div>
+              <div className="text-2xl font-semibold text-slate-900">{totalBalance.toLocaleString("en-IN")}</div>
+              <div className="text-xs text-slate-500 font-semibold tracking-normal">Total Coins</div>
             </div>
           </div>
         </div>
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <Users className="w-5 h-5 text-emerald-600" />
+              <Users className="w-5 h-5 text-emerald-600 stroke-[1.5]" />
             </div>
             <div>
-              <div className="text-2xl font-black text-emerald-600">{activeUsers}</div>
-              <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Active Users</div>
+              <div className="text-2xl font-semibold text-emerald-600">{activeUsers}</div>
+              <div className="text-xs text-slate-500 font-semibold tracking-normal">Active Users</div>
             </div>
           </div>
         </div>
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <ArrowUpRight className="w-5 h-5 text-blue-600" />
+              <ArrowUpRight className="w-5 h-5 text-slate-700 stroke-[1.5]" />
             </div>
             <div>
-              <div className="text-2xl font-black text-blue-600">{totalEarned.toLocaleString("en-IN")}</div>
-              <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Lifetime Earned</div>
+              <div className="text-2xl font-semibold text-slate-700">{totalEarned.toLocaleString("en-IN")}</div>
+              <div className="text-xs text-slate-500 font-semibold tracking-normal">Lifetime Earned</div>
             </div>
           </div>
         </div>
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
-              <ArrowDownRight className="w-5 h-5 text-rose-600" />
+              <ArrowDownRight className="w-5 h-5 text-rose-600 stroke-[1.5]" />
             </div>
             <div>
-              <div className="text-2xl font-black text-rose-600">{totalSpent.toLocaleString("en-IN")}</div>
-              <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Lifetime Spent · {hasSpentUsers} user{hasSpentUsers === 1 ? "" : "s"}</div>
+              <div className="text-2xl font-semibold text-rose-600">{totalSpent.toLocaleString("en-IN")}</div>
+              <div className="text-xs text-slate-500 font-semibold tracking-normal">Lifetime Spent · {hasSpentUsers} user{hasSpentUsers === 1 ? "" : "s"}</div>
             </div>
           </div>
         </div>
@@ -132,8 +132,8 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
           return (
             <div key={tier} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${cfg.border} ${cfg.bg}`}>
               <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
-              <span className={`text-xs font-bold ${cfg.color}`}>{cfg.label}</span>
-              <span className="text-xs font-black text-slate-900">{tierCounts[tier]}</span>
+              <span className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</span>
+              <span className="text-xs font-semibold text-slate-900">{tierCounts[tier]}</span>
             </div>
           )
         })}
@@ -143,19 +143,19 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
       <div className="flex flex-wrap items-center gap-3">
         {/* Search */}
         <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
           <input
             type="text"
             placeholder="Search by name, phone, or user ID..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-all"
+            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-colors"
           />
         </div>
 
         {/* Tier filter */}
         <div className="relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none stroke-[1.5]" />
           <select
             value={tierFilter}
             onChange={e => setTierFilter(e.target.value)}
@@ -170,7 +170,7 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
 
         {/* Spent filter */}
         <div className="relative">
-          <ArrowDownRight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <ArrowDownRight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none stroke-[1.5]" />
           <select
             value={spentFilter}
             onChange={e => setSpentFilter(e.target.value)}
@@ -185,28 +185,28 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
         {/* Hide zero toggle */}
         <button
           onClick={() => setHideZero(!hideZero)}
-          className={`h-10 px-4 rounded-xl border text-xs font-bold transition-all inline-flex items-center gap-2 ${
+          className={`h-10 px-4 rounded-xl border text-xs font-semibold transition-colors inline-flex items-center gap-2 ${
             hideZero
-              ? "bg-rose-500 text-white border-rose-500"
+              ? "bg-rose-700 text-white border-rose-500"
               : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
           }`}
         >
-          {hideZero ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {hideZero ? <EyeOff className="w-4 h-4 stroke-[1.5]" /> : <Eye className="w-4 h-4 stroke-[1.5]" />}
           {hideZero ? "Zero Hidden" : "Zero Visible"}
         </button>
       </div>
 
       {/* Results count */}
-      <div className="text-xs text-slate-400 font-semibold">
+      <div className="text-xs text-slate-500 font-semibold">
         Showing {filtered.length} of {users.length} users
       </div>
 
       {/* Table */}
       {filtered.length > 0 ? (
-        <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+        <div className="rounded-2xl border bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
           <table className="w-full">
             <thead className="bg-slate-50/50">
-              <tr className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <tr className="text-xs font-semibold text-slate-600 tracking-normal">
                 <th className="py-4 px-6 text-left">User</th>
                 <th className="py-4 px-6 text-right">Balance</th>
                 <th className="py-4 px-6 text-right">Earned</th>
@@ -223,51 +223,51 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
                 const TierIcon = tierCfg.icon
                 return (
                   <tr key={user.user_id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-6 tabular-nums">
                       <div>
-                        <div className="text-sm font-bold text-slate-900">{user.full_name}</div>
-                        <div className="text-xs text-slate-400">{user.phone || "No phone"}</div>
+                        <div className="text-sm font-semibold text-slate-900">{user.full_name}</div>
+                        <div className="text-xs text-slate-500">{user.phone || "No phone"}</div>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-right">
-                      <span className="text-sm font-black text-slate-900 tabular-nums">{user.balance.toLocaleString("en-IN")}</span>
-                      <span className="text-xs text-slate-400 ml-1">coins</span>
+                    <td className="py-4 px-6 text-right tabular-nums">
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums">{user.balance.toLocaleString("en-IN")}</span>
+                      <span className="text-xs text-slate-500 ml-1">coins</span>
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-4 px-6 text-right tabular-nums">
                       <span className="text-sm font-semibold text-emerald-600 tabular-nums">{user.lifetime_earned.toLocaleString("en-IN")}</span>
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-4 px-6 text-right tabular-nums">
                       <div className="flex items-center justify-end gap-2">
-                        <span className={`text-sm font-semibold tabular-nums ${user.lifetime_spent > 0 ? "text-rose-600" : "text-slate-300"}`}>{user.lifetime_spent.toLocaleString("en-IN")}</span>
+                        <span className={`text-sm font-semibold tabular-nums ${user.lifetime_spent > 0 ? "text-rose-600" : "text-slate-400"}`}>{user.lifetime_spent.toLocaleString("en-IN")}</span>
                         {user.lifetime_spent > 0 && (
-                          <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-full">Redeemed</span>
+                          <span className="inline-flex items-center text-xs font-semibold tracking-normal text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-full">Redeemed</span>
                         )}
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-center">
+                    <td className="py-4 px-6 text-center tabular-nums">
                       {user.pending > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
                           {user.pending}
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-300">—</span>
+                        <span className="text-xs text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-center">
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${tierCfg.bg} ${tierCfg.border} ${tierCfg.color}`}>
+                    <td className="py-4 px-6 text-center tabular-nums">
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold tracking-normal px-2 py-1 rounded-full border ${tierCfg.bg} ${tierCfg.border} ${tierCfg.color}`}>
                         <TierIcon className="w-3 h-3" />
                         {tierCfg.label}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right">
-                      <span className="text-xs text-slate-400">{formatDate(user.last_activity)}</span>
+                    <td className="py-4 px-6 text-right tabular-nums">
+                      <span className="text-xs text-slate-500">{formatDate(user.last_activity)}</span>
                     </td>
-                    <td className="py-4 px-6 text-center">
+                    <td className="py-4 px-6 text-center tabular-nums">
                       <Link
                         href={`/admin/rewards/users/${user.user_id}`}
-                        className="rounded-lg h-8 w-8 border border-slate-200 hover:bg-slate-100 transition-all inline-flex items-center justify-center text-slate-400"
+                        className="rounded-lg h-8 w-8 border border-slate-200 hover:bg-slate-100 transition-colors inline-flex items-center justify-center text-slate-500"
                       >
-                        <ArrowUpRight className="w-4 h-4" />
+                        <ArrowUpRight className="w-4 h-4 stroke-[1.5]" />
                       </Link>
                     </td>
                   </tr>
@@ -278,9 +278,9 @@ export function AdminRewardsUsersClient({ users }: { users: any[] }) {
         </div>
       ) : (
         <div className="rounded-2xl border bg-white p-12 text-center shadow-sm">
-          <Coins className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-400">No users found</p>
-          <p className="text-xs text-slate-300 mt-1">
+          <Coins className="w-10 h-10 text-slate-200 mx-auto mb-3 stroke-[1.5]" />
+          <p className="text-sm font-semibold text-slate-500">No users found</p>
+          <p className="text-xs text-slate-400 mt-1">
             {search ? "Try a different search term" : hideZero ? "All users have 0 balance — toggle to show" : "No users match the filters"}
           </p>
         </div>

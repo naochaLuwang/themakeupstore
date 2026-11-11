@@ -69,7 +69,7 @@ export default async function AdminJobApplicationsPage() {
         <div className="space-y-6">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Job Applications</h1>
+                    <h1 className="text-slate-900 text-2xl font-black tracking-tight">Job Applications</h1>
                     <p className="text-sm text-slate-500">Review applicants, resumes, and hiring status.</p>
                 </div>
             </header>
@@ -77,16 +77,16 @@ export default async function AdminJobApplicationsPage() {
             <Tabs defaultValue="pending" className="w-full">
                 <TabsList className="bg-slate-100 p-1 rounded-xl w-full h-auto flex justify-start overflow-x-auto no-scrollbar gap-1">
                     <TabsTrigger value="pending" className="rounded-lg px-4 py-2 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm flex gap-1.5 items-center">
-                        <Clock className="w-4 h-4" /> Pending <span className="text-slate-400">{pending.length}</span>
+                        <Clock className="w-4 h-4 stroke-[1.5]" /> Pending <span className="text-slate-500">{pending.length}</span>
                     </TabsTrigger>
                     <TabsTrigger value="shortlisted" className="rounded-lg px-4 py-2 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm flex gap-1.5 items-center">
-                        <Users className="w-4 h-4" /> Shortlisted <span className="text-slate-400">{shortlisted.length}</span>
+                        <Users className="w-4 h-4 stroke-[1.5]" /> Shortlisted <span className="text-slate-500">{shortlisted.length}</span>
                     </TabsTrigger>
                     <TabsTrigger value="hired" className="rounded-lg px-4 py-2 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm flex gap-1.5 items-center">
-                        <Award className="w-4 h-4" /> Hired <span className="text-slate-400">{hired.length}</span>
+                        <Award className="w-4 h-4 stroke-[1.5]" /> Hired <span className="text-slate-500">{hired.length}</span>
                     </TabsTrigger>
                     <TabsTrigger value="rejected" className="rounded-lg px-4 py-2 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm flex gap-1.5 items-center">
-                        <History className="w-4 h-4" /> Rejected <span className="text-slate-400">{rejected.length}</span>
+                        <History className="w-4 h-4 stroke-[1.5]" /> Rejected <span className="text-slate-500">{rejected.length}</span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -121,7 +121,7 @@ export default async function AdminJobApplicationsPage() {
 function ApplicationCard({ app, action, showActions, showHire }: any) {
     const status = app.status
     return (
-        <div className="rounded-2xl border bg-white p-5 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6 hover:border-slate-300 transition-all">
+        <div className="rounded-2xl border bg-white p-5 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6 hover:border-slate-300 transition-colors">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-1 w-full">
                 <InfoBlock icon={<Briefcase />} label="Applied For" title={app.jobs?.title || "Deleted role"} sub={app.jobs ? `${TYPE_LABELS[app.jobs.employment_type] || app.jobs.employment_type}${app.jobs.location ? " · " + app.jobs.location : ""}` : null} />
                 <InfoBlock icon={<Users />} label="Applicant" title={app.full_name} sub={app.phone} />
@@ -135,18 +135,18 @@ function ApplicationCard({ app, action, showActions, showHire }: any) {
 
                 {app.resume_url ? (
                     <a href={app.resume_url} target="_blank" rel="noopener noreferrer" className="h-10 px-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-600 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
-                        <FileText className="w-4 h-4" /> Resume <ExternalLink className="w-3 h-3 text-slate-400" />
+                        <FileText className="w-4 h-4 stroke-[1.5]" /> Resume <ExternalLink className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                     </a>
                 ) : (
-                    <span className="h-10 px-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-400 bg-slate-50 rounded-xl">
-                        <FileText className="w-4 h-4" /> Resume unavailable
+                    <span className="h-10 px-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-500 bg-slate-50 rounded-xl">
+                        <FileText className="w-4 h-4 stroke-[1.5]" /> Resume unavailable
                     </span>
                 )}
 
                 <Dialog>
                     <DialogTrigger asChild>
                         <button className="h-10 px-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-600 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
-                            <Eye className="w-4 h-4" /> Details
+                            <Eye className="w-4 h-4 stroke-[1.5]" /> Details
                         </button>
                     </DialogTrigger>
                     <DialogContent className="rounded-2xl">
@@ -159,12 +159,12 @@ function ApplicationCard({ app, action, showActions, showHire }: any) {
                                 <DetailItem label="Role" value={app.jobs?.title} />
                             </div>
                             <div className="space-y-2">
-                                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Cover Note</p>
+                                <p className="text-xs font-medium text-slate-500 tracking-normal">Cover Note</p>
                                 <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{app.cover_letter || "No cover note provided."}</p>
                             </div>
                             {app.resume_url && (
                                 <a href={app.resume_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 h-10 px-4 text-xs font-semibold text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition-colors">
-                                    <FileText className="w-4 h-4" /> Open Resume <ExternalLink className="w-3 h-3 opacity-60" />
+                                    <FileText className="w-4 h-4 stroke-[1.5]" /> Open Resume <ExternalLink className="w-4 h-4 opacity-60 stroke-[1.5]" />
                                 </a>
                             )}
                         </div>
@@ -177,8 +177,8 @@ function ApplicationCard({ app, action, showActions, showHire }: any) {
                             <form action={action}>
                                 <input type="hidden" name="id" value={app.id} />
                                 <input type="hidden" name="status" value="shortlisted" />
-                                <button type="submit" className="h-10 px-5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-blue-600 transition-all flex items-center gap-2 shadow-sm">
-                                    <Check className="w-4 h-4" /> Shortlist
+                                <button type="submit" className="h-10 px-5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-900 transition-colors flex items-center gap-2 shadow-sm">
+                                    <Check className="w-4 h-4 stroke-[1.5]" /> Shortlist
                                 </button>
                             </form>
                         )}
@@ -186,16 +186,16 @@ function ApplicationCard({ app, action, showActions, showHire }: any) {
                             <form action={action}>
                                 <input type="hidden" name="id" value={app.id} />
                                 <input type="hidden" name="status" value="hired" />
-                                <button type="submit" className="h-10 px-5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-sm">
-                                    <Check className="w-4 h-4" /> Hire
+                                <button type="submit" className="h-10 px-5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-colors flex items-center gap-2 shadow-sm">
+                                    <Check className="w-4 h-4 stroke-[1.5]" /> Hire
                                 </button>
                             </form>
                         )}
                         <form action={action}>
                             <input type="hidden" name="id" value={app.id} />
                             <input type="hidden" name="status" value="rejected" />
-                            <button type="submit" className="rounded-lg h-10 w-10 border border-slate-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all text-slate-400 flex items-center justify-center">
-                                <Ban className="w-4 h-4" />
+                            <button type="submit" className="rounded-lg h-10 w-10 border border-slate-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors text-slate-500 flex items-center justify-center">
+                                <Ban className="w-4 h-4 stroke-[1.5]" />
                             </button>
                         </form>
                     </>
@@ -208,7 +208,7 @@ function ApplicationCard({ app, action, showActions, showHire }: any) {
 function EmptyState({ msg }: { msg: string }) {
     return (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
-            <p className="text-slate-400 text-sm font-medium">{msg}</p>
+            <p className="text-slate-500 text-sm font-medium">{msg}</p>
         </div>
     )
 }
@@ -216,11 +216,11 @@ function EmptyState({ msg }: { msg: string }) {
 function InfoBlock({ icon, label, title, sub, isMono }: any) {
     return (
         <div className="flex gap-4 items-center">
-            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 border border-slate-100 shrink-0">
                 {icon}
             </div>
             <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+                <p className="text-xs font-medium text-slate-500 tracking-normal mb-0.5">{label}</p>
                 <p className={`text-sm font-semibold text-slate-900 truncate ${isMono ? 'font-mono' : ''}`}>{title || 'N/A'}</p>
                 {sub && <p className="text-xs font-medium text-slate-500 truncate">{sub}</p>}
             </div>
@@ -231,7 +231,7 @@ function InfoBlock({ icon, label, title, sub, isMono }: any) {
 function DetailItem({ label, value }: any) {
     return (
         <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</p>
+            <p className="text-xs font-medium text-slate-500 tracking-normal">{label}</p>
             <p className="text-sm font-semibold text-slate-900">{value || 'N/A'}</p>
         </div>
     )

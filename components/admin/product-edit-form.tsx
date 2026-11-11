@@ -34,16 +34,16 @@ function SortableImage({ url, index, onRemove }: { url: string; index: number; o
     const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 1, opacity: isDragging ? 0.3 : 1 }
 
     return (
-        <div ref={setNodeRef} style={style} className="relative aspect-square rounded-[1.25rem] border border-slate-100 group overflow-hidden bg-slate-50 shadow-inner">
+        <div ref={setNodeRef} style={style} className="relative aspect-square rounded-xl border border-slate-100 group overflow-hidden bg-slate-50 shadow-sm">
             <img src={url} className="object-cover w-full h-full pointer-events-none" alt="gallery" loading="lazy" />
             <div {...attributes} {...listeners} className="absolute inset-0 cursor-grab active:cursor-grabbing flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity z-10">
-                <GripVertical className="text-white w-6 h-6" />
+                <GripVertical className="text-white w-6 h-6 stroke-[1.5]" />
             </div>
-            <button type="button" onClick={() => onRemove(index)} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors z-20 shadow-lg">
-                <Trash2 className="w-4 h-4" />
+            <button type="button" onClick={() => onRemove(index)} className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors z-20 shadow-sm">
+                <Trash2 className="w-4 h-4 stroke-[1.5]" />
             </button>
-            {index === 0 && <div className="absolute top-2 left-2 bg-slate-900/90 backdrop-blur-md text-[8px] text-white px-3 py-1 rounded-full font-black uppercase tracking-widest z-20">Cover</div>}
-            <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm text-[8px] text-slate-500 px-2 py-0.5 rounded-md font-bold z-20">{index + 1}</div>
+            {index === 0 && <div className="absolute top-2 left-2 bg-slate-900/90 backdrop-blur-md text-xs text-white px-3 py-1 rounded-full font-semibold tracking-normal z-20">Cover</div>}
+            <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm text-xs text-slate-500 px-2 py-0.5 rounded-md font-semibold z-20">{index + 1}</div>
         </div>
     )
 }
@@ -66,32 +66,32 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
     }, [title, productSlug, index, form]);
 
     return (
-        <div className="p-6 border border-slate-100 rounded-[2rem] bg-white space-y-6 shadow-sm relative group">
+        <div className="p-6 border border-slate-100 rounded-2xl bg-white space-y-6 shadow-sm relative group">
             <input type="hidden" {...form.register(`variants.${index}.sku`)} />
 
-            <div className="grid grid-cols-12 gap-4 items-center">
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-12 sm:items-center">
                 {/* HEX PICKER */}
-                <div className="col-span-2 md:col-span-1">
-                    <div className="relative w-10 h-10 rounded-full border-2 border-white shadow-md overflow-hidden" style={{ backgroundColor: hexCode }}>
+                <div className="col-span-1 sm:col-span-2 md:col-span-1">
+                    <div className="relative w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden" style={{ backgroundColor: hexCode }}>
                         <input type="color" {...form.register(`variants.${index}.hex_code`)} className="absolute inset-0 opacity-0 cursor-pointer scale-150" />
-                        <Pipette className="absolute inset-0 m-auto w-4 h-4 text-white mix-blend-difference pointer-events-none opacity-50" />
+                        <Pipette className="absolute inset-0 m-auto w-4 h-4 text-white mix-blend-difference pointer-events-none opacity-50 stroke-[1.5]" />
                     </div>
                 </div>
 
                 {/* SHADE NAME */}
-                <div className="col-span-10 md:col-span-5">
-                    <Input className="rounded-xl h-11 bg-slate-50/50 border-none font-bold text-slate-900" placeholder="Shade Name" {...form.register(`variants.${index}.title`)} />
+                <div className="col-span-1 sm:col-span-10 md:col-span-5">
+                    <Input className="rounded-xl h-11 bg-white border-slate-200 font-semibold text-slate-900 min-w-0 font-normal" placeholder="Shade Name" {...form.register(`variants.${index}.title`)} />
                 </div>
 
                 {/* MEDIA LINKER */}
-                <div className="col-span-8 md:col-span-4">
+                <div className="col-span-1 sm:col-span-8 md:col-span-4">
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button
                                 type="button"
                                 variant="outline"
-                                className={`group relative w-full h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500
-                                ${selectedImages.length > 0 ? 'border-indigo-600 bg-white text-indigo-600 shadow-xl shadow-indigo-100/50' : 'border-slate-200 bg-white text-slate-400'}`}
+                                className={`group relative w-full h-12 rounded-xl text-xs font-semibold tracking-normal transition-colors duration-200
+                                ${selectedImages.length > 0 ? 'border-slate-200 bg-white text-slate-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500'}`}
                             >
                                 <div className="flex items-center justify-center gap-3">
                                     {selectedImages.length > 0 ? (
@@ -105,7 +105,7 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                                         </>
                                     ) : (
                                         <>
-                                            <PlusCircle className="w-4 h-4 opacity-50" />
+                                            <PlusCircle className="w-4 h-4 opacity-50 stroke-[1.5]" />
                                             <span>Link Media Assets</span>
                                         </>
                                     )}
@@ -118,27 +118,27 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                             onOpenAutoFocus={(e) => e.preventDefault()}
                         >
                             {/* HEADER */}
-                            <div className="h-28 px-10 flex items-center justify-between border-b border-slate-100 bg-white shrink-0">
+                            <div className="h-20 px-4 sm:px-6 flex items-center justify-between border-b border-slate-100 bg-white shrink-0">
                                 <div className="space-y-1">
-                                    <DialogTitle className="text-4xl font-black uppercase tracking-tighter italic text-slate-900 leading-none">
+                                    <DialogTitle className="text-xl font-semibold tracking-tight text-slate-900">
                                         Media Library
                                     </DialogTitle>
                                     <div className="flex items-center gap-4">
-                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em]">
+                                        <span className="text-xs font-semibold text-slate-700 tracking-normal">
                                             Workspace Management • {selectedImages.length} Assets Linked
                                         </span>
                                     </div>
                                 </div>
 
                                 <DialogClose asChild>
-                                    <Button variant="ghost" className="w-14 h-14 rounded-2xl bg-slate-50 hover:bg-slate-900 hover:text-white transition-all duration-300">
-                                        <X className="w-6 h-6" />
+                                    <Button variant="ghost" className="w-14 h-14 rounded-xl bg-slate-50 hover:bg-slate-900 hover:text-white transition-colors duration-300">
+                                        <X className="w-6 h-6 stroke-[1.5]" />
                                     </Button>
                                 </DialogClose>
                             </div>
 
                             {/* GRID */}
-                            <div className="flex-1 overflow-y-auto p-10 bg-[#fafafa] custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50 custom-scrollbar">
                                 <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-8 w-full pb-32">
                                     {previews.map((url: string) => {
                                         const selectedIdx = selectedImages.indexOf(url);
@@ -151,15 +151,15 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                                                 onClick={() => toggleVariantImage(index, url)}
                                                 className="group relative w-full text-left"
                                             >
-                                                <div className={`relative aspect-square rounded-[2.5rem] overflow-hidden transition-all duration-500 
+                                                <div className={`relative aspect-square rounded-2xl overflow-hidden transition-colors duration-200
                                                 ${isSelected
-                                                    ? 'ring-[10px] ring-indigo-600 ring-offset-4 scale-[0.95] shadow-xl shadow-indigo-100'
-                                                    : 'hover:-translate-y-2 hover:shadow-xl hover:shadow-slate-200 shadow-sm border border-slate-100'}`}
+                                                    ? 'ring-2 ring-pink-600 ring-offset-4 scale-[0.95] shadow-sm'
+                                                    : 'hover:shadow-sm shadow-sm border border-slate-100'}`}
                                                 >
                                                     <img
                                                         src={url}
-                                                        className={`w-full h-full object-cover transition-all duration-700 
-                                                        ${isSelected ? 'brightness-[0.3]' : 'group-hover:scale-105'}`}
+                                                        className={`w-full h-full object-cover transition-colors duration-200
+                                                        ${isSelected ? 'brightness-[0.3]' : ''}`}
                                                     />
 
                                                     <AnimatePresence>
@@ -170,8 +170,8 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                                                                 exit={{ opacity: 0, scale: 0.8 }}
                                                                 className="absolute inset-0 flex items-center justify-center"
                                                             >
-                                                                <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center border-[4px] border-indigo-600 shadow-xl">
-                                                                    <span className="text-2xl font-black text-indigo-600 italic">
+                                                                <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center border-[4px] border-slate-200 shadow-sm">
+                                                                    <span className="text-2xl font-semibold text-slate-700">
                                                                         {selectedIdx + 1}
                                                                     </span>
                                                                 </div>
@@ -180,9 +180,9 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                                                     </AnimatePresence>
 
                                                     {!isSelected && (
-                                                        <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/5 transition-colors flex items-center justify-center">
-                                                            <div className="w-14 h-14 rounded-full bg-white shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 flex items-center justify-center">
-                                                                <Plus className="w-6 h-6 text-indigo-600" />
+                                                        <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/5 transition-colors flex items-center justify-center">
+                                                            <div className="w-14 h-14 rounded-full bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-colors scale-90 flex items-center justify-center">
+                                                                <Plus className="w-6 h-6 text-slate-700 stroke-[1.5]" />
                                                             </div>
                                                         </div>
                                                     )}
@@ -194,9 +194,9 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                             </div>
 
                             {/* FOOTER */}
-                            <div className="h-28 px-10 border-t border-slate-100 bg-white flex items-center justify-end shrink-0">
+                            <div className="h-20 px-4 sm:px-6 border-t border-slate-100 bg-white flex items-center justify-end shrink-0">
                                 <DialogClose asChild>
-                                    <Button className="px-16 h-14 rounded-2xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-[0.5em] hover:bg-indigo-600 transition-all shadow-xl active:scale-95">
+                                    <Button className="w-full px-5 h-10 sm:w-auto rounded-xl bg-slate-900 text-white text-xs font-semibold tracking-normal hover:bg-slate-900 transition-colors shadow-sm active:scale-95">
                                         Update Selection
                                     </Button>
                                 </DialogClose>
@@ -206,31 +206,31 @@ function VariantRow({ index, form, previews, toggleVariantImage, remV, handleNum
                 </div>
 
                 {/* DELETE */}
-                <div className="col-span-4 md:col-span-2 flex justify-end">
-                    <Button type="button" variant="ghost" onClick={() => remV(index)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></Button>
+                <div className="col-span-1 flex justify-end sm:col-span-4 md:col-span-2">
+                    <Button type="button" variant="ghost" onClick={() => remV(index)} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4 stroke-[1.5]" /></Button>
                 </div>
             </div>
 
             {/* SPECS ROW */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-50 font-bold">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-50 font-semibold">
                 <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Price</label>
-                    <Input className="h-11 rounded-xl bg-slate-50/50 border-none text-slate-900" value={form.watch(`variants.${index}.price`)} onChange={(e) => handleNumberChange(e.target.value, (v: any) => form.setValue(`variants.${index}.price`, v))} />
+                    <label className="text-xs font-semibold text-slate-500 ml-1">Price</label>
+                    <Input className="h-11 rounded-xl bg-white border-slate-200 text-slate-900 min-w-0 font-normal" value={form.watch(`variants.${index}.price`)} onChange={(e) => handleNumberChange(e.target.value, (v: any) => form.setValue(`variants.${index}.price`, v))} />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Stock</label>
-                    <Input className="h-11 rounded-xl bg-slate-50/50 border-none text-slate-900" value={form.watch(`variants.${index}.stock`)} onChange={(e) => handleNumberChange(e.target.value, (v: any) => form.setValue(`variants.${index}.stock`, v))} />
+                    <label className="text-xs font-semibold text-slate-500 ml-1">Stock</label>
+                    <Input className="h-11 rounded-xl bg-white border-slate-200 text-slate-900 min-w-0 font-normal" value={form.watch(`variants.${index}.stock`)} onChange={(e) => handleNumberChange(e.target.value, (v: any) => form.setValue(`variants.${index}.stock`, v))} />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Disc. Type</label>
+                    <label className="text-xs font-semibold text-slate-500 ml-1">Disc. Type</label>
                     <Select onValueChange={(v) => form.setValue(`variants.${index}.discount_type`, v as any)} value={form.watch(`variants.${index}.discount_type`)}>
                         <SelectTrigger className="h-11 rounded-xl bg-slate-50/50 border-none text-slate-900"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="none">None</SelectItem><SelectItem value="percentage">%</SelectItem><SelectItem value="amount">Fixed</SelectItem></SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Disc. Value</label>
-                    <Input className="h-11 rounded-xl bg-slate-50/50 border-none text-slate-900" value={form.watch(`variants.${index}.discount_value`)} onChange={(e) => handleNumberChange(e.target.value, (v: any) => form.setValue(`variants.${index}.discount_value`, v))} />
+                    <label className="text-xs font-semibold text-slate-500 ml-1">Disc. Value</label>
+                    <Input className="h-11 rounded-xl bg-white border-slate-200 text-slate-900 min-w-0 font-normal" value={form.watch(`variants.${index}.discount_value`)} onChange={(e) => handleNumberChange(e.target.value, (v: any) => form.setValue(`variants.${index}.discount_value`, v))} />
                 </div>
             </div>
         </div>
@@ -353,67 +353,67 @@ export default function ProductEditForm({ product, categories, concerns = [] }: 
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 p-1">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="min-w-0 space-y-6">
                 {/* HEADER */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6 pt-4">
                     <div className="flex items-center gap-4">
-                        <Button type="button" variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full"><ArrowLeft className="w-5 h-5" /></Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => router.back()} className="rounded-lg"><ArrowLeft className="w-5 h-5 stroke-[1.5]" /></Button>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tighter uppercase italic text-slate-900">Update Stock</h1>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 text-slate-400">Inventory Management System</p>
+                            <h1 className="text-slate-900 text-xl font-semibold tracking-tight">Update Stock</h1>
+                            <p className="text-xs font-semibold tracking-normal mt-1 text-slate-500">Inventory Management System</p>
                         </div>
                     </div>
-                    <div className="flex gap-3">
-                        <Button type="button" variant="ghost" onClick={() => router.back()} className="rounded-xl font-bold uppercase text-[10px]">Discard</Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button type="button" variant="ghost" onClick={() => router.back()} className="rounded-xl font-semibold text-xs">Discard</Button>
                         <Button 
                             type="submit" 
                             disabled={isPending || isSuccess} 
-                            className={`min-w-[180px] h-12 rounded-xl text-[11px] font-black uppercase transition-all duration-300 flex items-center justify-center ${isSuccess ? "bg-emerald-500 text-white shadow-emerald-100" : "bg-slate-900 text-white shadow-xl shadow-slate-200"}`}
+                            className={`min-w-0 px-4 h-10 rounded-xl text-xs font-semibold transition-colors duration-300 flex items-center justify-center ${isSuccess ? "bg-emerald-700 text-white" : "bg-slate-900 text-white shadow-sm"}`}
                         >
-                            {isPending ? <Loader2 className="animate-spin w-4 h-4" /> : isSuccess ? <CheckCircle2 className="w-4 h-4" /> : "Sync Changes"}
+                            {isPending ? <Loader2 className="animate-spin w-4 h-4 stroke-[1.5]" /> : isSuccess ? <CheckCircle2 className="w-4 h-4 stroke-[1.5]" /> : "Sync Changes"}
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
+                <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-3">
+                    <div className="min-w-0 space-y-6 xl:col-span-2">
                         {/* CORE ATTRIBUTES */}
-                        <Card className="rounded-[2.5rem] border-slate-200 shadow-sm overflow-hidden">
-                            <CardHeader className="bg-slate-50 border-b p-6"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Core Attributes</CardTitle></CardHeader>
-                            <CardContent className="space-y-6 pt-6">
-                                <div className="grid grid-cols-2 gap-6">
-                                    <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">Public Title</FormLabel><FormControl><Input className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl></FormItem>} />
-                                    <FormField control={form.control} name="slug" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">URL Segment</FormLabel><FormControl><Input className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl></FormItem>} />
+                        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden gap-0 py-0">
+                            <CardHeader className="bg-slate-50 border-b p-4 sm:p-5"><CardTitle className="text-xs font-semibold text-slate-500">Core Attributes</CardTitle></CardHeader>
+                            <CardContent className="space-y-6 p-4 sm:p-5">
+                                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel className="text-xs font-semibold tracking-normal text-slate-900">Public Title</FormLabel><FormControl><Input className="h-10 rounded-xl bg-white border-slate-200 font-semibold text-slate-900 min-w-0 font-normal" {...field} /></FormControl></FormItem>} />
+                                    <FormField control={form.control} name="slug" render={({ field }) => <FormItem><FormLabel className="text-xs font-semibold tracking-normal text-slate-900">URL Segment</FormLabel><FormControl><Input className="h-10 rounded-xl bg-white border-slate-200 font-semibold text-slate-900 min-w-0 font-normal" {...field} /></FormControl></FormItem>} />
                                 </div>
-                                <FormField control={form.control} name="tag" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">Tag (optional)</FormLabel><FormControl><Input placeholder="e.g. BESTSELLER, NEW, MINI" className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900" {...field} /></FormControl><FormDescription className="text-[10px] text-slate-400">Shown as badge on product card</FormDescription></FormItem>} />
+                                <FormField control={form.control} name="tag" render={({ field }) => <FormItem><FormLabel className="text-xs font-semibold tracking-normal text-slate-900">Tag (optional)</FormLabel><FormControl><Input placeholder="e.g. BESTSELLER, NEW, MINI" className="h-10 rounded-xl bg-white border-slate-200 font-semibold text-slate-900 min-w-0 font-normal" {...field} /></FormControl><FormDescription className="text-xs text-slate-500">Shown as badge on product card</FormDescription></FormItem>} />
                                 <FormField control={form.control} name="description" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">Product Narration</FormLabel>
+                                        <FormLabel className="text-xs font-semibold tracking-normal text-slate-900">Product Narration</FormLabel>
                                         <FormControl><RichTextEditor value={field.value} onChange={field.onChange} /></FormControl>
                                     </FormItem>
                                 )} />
-                                <FormField control={form.control} name="category_ids" render={({ field }) => <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-900">Collections</FormLabel><FormControl><MultiSelect options={categories.map(c => ({ label: c.name, value: c.id }))} selected={field.value || []} onChange={field.onChange} /></FormControl></FormItem>} />
+                                <FormField control={form.control} name="category_ids" render={({ field }) => <FormItem><FormLabel className="text-xs font-semibold tracking-normal text-slate-900">Collections</FormLabel><FormControl><MultiSelect options={categories.map(c => ({ label: c.name, value: c.id }))} selected={field.value || []} onChange={field.onChange} /></FormControl></FormItem>} />
                             </CardContent>
                         </Card>
 
                         {/* SHADE PALETTE */}
-                        <Card className={`rounded-[2.5rem] transition-all duration-500 ${hasVariants ? "border-indigo-100 bg-indigo-50/10 shadow-sm" : "border-slate-200 shadow-sm"}`}>
-                            <CardHeader className="flex flex-row items-center justify-between border-b p-6 bg-slate-50/50">
-                                <CardTitle className="text-[10px] font-black uppercase text-indigo-500">Shade Palette</CardTitle>
+                        <Card className={`rounded-2xl transition-colors duration-200  gap-0 py-0${hasVariants ? "border-slate-200 bg-slate-50/10 shadow-sm gap-0 py-0" : "border-slate-200 shadow-sm gap-0 py-0"} gap-0 py-0`}>
+                            <CardHeader className="flex flex-row items-center justify-between border-b p-4 sm:p-5 bg-slate-50/50">
+                                <CardTitle className="text-xs font-semibold text-slate-700">Shade Palette</CardTitle>
                                 <FormField control={form.control} name="has_variants" render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
                             </CardHeader>
-                            <CardContent className="pt-6">
+                            <CardContent className="p-4 sm:p-5">
                                 {hasVariants ? (
                                     <div className="space-y-4">
                                         {vFields.map((field, index) => (
                                             <VariantRow key={field._rhfId} index={index} form={form} previews={previews} toggleVariantImage={toggleVariantImage} remV={remV} handleNumberChange={handleNumberChange} />
                                         ))}
-                                        <Button type="button" variant="outline" className="w-full border-dashed h-14 rounded-[1.5rem] font-black text-slate-400 uppercase text-[10px] hover:text-indigo-600 transition-colors" onClick={() => addV({ title: "", sku: "", price: 0, stock: 0, discount_type: "none", discount_value: 0, hex_code: "#cbd5e1", variant_image_urls: [] })}>
-                                            <Plus className="w-4 h-4 mr-2" /> Append Shade Option
+                                        <Button type="button" variant="outline" className="w-full border-dashed h-14 rounded-xl font-semibold text-slate-500 text-xs hover:text-slate-700 transition-colors" onClick={() => addV({ title: "", sku: "", price: 0, stock: 0, discount_type: "none", discount_value: 0, hex_code: "#cbd5e1", variant_image_urls: [] })}>
+                                            <Plus className="w-4 h-4 mr-2 stroke-[1.5]" /> Append Shade Option
                                         </Button>
                                     </div>
                                 ) : (
-                                    <div className="py-20 text-center border-2 border-dashed rounded-[2.5rem] bg-white/50"><p className="text-[10px] font-black uppercase text-slate-300">Default SKU Mode Active</p></div>
+                                    <div className="py-20 text-center border-2 border-dashed rounded-2xl bg-white/50"><p className="text-xs font-semibold text-slate-400">Default SKU Mode Active</p></div>
                                 )}
                             </CardContent>
                         </Card>
@@ -421,19 +421,19 @@ export default function ProductEditForm({ product, categories, concerns = [] }: 
 
                     <div className="space-y-6">
                         {!hasVariants && (
-                            <Card className="rounded-[2rem] border-blue-100 bg-blue-50/20 p-6 space-y-4 shadow-sm">
-                                <FormField control={form.control} name="base_price" render={({ field }) => <FormItem><FormLabel className="text-[9px] font-black uppercase text-slate-900">Price</FormLabel><Input className="h-12 rounded-xl bg-white border-blue-100 font-bold" type="text" value={field.value} onChange={(e) => handleNumberChange(e.target.value, field.onChange)} /></FormItem>} />
-                                <FormField control={form.control} name="stock" render={({ field }) => <FormItem><FormLabel className="text-[9px] font-black uppercase text-slate-900">Stock</FormLabel><Input className="h-12 rounded-xl bg-white border-blue-100 font-bold" type="text" value={field.value} onChange={(e) => handleNumberChange(e.target.value, field.onChange)} /></FormItem>} />
+                            <Card className="rounded-2xl border-blue-100 bg-blue-50/20 p-6 space-y-4 shadow-sm">
+                                <FormField control={form.control} name="base_price" render={({ field }) => <FormItem><FormLabel className="text-xs font-semibold text-slate-900">Price</FormLabel><Input className="h-10 rounded-xl bg-white border-blue-100 font-semibold min-w-0 font-normal" type="text" value={field.value} onChange={(e) => handleNumberChange(e.target.value, field.onChange)} /></FormItem>} />
+                                <FormField control={form.control} name="stock" render={({ field }) => <FormItem><FormLabel className="text-xs font-semibold text-slate-900">Stock</FormLabel><Input className="h-10 rounded-xl bg-white border-blue-100 font-semibold min-w-0 font-normal" type="text" value={field.value} onChange={(e) => handleNumberChange(e.target.value, field.onChange)} /></FormItem>} />
                             </Card>
                         )}
 
                         {/* MEDIA ASSETS */}
-                        <Card className="rounded-[2.5rem] overflow-hidden border-slate-200 shadow-sm p-6 space-y-4">
-                            <CardHeader className="p-0 pb-2"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Media Assets</CardTitle></CardHeader>
+                        <Card className="rounded-2xl overflow-hidden border-slate-200 shadow-sm p-6 space-y-4">
+                            <CardHeader className="p-0 pb-2"><CardTitle className="text-xs font-semibold text-slate-500">Media Assets</CardTitle></CardHeader>
                             <input type="file" ref={fileInputRef} multiple className="hidden" accept="image/*" onChange={handleImageChange} />
-                            <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed rounded-[1.5rem] p-10 flex flex-col items-center cursor-pointer hover:bg-slate-50 transition-all group">
-                                <Plus className="w-6 h-6 text-slate-400 group-hover:text-indigo-500 transition-colors" />
-                                <p className="text-[10px] font-black uppercase mt-3 text-slate-400">Import Media</p>
+                            <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed rounded-xl p-10 flex flex-col items-center cursor-pointer hover:bg-slate-50 transition-colors group">
+                                <Plus className="w-6 h-6 text-slate-500 group-hover:text-slate-700 transition-colors stroke-[1.5]" />
+                                <p className="text-xs font-semibold mt-3 text-slate-500">Import Media</p>
                             </div>
                             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                                 <SortableContext items={previews} strategy={rectSortingStrategy}>
@@ -445,13 +445,13 @@ export default function ProductEditForm({ product, categories, concerns = [] }: 
                         </Card>
 
                         {/* CONCERNS */}
-                        <Card className="rounded-[2rem] overflow-hidden border-slate-200 shadow-sm">
-                            <CardHeader className="bg-slate-50 border-b p-6">
-                                <CardTitle className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Concerns</CardTitle>
+                        <Card className="rounded-2xl overflow-hidden border-slate-200 shadow-sm gap-0 py-0">
+                            <CardHeader className="bg-slate-50 border-b p-4 sm:p-5">
+                                <CardTitle className="text-xs font-semibold text-slate-500 tracking-normal">Concerns</CardTitle>
                             </CardHeader>
                             <CardContent className="p-4 space-y-1 max-h-[300px] overflow-y-auto">
                                 {concerns.length === 0 ? (
-                                    <p className="text-[10px] text-slate-400 text-center py-4 font-medium">No concerns available</p>
+                                    <p className="text-xs text-slate-500 text-center py-4 font-medium">No concerns available</p>
                                 ) : (
                                     concerns.map((c) => {
                                         const checked = (form.watch("concern_ids") || []).includes(c.id)

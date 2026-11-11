@@ -86,7 +86,7 @@ export function ShowcaseForm({ item }: { item?: any }) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Image Upload */}
                 <div className="space-y-2">
-                    <FormLabel className="text-xs font-bold text-slate-700 uppercase tracking-wider">Image</FormLabel>
+                    <FormLabel className="text-xs font-semibold text-slate-700 tracking-normal">Image</FormLabel>
                     <input
                         type="file"
                         ref={fileInputRef}
@@ -96,14 +96,14 @@ export function ShowcaseForm({ item }: { item?: any }) {
                     />
                     <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed rounded-2xl p-8 flex flex-col items-center cursor-pointer hover:bg-slate-50 transition-all"
+                        className="border-2 border-dashed rounded-2xl p-8 flex flex-col items-center cursor-pointer hover:bg-slate-50 transition-colors"
                     >
                         {preview ? (
                             <img src={preview} alt="Preview" className="max-h-48 rounded-xl object-cover" />
                         ) : (
                             <>
-                                <Upload className="w-8 h-8 text-slate-300" />
-                                <p className="text-xs font-medium text-slate-400 mt-3">Click to upload image</p>
+                                <Upload className="w-8 h-8 text-slate-400 stroke-[1.5]" />
+                                <p className="text-xs font-medium text-slate-500 mt-3">Click to upload image</p>
                             </>
                         )}
                     </div>
@@ -111,7 +111,7 @@ export function ShowcaseForm({ item }: { item?: any }) {
 
                 <FormField control={form.control} name="title" render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-xs font-bold text-slate-700 uppercase tracking-wider">Title</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-700 tracking-normal">Title</FormLabel>
                         <FormControl><Input {...field} placeholder="e.g. Steal the Show" className="rounded-xl" /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -119,7 +119,7 @@ export function ShowcaseForm({ item }: { item?: any }) {
 
                 <FormField control={form.control} name="subtitle" render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-xs font-bold text-slate-700 uppercase tracking-wider">Subtitle</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-700 tracking-normal">Subtitle</FormLabel>
                         <FormControl><Input {...field} placeholder="Optional subtitle" className="rounded-xl" /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -127,7 +127,7 @@ export function ShowcaseForm({ item }: { item?: any }) {
 
                 <FormField control={form.control} name="link_url" render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-xs font-bold text-slate-700 uppercase tracking-wider">Link URL</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-700 tracking-normal">Link URL</FormLabel>
                         <FormControl><Input {...field} placeholder="Optional link" className="rounded-xl" /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -135,7 +135,7 @@ export function ShowcaseForm({ item }: { item?: any }) {
 
                 <FormField control={form.control} name="position" render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-xs font-bold text-slate-700 uppercase tracking-wider">Position</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-700 tracking-normal">Position</FormLabel>
                         <FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -144,12 +144,12 @@ export function ShowcaseForm({ item }: { item?: any }) {
                 <FormField control={form.control} name="is_active" render={({ field }) => (
                     <FormItem className="flex items-center gap-3">
                         <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        <FormLabel className="text-xs font-bold text-slate-700 uppercase tracking-wider !mt-0">Active</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-700 tracking-normal !mt-0">Active</FormLabel>
                     </FormItem>
                 )} />
 
                 <Button type="submit" className="rounded-xl bg-slate-900 text-white font-semibold">
-                    {form.formState.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : item ? "Update" : "Create"}
+                    {form.formState.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : item ? "Update" : "Create"}
                 </Button>
             </form>
         </Form>

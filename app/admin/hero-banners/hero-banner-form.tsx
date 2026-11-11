@@ -18,7 +18,7 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
 
     return (
         <form
-            className="max-w-3xl mx-auto space-y-8 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700"
+            className="max-w-3xl mx-auto space-y-8 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-200"
             action={async (formData) => {
                 setLoading(true)
                 try {
@@ -40,62 +40,62 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
             }}
         >
             {/* Card 1: Content */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 rounded-lg">
-                            <Type className="w-4 h-4 text-indigo-600" />
+                        <div className="p-2 bg-slate-50 rounded-lg">
+                            <Type className="w-4 h-4 text-slate-700 stroke-[1.5]" />
                         </div>
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Banner Content</h3>
+                        <h3 className="text-xs font-semibold tracking-normal text-slate-900">Banner Content</h3>
                     </div>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Slide Content</div>
+                    <div className="text-xs font-semibold text-slate-500 tracking-normal">Slide Content</div>
                 </div>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Title</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal ml-1">Title</label>
                         <input
                             name="title"
                             required
                             defaultValue={initialData?.title}
                             placeholder="THE MAKEUP STORE"
-                            className="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-5 text-sm font-black uppercase tracking-[0.2em] focus:bg-white focus:border-slate-900 transition-all outline-none shadow-inner"
+                            className="w-full bg-slate-50 border-2 border-transparent rounded-xl p-5 text-sm font-semibold tracking-normal focus:bg-white focus:border-slate-900 transition-colors outline-none shadow-sm"
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Subtitle</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal ml-1">Subtitle</label>
                         <input
                             name="subtitle"
                             defaultValue={initialData?.subtitle}
                             placeholder="EXCLUSIVE COLLECTION"
-                            className="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-5 text-sm font-black uppercase tracking-[0.2em] focus:bg-white focus:border-slate-900 transition-all outline-none shadow-inner"
+                            className="w-full bg-slate-50 border-2 border-transparent rounded-xl p-5 text-sm font-semibold tracking-normal focus:bg-white focus:border-slate-900 transition-colors outline-none shadow-sm"
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Description</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal ml-1">Description</label>
                         <textarea
                             name="description"
                             rows={3}
                             defaultValue={initialData?.description}
                             placeholder="Luxury makeup, skincare, and fragrance from the world most coveted beauty brands"
-                            className="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-5 text-sm font-medium focus:bg-white focus:border-slate-900 transition-all resize-none outline-none shadow-inner"
+                            className="w-full bg-slate-50 border-2 border-transparent rounded-xl p-5 text-sm font-medium focus:bg-white focus:border-slate-900 transition-colors resize-none outline-none shadow-sm"
                         />
                     </div>
                 </div>
             </div>
 
             {/* Card 2: Image & Route */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-emerald-50 rounded-lg">
-                            <ImageIcon className="w-4 h-4 text-emerald-600" />
+                            <ImageIcon className="w-4 h-4 text-emerald-600 stroke-[1.5]" />
                         </div>
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Image & Navigation</h3>
+                        <h3 className="text-xs font-semibold tracking-normal text-slate-900">Image & Navigation</h3>
                     </div>
                 </div>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Upload Image</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal ml-1">Upload Image</label>
                         <input
                             type="file"
                             name="file"
@@ -105,9 +105,9 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
                                 if (preview) URL.revokeObjectURL(preview)
                                 setPreview(f ? URL.createObjectURL(f) : null)
                             }}
-                            className="block w-full text-xs font-medium text-slate-500 file:mr-4 file:py-3 file:px-5 file:rounded-xl file:border-0 file:bg-slate-900 file:text-white file:text-[10px] file:font-black file:uppercase file:tracking-widest hover:file:bg-slate-700 cursor-pointer bg-slate-50 border-2 border-transparent rounded-2xl p-4 focus-within:bg-white"
+                            className="block w-full text-xs font-medium text-slate-500 file:mr-4 file:py-3 file:px-5 file:rounded-xl file:border-0 file:bg-slate-900 file:text-white file:text-xs file:font-semibold file:tracking-normal hover:file:bg-slate-700 cursor-pointer bg-slate-50 border-2 border-transparent rounded-xl p-4 focus-within:bg-white"
                         />
-                        <p className="text-[9px] text-slate-400 font-medium ml-1">JPEG, PNG, WebP, AVIF or GIF up to 8MB. A new upload replaces the current image.</p>
+                        <p className="text-xs text-slate-500 font-medium ml-1">JPEG, PNG, WebP, AVIF or GIF up to 8MB. A new upload replaces the current image.</p>
                     </div>
                     {preview && (
                         <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden bg-slate-100">
@@ -115,39 +115,39 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
                         </div>
                     )}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Or Image URL</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal ml-1">Or Image URL</label>
                         <input
                             name="image_url"
                             defaultValue={initialData?.image_url}
                             placeholder="https://..."
-                            className="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-5 text-sm font-medium focus:bg-white focus:border-slate-900 transition-all outline-none shadow-inner"
+                            className="w-full bg-slate-50 border-2 border-transparent rounded-xl p-5 text-sm font-medium focus:bg-white focus:border-slate-900 transition-colors outline-none shadow-sm"
                         />
-                        <p className="text-[9px] text-slate-400 font-medium ml-1">Optional — keep an existing image by leaving this as-is and picking no file.</p>
+                        <p className="text-xs text-slate-500 font-medium ml-1">Optional — keep an existing image by leaving this as-is and picking no file.</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Route</label>
+                            <label className="text-xs font-semibold text-slate-500 tracking-normal ml-1">Route</label>
                             <input
                                 name="route"
                                 defaultValue={initialData?.route || "/exclusive"}
                                 placeholder="/exclusive"
-                                className="w-full bg-slate-50 border-2 border-transparent rounded-xl p-4 text-xs font-bold outline-none focus:bg-white focus:border-slate-900 transition-all shadow-inner"
+                                className="w-full bg-slate-50 border-2 border-transparent rounded-xl p-4 text-xs font-semibold outline-none focus:bg-white focus:border-slate-900 transition-colors shadow-sm"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Position (sort order)</label>
+                            <label className="text-xs font-semibold text-slate-500 tracking-normal ml-1">Position (sort order)</label>
                             <input
                                 name="position"
                                 type="number"
                                 defaultValue={initialData?.position || 0}
-                                className="w-full bg-slate-50 border-2 border-transparent rounded-xl p-4 text-xs font-bold outline-none focus:bg-white focus:border-slate-900 transition-all shadow-inner"
+                                className="w-full bg-slate-50 border-2 border-transparent rounded-xl p-4 text-xs font-semibold outline-none focus:bg-white focus:border-slate-900 transition-colors shadow-sm"
                             />
                         </div>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-slate-50/50 border border-slate-100 rounded-2xl">
                         <div className="space-y-0.5">
-                            <p className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Active</p>
-                            <p className="text-[9px] text-slate-400 font-medium">Show this banner on the homepage.</p>
+                            <p className="text-xs font-semibold text-slate-900 tracking-normal">Active</p>
+                            <p className="text-xs text-slate-500 font-medium">Show this banner on the homepage.</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -156,7 +156,7 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
                                 defaultChecked={initialData?.is_active !== false}
                                 className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-colors peer-checked:bg-slate-900"></div>
                         </label>
                     </div>
                 </div>
@@ -164,23 +164,23 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
 
             {/* Preview */}
             {initialData?.image_url && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-amber-50 rounded-lg">
-                                <FlipHorizontal className="w-4 h-4 text-amber-600" />
+                                <FlipHorizontal className="w-4 h-4 text-amber-600 stroke-[1.5]" />
                             </div>
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Preview</h3>
+                            <h3 className="text-xs font-semibold tracking-normal text-slate-900">Preview</h3>
                         </div>
                     </div>
                     <div className="p-8">
                         <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden bg-slate-100">
                             <img src={initialData.image_url} alt={initialData.title} className="w-full h-full object-cover" loading="lazy" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            <div className="absolute inset-0 bg-slate-50" />
                             <div className="absolute bottom-6 left-6 right-6">
-                                <h4 className="text-white text-lg font-black uppercase tracking-wider">{initialData.title}</h4>
+                                <h4 className="text-white text-lg font-semibold tracking-normal">{initialData.title}</h4>
                                 {initialData.subtitle && (
-                                    <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">{initialData.subtitle}</p>
+                                    <p className="text-white/70 text-xs font-semibold tracking-normal mt-1">{initialData.subtitle}</p>
                                 )}
                             </div>
                         </div>
@@ -193,15 +193,15 @@ export function HeroBannerForm({ initialData }: HeroBannerFormProps) {
                 <Button
                     type="submit"
                     disabled={loading}
-                    className="h-14 bg-slate-900 text-white rounded-2xl shadow-xl shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all transform flex items-center justify-center gap-4 group px-10"
+                    className="h-14 bg-slate-900 text-white rounded-xl shadow-sm active:scale-[0.98] transition-colors transform flex items-center justify-center gap-4 group px-10"
                 >
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em]">
+                    <span className="text-xs font-semibold tracking-normal">
                         {loading ? "Saving..." : isEdit ? "Update Banner" : "Create Banner"}
                     </span>
                     {loading ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin stroke-[1.5]" />
                     ) : (
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        <ArrowRight className="w-4 h-4 transition-transform stroke-[1.5]" />
                     )}
                 </Button>
             </div>

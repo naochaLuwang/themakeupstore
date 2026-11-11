@@ -25,15 +25,15 @@ export function AbandonedCartsClient({ carts }: { carts: any[] }) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <p className="text-2xl font-black tracking-tight">{pending.length}</p>
+          <p className="text-2xl font-semibold tracking-tight">{pending.length}</p>
           <p className="text-xs text-slate-500 mt-1">Pending Recovery</p>
         </div>
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <p className="text-2xl font-black tracking-tight">{emailed.length}</p>
+          <p className="text-2xl font-semibold tracking-tight">{emailed.length}</p>
           <p className="text-xs text-slate-500 mt-1">Emails Sent</p>
         </div>
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <p className="text-2xl font-black tracking-tight">{recent.length}</p>
+          <p className="text-2xl font-semibold tracking-tight">{recent.length}</p>
           <p className="text-xs text-slate-500 mt-1">Active Recently</p>
         </div>
       </div>
@@ -43,14 +43,14 @@ export function AbandonedCartsClient({ carts }: { carts: any[] }) {
         <button
           onClick={handleSend}
           disabled={sending || pending.length === 0}
-          className="inline-flex items-center gap-2 rounded-xl h-10 px-5 bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-slate-800 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl h-10 px-5 bg-slate-900 text-white text-xs font-semibold tracking-normal hover:bg-slate-800 disabled:opacity-50 transition-colors"
         >
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+          {sending ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Mail className="w-4 h-4 stroke-[1.5]" />}
           {sending ? "Sending..." : `Send Recovery Emails (${pending.length})`}
         </button>
         {result && (
           <span className="text-xs text-emerald-600 font-semibold">
-            <CheckCircle2 className="w-4 h-4 inline mr-1" />
+            <CheckCircle2 className="w-4 h-4 inline mr-1 stroke-[1.5]" />
             Sent: {result.sent}, Failed: {result.failed}
           </span>
         )}
@@ -59,49 +59,49 @@ export function AbandonedCartsClient({ carts }: { carts: any[] }) {
       {/* Table */}
       {carts.length === 0 ? (
         <div className="rounded-2xl border bg-white p-12 text-center shadow-sm">
-          <ShoppingBag className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-          <p className="text-sm font-medium text-slate-400">No carts found</p>
+          <ShoppingBag className="w-8 h-8 text-slate-200 mx-auto mb-3 stroke-[1.5]" />
+          <p className="text-sm font-medium text-slate-500">No carts found</p>
         </div>
       ) : (
-        <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+        <div className="rounded-2xl border bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">User</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Items</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Last Active</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Recovery Email</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">User</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Items</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Last Active</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Recovery Email</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {carts.map((cart: any) => (
                 <tr key={cart.id} className="hover:bg-slate-50/50">
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 tabular-nums">
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-slate-400" />
+                      <User className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                       <div>
                         <p className="text-sm font-medium text-slate-900">{cart.profiles?.full_name || "Unknown"}</p>
-                        <p className="text-xs text-slate-400">{cart.profiles?.email}</p>
+                        <p className="text-xs text-slate-500">{cart.profiles?.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 tabular-nums">
                     <span className="text-sm text-slate-900 font-medium">{cart.cart_items?.length || 0} items</span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 tabular-nums">
                     <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <Clock className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                       <span className="text-sm text-slate-600">{new Date(cart.updated_at).toLocaleString()}</span>
                     </div>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 tabular-nums">
                     {cart.abandoned_email_sent_at ? (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <CheckCircle2 className="w-4 h-4 stroke-[1.5]" />
                         Sent {new Date(cart.abandoned_email_sent_at).toLocaleDateString()}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-400">Pending</span>
+                      <span className="text-xs text-slate-500">Pending</span>
                     )}
                   </td>
                 </tr>

@@ -22,9 +22,9 @@ function CustomerFiltersInner() {
     }, 300)
 
     return (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex min-w-0 flex-col items-start gap-3 xl:flex-row xl:items-center">
             <div className="relative max-w-sm flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 stroke-[1.5]" />
                 <Input
                     placeholder="Search customers..."
                     className="pl-10 h-11 rounded-xl border-slate-200"
@@ -32,20 +32,20 @@ function CustomerFiltersInner() {
                     onChange={(e) => updateParams("q", e.target.value)}
                 />
             </div>
-            <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-400">From</span>
+            <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:w-auto sm:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
+                <span className="text-xs font-medium text-slate-500">From</span>
                 <input
                     type="date"
                     defaultValue={searchParams.get("from")?.toString()}
                     onChange={(e) => updateParams("from", e.target.value)}
-                    className="h-11 rounded-xl border border-slate-200 px-3 text-sm bg-white"
+                    className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm sm:w-[150px]"
                 />
-                <span className="text-xs font-medium text-slate-400">To</span>
+                <span className="text-xs font-medium text-slate-500">To</span>
                 <input
                     type="date"
                     defaultValue={searchParams.get("to")?.toString()}
                     onChange={(e) => updateParams("to", e.target.value)}
-                    className="h-11 rounded-xl border border-slate-200 px-3 text-sm bg-white"
+                    className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm sm:w-[150px]"
                 />
             </div>
         </div>
@@ -54,7 +54,7 @@ function CustomerFiltersInner() {
 
 export function CustomerFilters() {
     return (
-        <Suspense fallback={<div className="h-11 w-full bg-slate-100 rounded-xl animate-pulse" />}>
+        <Suspense fallback={<div className="h-11 w-full bg-slate-100 rounded-xl" />}>
             <CustomerFiltersInner />
         </Suspense>
     )

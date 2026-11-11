@@ -33,8 +33,8 @@ function DateRangePickerInner() {
         <div className="grid gap-2">
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[300px] justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
+                    <Button variant="outline" className="w-full sm:w-[300px] justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4 stroke-[1.5]" />
                         {date?.from ? (
                             date.to ? (
                                 <>
@@ -48,7 +48,7 @@ function DateRangePickerInner() {
                         )}
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
+                <PopoverContent className="w-auto max-w-[calc(100vw-2rem)] overflow-x-auto p-0" align="end">
                     <Calendar
                         initialFocus
                         mode="range"
@@ -65,7 +65,7 @@ function DateRangePickerInner() {
 
 export function DateRangePicker() {
     return (
-        <Suspense fallback={<div className="h-10 w-[300px] bg-slate-100 rounded-lg animate-pulse" />}>
+        <Suspense fallback={<div className="h-10 w-full sm:w-[300px] bg-slate-100 rounded-lg" />}>
             <DateRangePickerInner />
         </Suspense>
     )

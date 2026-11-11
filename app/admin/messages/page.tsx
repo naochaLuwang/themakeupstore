@@ -13,7 +13,7 @@ export default async function AdminMessagesPage() {
     return (
         <div className="space-y-6">
             <div className="space-y-1">
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Customer Inquiries</h1>
+                <h1 className="text-slate-900 text-2xl font-black tracking-tight">Customer Inquiries</h1>
                 <p className="text-sm text-slate-500">Inbox</p>
             </div>
 
@@ -24,8 +24,8 @@ export default async function AdminMessagesPage() {
                     ))
                 ) : (
                     <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
-                        <Mail className="w-10 h-10 text-slate-200 mx-auto mb-4" />
-                        <p className="text-slate-400 font-medium">Your inbox is empty</p>
+                        <Mail className="w-10 h-10 text-slate-200 mx-auto mb-4 stroke-[1.5]" />
+                        <p className="text-slate-500 font-medium">Your inbox is empty</p>
                     </div>
                 )}
             </div>

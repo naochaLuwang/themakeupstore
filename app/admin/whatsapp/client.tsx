@@ -142,11 +142,11 @@ export function WhatsAppClient({
 
   const statusIcon = (s: string) => {
     switch (s) {
-      case 'sent': return <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-      case 'delivered': return <CheckCircle2 className="w-3 h-3 text-blue-500" />
-      case 'read': return <CheckCircle2 className="w-3 h-3 text-violet-500" />
-      case 'failed': return <XCircle className="w-3 h-3 text-red-500" />
-      default: return <Clock className="w-3 h-3 text-slate-400" />
+      case 'sent': return <CheckCircle2 className="w-4 h-4 text-emerald-500 stroke-[1.5]" />
+      case 'delivered': return <CheckCircle2 className="w-4 h-4 text-slate-700 stroke-[1.5]" />
+      case 'read': return <CheckCircle2 className="w-4 h-4 text-slate-700 stroke-[1.5]" />
+      case 'failed': return <XCircle className="w-4 h-4 text-red-500 stroke-[1.5]" />
+      default: return <Clock className="w-4 h-4 text-slate-500 stroke-[1.5]" />
     }
   }
 
@@ -157,9 +157,9 @@ export function WhatsAppClient({
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
               tab === t
-                ? 'bg-rose-500 text-white shadow-md'
+                ? 'bg-rose-700 text-white shadow-sm'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -172,7 +172,7 @@ export function WhatsAppClient({
         <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Phone Number ID *</label>
+              <label className="text-xs font-semibold text-slate-500 tracking-normal">Phone Number ID *</label>
               <input
                 className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                 value={config.phone_number_id}
@@ -180,7 +180,7 @@ export function WhatsAppClient({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">WABA ID</label>
+              <label className="text-xs font-semibold text-slate-500 tracking-normal">WABA ID</label>
               <input
                 className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                 value={config.waba_id}
@@ -188,7 +188,7 @@ export function WhatsAppClient({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Business Account ID</label>
+              <label className="text-xs font-semibold text-slate-500 tracking-normal">Business Account ID</label>
               <input
                 className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                 value={config.business_account_id}
@@ -196,7 +196,7 @@ export function WhatsAppClient({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Access Token *</label>
+              <label className="text-xs font-semibold text-slate-500 tracking-normal">Access Token *</label>
               <input
                 type="password"
                 className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
@@ -206,7 +206,7 @@ export function WhatsAppClient({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Verify Token</label>
+              <label className="text-xs font-semibold text-slate-500 tracking-normal">Verify Token</label>
               <input
                 className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                 value={config.verify_token}
@@ -214,7 +214,7 @@ export function WhatsAppClient({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Webhook Secret (App Secret)</label>
+              <label className="text-xs font-semibold text-slate-500 tracking-normal">Webhook Secret (App Secret)</label>
               <input
                 type="password"
                 className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
@@ -228,9 +228,9 @@ export function WhatsAppClient({
             <button
               onClick={saveConfig}
               disabled={saving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-rose-500 text-white rounded-xl text-sm font-bold hover:bg-rose-600 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-rose-700 text-white rounded-xl text-sm font-semibold hover:bg-rose-600 transition-colors disabled:opacity-50"
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-4 h-4 stroke-[1.5]" />
               {saving ? 'Saving...' : 'Save Configuration'}
             </button>
           </div>
@@ -242,20 +242,20 @@ export function WhatsAppClient({
           <div className="flex justify-end">
             <button
               onClick={() => { setEditTemplate(null); setTf({ name: '', category: 'UTILITY', language: 'en_US', header_type: '', header_content: '', body_text: '', footer_text: '', status: 'APPROVED', meta_template_id: '' }); setShowTemplateForm(true) }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-xl text-sm font-bold hover:bg-rose-600 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-rose-700 text-white rounded-xl text-sm font-semibold hover:bg-rose-600 transition-colors"
             >
-              <Plus className="w-4 h-4" /> Add Template
+              <Plus className="w-4 h-4 stroke-[1.5]" /> Add Template
             </button>
           </div>
 
           {showTemplateForm && (
             <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-5">
-              <h3 className="text-sm font-bold text-slate-700">
+              <h3 className="text-sm font-semibold text-slate-700">
                 {editTemplate ? 'Edit Template' : 'New Template'}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Name *</label>
+                  <label className="text-xs font-semibold text-slate-500 tracking-normal">Name *</label>
                   <input
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                     value={tf.name}
@@ -264,7 +264,7 @@ export function WhatsAppClient({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Category</label>
+                  <label className="text-xs font-semibold text-slate-500 tracking-normal">Category</label>
                   <select
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                     value={tf.category}
@@ -276,7 +276,7 @@ export function WhatsAppClient({
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Language</label>
+                  <label className="text-xs font-semibold text-slate-500 tracking-normal">Language</label>
                   <input
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                     value={tf.language}
@@ -285,7 +285,7 @@ export function WhatsAppClient({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Header Type</label>
+                  <label className="text-xs font-semibold text-slate-500 tracking-normal">Header Type</label>
                   <select
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                     value={tf.header_type}
@@ -298,7 +298,7 @@ export function WhatsAppClient({
                 </div>
                 {tf.header_type && (
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Header Content</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Header Content</label>
                     <input
                       className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                       value={tf.header_content}
@@ -308,17 +308,17 @@ export function WhatsAppClient({
                   </div>
                 )}
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Body Template *</label>
+                  <label className="text-xs font-semibold text-slate-500 tracking-normal">Body Template *</label>
                   <textarea
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 h-24 resize-none"
                     value={tf.body_text}
                     onChange={e => setTf({ ...tf, body_text: e.target.value })}
                     placeholder="Hi {{1}}, your order #{{2}} is now {{3}}. Items: {{4}}. Track at: {{5}}"
                   />
-                  <p className="text-xs text-slate-400">Use {'{{1}}'}, {'{{2}}'}, etc. for variables. <br />For order templates: 1=name, 2=order#, 3=status, 4=items, 5=track URL</p>
+                  <p className="text-xs text-slate-500">Use {'{{1}}'}, {'{{2}}'}, etc. for variables. <br />For order templates: 1=name, 2=order#, 3=status, 4=items, 5=track URL</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Footer</label>
+                  <label className="text-xs font-semibold text-slate-500 tracking-normal">Footer</label>
                   <input
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                     value={tf.footer_text}
@@ -327,7 +327,7 @@ export function WhatsAppClient({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                  <label className="text-xs font-semibold text-slate-500 tracking-normal">Status</label>
                   <select
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                     value={tf.status}
@@ -339,7 +339,7 @@ export function WhatsAppClient({
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Meta Template ID</label>
+                  <label className="text-xs font-semibold text-slate-500 tracking-normal">Meta Template ID</label>
                   <input
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
                     value={tf.meta_template_id}
@@ -350,52 +350,52 @@ export function WhatsAppClient({
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   onClick={() => { setShowTemplateForm(false); setEditTemplate(null) }}
-                  className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800"
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={saveTemplate}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-rose-500 text-white rounded-xl text-sm font-bold hover:bg-rose-600 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-rose-700 text-white rounded-xl text-sm font-semibold hover:bg-rose-600 transition-colors disabled:opacity-50"
                 >
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 stroke-[1.5]" />
                   {saving ? 'Saving...' : editTemplate ? 'Update Template' : 'Create Template'}
                 </button>
               </div>
             </div>
           )}
 
-          <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+          <div className="rounded-2xl border bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                  <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Category</th>
-                  <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Body Preview</th>
-                  <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="text-right py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Name</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Category</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Body Preview</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Status</th>
+                  <th className="text-right py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {templates.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-sm text-slate-400">
+                    <td colSpan={5} className="py-12 text-center text-sm text-slate-500 tabular-nums">
                       No templates yet. Create one to match your Meta-approved WhatsApp templates.
                     </td>
                   </tr>
                 ) : templates.map(t => (
                   <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50/50">
-                    <td className="py-4 px-6">
-                      <span className="text-sm font-bold text-slate-800">{t.name}</span>
+                    <td className="py-4 px-6 tabular-nums">
+                      <span className="text-sm font-semibold text-slate-800">{t.name}</span>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-6 tabular-nums">
                       <span className="text-xs text-slate-500">{t.category}</span>
                     </td>
-                    <td className="py-4 px-6 max-w-[300px]">
+                    <td className="py-4 px-6 max-w-[300px] tabular-nums">
                       <span className="text-xs text-slate-500 truncate block">{t.body_text}</span>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-6 tabular-nums">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                         t.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' :
                         t.status === 'PENDING' ? 'bg-amber-50 text-amber-700' :
@@ -404,19 +404,19 @@ export function WhatsAppClient({
                         {t.status}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-4 px-6 text-right tabular-nums">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => editTemplateFn(t)}
                           className="rounded-lg h-9 w-9 border border-slate-200 flex items-center justify-center hover:bg-slate-50"
                         >
-                          <MessageSquare className="w-4 h-4 text-slate-500" />
+                          <MessageSquare className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                         </button>
                         <button
                           onClick={() => deleteTemplate(t.id)}
                           className="rounded-lg h-9 w-9 border border-slate-200 flex items-center justify-center hover:bg-red-50"
                         >
-                          <Trash2 className="w-4 h-4 text-red-400" />
+                          <Trash2 className="w-4 h-4 text-red-400 stroke-[1.5]" />
                         </button>
                       </div>
                     </td>
@@ -429,46 +429,46 @@ export function WhatsAppClient({
       )}
 
       {tab === 'logs' && (
-        <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+        <div className="rounded-2xl border bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Time</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Order</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Template</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Time</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Order</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Phone</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Template</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-500 tracking-normal">Status</th>
               </tr>
             </thead>
             <tbody>
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-sm text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-sm text-slate-500 tabular-nums">
                     No notifications sent yet.
                   </td>
                 </tr>
               ) : logs.map(log => (
                 <tr key={log.id} className="border-b border-slate-50 hover:bg-slate-50/50">
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 tabular-nums">
                     <span className="text-xs text-slate-500">
                       {new Date(log.created_at).toLocaleString()}
                     </span>
                   </td>
-                  <td className="py-4 px-6">
-                    <span className="text-xs font-bold text-slate-700">
+                  <td className="py-4 px-6 tabular-nums">
+                    <span className="text-xs font-semibold text-slate-700">
                       {log.order_id ? `#${log.order_id.slice(0, 8)}` : '-'}
                     </span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 tabular-nums">
                     <span className="text-xs text-slate-600">{log.customer_phone}</span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 tabular-nums">
                     <span className="text-xs text-slate-600">{log.template_name}</span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 tabular-nums">
                     <div className="flex items-center gap-1.5">
                       {statusIcon(log.status)}
-                      <span className="text-xs font-bold text-slate-600 capitalize">{log.status}</span>
+                      <span className="text-xs font-semibold text-slate-600 capitalize">{log.status}</span>
                     </div>
                   </td>
                 </tr>

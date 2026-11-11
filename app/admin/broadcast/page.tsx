@@ -209,9 +209,9 @@ export default function AdminBroadcastForm() {
             status?.type === "info" ? "bg-slate-50 text-slate-600 border border-slate-200" :
             "hidden"
         }`}>
-            {status?.type === "success" ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> :
-             status?.type === "error" ? <XCircle className="w-4 h-4 shrink-0 mt-0.5" /> :
-             status?.type === "info" ? <Info className="w-4 h-4 shrink-0 mt-0.5" /> : null}
+            {status?.type === "success" ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 stroke-[1.5]" /> :
+             status?.type === "error" ? <XCircle className="w-4 h-4 shrink-0 mt-0.5 stroke-[1.5]" /> :
+             status?.type === "info" ? <Info className="w-4 h-4 shrink-0 mt-0.5 stroke-[1.5]" /> : null}
             <span>{status?.text}</span>
         </div>
     )
@@ -223,7 +223,7 @@ export default function AdminBroadcastForm() {
 
             {/* HEADER */}
             <div className="space-y-1">
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Broadcast</h1>
+                <h1 className="text-slate-900 text-2xl font-black tracking-tight">Broadcast</h1>
                 <p className="text-sm text-slate-500">Send FCM push notifications to every installed device.</p>
             </div>
 
@@ -231,30 +231,30 @@ export default function AdminBroadcastForm() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-2xl border bg-white p-5 shadow-sm flex items-center gap-3">
                     <div className="h-9 w-9 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center shrink-0">
-                        <Smartphone className="w-4 h-4" />
+                        <Smartphone className="w-4 h-4 stroke-[1.5]" />
                     </div>
                     <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Devices</p>
-                        <p className="text-lg font-black text-slate-900 truncate">{stats.devices}</p>
+                        <p className="text-xs font-semibold tracking-normal text-slate-500">Devices</p>
+                        <p className="text-lg font-semibold text-slate-900 truncate">{stats.devices}</p>
                     </div>
                 </div>
                 <div className="rounded-2xl border bg-white p-5 shadow-sm flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <Users className="w-4 h-4" />
+                    <div className="h-9 w-9 rounded-xl bg-slate-50 text-slate-700 flex items-center justify-center shrink-0">
+                        <Users className="w-4 h-4 stroke-[1.5]" />
                     </div>
                     <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Users</p>
-                        <p className="text-lg font-black text-slate-900 truncate">{stats.users}</p>
+                        <p className="text-xs font-semibold tracking-normal text-slate-500">Users</p>
+                        <p className="text-lg font-semibold text-slate-900 truncate">{stats.users}</p>
                     </div>
                 </div>
                 <div className="rounded-2xl border bg-white p-5 shadow-sm flex items-center gap-3">
                     <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                        <Activity className="w-4 h-4" />
+                        <Activity className="w-4 h-4 stroke-[1.5]" />
                     </div>
                     <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">FCM Service</p>
-                        <p className="text-lg font-black text-emerald-600 truncate flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <p className="text-xs font-semibold tracking-normal text-slate-500">FCM Service</p>
+                        <p className="text-lg font-semibold text-emerald-600 truncate flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
                             Live
                         </p>
                     </div>
@@ -265,58 +265,58 @@ export default function AdminBroadcastForm() {
             <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <h2 className="text-base font-bold text-slate-900">Registered Devices</h2>
-                        <p className="text-xs text-slate-400 mt-0.5">Every active FCM token in the app.</p>
+                        <h2 className="text-base font-semibold text-slate-900">Registered Devices</h2>
+                        <p className="text-xs text-slate-500 mt-0.5">Every active FCM token in the app.</p>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{stats.devices} token{stats.devices === 1 ? "" : "s"}</span>
+                    <span className="text-xs font-semibold tracking-normal text-slate-500">{stats.devices} token{stats.devices === 1 ? "" : "s"}</span>
                 </div>
                 {devices.length === 0 ? (
                     <div className="p-12 text-center">
-                        <Smartphone className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                        <Smartphone className="w-10 h-10 text-slate-200 mx-auto mb-3 stroke-[1.5]" />
                         <p className="text-sm font-medium text-slate-500">No devices registered yet.</p>
-                        <p className="text-xs text-slate-400 mt-1">Open the app, log in, and grant notification permission.</p>
+                        <p className="text-xs text-slate-500 mt-1">Open the app, log in, and grant notification permission.</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto min-w-0 max-w-full">
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50/50 border-b border-slate-100">
                                 <tr>
-                                    <th className="text-left py-3 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">User</th>
-                                    <th className="text-left py-3 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Token</th>
-                                    <th className="text-left py-3 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Platform</th>
-                                    <th className="text-left py-3 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Registered</th>
-                                    <th className="text-right py-3 px-6 font-bold text-slate-600 text-xs uppercase tracking-wider">Action</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-slate-600 text-xs tracking-normal">User</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-slate-600 text-xs tracking-normal">Token</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-slate-600 text-xs tracking-normal">Platform</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-slate-600 text-xs tracking-normal">Registered</th>
+                                    <th className="text-right py-3 px-6 font-semibold text-slate-600 text-xs tracking-normal">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {devices.map((d: any) => (
                                     <tr key={d.id} className="border-b border-slate-50 hover:bg-slate-50/70 transition-colors">
-                                        <td className="py-3 px-6">
+                                        <td className="py-3 px-6 tabular-nums">
                                             <div className="flex flex-col">
                                                 <span className="text-xs font-semibold text-slate-800">{d.profiles?.full_name || "Unknown user"}</span>
-                                                <span className="text-[11px] font-mono text-slate-400">{d.user_id?.slice(0, 8) || "—"}</span>
+                                                <span className="text-xs font-mono text-slate-500">{d.user_id?.slice(0, 8) || "—"}</span>
                                             </div>
                                         </td>
-                                        <td className="py-3 px-6">
-                                            <span className="font-mono text-[11px] text-slate-500">{d.fcm_token?.slice(0, 28)}...</span>
+                                        <td className="py-3 px-6 tabular-nums">
+                                            <span className="font-mono text-xs text-slate-500">{d.fcm_token?.slice(0, 28)}...</span>
                                         </td>
-                                        <td className="py-3 px-6">
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                                        <td className="py-3 px-6 tabular-nums">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tracking-normal bg-slate-100 text-slate-600 border border-slate-200">
                                                 {d.platform || "android"}
                                             </span>
                                         </td>
-                                        <td className="py-3 px-6 text-xs text-slate-500">{d.created_at ? new Date(d.created_at).toLocaleDateString() : "—"}</td>
-                                        <td className="py-3 px-6 text-right">
+                                        <td className="py-3 px-6 text-xs text-slate-500 tabular-nums">{d.created_at ? new Date(d.created_at).toLocaleDateString() : "—"}</td>
+                                        <td className="py-3 px-6 text-right tabular-nums">
                                             <button
                                                 onClick={async () => {
                                                     const { error } = await supabase.from('push_subscriptions').delete().eq('id', d.id)
                                                     if (!error) { toast.success("Device removed"); fetchNetworkStats() }
                                                     else toast.error("Failed to remove device")
                                                 }}
-                                                className="rounded-lg h-8 w-8 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all text-slate-400 flex items-center justify-center"
+                                                className="rounded-lg h-8 w-8 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors text-slate-500 flex items-center justify-center"
                                                 title="Remove this device token"
                                             >
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <Trash2 className="w-4 h-4 stroke-[1.5]" />
                                             </button>
                                         </td>
                                     </tr>
@@ -331,12 +331,12 @@ export default function AdminBroadcastForm() {
                 {/* COMPOSER */}
                 <div className="lg:col-span-7 rounded-2xl border bg-white p-6 md:p-8 shadow-sm space-y-6">
                     <div>
-                        <h2 className="text-base font-bold text-slate-900">New Notification</h2>
-                        <p className="text-xs text-slate-400 mt-0.5">Reaches every registered device with the app installed.</p>
+                        <h2 className="text-base font-semibold text-slate-900">New Notification</h2>
+                        <p className="text-xs text-slate-500 mt-0.5">Reaches every registered device with the app installed.</p>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Title</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal">Title</label>
                         <input
                             className={fieldClass}
                             value={form.title}
@@ -346,7 +346,7 @@ export default function AdminBroadcastForm() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Message Body</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal">Message Body</label>
                         <textarea
                             className={`${fieldClass} h-28 resize-none pt-3`}
                             value={form.body}
@@ -356,9 +356,9 @@ export default function AdminBroadcastForm() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Redirect Link</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal">Redirect Link</label>
                         <div className="relative">
-                            <Link2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                            <Link2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 stroke-[1.5]" />
                             <input
                                 className={`${fieldClass} pl-10`}
                                 value={form.url}
@@ -369,35 +369,35 @@ export default function AdminBroadcastForm() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Audience</label>
+                        <label className="text-xs font-semibold text-slate-500 tracking-normal">Audience</label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button
                                 onClick={() => { setTargetMode("all"); setTargetUserIds([]) }}
-                                className={`h-11 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
+                                className={`h-11 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
                                     targetMode === "all"
                                         ? "border-pink-300 bg-pink-50 text-pink-700"
                                         : "border-slate-200 text-slate-500 hover:bg-slate-50"
                                 }`}
                             >
-                                <Users className="w-4 h-4" />
+                                <Users className="w-4 h-4 stroke-[1.5]" />
                                 All {stats.users} Users
                             </button>
                             <button
                                 onClick={() => setTargetMode("users")}
-                                className={`h-11 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
+                                className={`h-11 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
                                     targetMode === "users"
                                         ? "border-pink-300 bg-pink-50 text-pink-700"
                                         : "border-slate-200 text-slate-500 hover:bg-slate-50"
                                 }`}
                             >
-                                <Smartphone className="w-4 h-4" />
+                                <Smartphone className="w-4 h-4 stroke-[1.5]" />
                                 Specific Users
                             </button>
                         </div>
                         {targetMode === "users" && (
                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2 space-y-2 max-h-56 overflow-y-auto">
                                 {userOptions.length === 0 && (
-                                    <p className="px-2 py-1 text-xs text-slate-400 font-medium">No registered devices yet</p>
+                                    <p className="px-2 py-1 text-xs text-slate-500 font-medium">No registered devices yet</p>
                                 )}
                                 {userOptions.map(u => (
                                     <label key={u.user_id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white cursor-pointer transition-colors">
@@ -423,26 +423,26 @@ export default function AdminBroadcastForm() {
                         <button
                             onClick={sendBroadcast}
                             disabled={loading || !form.title || !form.body || stats.devices === 0 || (targetMode === "users" && targetUserIds.length === 0)}
-                            className="w-full h-11 bg-pink-600 hover:bg-pink-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black tracking-wider uppercase rounded-xl flex items-center justify-center gap-2 transition-colors"
+                            className="w-full h-11 bg-pink-600 hover:bg-pink-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold tracking-normal rounded-xl flex items-center justify-center gap-2 transition-colors"
                         >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Send className="w-4 h-4 stroke-[1.5]" />}
                             {loading ? "SENDING..." : targetUserIds.length > 0 ? `Send to ${targetUserIds.length} user${targetUserIds.length === 1 ? "" : "s"}` : `Broadcast to ${stats.devices} device${stats.devices === 1 ? "" : "s"}`}
                         </button>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button
                                 onClick={sendTest}
                                 disabled={loading || stats.devices === 0}
-                                className="h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                                className="h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Radio className="w-4 h-4 stroke-[1.5]" />}
                                 Send Test to My Devices
                             </button>
                             <button
                                 onClick={sendTopicTest}
                                 disabled={loading || stats.devices === 0}
-                                className="h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                                className="h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Radio className="w-4 h-4 stroke-[1.5]" />}
                                 Test Admin Devices
                             </button>
                         </div>
@@ -455,21 +455,21 @@ export default function AdminBroadcastForm() {
                 <div className="lg:col-span-5 space-y-6">
                     {/* PHONE PREVIEW */}
                     <div className="rounded-2xl border bg-white p-6 shadow-sm">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-4">Preview</p>
-                        <div className="rounded-[2.5rem] bg-slate-100 border-4 border-slate-200 px-4 pt-10 pb-4 relative overflow-hidden">
+                        <p className="text-xs font-semibold tracking-normal text-slate-500 mb-4">Preview</p>
+                        <div className="rounded-2xl bg-slate-100 border-4 border-slate-200 px-4 pt-10 pb-4 relative overflow-hidden">
                             <div className="absolute top-0 inset-x-0 mx-auto w-24 h-5 bg-slate-200 rounded-b-2xl" />
                             <div className="bg-white rounded-xl shadow p-4">
                                 <div className="flex items-center gap-2 mb-1.5">
                                     <div className="w-5 h-5 bg-pink-600 rounded-md flex items-center justify-center">
-                                        <Bell className="w-3 h-3 text-white" />
+                                        <Bell className="w-4 h-4 text-white stroke-[1.5]" />
                                     </div>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">The Makeup Store</span>
-                                    <span className="text-[9px] text-slate-300 ml-auto italic">now</span>
+                                    <span className="text-xs font-semibold tracking-normal text-slate-500">The Makeup Store</span>
+                                    <span className="text-xs text-slate-400 ml-auto">now</span>
                                 </div>
-                                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-tight truncate">
+                                <h4 className="text-xs font-semibold text-slate-900 tracking-tight truncate">
                                     {form.title || "Headline Preview"}
                                 </h4>
-                                <p className="text-[11px] text-slate-500 leading-snug line-clamp-2 mt-1">
+                                <p className="text-xs text-slate-500 leading-snug line-clamp-2 mt-1">
                                     {form.body || "Your message will appear here — exactly as users see it on their lock screen."}
                                 </p>
                             </div>
@@ -480,19 +480,19 @@ export default function AdminBroadcastForm() {
                     {/* FCM KEY DIAGNOSTICS */}
                     <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-3">
                         <div className="flex items-center justify-between">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">FCM Diagnostics</p>
-                            <Bell className="w-4 h-4 text-slate-300" />
+                            <p className="text-xs font-semibold tracking-normal text-slate-500">FCM Diagnostics</p>
+                            <Bell className="w-4 h-4 text-slate-400 stroke-[1.5]" />
                         </div>
                         <button
                             onClick={testFcmKey}
                             disabled={fcmTestLoading}
-                            className="w-full h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                            className="w-full h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
                         >
-                            {fcmTestLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+                            {fcmTestLoading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Activity className="w-4 h-4 stroke-[1.5]" />}
                             {fcmTestLoading ? "TESTING..." : "Test FCM Service Key"}
                         </button>
                         {fcmTestResult && (
-                            <p className={`text-[11px] font-medium px-3 py-2.5 rounded-lg border ${
+                            <p className={`text-xs font-medium px-3 py-2.5 rounded-lg border ${
                                 fcmTestResult.ok ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-600 border-red-200"
                             }`}>
                                 {fcmTestResult.text}
@@ -501,13 +501,13 @@ export default function AdminBroadcastForm() {
                         <button
                             onClick={registerFCM}
                             disabled={regLoading}
-                            className="w-full h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                            className="w-full h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
                         >
-                            {regLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                            {regLoading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Smartphone className="w-4 h-4 stroke-[1.5]" />}
                             {regLoading ? "REGISTERING..." : "Register This Device for FCM"}
                         </button>
                         {regStatus && (
-                            <p className={`text-[11px] font-medium px-3 py-2.5 rounded-lg border ${
+                            <p className={`text-xs font-medium px-3 py-2.5 rounded-lg border ${
                                 regStatus.startsWith("Failed") || regStatus.includes("denied") || regStatus.includes("requires")
                                     ? "bg-amber-50 text-amber-700 border-amber-200"
                                     : "bg-emerald-50 text-emerald-700 border-emerald-200"

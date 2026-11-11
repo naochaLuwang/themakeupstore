@@ -70,12 +70,12 @@ export default async function ProductsPage({
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Products</h1>
+                    <h1 className="text-slate-900 text-2xl font-black tracking-tight">Products</h1>
                     <p className="text-sm text-slate-500">Catalog & visibility management</p>
                 </div>
                 <Button asChild className="rounded-xl h-11 px-5 bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800">
                     <Link href="/admin/products/add">
-                        <Plus className="mr-2 h-4 w-4" /> Add Product
+                        <Plus className="mr-2 h-4 w-4 stroke-[1.5]" /> Add Product
                     </Link>
                 </Button>
             </div>
@@ -91,10 +91,10 @@ export default async function ProductsPage({
             </div>
 
             {/* DESKTOP DATA TABLE */}
-            <div className="hidden lg:block rounded-2xl border bg-white overflow-hidden shadow-sm">
+            <div className="hidden lg:block rounded-2xl border bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
                 <table className="w-full">
                     <thead className="bg-slate-50/50">
-                        <tr className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        <tr className="text-xs font-semibold text-slate-600 tracking-normal">
                             <th className="py-4 px-6 text-left">Product Info</th>
                             <th className="py-4 px-6 text-left">Brand</th>
                             <th className="py-4 px-6 text-left">Status</th>
@@ -109,40 +109,40 @@ export default async function ProductsPage({
 
                                 return (
                                     <tr key={product.id} className={`group hover:bg-slate-50/50 transition-colors ${!isActive ? 'opacity-60' : ''}`}>
-                                        <td className="py-4 px-6">
+                                        <td className="py-4 px-6 tabular-nums">
                                             <div className="flex items-center gap-4">
                                                 <div className="h-14 w-14 relative rounded-xl border border-slate-200 bg-slate-100 overflow-hidden flex-shrink-0">
                                                     {product.thumbnail_url ? (
                                                         <Image fill src={product.thumbnail_url} alt={product.name} className="object-cover" />
                                                     ) : (
-                                                        <Package className="h-5 w-5 m-auto absolute inset-0 text-slate-300" />
+                                                        <Package className="h-5 w-5 m-auto absolute inset-0 text-slate-400 stroke-[1.5]" />
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold text-slate-900 text-sm">{product.name}</span>
-                                                    <span className="text-[11px] text-slate-400 font-mono">{product.slug}</span>
+                                                    <span className="text-xs text-slate-500 font-mono">{product.slug}</span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="py-4 px-6">
+                                        <td className="py-4 px-6 tabular-nums">
                                             <span className="text-xs font-medium text-slate-500">{product.brand || "Generic"}</span>
                                         </td>
-                                        <td className="py-4 px-6">
+                                        <td className="py-4 px-6 tabular-nums">
                                             <Badge className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border-none ${isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                                                 {product.status}
                                             </Badge>
                                         </td>
-                                        <td className="py-4 px-6">
+                                        <td className="py-4 px-6 tabular-nums">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-semibold text-slate-900">{totalStock}</span>
                                                 <div className={`h-1.5 w-1.5 rounded-full ${totalStock > 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
                                             </div>
                                         </td>
-                                        <td className="py-4 px-6 text-right">
+                                        <td className="py-4 px-6 text-right tabular-nums">
                                             <div className="flex justify-end items-center gap-2">
                                                 <form action={toggleStatus.bind(null, product.id, product.status)}>
-                                                    <Button variant="outline" size="icon" className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-all text-slate-400">
-                                                        {isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4 text-emerald-500" />}
+                                                    <Button variant="outline" size="icon" className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-colors text-slate-500">
+                                                        {isActive ? <EyeOff className="h-4 w-4 stroke-[1.5]" /> : <Eye className="h-4 w-4 text-emerald-500 stroke-[1.5]" />}
                                                     </Button>
                                                 </form>
                                                 <Button variant="secondary" size="sm" asChild className="h-9 px-4 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200">
@@ -172,15 +172,15 @@ export default async function ProductsPage({
                                             {product.thumbnail_url ? (
                                                 <Image fill src={product.thumbnail_url} alt={product.name} className="object-cover" />
                                             ) : (
-                                                <Package className="h-6 w-6 m-auto absolute inset-0 text-slate-200" />
+                                                <Package className="h-6 w-6 m-auto absolute inset-0 text-slate-200 stroke-[1.5]" />
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <Badge className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border-none ${isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                <Badge className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border-none ${isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                                                     {product.status}
                                                 </Badge>
-                                                <span className="text-[10px] font-medium text-slate-400 truncate">{product.brand || "Generic"}</span>
+                                                <span className="text-xs font-medium text-slate-500 truncate">{product.brand || "Generic"}</span>
                                             </div>
                                             <h3 className="font-semibold text-slate-900 text-sm truncate">{product.name}</h3>
                                             <div className="flex items-center gap-3 mt-2">
@@ -193,7 +193,7 @@ export default async function ProductsPage({
                                     <div className="grid grid-cols-3 border-t border-slate-100">
                                         <form action={toggleStatus.bind(null, product.id, product.status)} className="border-r border-slate-100">
                                             <button className="w-full py-3 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-600 active:bg-slate-50 transition-colors">
-                                                {isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-emerald-500" />}
+                                                {isActive ? <EyeOff className="w-4 h-4 stroke-[1.5]" /> : <Eye className="w-4 h-4 text-emerald-500 stroke-[1.5]" />}
                                                 {isActive ? 'Hide' : 'Show'}
                                             </button>
                                         </form>
@@ -212,8 +212,8 @@ export default async function ProductsPage({
 
                 {(!products || products.length === 0) && (
                     <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
-                        <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                        <p className="text-slate-400 font-medium">No products found</p>
+                        <Package className="w-12 h-12 text-slate-200 mx-auto mb-4 stroke-[1.5]" />
+                        <p className="text-slate-500 font-medium">No products found</p>
                     </div>
                 )}
         </div>

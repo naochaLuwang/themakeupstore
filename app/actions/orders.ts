@@ -9,7 +9,6 @@ import { quoteFingerprint, requestFingerprint, verifyCapturedPayment } from "@/l
 import { randomUUID } from "node:crypto"
 import { refundPaymentOnce } from "@/lib/verified-payment"
 import { checkoutOrderItems } from "@/lib/checkout-order-items"
-import { OrderPOSSchema } from "@/lib/schemas"
 import { VALID_TRANSITIONS, STATUS_TIMESTAMPS } from "@/lib/order-status"
 import { sendOrderPush } from "@/lib/order-push"
 import { notifyBackInStock } from "./back-in-stock-notify"
@@ -60,41 +59,6 @@ async function atomicDecrementStock(supabase: Awaited<ReturnType<typeof createCl
     console.error("All stock decrement attempts failed for", variantId)
     return false
 }
-
-async function incrementAndCheckRestock(
-    supabase: Awaited<ReturnType<typeof createClient>>,
-    variantId: string,
-    amount: number
-) {
-    const { data: before } = await supabase
-        .from("product_variants")
-        .select("stock")
-        .eq("id", variantId)
-        .single()
-    const stockBefore = before?.stock ?? 0
-
-    const { error: rpcErr } = await supabase.rpc("increment_stock", {
-        row_id: variantId,
-        amount,
-    })
-
-    if (rpcErr) {
-        if (before) {
-            await supabase
-                .from("product_variants")
-                .update({ stock: stockBefore + amount })
-                .eq("id", variantId)
-        }
-    }
-
-    if (stockBefore <= 0 && stockBefore + amount > 0) {
-        notifyBackInStock(variantId).catch(err =>
-            console.error("[BackInStock] Auto-notify failed:", err)
-        )
-    }
-}
-
-
 
 async function withRestockNotifications<T extends {error:{message:string}|null}>(
     db:Awaited<ReturnType<typeof createAdminClient>>,orderId:string,operation:()=>PromiseLike<T>
@@ -190,7 +154,15 @@ export async function placeOrder(
                 promo_code: pricingInput.promoCode || null, promo_discount_amount: quote.promoDiscount,
                 bxgy_discount_amount: quote.bxgyDiscount, gift_card_discount: quote.giftCardDiscount, coin_discount_amount: quote.coinDiscount,
                 offer_snapshot:{version:2,qualifying_subtotal:quote.qualifyingSubtotal,discounts:quote.discounts,gifts:quote.freeItems,bxgy_allocations:quote.bxgyAllocations,
-                    coupon_discount:quote.promoDiscount,merchandise_subtotal:quote.subtotal,fingerprint} },
+                    coupon_discount:quote.promoDiscount,merchandise_subtotal:quote.subtotal,fingerprint,
+                    pricing_context: quote.previewCatalog ? {
+                        snapshot: {...quote.previewCatalog,flashSales:undefined,
+                            bxgyRules:quote.previewCatalog.bxgyRules.filter(r=>quote.promotions.some(p=>p.kind==='bxgy'&&p.id===r.id)),
+                            giftRules:quote.previewCatalog.giftRules.filter(r=>quote.promotions.some(p=>p.kind==='gift'&&p.id===r.id)),
+                            giftOptions:quote.previewCatalog.giftOptions.map(g=>({...g,stock:0})),expiresAt:0},
+                        coupon:quote.couponDefinition,
+                        bases:Object.fromEntries(quote.items.map(i=>[`variant:${i.variantId}`,{price:i.price,mrp:i.mrp,categoryIds:i.categoryIds,brand:i.brand}]))
+                    } : undefined} },
             p_items: orderItems, p_stock: stock,
             p_promotions: quote.promotions,
             p_gift_code: pricingInput.giftCardCode || null,
@@ -231,7 +203,7 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
         const [orderRes, profileRes] = await Promise.all([
             supabase
                 .from('orders')
-                .select('status, user_id, payment_method, payment_status, razorpay_payment_id, order_items(product_variant_id, quantity)')
+                .select('status, user_id, payment_method, payment_status, razorpay_payment_id, edit_version, order_items(product_variant_id, quantity)')
                 .eq('id', orderId)
                 .single(),
             supabase
@@ -250,6 +222,16 @@ export async function cancelOrderAndRestoreStock(orderId: string, reason?: strin
         // This was the part blocking your admin previously
         if (order.user_id !== user.id && !isAdmin) {
             throw new Error("Unauthorized: You do not have permission to cancel this order")
+        }
+
+        if (Number(order.edit_version) > 0) {
+            const {cancelAmendedOrder}=await import('@/lib/order-edit-server')
+            const result=await withRestockNotifications(supabase,orderId,async()=>{
+                const cancellation=await cancelAmendedOrder(supabase,orderId,user.id,reason || 'Order cancelled')
+                return {...cancellation,error:null}
+            })
+            for(const path of ['/admin/orders',`/admin/orders/${orderId}`,`/admin/orders/${orderId}/edit`,`/profile/orders/${orderId}`])revalidatePath(path)
+            return {success:true,message:result.message}
         }
 
         // 4. STATUS CHECK: Prevent cancelling completed logic
@@ -464,212 +446,27 @@ export async function createWholesaleOrder(data: {
 }
 
 
-// app/actions/orders.ts
+// Compatibility entry points: all item/price changes now use the reviewed,
+// transactional amendment actions. Old tabs must not bypass that path.
 export async function updateOrderPOS(
-    orderId: string, 
-    items: any[], 
-    globalDiscount: number = 0,
-    shippingPrice: number = 0,
-    additionalCharges: number = 0,
-    additionalChargesLabel: string = 'Extra Charges'
+    orderId: string, items: unknown[], globalDiscount = 0, shippingPrice = 0,
+    additionalCharges = 0, additionalChargesLabel = 'Extra Charges'
 ) {
-    const { supabase } = await requireAdmin()
-    const {data:contract}=await supabase.from('orders').select('checkout_key').eq('id',orderId).single()
-    if(contract?.checkout_key)return {success:false,message:'Use an item refund or cancel this checkout order. Its original prices and offers are preserved.'}
-
-
-    const { success, data, error: validationError } = OrderPOSSchema.safeParse({
-        orderId, items, globalDiscount, additionalCharges, additionalChargesLabel
-    })
-    if (!success) return { success: false, message: validationError.message }
-
-    // 1. Fetch current items to RESTORE stock before deletion
-    const { data: currentItems } = await supabase
-        .from('order_items')
-        .select('product_variant_id, quantity')
-        .eq('order_id', orderId);
-
-    if (currentItems) {
-        for (const item of currentItems) {
-            if (item.product_variant_id) {
-                await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
-            }
-        }
-    }
-
-    // 2. DELETE ALL existing items
-    const { error: deleteError } = await supabase
-        .from('order_items')
-        .delete()
-        .eq('order_id', orderId);
-
-    if (deleteError) {
-        console.error("Order items cleanup failed:", deleteError)
-        return { success: false, message: "Failed to update order items" }
-    }
-
-    // 3. PREPARE data for insertion
-    const cleanItems = data.items.map(item => ({
-        order_id: orderId,
-        product_id: item.product_id,
-        product_variant_id: item.product_variant_id,
-        product_name: item.product_name,
-        variant_title: item.variant_title,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        mrp: item.mrp,
-        sku: item.sku
-    }));
-
-    // 4. INSERT the fresh set
-    const { error: insertError } = await supabase
-        .from('order_items')
-        .insert(cleanItems);
-
-    if (insertError) {
-        console.error("Order items insertion failed:", insertError)
-        return { success: false, message: "Failed to save order items" }
-    }
-
-    // 5. DECREMENT STOCK for the new set
-    for (const item of cleanItems) {
-        if (item.product_variant_id) {
-            await supabase.rpc('decrement_stock', {
-                row_id: item.product_variant_id,
-                amount: item.quantity
-            })
-        }
-    }
-
-    // 4. UPDATE ORDER TOTALS
-    const itemsTotal = data.items.reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0);
-    const finalTotal = Math.round(itemsTotal - data.globalDiscount + shippingPrice + data.additionalCharges);
-
-    const { error: orderUpdateError } = await supabase
-        .from('orders')
-        .update({
-            total: finalTotal,
-            shipping_price: shippingPrice,
-            promo_discount_amount: data.globalDiscount,
-            additional_charges: data.additionalCharges,
-            additional_charges_label: data.additionalChargesLabel,
-            updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-
-    if (orderUpdateError) return { success: false, message: "Order total sync failed" };
-
-    revalidatePath('/admin/orders');
-    return { success: true };
+    await requireAdmin()
+    void [orderId, items, globalDiscount, shippingPrice, additionalCharges, additionalChargesLabel]
+    return {success:false,message:'Open Edit order and review the updated items and total before saving.'}
 }
 
-export async function removeOrderItem(itemId: string, orderId: string) {
-    const { supabase } = await requireAdmin()
-    const {data:contract}=await supabase.from('orders').select('checkout_key').eq('id',orderId).single()
-    if(contract?.checkout_key)return {success:false,message:'Use an item refund or cancel this checkout order. Its original prices and offers are preserved.'}
-
-
-    try {
-        const { data: item, error: fetchErr } = await supabase
-            .from('order_items')
-            .select('product_variant_id, quantity')
-            .eq('id', itemId)
-            .single()
-
-        if (fetchErr || !item) throw new Error("Order item not found")
-
-        if (item.product_variant_id) {
-            await incrementAndCheckRestock(supabase, item.product_variant_id, item.quantity)
-        }
-
-        const { error: deleteErr, data: deleted } = await supabase
-            .from('order_items')
-            .delete()
-            .eq('id', itemId)
-            .select()
-
-        if (deleteErr) {
-            console.error("Failed to remove order item:", deleteErr)
-            throw new Error("Failed to remove item")
-        }
-        if (!deleted || deleted.length === 0) throw new Error("Order item not found")
-
-        const { data: remaining } = await supabase
-            .from('order_items')
-            .select('*')
-            .eq('order_id', orderId)
-
-        const { data: order } = await supabase
-            .from('orders')
-            .select('shipping_price, promo_discount_amount, additional_charges')
-            .eq('id', orderId)
-            .single()
-
-        const itemsTotal = (remaining || []).reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
-        const finalTotal = Math.round(itemsTotal - Number(order?.promo_discount_amount || 0) + Number(order?.additional_charges || 0) + Number(order?.shipping_price || 0))
-
-        const { error: updateErr } = await supabase
-            .from('orders')
-            .update({ total: finalTotal, updated_at: new Date().toISOString() })
-            .eq('id', orderId)
-
-        if (updateErr) throw new Error("Failed to update total")
-
-        revalidatePath('/admin/orders')
-        revalidatePath(`/admin/orders/${orderId}`)
-
-        return {
-            success: true,
-            order_items: remaining || [],
-            total: finalTotal
-        }
-    } catch (error: any) {
-        return { success: false, message: error.message }
-    }
+export async function removeOrderItem(itemId:string,orderId:string) {
+    await requireAdmin()
+    void [itemId,orderId]
+    return {success:false,message:'Open Edit order to remove items in a reviewed draft.'}
 }
 
-export async function updateOrderDiscount(orderId: string, discountAmount: number, discountRemark: string) {
-    const { supabase } = await requireAdmin()
-    const {data:contract}=await supabase.from('orders').select('checkout_key').eq('id',orderId).single()
-    if(contract?.checkout_key)return {success:false,message:'Use an item refund or cancel this checkout order. Its original prices and offers are preserved.'}
-
-
-    try {
-        const { data: order } = await supabase
-            .from('orders')
-            .select('shipping_price, additional_charges')
-            .eq('id', orderId)
-            .single()
-
-        const { data: items } = await supabase
-            .from('order_items')
-            .select('unit_price, quantity')
-            .eq('order_id', orderId)
-
-        const itemsTotal = (items || []).reduce((acc, i) => acc + (Number(i.unit_price) * i.quantity), 0)
-        const finalTotal = Math.round(itemsTotal - discountAmount + Number(order?.additional_charges || 0) + Number(order?.shipping_price || 0))
-
-        await supabase
-            .from('orders')
-            .update({
-                promo_discount_amount: discountAmount,
-                discount_remark: discountRemark || null,
-                total: finalTotal,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', orderId)
-
-        revalidatePath('/admin/orders')
-        revalidatePath(`/admin/orders/${orderId}`)
-        return { success: true }
-    } catch (error: any) {
-        return { success: false, message: error.message }
-    }
-}
-
-const STATUS_ORDER_TYPE: Record<string, string> = {
-    delivery: "delivery",
-    pickup: "pickup",
+export async function updateOrderDiscount(orderId:string,discountAmount:number,discountRemark:string) {
+    await requireAdmin()
+    void [orderId,discountAmount,discountRemark]
+    return {success:false,message:'Open Edit order to review the revised pricing.'}
 }
 
 export async function updateOrderStatus(orderId: string, status: string, deliveryPartnerId?: string, trackingNumber?: string) {
@@ -692,6 +489,12 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
         const validNext = VALID_TRANSITIONS[orderType]?.[oldStatus] || []
         if (!validNext.includes(newStatus)) {
             throw new Error(`Cannot transition from "${oldStatus}" to "${newStatus}" for ${orderType} orders`)
+        }
+
+        if(newStatus==='cancelled'){
+            const cancellation=await cancelOrderAndRestoreStock(orderId,'Cancelled by administrator')
+            if(!cancellation.success)throw new Error(cancellation.message)
+            return {success:true,oldStatus,newStatus,userId:order.user_id,pushNotification:undefined}
         }
 
         const updatePayload: any = {
@@ -825,7 +628,7 @@ export async function deleteOrder(orderId: string) {
         const [orderRes, profileRes] = await Promise.all([
             supabase
                 .from('orders')
-                .select('user_id,status,checkout_key, payment_method, payment_status, razorpay_payment_id, coin_discount_amount, order_items(id,product_variant_id, quantity)')
+                .select('user_id,status,checkout_key, edit_version, payment_method, payment_status, razorpay_payment_id, coin_discount_amount, order_items(id,product_variant_id, quantity)')
                 .eq('id', orderId)
                 .single(),
             supabase
@@ -841,6 +644,11 @@ export async function deleteOrder(orderId: string) {
         const isAdmin = profileRes.data?.is_admin || false
 
         if (!isAdmin) throw new Error("Admin access required")
+        if(order.status!=='cancelled')throw new Error('Cancel this order before deleting it so its stock and credits are returned correctly.')
+        if(Number(order.edit_version)>0)throw new Error('Amended orders keep their item and payment audit history and cannot be deleted.')
+        const history=await supabase.from('order_amendments').select('id').eq('order_id',orderId).limit(1)
+        if(history.error)throw new Error('Could not verify this order’s edit history')
+        if(history.data?.length)throw new Error('Orders with an edit or packing history must be retained for review.')
         if(order.checkout_key){
             if(order.status!=='cancelled')throw new Error('Cancel this checkout order before deleting it so its stock and credits are returned correctly.')
             const {error}=await withRestockNotifications(supabase,orderId,()=>supabase.rpc('reconcile_cancelled_order',{p_order_id:orderId}))
@@ -944,8 +752,12 @@ export async function deleteOrder(orderId: string) {
 export async function updateOrderPaymentStatus(orderId: string, status: string) {
     const { supabase } = await requireAdmin()
     if (!['unpaid', 'paid', 'failed', 'refunded', 'partially_refunded', 'pending'].includes(status)) return { success: false, message: 'Invalid payment status' }
-    const { error } = await supabase.from('orders').update({ payment_status: status }).eq('id', orderId)
+    const lookup = await supabase.from('orders').select('edit_version').eq('id',orderId).single()
+    if(lookup.error)return {success:false,message:'Order could not be verified'}
+    if(Number(lookup.data?.edit_version)>0)return {success:false,message:'Use Edit order to record the actual payment or refund receipt.'}
+    const { error, data } = await supabase.from('orders').update({ payment_status: status }).eq('id', orderId).eq('edit_version',0).select('id')
     if (error) return { success: false, message: error.message }
+    if(!data?.length)return {success:false,message:'The order changed. Reload it and use Edit order to record the receipt.'}
     revalidatePath('/admin/orders')
     return { success: true }
 }
@@ -955,9 +767,11 @@ export async function updateOrderTypeSecure(orderId: string, type: string, reset
     if (!['delivery', 'pickup'].includes(type)) return { success: false, message: 'Invalid order type' }
     const { data: order, error: lookupError } = await supabase.from('orders').select('status').eq('id', orderId).single()
     if (lookupError || !order) return { success: false, message: 'Order not found' }
+    if(!['pending','confirmed'].includes(order.status))return {success:false,message:order.status==='packed'?'Open Edit order and reopen packing before changing delivery type.':'Delivery type can only change before packing.'}
     const reset = resetStatus || !Object.keys(VALID_TRANSITIONS[type]).includes(order.status)
-    const { error } = await supabase.from('orders').update({ order_type: type, ...(reset ? { status: 'pending' } : {}) }).eq('id', orderId)
+    const { error, data } = await supabase.from('orders').update({ order_type: type, ...(reset ? { status: 'pending' } : {}) }).eq('id', orderId).eq('status',order.status).select('id')
     if (error) return { success: false, message: error.message }
+    if(!data?.length)return {success:false,message:'The order changed. Reload it before changing delivery type.'}
     revalidatePath('/admin/orders')
     return { success: true, reset }
 }

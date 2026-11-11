@@ -45,7 +45,7 @@ export default async function CustomersPage({
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Customers</h1>
+                    <h1 className="text-slate-900 text-2xl font-black tracking-tight">Customers</h1>
                     <p className="text-sm text-slate-500">Manage your relationship with your shoppers.</p>
                 </div>
             </div>
@@ -53,17 +53,17 @@ export default async function CustomersPage({
             <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border bg-white p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Customers</p>
-                        <Users className="h-4 w-4 text-slate-400" />
+                        <p className="text-xs font-medium text-slate-500 tracking-normal">Total Customers</p>
+                        <Users className="h-4 w-4 text-slate-500 stroke-[1.5]" />
                     </div>
-                    <div className="text-2xl font-bold text-slate-900">{totalCustomers}</div>
+                    <div className="text-2xl font-semibold text-slate-900">{totalCustomers}</div>
                 </div>
                 <div className="rounded-2xl border bg-white p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Active (30d)</p>
-                        <UserCheck className="h-4 w-4 text-emerald-500" />
+                        <p className="text-xs font-medium text-slate-500 tracking-normal">Active (30d)</p>
+                        <UserCheck className="h-4 w-4 text-emerald-500 stroke-[1.5]" />
                     </div>
-                    <div className="text-2xl font-bold text-slate-900">{activeThisMonth}</div>
+                    <div className="text-2xl font-semibold text-slate-900">{activeThisMonth}</div>
                 </div>
             </div>
 

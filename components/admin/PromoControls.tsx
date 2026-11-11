@@ -19,9 +19,9 @@ export function PromoStatusToggle({ id, isActive }: { id: string, isActive: bool
         setLoading(false)
     }
     return (
-        <button onClick={handleToggle} disabled={loading} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${isActive ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-            {loading ? <Loader2 className="w-2 h-2 animate-spin" /> : <Circle className="w-1.5 h-1.5 fill-current" />}
-            <span className="text-[8px] font-black">{isActive ? 'Active' : 'Draft'}</span>
+        <button onClick={handleToggle} disabled={loading} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${isActive ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+            {loading ? <Loader2 className="w-2 h-2 animate-spin stroke-[1.5]" /> : <Circle className="w-1.5 h-1.5 fill-current stroke-[1.5]" />}
+            <span className="text-xs font-semibold">{isActive ? 'Active' : 'Draft'}</span>
         </button>
     )
 }
@@ -49,9 +49,9 @@ export function DeletePromoButton({ id }: { id: string }) {
         <button
             onClick={handleDelete}
             disabled={loading}
-            className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-50"
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
         >
-            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Trash2 className="w-4 h-4 stroke-[1.5]" />}
         </button>
     )
 }
@@ -68,9 +68,9 @@ export function FreeGiftStatusToggle({ id, isActive }: { id: string, isActive: b
         finally { setLoading(false) }
     }
     return (
-        <button onClick={handleToggle} disabled={loading} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${isActive ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-            {loading ? <Loader2 className="w-2 h-2 animate-spin" /> : <Circle className="w-1.5 h-1.5 fill-current" />}
-            <span className="text-[8px] font-black">{isActive ? 'Active' : 'Draft'}</span>
+        <button onClick={handleToggle} disabled={loading} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${isActive ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+            {loading ? <Loader2 className="w-2 h-2 animate-spin stroke-[1.5]" /> : <Circle className="w-1.5 h-1.5 fill-current stroke-[1.5]" />}
+            <span className="text-xs font-semibold">{isActive ? 'Active' : 'Draft'}</span>
         </button>
     )
 }
@@ -88,8 +88,8 @@ export function DeleteFreeGiftButton({ id }: { id: string }) {
         finally { setLoading(false) }
     }
     return (
-        <button onClick={handleDelete} disabled={loading} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-50">
-            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+        <button onClick={handleDelete} disabled={loading} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Trash2 className="w-4 h-4 stroke-[1.5]" />}
         </button>
     )
 }
@@ -106,9 +106,9 @@ export function BXGYStatusToggle({ id, isActive }: { id: string, isActive: boole
         finally { setLoading(false) }
     }
     return (
-        <button onClick={handleToggle} disabled={loading} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${isActive ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-            {loading ? <Loader2 className="w-2 h-2 animate-spin" /> : <Circle className="w-1.5 h-1.5 fill-current" />}
-            <span className="text-[8px] font-black">{isActive ? 'Active' : 'Draft'}</span>
+        <button onClick={handleToggle} disabled={loading} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${isActive ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+            {loading ? <Loader2 className="w-2 h-2 animate-spin stroke-[1.5]" /> : <Circle className="w-1.5 h-1.5 fill-current stroke-[1.5]" />}
+            <span className="text-xs font-semibold">{isActive ? 'Active' : 'Draft'}</span>
         </button>
     )
 }
@@ -126,8 +126,8 @@ export function DeleteBXGYButton({ id }: { id: string }) {
         finally { setLoading(false) }
     }
     return (
-        <button onClick={handleDelete} disabled={loading} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-50">
-            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+        <button onClick={handleDelete} disabled={loading} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Trash2 className="w-4 h-4 stroke-[1.5]" />}
         </button>
     )
 }

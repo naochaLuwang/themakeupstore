@@ -65,11 +65,11 @@ export function ReportExportButtons({ data, type = "velocity" }: { data: any[], 
 
     return (
         <div className="flex gap-1">
-            <button onClick={exportExcel} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-[9px] font-black uppercase border border-emerald-100 hover:bg-emerald-100 transition-colors">
-                <FileSpreadsheet className="w-3 h-3" /> Excel
+            <button onClick={exportExcel} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-semibold border border-emerald-100 hover:bg-emerald-100 transition-colors">
+                <FileSpreadsheet className="w-4 h-4 stroke-[1.5]" /> Excel
             </button>
-            <button onClick={exportPDF} className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-[9px] font-black uppercase border border-red-100 hover:bg-red-100 transition-colors">
-                <FileText className="w-3 h-3" /> PDF
+            <button onClick={exportPDF} className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-semibold border border-red-100 hover:bg-red-100 transition-colors">
+                <FileText className="w-4 h-4 stroke-[1.5]" /> PDF
             </button>
         </div>
     )

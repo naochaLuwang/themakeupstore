@@ -54,8 +54,8 @@ export default function BatchLabelsPage() {
 
     if (loading) {
         return (
-            <div className="flex h-[60vh] items-center justify-center gap-2 text-slate-400 font-medium">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading labels...
+            <div className="flex h-[60vh] items-center justify-center gap-2 text-slate-500 font-medium">
+                <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> Loading labels...
             </div>
         )
     }
@@ -63,10 +63,10 @@ export default function BatchLabelsPage() {
     if (requested.length === 0) {
         return (
             <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
-                <PackageOpen className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                <PackageOpen className="w-12 h-12 text-slate-200 mx-auto mb-3 stroke-[1.5]" />
                 <p className="text-slate-500 font-medium mb-4">No order ids provided</p>
-                <Link href="/admin/orders" className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900">
-                    <ArrowLeft className="w-3.5 h-3.5" /> Back to Orders
+                <Link href="/admin/orders" className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900">
+                    <ArrowLeft className="w-4 h-4 stroke-[1.5]" /> Back to Orders
                 </Link>
             </div>
         )
@@ -143,13 +143,13 @@ export default function BatchLabelsPage() {
                 <div className="flex items-center gap-3">
                     <Link
                         href="/admin/orders"
-                        className="rounded-xl h-10 w-10 border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all"
+                        className="rounded-xl h-10 w-10 border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
                         title="Back to orders"
                     >
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4 stroke-[1.5]" />
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-black tracking-tight text-slate-900">
+                        <h1 className="text-slate-900 text-2xl font-black tracking-tight">
                             {orders.length} Label{orders.length !== 1 ? "s" : ""}
                         </h1>
                         <p className="text-sm text-slate-500">
@@ -162,9 +162,9 @@ export default function BatchLabelsPage() {
                     <button
                         onClick={handlePrint}
                         disabled={printing || orders.length === 0}
-                        className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm hover:bg-black transition-colors disabled:opacity-60"
+                        className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-sm hover:bg-black transition-colors disabled:opacity-60"
                     >
-                        {printing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                        {printing ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Printer className="w-4 h-4 stroke-[1.5]" />}
                         Print All{orders.length > 1 ? ` (${orders.length})` : ""}
                     </button>
                 </div>

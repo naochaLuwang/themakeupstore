@@ -73,15 +73,15 @@ export function CategoryForm({ categories }: { categories: { id: string, name: s
                                 <button
                                     type="button"
                                     onClick={() => { setPreview(""); setSelectedFile(null) }}
-                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-lg p-1"
                                 >
-                                    <X className="w-3 h-3" />
+                                    <X className="w-4 h-4 stroke-[1.5]" />
                                 </button>
                             </div>
                         ) : (
                             <label className="w-32 h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition">
-                                <ImagePlus className="w-6 h-6 text-gray-400" />
-                                <span className="text-[10px] mt-2 text-gray-500">Upload</span>
+                                <ImagePlus className="w-6 h-6 text-gray-400 stroke-[1.5]" />
+                                <span className="text-xs mt-2 text-gray-500">Upload</span>
                                 <input type="file" className="hidden" accept="image/*" onChange={onImageSelect} />
                             </label>
                         )}

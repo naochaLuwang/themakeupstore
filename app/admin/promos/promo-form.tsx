@@ -80,7 +80,7 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
 
                     {/* Code & Description */}
                     <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-5">
-                        <h2 className="text-sm font-bold text-slate-900">Promo Details</h2>
+                        <h2 className="text-sm font-semibold text-slate-900">Promo Details</h2>
 
                         <div className="space-y-2">
                             <label className="text-xs font-semibold text-slate-500">Code</label>
@@ -89,7 +89,7 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                 required
                                 defaultValue={initialData?.code}
                                 placeholder="e.g. SUMMER25"
-                                className="w-full h-11 px-4 text-sm font-bold uppercase tracking-wider bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                className="w-full h-11 px-4 text-sm font-semibold tracking-normal bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors"
                             />
                         </div>
 
@@ -101,23 +101,23 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                 rows={2}
                                 defaultValue={initialData?.description}
                                 placeholder="What is this promo for?"
-                                className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all resize-none"
+                                className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors resize-none"
                             />
                         </div>
                     </div>
 
                     {/* Discount Value */}
                     <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-5">
-                        <h2 className="text-sm font-bold text-slate-900">Discount</h2>
+                        <h2 className="text-sm font-semibold text-slate-900">Discount</h2>
 
                         <div className="flex gap-2">
                             <button
                                 type="button"
                                 onClick={() => setDiscountType('percentage')}
-                                className={`flex-1 h-11 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                                className={`flex-1 h-11 rounded-xl text-xs font-semibold tracking-normal transition-colors ${
                                     discountType === 'percentage'
                                         ? 'bg-slate-900 text-white'
-                                        : 'bg-slate-50 text-slate-400 border border-slate-200 hover:text-slate-600'
+                                        : 'bg-slate-50 text-slate-500 border border-slate-200 hover:text-slate-600'
                                 }`}
                             >
                                 Percentage
@@ -125,10 +125,10 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                             <button
                                 type="button"
                                 onClick={() => setDiscountType('fixed')}
-                                className={`flex-1 h-11 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                                className={`flex-1 h-11 rounded-xl text-xs font-semibold tracking-normal transition-colors ${
                                     discountType === 'fixed'
                                         ? 'bg-slate-900 text-white'
-                                        : 'bg-slate-50 text-slate-400 border border-slate-200 hover:text-slate-600'
+                                        : 'bg-slate-50 text-slate-500 border border-slate-200 hover:text-slate-600'
                                 }`}
                             >
                                 Fixed Amount
@@ -141,7 +141,7 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                     {discountType === 'percentage' ? 'Percentage Off' : 'Amount Off'}
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">
                                         {discountType === 'percentage' ? '%' : '₹'}
                                     </span>
                                     <input
@@ -150,21 +150,21 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                         required
                                         min={0}
                                         defaultValue={initialData?.discount_value}
-                                        className="w-full h-11 pl-8 pr-4 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                        className="w-full h-11 pl-8 pr-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors"
                                     />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-semibold text-slate-500">Max Discount Cap</label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₹</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">₹</span>
                                     <input
                                         name="max_discount_amount"
                                         type="number"
                                         min={0}
                                         defaultValue={initialData?.max_discount_amount}
                                         placeholder="No cap"
-                                        className="w-full h-11 pl-8 pr-4 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                        className="w-full h-11 pl-8 pr-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors"
                                     />
                                 </div>
                             </div>
@@ -173,7 +173,7 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
 
                     {/* Rules */}
                     <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-5">
-                        <h2 className="text-sm font-bold text-slate-900">Rules</h2>
+                        <h2 className="text-sm font-semibold text-slate-900">Rules</h2>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -183,7 +183,7 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                     type="datetime-local"
                                     required
                                     defaultValue={formatDateTime(initialData?.starts_at || new Date().toISOString())}
-                                    className="w-full h-11 px-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                    className="w-full h-11 px-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -192,7 +192,7 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                     name="expires_at"
                                     type="datetime-local"
                                     defaultValue={formatDateTime(initialData?.expires_at)}
-                                    className="w-full h-11 px-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                    className="w-full h-11 px-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors"
                                 />
                             </div>
                         </div>
@@ -206,19 +206,19 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                     min={0}
                                     defaultValue={initialData?.usage_limit}
                                     placeholder="Unlimited"
-                                    className="w-full h-11 px-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                    className="w-full h-11 px-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-semibold text-slate-500">Min Order Amount</label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₹</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">₹</span>
                                     <input
                                         name="min_order_amount"
                                         type="number"
                                         min={0}
                                         defaultValue={initialData?.min_order_amount || 0}
-                                        className="w-full h-11 pl-8 pr-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                        className="w-full h-11 pl-8 pr-4 text-sm font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors"
                                     />
                                 </div>
                             </div>
@@ -226,8 +226,8 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
 
                         <div className="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-xl">
                             <div>
-                                <p className="text-xs font-bold text-slate-900">Once per customer</p>
-                                <p className="text-[11px] text-slate-400">Limit to one use per user account</p>
+                                <p className="text-xs font-semibold text-slate-900">Once per customer</p>
+                                <p className="text-xs text-slate-500">Limit to one use per user account</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input
@@ -236,14 +236,14 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                     defaultChecked={initialData?.once_per_user}
                                     className="sr-only peer"
                                 />
-                                <div className="w-10 h-[22px] bg-slate-200 rounded-full peer peer-checked:after:translate-x-[18px] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-slate-900"></div>
+                                <div className="w-10 h-[22px] bg-slate-200 rounded-full peer peer-checked:after:translate-x-[18px] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-colors peer-checked:bg-slate-900"></div>
                             </label>
                         </div>
                     </div>
 
                     {/* Targeting */}
                     <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-5">
-                        <h2 className="text-sm font-bold text-slate-900">Applies To</h2>
+                        <h2 className="text-sm font-semibold text-slate-900">Applies To</h2>
 
                         <div className="flex gap-2">
                             {[
@@ -255,10 +255,10 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                     key={tab.id}
                                     type="button"
                                     onClick={() => { setApplyTo(tab.id); setSelectedIds([]); setSearchQuery(''); }}
-                                    className={`px-4 h-9 rounded-lg text-xs font-semibold transition-all ${
+                                    className={`px-4 h-9 rounded-lg text-xs font-semibold transition-colors ${
                                         applyTo === tab.id
                                             ? 'bg-slate-900 text-white'
-                                            : 'bg-slate-50 text-slate-400 border border-slate-200 hover:text-slate-600'
+                                            : 'bg-slate-50 text-slate-500 border border-slate-200 hover:text-slate-600'
                                     }`}
                                 >
                                     {tab.label}
@@ -269,30 +269,30 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                         {applyTo !== 'all' && (
                             <div className="space-y-3">
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 stroke-[1.5]" />
                                     <input
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         placeholder={`Search ${applyTo === 'specific_products' ? 'products' : 'categories'}...`}
-                                        className="w-full h-10 pl-10 pr-4 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                        className="w-full h-10 pl-10 pr-4 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors"
                                     />
                                 </div>
                                 <div className="max-h-64 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-50">
                                     {filteredItems.length === 0 ? (
-                                        <p className="p-6 text-center text-xs text-slate-400">No results found</p>
+                                        <p className="p-6 text-center text-xs text-slate-500">No results found</p>
                                     ) : (
                                         filteredItems.map(item => (
                                             <button
                                                 key={item.id}
                                                 type="button"
                                                 onClick={() => toggleId(item.id)}
-                                                className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all ${
+                                                className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
                                                     selectedIds.includes(item.id) ? 'bg-slate-50' : 'hover:bg-slate-50/50'
                                                 }`}
                                             >
                                                 <span className="text-sm font-medium text-slate-700 truncate">{item.name || item.title}</span>
                                                 {selectedIds.includes(item.id) ? (
-                                                    <Check className="w-4 h-4 text-slate-900 shrink-0" />
+                                                    <Check className="w-4 h-4 text-slate-900 shrink-0 stroke-[1.5]" />
                                                 ) : (
                                                     <div className="w-4 h-4 rounded-full border-2 border-slate-200 shrink-0" />
                                                 )}
@@ -301,7 +301,7 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                     )}
                                 </div>
                                 {selectedIds.length > 0 && (
-                                    <p className="text-xs text-slate-400">{selectedIds.length} selected</p>
+                                    <p className="text-xs text-slate-500">{selectedIds.length} selected</p>
                                 )}
                             </div>
                         )}
@@ -314,8 +314,8 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                         <div className="rounded-2xl border bg-white p-6 shadow-sm">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl">
-                                    <Zap className="w-4 h-4 text-amber-600 shrink-0" />
-                                    <p className="text-[11px] font-medium text-amber-700">
+                                    <Zap className="w-4 h-4 text-amber-600 shrink-0 stroke-[1.5]" />
+                                    <p className="text-xs font-medium text-amber-700">
                                         The promo code goes live immediately after saving.
                                     </p>
                                 </div>
@@ -323,13 +323,13 @@ export function PromoForm({ products, categories, initialData, initialSelectedId
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full h-12 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className="w-full h-12 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {loading ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
                                     ) : (
                                         <>
-                                            <Tag className="w-4 h-4" />
+                                            <Tag className="w-4 h-4 stroke-[1.5]" />
                                             {isEdit ? 'Update Promo' : 'Create Promo'}
                                         </>
                                     )}

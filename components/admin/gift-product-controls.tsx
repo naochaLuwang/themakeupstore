@@ -20,8 +20,8 @@ export function GiftProductDeleteButton({ id }: { id: string }) {
     }
   }
   return (
-    <button onClick={handleDelete} disabled={loading} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-50">
-      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+    <button onClick={handleDelete} disabled={loading} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+      {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Trash2 className="w-4 h-4 stroke-[1.5]" />}
     </button>
   )
 }

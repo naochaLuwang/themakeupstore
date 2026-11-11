@@ -16,7 +16,7 @@ import { format, startOfDay, endOfDay, subDays, parseISO, differenceInDays, getD
 import Link from "next/link"
 
 const RevenueChart = dynamic(() => import("@/components/admin/revenue-chart").then(m => ({ default: m.RevenueChart })), {
-    loading: () => <div className="rounded-2xl border bg-white p-6 shadow-sm h-80 flex items-center justify-center"><Loader2 className="w-6 h-6 text-slate-300 animate-spin" /></div>,
+    loading: () => <div className="rounded-2xl border bg-white p-6 shadow-sm h-80 flex items-center justify-center"><Loader2 className="w-6 h-6 text-slate-400 animate-spin stroke-[1.5]" /></div>,
 })
 import { Badge } from "@/components/ui/badge"
 
@@ -26,39 +26,39 @@ function StatCard({ label, value, subtitle, icon, change, className = "" }: {
     label: string; value: string; subtitle?: string; icon: React.ReactNode; change?: number; className?: string
 }) {
     return (
-        <div className={`rounded-xl border border-slate-200 bg-white p-2.5 sm:p-3 shadow-sm ${className}`}>
-            <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">{label}</span>
-                <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-md bg-slate-50 border border-slate-100 shrink-0 ml-1">
-                    <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500">{icon}</div>
+        <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-4 xl:p-5 shadow-sm ${className}`}>
+            <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-xs font-medium text-slate-500 tracking-normal truncate">{label}</span>
+                <div className="h-7 w-7 flex shrink-0 items-center justify-center rounded-lg bg-slate-50">
+                    <div className="h-4 w-4 text-slate-500 [&>svg]:size-4 [&>svg]:stroke-[1.5]">{icon}</div>
                 </div>
             </div>
-            <div className="flex items-end justify-between gap-1">
-                <p className="text-sm sm:text-lg font-bold text-slate-900 tracking-tight truncate">{value}</p>
+            <div className="flex flex-wrap items-end justify-between gap-2">
+                <p className="text-xl xl:text-2xl leading-tight font-semibold text-slate-900 tabular-nums tracking-tight">{value}</p>
                 {change !== undefined && (
-                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1 py-0.5 rounded ${
+                    <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-1 py-0.5 rounded ${
                         change >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'
                     }`}>
-                        {change >= 0 ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
+                        {change >= 0 ? <ArrowUp className="w-2.5 h-2.5 stroke-[1.5]" /> : <ArrowDown className="w-2.5 h-2.5 stroke-[1.5]" />}
                         {Math.abs(change).toFixed(0)}%
                     </span>
                 )}
             </div>
-            {subtitle && <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
         </div>
     )
 }
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return <div className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>
+    return <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>
 }
 
 function SectionTitle({ icon, label, right }: { icon: React.ReactNode; label: string; right?: React.ReactNode }) {
     return (
-        <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-                <span className="text-slate-400">{icon}</span>
-                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
+        <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+                <span className="inline-flex shrink-0 text-slate-400 [&>svg]:size-4 [&>svg]:stroke-[1.5]">{icon}</span>
+                <span className="text-sm font-semibold text-slate-900 tracking-normal">{label}</span>
             </div>
             {right}
         </div>
@@ -77,12 +77,12 @@ function DayOfWeekChart({ orders }: { orders: any[] }) {
     })
     const maxR = Math.max(...buckets.map(b => b.total), 1)
     return (
-        <div className="flex items-end gap-1.5 h-20 mt-1">
+        <div className="grid grid-cols-7 gap-1 h-32 pt-9 pb-5 mt-3">
             {buckets.map((b, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                    <span className="text-[8px] font-semibold text-emerald-600 tabular-nums">₹{Math.round(b.total / 1000)}k</span>
-                    <div className="w-full rounded-t-sm bg-emerald-400/30" style={{ height: `${(b.total / maxR) * 100}%` }} />
-                    <span className="text-[9px] text-slate-500 font-semibold">{days[i]}</span>
+                <div key={i} className="relative flex h-full min-w-0 items-end">
+                    <span className="absolute bottom-full left-0 mb-1 w-full break-all text-center text-[11px] leading-4 font-medium text-slate-500 tabular-nums">₹{Math.round(b.total / 1000)}k</span>
+                    <div className="w-full rounded-t-sm bg-slate-300" style={{ height: `${(b.total / maxR) * 100}%` }} />
+                    <span className="absolute top-full left-0 mt-1 w-full text-center text-xs text-slate-500 font-semibold">{days[i]}</span>
                 </div>
             ))}
         </div>
@@ -94,7 +94,7 @@ function DayOfWeekChart({ orders }: { orders: any[] }) {
 function MiniPct({ value, max, color }: { value: number; max: number; color: string }) {
     const pct = max > 0 ? (value / max) * 100 : 0
     return (
-        <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+        <div className="min-w-0 flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
             <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
         </div>
     )
@@ -266,37 +266,37 @@ export default async function AdminDashboard({ searchParams }: {
 
     // PM colors
     const pmColors: Record<string, string> = {
-        "COD": "bg-amber-400",
-        "razorpay": "bg-blue-400",
-        "stripe": "bg-indigo-400",
-        "prepaid": "bg-emerald-400",
-        "card": "bg-violet-400",
-        "upi": "bg-cyan-400",
-        "paypal": "bg-sky-400",
+        "COD": "bg-slate-400",
+        "razorpay": "bg-slate-400",
+        "stripe": "bg-slate-400",
+        "prepaid": "bg-slate-400",
+        "card": "bg-slate-400",
+        "upi": "bg-slate-400",
+        "paypal": "bg-slate-400",
     }
 
     return (
-        <div className="space-y-2 sm:space-y-3">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
-                    <h1 className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight truncate">Dashboard</h1>
-                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">{format(start, "MMM dd, yyyy")} — {format(end, "MMM dd, yyyy")}</p>
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Dashboard</h1>
+                    <p className="mt-1 text-sm text-slate-500">{format(start, "MMM dd, yyyy")} — {format(end, "MMM dd, yyyy")}</p>
                 </div>
-                <div className="shrink-0">
+                <div className="w-full sm:w-auto sm:shrink-0">
                     <DateRangePicker />
                 </div>
             </div>
 
             {ordersRes.error && (
                 <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 stroke-[1.5]" />
                     <p className="text-xs font-medium text-red-700">Failed to load dashboard data.</p>
                 </div>
             )}
 
             {/* Row 1: Real-time / Today metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
                 <StatCard label="Today Revenue" value={`₹${todayRev.toLocaleString('en-IN')}`} icon={<TrendingUp />} />
                 <StatCard label="Today Orders" value={todayCnt.toString()} icon={<ShoppingCart />} />
                 <StatCard label="Fulfillment" value={`${c.full.toFixed(0)}%`} subtitle={`${c.del} delivered`} icon={<CheckCircle2 />}
@@ -308,7 +308,7 @@ export default async function AdminDashboard({ searchParams }: {
             </div>
 
             {/* Row 2: Period stats with comparison */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                 <StatCard label="Revenue" value={`₹${(c.rev / 1000).toFixed(1)}K`} subtitle={`${c.cnt} orders`}
                     icon={<CircleDollarSign />} change={pct(c.rev, p.rev)} />
                 <StatCard label="Avg Order" value={`₹${c.aov.toLocaleString()}`} icon={<BarChart3 />} change={pct(c.aov, p.aov)} />
@@ -320,8 +320,8 @@ export default async function AdminDashboard({ searchParams }: {
             </div>
 
             {/* Quick Actions */}
-            <SectionCard className="p-2 sm:p-2.5">
-                <div className="flex gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar">
+            <SectionCard className="p-3">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                     {[
                         { label: "New Product", href: "/admin/products/add", icon: PackagePlus },
                         { label: "Broadcast", href: "/admin/broadcast", icon: Send },
@@ -333,49 +333,49 @@ export default async function AdminDashboard({ searchParams }: {
                         { label: "Reports", href: "/admin/reports/sales", icon: BarChart3 },
                     ].map(a => (
                         <Link key={a.label} href={a.href}
-                            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:-translate-y-0.5 transition-all shrink-0"
+                            className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50 transition-colors"
                         >
-                            <a.icon className="w-3 h-3 text-slate-500" />
-                            <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 whitespace-nowrap">{a.label}</span>
-                            <ArrowUpRight className="w-2.5 h-2.5 text-slate-300 hidden sm:block" />
+                            <a.icon className="w-4 h-4 text-slate-500 stroke-[1.5]" />
+                            <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{a.label}</span>
+                            <ArrowUpRight className="w-2.5 h-2.5 text-slate-400 hidden sm:block stroke-[1.5]" />
                         </Link>
                     ))}
                 </div>
             </SectionCard>
 
             {/* Row 3: Charts area */}
-            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 sm:gap-3">
-                <SectionCard className="p-3 sm:p-4 sm:col-span-3">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+                <SectionCard className="min-w-0 p-5 xl:col-span-6">
                     <SectionTitle icon={<Activity />} label="Revenue Flow" />
                     <RevenueChart orders={net} startDate={startDate} endDate={endDate} />
                 </SectionCard>
-                <SectionCard className="p-3 sm:p-4 sm:col-span-2">
+                <SectionCard className="min-w-0 p-5 xl:col-span-3">
                     <SectionTitle icon={<Flame />} label="Top Products" />
                     {topProds.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
+                        <p className="text-xs text-slate-500 text-center py-6">No data</p>
                     ) : (
                         <div className="space-y-1.5">
                             {topProds.map((p, i) => (
                                 <div key={p.name} className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-slate-300 w-4">{i + 1}</span>
+                                    <span className="text-xs font-semibold text-slate-400 w-4">{i + 1}</span>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs text-slate-700 truncate font-medium">{p.name}</p>
-                                        <p className="text-[10px] text-slate-400 truncate">{p.category}</p>
+                                        <p className="text-xs text-slate-500 truncate">{p.category}</p>
                                     </div>
                                     <span className="text-xs font-semibold text-slate-500">{p.qty}</span>
-                                    <div className="hidden sm:block w-12"><MiniPct value={p.qty} max={topProds[0].qty} color="bg-blue-400" /></div>
+                                    <div className="hidden sm:block w-12"><MiniPct value={p.qty} max={topProds[0].qty} color="bg-slate-400" /></div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </SectionCard>
-                <SectionCard className="p-3 sm:p-4 sm:col-span-1">
+                <SectionCard className="min-w-0 p-5 xl:col-span-3">
                     <SectionTitle icon={<Layers />} label="Orders" />
                     <div className="space-y-1.5">
                         {statusBD.map(s => (
                             <div key={s.label} className="flex items-center justify-between gap-1">
-                                <span className={`text-[10px] ${s.color}`}>{s.label}</span>
-                                <div className="flex items-center gap-1.5">
+                                <span className={`text-xs ${s.color}`}>{s.label}</span>
+                                <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-slate-700">{s.cnt}</span>
                                     <div className={`w-2 h-2 rounded-full shrink-0 ${s.bg}`} />
                                 </div>
@@ -383,48 +383,48 @@ export default async function AdminDashboard({ searchParams }: {
                         ))}
                     </div>
                     <div className="flex items-center gap-1.5 mt-3 mb-2">
-                        <CalendarDays className="w-3 h-3 text-slate-400" />
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Day of Week</span>
+                        <CalendarDays className="w-4 h-4 text-slate-500 stroke-[1.5]" />
+                        <span className="text-sm font-semibold text-slate-900 tracking-normal">Day of Week</span>
                     </div>
                     <DayOfWeekChart orders={net} />
                 </SectionCard>
             </div>
 
             {/* Row 4: Tables */}
-            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 sm:gap-3">
-                <SectionCard className="sm:col-span-3 overflow-hidden">
-                    <div className="p-3 pb-0">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+                <SectionCard className="min-w-0 overflow-hidden xl:col-span-7">
+                    <div className="p-5 pb-0">
                         <SectionTitle icon={<ShoppingBag />} label="Recent Orders"
-                            right={<Link href="/admin/orders" className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">View All →</Link>} />
+                            right={<Link href="/admin/orders" className="text-xs font-semibold text-slate-700 hover:text-slate-700">View All →</Link>} />
                     </div>
                     <RecentOrdersTable orders={orders.slice(0, 8)} />
                 </SectionCard>
-                <SectionCard className="p-3 sm:p-4 sm:col-span-2">
+                <SectionCard className="min-w-0 p-5 xl:col-span-3">
                     <SectionTitle icon={<BarChart3 />} label="Top Categories" />
                     {topCats.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
+                        <p className="text-xs text-slate-500 text-center py-6">No data</p>
                     ) : (
                         <div className="space-y-2">
                             {topCats.map(([cat, cnt]) => (
                                 <div key={cat} className="flex items-center gap-2">
                                     <span className="text-xs text-slate-600 flex-1 truncate">{cat}</span>
                                     <span className="text-xs font-semibold text-slate-500">{cnt}</span>
-                                    <MiniPct value={cnt} max={topCats[0][1]} color="bg-violet-400" />
+                                    <MiniPct value={cnt} max={topCats[0][1]} color="bg-slate-400" />
                                 </div>
                             ))}
                         </div>
                     )}
                 </SectionCard>
-                <SectionCard className="p-3 sm:p-4 sm:col-span-1">
+                <SectionCard className="min-w-0 p-5 xl:col-span-2">
                     <SectionTitle icon={<CreditCard />} label="Payment" />
                     {pmBuckets.size === 0 ? (
-                        <p className="text-xs text-slate-400 italic text-center py-6">No data</p>
+                        <p className="text-xs text-slate-500 text-center py-6">No data</p>
                     ) : (
                         <div className="space-y-1.5">
                             {[...pmBuckets.entries()].sort((a, b) => b[1] - a[1]).map(([pm, cnt]) => (
                                 <div key={pm}>
                                     <div className="flex items-center justify-between mb-0.5">
-                                        <span className="text-[10px] text-slate-500 font-medium">{pm}</span>
+                                        <span className="text-xs text-slate-500 font-medium">{pm}</span>
                                         <span className="text-xs font-semibold text-slate-700">{pmTotal > 0 ? Math.round((cnt / pmTotal) * 100) : 0}%</span>
                                     </div>
                                     <MiniPct value={cnt} max={pmTotal} color={pmColors[pm] || "bg-slate-400"} />
@@ -436,82 +436,82 @@ export default async function AdminDashboard({ searchParams }: {
             </div>
 
             {/* Row 5: Activity + Low Stock + Bottom Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                <SectionCard className="p-3 sm:p-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <SectionCard className="min-w-0 p-5">
                     <SectionTitle icon={<Bell />} label="Recent Activity"
-                        right={<Link href="/admin/messages" className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">View</Link>} />
+                        right={<Link href="/admin/messages" className="text-xs font-semibold text-slate-700 hover:text-slate-700">View</Link>} />
                     {recentMsgs.length === 0 && recentWl.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic text-center py-4">No recent activity</p>
+                        <p className="text-xs text-slate-500 text-center py-4">No recent activity</p>
                     ) : (
                         <div className="space-y-2">
                             {recentMsgs.map((msg: any) => (
                                 <div key={msg.id} className="flex items-start gap-2">
                                     <div className="p-1 rounded-md bg-amber-50 mt-0.5">
-                                        <MessageSquare className="w-3 h-3 text-amber-600" />
+                                        <MessageSquare className="w-4 h-4 text-amber-600 stroke-[1.5]" />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <p className="text-xs font-medium text-slate-700 truncate">{msg.name}</p>
-                                        <p className="text-[10px] text-slate-400 truncate">{msg.subject}</p>
+                                        <p className="text-xs text-slate-500 truncate">{msg.subject}</p>
                                     </div>
-                                    <Badge variant="outline" className="text-[9px] uppercase shrink-0 h-4 px-1 font-medium">{msg.status}</Badge>
+                                    <Badge variant="outline" className="text-xs shrink-0 h-5 px-1 font-medium">{msg.status}</Badge>
                                 </div>
                             ))}
                             {recentWl.map((w: any) => (
                                 <div key={w.id} className="flex items-start gap-2">
-                                    <div className="p-1 rounded-md bg-violet-50 mt-0.5">
-                                        <UserPlus className="w-3 h-3 text-violet-600" />
+                                    <div className="p-1 rounded-md bg-slate-50 mt-0.5">
+                                        <UserPlus className="w-4 h-4 text-slate-700 stroke-[1.5]" />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <p className="text-xs font-medium text-slate-700 truncate">{w.company_name}</p>
-                                        <p className="text-[10px] text-slate-400">Wholesale Application</p>
+                                        <p className="text-xs text-slate-500">Wholesale Application</p>
                                     </div>
-                                    <Badge variant="outline" className="text-[9px] uppercase shrink-0 h-4 px-1 font-medium">{w.status}</Badge>
+                                    <Badge variant="outline" className="text-xs shrink-0 h-5 px-1 font-medium">{w.status}</Badge>
                                 </div>
                             ))}
                         </div>
                     )}
                 </SectionCard>
                 <Suspense fallback={
-                    <SectionCard className="p-3 sm:p-4 flex items-center justify-center h-32">
-                        <Loader2 className="w-4 h-4 animate-spin text-slate-300" />
+                    <SectionCard className="min-w-0 p-5 flex items-center justify-center h-32">
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-400 stroke-[1.5]" />
                     </SectionCard>
                 }>
                     <LowStockPanel />
                 </Suspense>
-                <SectionCard className="p-3 sm:p-4">
+                <SectionCard className="min-w-0 p-5">
                     <SectionTitle icon={<Sparkles />} label="Quick Metrics" />
                     <div className="space-y-2">
                         <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                            <div className="flex items-center gap-1.5">
-                                <BadgePercent className="w-3 h-3 text-slate-400" />
+                            <div className="flex items-center gap-2">
+                                <BadgePercent className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                                 <span className="text-xs text-slate-600">Promo Rate</span>
                             </div>
                             <span className="text-xs font-semibold text-slate-800">{promoRate.toFixed(1)}%</span>
                         </div>
                         <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                            <div className="flex items-center gap-1.5">
-                                <User className="w-3 h-3 text-slate-400" />
+                            <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                                 <span className="text-xs text-slate-600">New Customers</span>
                             </div>
                             <span className="text-xs font-semibold text-slate-800">{newCount}</span>
                         </div>
                         <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                            <div className="flex items-center gap-1.5">
-                                <RefreshCw className="w-3 h-3 text-slate-400" />
+                            <div className="flex items-center gap-2">
+                                <RefreshCw className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                                 <span className="text-xs text-slate-600">Returning</span>
                             </div>
                             <span className="text-xs font-semibold text-slate-800">{returningCount}</span>
                         </div>
                         <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                            <div className="flex items-center gap-1.5">
-                                <Mail className="w-3 h-3 text-slate-400" />
+                            <div className="flex items-center gap-2">
+                                <Mail className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                                 <span className="text-xs text-slate-600">Unread Msgs</span>
                             </div>
                             <span className="text-xs font-semibold text-slate-800">{unreadMsg}</span>
                         </div>
                         <div className="flex items-center justify-between py-1.5">
-                            <div className="flex items-center gap-1.5">
-                                <UserPlus className="w-3 h-3 text-slate-400" />
+                            <div className="flex items-center gap-2">
+                                <UserPlus className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                                 <span className="text-xs text-slate-600">Wholesale Pending</span>
                             </div>
                             <span className="text-xs font-semibold text-slate-800">{pendingWl}</span>
@@ -533,25 +533,25 @@ async function LowStockPanel() {
         .lte("stock", 10).order("stock", { ascending: true }).limit(6)
 
     return (
-        <SectionCard className="p-3 sm:p-4 h-full">
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                    <Zap className="w-3 h-3 text-amber-500" />
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Low Stock</span>
+        <SectionCard className="min-w-0 p-5 h-full">
+            <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500 stroke-[1.5]" />
+                    <span className="text-sm font-semibold text-slate-900 tracking-normal">Low Stock</span>
                 </div>
-                <Link href="/admin/stock" className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">View All →</Link>
+                <Link href="/admin/stock" className="text-xs font-semibold text-slate-700 hover:text-slate-700">View All →</Link>
             </div>
             {!items?.length ? (
-                <p className="text-xs text-slate-400 italic text-center py-6">All stocked up!</p>
+                <p className="text-xs text-slate-500 text-center py-6">All stocked up!</p>
             ) : (
                 <div className="space-y-1.5">
                     {items.map((item: any) => (
-                        <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+                        <div key={item.id} className="flex items-center justify-between gap-3 py-2 border-b border-slate-100 last:border-0">
                             <div className="min-w-0 flex-1">
                                 <p className="text-xs font-medium text-slate-700 truncate">{item.products?.name}</p>
-                                <p className="text-[10px] text-slate-400 font-mono">{item.sku}</p>
+                                <p className="text-xs text-slate-500 font-mono">{item.sku}</p>
                             </div>
-                            <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            <div className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
                                 item.stock === 0 ? 'bg-red-50 text-red-600' :
                                 item.stock <= 3 ? 'bg-orange-50 text-orange-600' :
                                 'bg-amber-50 text-amber-600'

@@ -7,12 +7,11 @@ import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Trash2, Save, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet, Coins, Tag } from "lucide-react"
+import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet, Coins, Tag } from "lucide-react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
 import { refundableLineAmount } from "@/lib/order-amounts"
-import { getPendingOrderRefund, removeOrderItem, updateOrderDiscount, processPartialRefund, updateOrderDeliveryPartner, updateOrderTypeSecure } from "@/app/actions/orders"
-import { getTypeStatuses, STATUS_LABELS } from "@/lib/order-status"
+import { getPendingOrderRefund, processPartialRefund, updateOrderDeliveryPartner, updateOrderTypeSecure } from "@/app/actions/orders"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
@@ -22,10 +21,6 @@ export default function OrderInvoicePage() {
     const [order, setOrder] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [isThermal, setIsThermal] = useState(false)
-    const [isEditing, setIsEditing] = useState(false)
-    const [editDiscount, setEditDiscount] = useState(0)
-    const [editRemark, setEditRemark] = useState("")
-    const [saving, setSaving] = useState(false)
     const [deliveryPartner, setDeliveryPartner] = useState<any>(null)
     const [deliveryPartners, setDeliveryPartners] = useState<any[]>([])
     const [editingPartner, setEditingPartner] = useState(false)
@@ -79,8 +74,6 @@ export default function OrderInvoicePage() {
                 }
             }
 
-            setEditDiscount(Number(data.promo_discount_amount || 0))
-            setEditRemark(data.discount_remark || "")
             setLoading(false)
             // ... (rest of the original fetch)
         }
@@ -103,8 +96,8 @@ export default function OrderInvoicePage() {
         fetchPartners()
     }, [order?.delivery_partner_id])
 
-    if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
-    if (!order) return <div className="p-10 text-center text-slate-500 font-bold uppercase tracking-widest">Order not found</div>
+    if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-500 stroke-[1.5]" /></div>
+    if (!order) return <div className="p-10 text-center text-slate-500 font-semibold tracking-normal">Order not found</div>
 
     const subtotalMRP = order.order_items.reduce((acc: number, item: any) => {
         const trueMrp = Math.max(Number(item.mrp || 0), catalogPrices[item.product_variant_id] || 0, Number(item.unit_price))
@@ -140,49 +133,17 @@ export default function OrderInvoicePage() {
         setOrder((o: any) => ({ ...o, order_type: newType, status: "pending" }))
     }
 
-    async function handleRemoveItem(itemId: string, index: number) {
-        const res = await removeOrderItem(itemId, id as string)
-        if (res.success) {
-            setOrder((o: any) => ({
-                ...o,
-                order_items: (res as any).order_items,
-                total: (res as any).total
-            }))
-            toast.success("Item removed")
-        } else {
-            toast.error(res.message || "Failed to remove item")
-        }
-    }
-
-    async function handleSaveDiscount() {
-        setSaving(true)
-        const res = await updateOrderDiscount(id as string, editDiscount, editRemark)
-        if (res.success) {
-            setOrder((o: any) => ({
-                ...o,
-                promo_discount_amount: editDiscount,
-                discount_remark: editRemark,
-                total: (o.order_items || []).reduce((acc: number, i: any) => acc + (Number(i.unit_price) * i.quantity), 0) - editDiscount + Number(o.additional_charges || 0) + Number(o.shipping_price || 0)
-            }))
-            toast.success("Discount updated")
-        } else {
-            toast.error(res.message || "Failed to update discount")
-        }
-        setSaving(false)
-        setIsEditing(false)
-    }
-
     const getStatusStyles = (status: string) => {
         const s = status?.toLowerCase()
-        if (s === 'paid' || s === 'completed') return { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100', icon: <CheckCircle2 className="w-3 h-3" /> }
-        if (s === 'pending') return { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', icon: <Clock className="w-3 h-3" /> }
-        return { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-100', icon: <AlertCircle className="w-3 h-3" /> }
+        if (s === 'paid' || s === 'completed') return { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100', icon: <CheckCircle2 className="w-4 h-4 stroke-[1.5]" /> }
+        if (s === 'pending') return { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', icon: <Clock className="w-4 h-4 stroke-[1.5]" /> }
+        return { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-100', icon: <AlertCircle className="w-4 h-4 stroke-[1.5]" /> }
     }
 
     const statusStyle = getStatusStyles(order.payment_status)
 
     return (
-        <div className={`min-h-screen py-10 px-4 transition-colors duration-500 ${isThermal ? 'bg-zinc-200' : 'bg-white'}`}>
+        <div className={`min-h-screen py-10 px-4 transition-colors duration-200 ${isThermal ? 'bg-zinc-200' : 'bg-white'}`}>
             <style jsx global>{`
     @media print {
         header, footer, nav, button, .no-print { display: none !important; }
@@ -202,25 +163,25 @@ export default function OrderInvoicePage() {
             {/* TOP TOOLBAR */}
             <div className="max-w-4xl mx-auto mb-6 no-print">
                 <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
-                    <Button variant="ghost" asChild className="rounded-xl font-bold text-sm w-full sm:w-auto">
-                        <Link href={`/admin/orders`}><ArrowLeft className="w-4 h-4 mr-2" /> Back to Orders</Link>
+                    <Button variant="ghost" asChild className="rounded-xl font-semibold text-sm w-full sm:w-auto">
+                        <Link href={`/admin/orders`}><ArrowLeft className="w-4 h-4 mr-2 stroke-[1.5]" /> Back to Orders</Link>
                     </Button>
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <Button 
                             variant="outline" 
                             onClick={() => setIsThermal(!isThermal)} 
-                            className={`rounded-xl px-3 sm:px-4 font-semibold text-xs sm:text-sm transition-all flex-1 sm:flex-none ${isThermal ? 'bg-slate-900 text-white hover:bg-black' : 'text-slate-600 hover:bg-slate-50'}`}
+                            className={`rounded-xl px-3 sm:px-4 font-semibold text-xs sm:text-sm transition-colors flex-1 sm:flex-none ${isThermal ? 'bg-slate-900 text-white hover:bg-black' : 'text-slate-600 hover:bg-slate-50'}`}
                         >
-                            <Ticket className="w-4 h-4 mr-1 sm:mr-2" /> <span className="hidden xs:inline">{isThermal ? 'A4 Format' : 'POS Mode'}</span><span className="xs:hidden">{isThermal ? 'A4' : 'POS'}</span>
+                            <Ticket className="w-4 h-4 mr-1 sm:mr-2 stroke-[1.5]" /> <span className="hidden xs:inline">{isThermal ? 'A4 Format' : 'POS Mode'}</span><span className="xs:hidden">{isThermal ? 'A4' : 'POS'}</span>
                         </Button>
-                        <Button onClick={() => window.print()} className="rounded-xl shadow-lg bg-slate-900 hover:bg-slate-800 transition-all font-bold text-white px-3 sm:px-5 text-xs sm:text-sm flex-1 sm:flex-none">
-                            <Printer className="w-4 h-4 mr-1 sm:mr-2" /> Print
+                        <Button onClick={() => window.print()} className="rounded-xl shadow-sm bg-slate-900 hover:bg-slate-800 transition-colors font-semibold text-white px-3 sm:px-5 text-xs sm:text-sm flex-1 sm:flex-none">
+                            <Printer className="w-4 h-4 mr-1 sm:mr-2 stroke-[1.5]" /> Print
                         </Button>
                         <Button 
                             onClick={() => window.open(`/admin/orders/${id}/label`, '_blank')}
-                            className="rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 transition-all font-bold text-white px-3 sm:px-5 text-xs sm:text-sm flex items-center gap-1 sm:gap-2 flex-1 sm:flex-none"
+                            className="rounded-xl shadow-sm bg-emerald-600 hover:bg-emerald-700 transition-colors font-semibold text-white px-3 sm:px-5 text-xs sm:text-sm flex items-center gap-1 sm:gap-2 flex-1 sm:flex-none"
                         >
-                            <Tag className="w-4 h-4" /> Label
+                            <Tag className="w-4 h-4 stroke-[1.5]" /> Label
                         </Button>
                         {(order.payment_status === "paid" || order.payment_status === "partially_refunded") && (
                             <Button 
@@ -236,19 +197,25 @@ export default function OrderInvoicePage() {
                                     setRefundTransactionId("")
                                     setShowRefundModal(true)
                                 }}
-                                className="rounded-xl border border-rose-200 text-rose-600 text-xs font-semibold uppercase tracking-wider hover:bg-rose-50 transition-all px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1 sm:gap-2 bg-white shadow-sm flex-1 sm:flex-none"
+                                className="rounded-xl border border-rose-200 text-rose-600 text-xs font-semibold tracking-normal hover:bg-rose-50 transition-colors px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1 sm:gap-2 bg-white shadow-sm flex-1 sm:flex-none"
                             >
-                                <RotateCcw className="w-4 h-4" /> Refund
+                                <RotateCcw className="w-4 h-4 stroke-[1.5]" /> Refund
                             </Button>
                         )}
-                        {order.status === 'pending' && !order.checkout_key && !isEditing && (
-                            <Button onClick={() => setIsEditing(true)} className="rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider hover:bg-slate-50 hover:text-slate-900 transition-all px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1 sm:gap-2 bg-white shadow-sm flex-1 sm:flex-none">
-                                <Pencil className="w-4 h-4" /> Edit
+                        {(['pending','confirmed','packed'].includes(order.status) || Number(order.edit_version)>0) && (
+                            <Button asChild className="rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold tracking-normal hover:bg-slate-50 hover:text-slate-900 transition-colors px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1 sm:gap-2 bg-white shadow-sm flex-1 sm:flex-none">
+                                <Link href={`/admin/orders/${id}/edit`}><Pencil className="w-4 h-4 stroke-[1.5]" /> Edit order</Link>
                             </Button>
                         )}
                     </div>
                 </div>
             </div>
+
+            {Number(order.edit_version)>0 && <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm no-print">
+                <p className="font-semibold">Order amended · revision {order.edit_version}</p>
+                <p className="mt-1">Received: ₹{Number(order.edit_paid_amount || 0).toLocaleString('en-IN')} · To collect: ₹{Number(order.edit_balance_due || 0).toLocaleString('en-IN')} · Refund due: ₹{Number(order.edit_refund_due || 0).toLocaleString('en-IN')}</p>
+                <Link href={`/admin/orders/${id}/edit`} className="mt-2 inline-block font-semibold underline">View changes and settle balance</Link>
+            </div>}
 
             <div id="printable-invoice" className={`mx-auto bg-white transition-all duration-500 overflow-hidden ${isThermal ? 'w-[58mm] p-2 rounded-none border-t border-black' : 'max-w-3xl p-4 sm:p-8 md:p-12 rounded-2xl sm:rounded-[2.5rem] border-2 border-slate-50 shadow-sm relative'}`}>
                 {/* BRANDING */}
@@ -425,21 +392,16 @@ export default function OrderInvoicePage() {
                         </div>
                     )}
 
-                    {order.order_items.map((item: any, idx: number) => {
+                    {order.order_items.map((item: any) => {
                         const itemMrp = Math.max(Number(item.mrp || 0), catalogPrices[item.product_variant_id] || 0, Number(item.unit_price))
                         const rate = Number(item.unit_price)
                         const discPercent = itemMrp > rate ? Math.round(((itemMrp - rate) / itemMrp) * 100) : 0
 
                         return (
-                            <div key={item.id} className={`${isThermal ? 'pb-2 border-b border-dotted border-slate-100' : isEditing ? `p-3 sm:p-4 rounded-2xl border border-blue-100 bg-blue-50/20 ${isEditing ? '' : ''}` : `p-3 sm:p-4 rounded-2xl border border-slate-50 bg-white hover:bg-slate-50/50 transition-colors`}`}>
+                            <div key={item.id} className={`${isThermal ? 'pb-2 border-b border-dotted border-slate-100' : `p-3 sm:p-4 rounded-2xl border border-slate-50 bg-white hover:bg-slate-50/50 transition-colors`}`}>
                                 {/* Mobile layout */}
                                 <div className="sm:hidden">
                                     <div className="flex items-start gap-3">
-                                        {isEditing && (
-                                            <button onClick={() => handleRemoveItem(item.id, idx)} className="h-8 w-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors shrink-0 mt-0.5">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
                                         <div className="flex-1 min-w-0">
                                             <p className="font-black text-slate-900 uppercase text-xs sm:text-sm break-words">{item.product_name}</p>
                                             <div className="flex items-center gap-2 mt-1">
@@ -466,12 +428,7 @@ export default function OrderInvoicePage() {
 
                                 {/* Desktop layout */}
                                 <div className="hidden sm:grid grid-cols-12 gap-4 items-center">
-                                    <div className={`col-span-6 ${isEditing ? 'flex items-center gap-3' : ''}`}>
-                                        {isEditing && (
-                                            <button onClick={() => handleRemoveItem(item.id, idx)} className="h-8 w-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors flex-shrink-0">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
+                                    <div className={`col-span-6 `}>
                                         <div className="min-w-0">
                                             <p className="font-black text-slate-900 uppercase text-xs sm:text-sm break-words">{item.product_name}</p>
                                             <div className="flex items-center gap-2 mt-1">
@@ -523,6 +480,7 @@ export default function OrderInvoicePage() {
                         <span>Shipping</span>
                         <span className="text-slate-900 font-bold">₹{order.shipping_price || 0}</span>
                     </div>
+                    {Number(order.additional_charges)>0 && <div className={`${isThermal?'flex justify-between':'w-full sm:w-64 flex justify-between'} text-xs font-semibold text-slate-600 uppercase`}><span>{order.additional_charges_label || 'Extra charges'}</span><span>₹{Number(order.additional_charges).toLocaleString('en-IN')}</span></div>}
                     {promoDiscount > 0 && (
                         <div>
                             <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-bold text-emerald-600 uppercase`}>
@@ -573,76 +531,14 @@ export default function OrderInvoicePage() {
                 )}
             </div>
 
-            {/* EDIT PANEL */}
-            {isEditing && !isThermal && (
-                <div className="max-w-4xl mx-auto mb-6 no-print px-4">
-                    <div className="rounded-xl border border-blue-200 bg-blue-50/50 shadow-sm p-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 rounded-lg bg-blue-100">
-                                    <Pencil className="w-4 h-4 text-blue-600" />
-                                </div>
-                                <span className="text-sm font-bold text-slate-900">Edit Order</span>
-                                <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">#{order.id.slice(0, 8).toUpperCase()}</span>
-                            </div>
-                            <button
-                                onClick={() => { setIsEditing(false); setEditDiscount(Number(order.promo_discount_amount || 0)); setEditRemark(order.discount_remark || "") }}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                            >
-                                <X className="w-3.5 h-3.5 text-slate-400" />
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4">
-                            <div className="sm:col-span-4 space-y-1">
-                                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Discount (₹)</label>
-                                <Input
-                                    type="number" min="0"
-                                    value={editDiscount}
-                                    onChange={(e) => setEditDiscount(parseFloat(e.target.value) || 0)}
-                                    className="h-10 text-sm font-bold border-blue-200 bg-white rounded-xl"
-                                />
-                            </div>
-                            <div className="sm:col-span-5 space-y-1">
-                                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Remark (reason)</label>
-                                <Input
-                                    value={editRemark}
-                                    onChange={(e) => setEditRemark(e.target.value)}
-                                    placeholder="Optional note..."
-                                    className="h-10 text-sm border-blue-200 bg-white rounded-xl"
-                                />
-                            </div>
-                            <div className="sm:col-span-3 flex items-end gap-2">
-                                <button
-                                    onClick={handleSaveDiscount} disabled={saving}
-                                    className="flex-1 h-10 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                                    Save
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs text-slate-500 pt-1 border-t border-blue-100">
-                            <span>Click <strong className="text-red-500">×</strong> on any item below to remove it</span>
-                            <span className="text-slate-300 hidden sm:inline">|</span>
-                            <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-amber-500" />
-                                Changes apply immediately after save
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* REFUND MODAL */}
             {showRefundModal && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg mx-0 sm:mx-4 p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-sm w-full max-w-lg mx-0 sm:mx-4 p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-black text-slate-900">Refund Items</h3>
-                            <button onClick={() => setShowRefundModal(false)} className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all">
-                                <X className="w-4 h-4 text-slate-400" />
+                            <h3 className="text-lg font-semibold text-slate-900">Refund Items</h3>
+                            <button onClick={() => setShowRefundModal(false)} className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors">
+                                <X className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                             </button>
                         </div>
 
@@ -666,21 +562,21 @@ export default function OrderInvoicePage() {
                                         />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-semibold text-slate-900 truncate">{item.product_name}</p>
-                                            <p className="text-xs text-slate-400">{item.variant_title} — ₹{Number(item.unit_price).toLocaleString()} each</p>
+                                            <p className="text-xs text-slate-500">{item.variant_title} — ₹{Number(item.unit_price).toLocaleString()} each</p>
                                             {(item.refunded_quantity || 0) > 0 && (
-                                                <p className="text-[10px] text-amber-600 font-medium">Already refunded: {item.refunded_quantity} of {item.quantity}</p>
+                                                <p className="text-xs text-amber-600 font-medium">Already refunded: {item.refunded_quantity} of {item.quantity}</p>
                                             )}
                                         </div>
                                         {(refundSelections[item.id] || 0) > 0 && (
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     onClick={() => setRefundSelections(prev => ({ ...prev, [item.id]: Math.max(0, (prev[item.id] || 0) - 1) }))}
-                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 text-sm font-bold"
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 text-sm font-semibold"
                                                 >−</button>
-                                                <span className="w-8 text-center text-sm font-bold text-slate-900">{refundSelections[item.id]}</span>
+                                                <span className="w-8 text-center text-sm font-semibold text-slate-900">{refundSelections[item.id]}</span>
                                                 <button
                                                     onClick={() => setRefundSelections(prev => ({ ...prev, [item.id]: Math.min(remaining, (prev[item.id] || 0) + 1) }))}
-                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 text-sm font-bold"
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 text-sm font-semibold"
                                                 >+</button>
                                             </div>
                                         )}
@@ -690,11 +586,11 @@ export default function OrderInvoicePage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Refund Method</label>
+                            <label className="text-xs font-semibold text-slate-500 tracking-normal">Refund Method</label>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setRefundMethod("razorpay")}
-                                    className={`flex-1 h-10 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
+                                    className={`flex-1 h-10 rounded-xl border text-xs font-semibold tracking-normal transition-colors ${
                                         refundMethod === "razorpay"
                                             ? "bg-rose-50 text-rose-700 border-rose-200"
                                             : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
@@ -702,18 +598,18 @@ export default function OrderInvoicePage() {
                                 >Razorpay</button>
                                 <button
                                     onClick={() => setRefundMethod("gpay")}
-                                    className={`flex-1 h-10 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
+                                    className={`flex-1 h-10 rounded-xl border text-xs font-semibold tracking-normal transition-colors ${
                                         refundMethod === "gpay"
                                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                             : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
                                     }`}
-                                ><Wallet className="w-3.5 h-3.5 inline mr-1" /> GPay</button>
+                                ><Wallet className="w-4 h-4 inline mr-1 stroke-[1.5]" /> GPay</button>
                             </div>
                         </div>
 
                         {refundMethod === "gpay" && (
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Transaction ID</label>
+                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Transaction ID</label>
                                 <Input
                                     placeholder="Enter GPay transaction ID..."
                                     value={refundTransactionId}
@@ -724,7 +620,7 @@ export default function OrderInvoicePage() {
                         )}
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Reason (optional)</label>
+                            <label className="text-xs font-semibold text-slate-500 tracking-normal">Reason (optional)</label>
                             <textarea
                                 placeholder="e.g. Customer requested partial refund for damaged item"
                                 value={refundReason}
@@ -742,14 +638,14 @@ export default function OrderInvoicePage() {
                             }, 0) || 0
                             return total > 0 ? (
                                 <div className="flex items-center justify-between p-3 rounded-xl bg-rose-50 border border-rose-200">
-                                    <span className="text-xs font-bold text-rose-700 uppercase tracking-wider">Refund Amount</span>
-                                    <span className="text-lg font-black text-rose-700">₹{total.toLocaleString()}</span>
+                                    <span className="text-xs font-semibold text-rose-700 tracking-normal">Refund Amount</span>
+                                    <span className="text-lg font-semibold text-rose-700">₹{total.toLocaleString()}</span>
                                 </div>
                             ) : null
                         })()}
 
                         <div className="flex gap-3 justify-end">
-                            <Button variant="outline" onClick={() => setShowRefundModal(false)} className="rounded-xl h-10 px-6 text-xs font-bold">
+                            <Button variant="outline" onClick={() => setShowRefundModal(false)} className="rounded-xl h-10 px-6 text-xs font-semibold">
                                 Cancel
                             </Button>
                             <Button
@@ -794,9 +690,9 @@ export default function OrderInvoicePage() {
                                     }
                                 }}
                                 disabled={processingRefund}
-                                className="rounded-xl h-10 px-6 bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white disabled:opacity-50"
+                                className="rounded-xl h-10 px-6 bg-rose-600 hover:bg-rose-700 text-xs font-semibold text-white disabled:opacity-50"
                             >
-                                {processingRefund ? <Loader2 className="w-4 h-4 animate-spin" /> : "Process Refund"}
+                                {processingRefund ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : "Process Refund"}
                             </Button>
                         </div>
                     </div>

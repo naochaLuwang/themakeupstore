@@ -48,7 +48,7 @@ function CategoryFilterInner({ categories }: { categories: { id: string; name: s
 
 export function CategoryFilter({ categories }: { categories: { id: string; name: string }[] }) {
     return (
-        <Suspense fallback={<div className="h-9 w-[180px] bg-slate-100 rounded-lg animate-pulse" />}>
+        <Suspense fallback={<div className="h-9 w-[180px] bg-slate-100 rounded-lg" />}>
             <CategoryFilterInner categories={categories} />
         </Suspense>
     )

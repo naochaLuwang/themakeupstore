@@ -27,7 +27,7 @@ function SearchInputInner({ placeholder }: { placeholder: string }) {
 
     return (
         <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 stroke-[1.5]" />
             <Input
                 placeholder={placeholder}
                 defaultValue={searchParams.get("q")?.toString()}
@@ -45,7 +45,7 @@ function SearchInputInner({ placeholder }: { placeholder: string }) {
 
 export function SearchInput({ placeholder }: { placeholder: string }) {
     return (
-        <Suspense fallback={<div className="h-9 w-full bg-slate-100 rounded-lg animate-pulse" />}>
+        <Suspense fallback={<div className="h-9 w-full bg-slate-100 rounded-lg" />}>
             <SearchInputInner placeholder={placeholder} />
         </Suspense>
     )

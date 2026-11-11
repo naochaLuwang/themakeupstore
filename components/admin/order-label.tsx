@@ -88,7 +88,7 @@ export function OrderLabel({ order }: { order: any }) {
             {/* ITEMS TABLE */}
             {/* PAYMENT */}
             <div className="flex-1 overflow-hidden flex flex-col justify-center">
-                {order.payment_status === "paid" ? (
+                {(Number(order.edit_version)>0 ? Number(order.edit_balance_due || 0)===0 : order.payment_status === "paid") ? (
                     <div className="border-2 border-black py-3 text-center">
                         <div className="text-[7px] font-bold uppercase tracking-[0.3em] text-black">Payment</div>
                         <div className="text-[30px] font-black uppercase tracking-tight leading-none mt-1">PREPAID</div>
@@ -97,7 +97,7 @@ export function OrderLabel({ order }: { order: any }) {
                 ) : (
                     <div className="border-2 border-black py-3 text-center">
                         <div className="text-[7px] font-bold uppercase tracking-[0.3em] text-black">Amount to Collect</div>
-                        <div className="text-[36px] font-black tracking-tight leading-none mt-1">₹{Number(order.total || 0).toLocaleString("en-IN")}</div>
+                        <div className="text-[36px] font-black tracking-tight leading-none mt-1">₹{Number(Number(order.edit_version)>0 ? order.edit_balance_due || 0 : order.total || 0).toLocaleString("en-IN")}</div>
                         <div className="text-[7px] font-bold uppercase tracking-widest mt-1.5">
                             {order.payment_status === "refunded" ? "Refunded" : "Cash on Delivery"}
                         </div>

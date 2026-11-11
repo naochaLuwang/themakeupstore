@@ -162,18 +162,18 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                 {/* TOOLBAR */}
                 <header className="h-16 bg-white border-b px-8 flex items-center justify-between sticky top-0 z-20">
                     <div className="flex items-center gap-2 text-sm font-medium">
-                        <span className="text-slate-400">Inventory</span>
-                        <ChevronRight className="w-4 h-4 text-slate-300" />
+                        <span className="text-slate-500">Inventory</span>
+                        <ChevronRight className="w-4 h-4 text-slate-400 stroke-[1.5]" />
                         <span>Create Purchase Order</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <Button variant="outline" className="h-9 px-4 text-xs font-semibold" onClick={() => setSelectedItems([])}>Clear</Button>
                         <Button
-                            className="h-9 px-4 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 transition-all"
+                            className="h-9 px-4 text-xs font-semibold bg-slate-900 hover:bg-slate-900 transition-colors"
                             disabled={loading || !supplierId || selectedItems.length === 0}
                             onClick={handleCreatePO}
                         >
-                            {loading ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Plus className="w-3 h-3 mr-2" />}
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" /> : <Plus className="w-4 h-4 mr-2 stroke-[1.5]" />}
                             Save Purchase Order
                         </Button>
                     </div>
@@ -186,13 +186,13 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                         <div className="bg-white border rounded-lg p-6 grid grid-cols-2 gap-4">
                             <div className="space-y-1.5 flex flex-col relative" ref={supplierDropdownRef}>
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Vendor</label>
+                                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Vendor</label>
                                     <button 
                                         type="button" 
                                         onClick={() => setIsVendorModalOpen(true)}
-                                        className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline flex items-center gap-1"
+                                        className="text-xs font-semibold text-slate-700 tracking-normal hover:underline flex items-center gap-1"
                                     >
-                                        <Plus className="w-3 h-3" /> New Vendor
+                                        <Plus className="w-4 h-4 stroke-[1.5]" /> New Vendor
                                     </button>
                                 </div>
                                 <div className="relative">
@@ -208,14 +208,14 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                             setIsSupplierOpen(true)
                                             setSupplierSearch("")
                                         }}
-                                        className="h-10 text-sm bg-slate-50 focus:bg-white transition-all cursor-text pr-8"
+                                        className="h-10 text-sm bg-slate-50 focus:bg-white transition-colors cursor-text pr-8"
                                     />
-                                    <ChevronRight className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${isSupplierOpen ? 'rotate-90' : ''}`} />
+                                    <ChevronRight className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 transition-transform stroke-[1.5] ${isSupplierOpen ? 'rotate-90' : ''}`} />
                                 </div>
                                 
                                 {/* Searchable Supplier Dropdown */}
                                 {isSupplierOpen && (
-                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl z-30 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-sm z-30 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
                                         {filteredSuppliers.length === 0 ? (
                                             <div className="p-4 text-sm text-slate-500 text-center">No suppliers found.</div>
                                         ) : (
@@ -228,10 +228,10 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                                             setSupplierSearch(s.name)
                                                             setIsSupplierOpen(false)
                                                         }}
-                                                        className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors ${supplierId === s.id ? 'bg-indigo-50 text-indigo-700 font-medium' : ''}`}
+                                                        className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors ${supplierId === s.id ? 'bg-slate-50 text-slate-700 font-medium' : ''}`}
                                                     >
                                                         {s.name}
-                                                        {supplierId === s.id && <Check className="w-4 h-4 text-indigo-600" />}
+                                                        {supplierId === s.id && <Check className="w-4 h-4 text-slate-700 stroke-[1.5]" />}
                                                     </li>
                                                 ))}
                                             </ul>
@@ -240,7 +240,7 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                 )}
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Reference No.</label>
+                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Reference No.</label>
                                 <Input
                                     value={reference}
                                     onChange={e => setReference(e.target.value)}
@@ -255,7 +255,7 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                             {/* Inline Add Item Search Header */}
                             <div className="p-4 border-b bg-slate-50/50 relative z-20" ref={productDropdownRef}>
                                 <div className="relative max-w-md mx-auto w-full">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 z-10 stroke-[1.5]" />
                                     <Input
                                         placeholder="Search and add line items..."
                                         value={productSearchQuery}
@@ -264,23 +264,23 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                             setIsProductSearchOpen(true)
                                         }}
                                         onFocus={() => setIsProductSearchOpen(true)}
-                                        className="pl-9 h-10 w-full bg-white shadow-sm transition-all focus:ring-2 ring-indigo-500/10 text-sm font-medium"
+                                        className="pl-9 h-10 w-full bg-white shadow-sm transition-colors focus:ring-2 ring-pink-600/10 text-sm font-medium"
                                     />
                                     
                                     {/* Inline Product Search Dropdown */}
                                     {isProductSearchOpen && productSearchQuery.trim() !== "" && (
-                                        <div className="absolute top-full mt-2 left-0 right-0 bg-white border rounded-lg shadow-2xl z-30 max-h-80 overflow-y-auto w-[150%] -ml-[25%] animate-in fade-in zoom-in-95 origin-top">
+                                        <div className="absolute top-full mt-2 left-0 right-0 bg-white border rounded-lg shadow-sm z-30 max-h-80 overflow-y-auto w-[150%] -ml-[25%] animate-in fade-in zoom-in-95 origin-top">
                                             {filteredProducts.length === 0 ? (
                                                 <div className="p-8 text-center flex flex-col items-center">
-                                                    <Package className="w-8 h-8 text-slate-200 mb-2" />
+                                                    <Package className="w-8 h-8 text-slate-200 mb-2 stroke-[1.5]" />
                                                     <span className="text-sm font-semibold text-slate-500">No products found</span>
-                                                    <span className="text-xs text-slate-400">Try adjusting your search</span>
+                                                    <span className="text-xs text-slate-500">Try adjusting your search</span>
                                                 </div>
                                             ) : (
                                                 <div className="divide-y">
                                                     {filteredProducts.map((p: any) => (
                                                         <div key={p.id} className="p-3">
-                                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{p.brand || 'No Brand'}</div>
+                                                            <div className="text-xs font-semibold text-slate-500 tracking-normal mb-1">{p.brand || 'No Brand'}</div>
                                                             <div className="font-semibold text-sm mb-2 text-slate-800">{p.name}</div>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 {p.product_variants.map((v: any) => {
@@ -290,10 +290,10 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                                                             key={v.id}
                                                                             onClick={() => addItem(v, p.name, p.id)}
                                                                             disabled={!!isAdded}
-                                                                            className={`flex items-center justify-between p-2 rounded border text-left text-xs transition-all ${isAdded ? 'bg-slate-50 border-transparent opacity-50 cursor-not-allowed' : 'bg-white hover:border-indigo-600 hover:bg-slate-50'}`}
+                                                                            className={`flex items-center justify-between p-2 rounded border text-left text-xs transition-colors ${isAdded ? 'bg-slate-50 border-transparent opacity-50 cursor-not-allowed' : 'bg-white hover:border-slate-200 hover:bg-slate-50'}`}
                                                                         >
                                                                             <span className="font-medium truncate mr-2">{v.title}</span>
-                                                                            {isAdded ? <Check className="w-3 h-3 text-slate-400 flex-shrink-0" /> : <Plus className="w-3 h-3 text-indigo-600 flex-shrink-0" />}
+                                                                            {isAdded ? <Check className="w-4 h-4 text-slate-500 flex-shrink-0 stroke-[1.5]" /> : <Plus className="w-4 h-4 text-slate-700 flex-shrink-0 stroke-[1.5]" />}
                                                                         </button>
                                                                     )
                                                                 })}
@@ -311,20 +311,20 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                 <table className="w-full text-left border-collapse z-10 relative">
                                     <thead className="bg-slate-50/80 border-b">
                                         <tr>
-                                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Item Details</th>
-                                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-32">Qty</th>
-                                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-40">Unit Cost</th>
-                                            <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-32 text-right">Total</th>
+                                            <th className="px-6 py-3 text-xs font-semibold text-slate-500 tracking-normal">Item Details</th>
+                                            <th className="px-6 py-3 text-xs font-semibold text-slate-500 tracking-normal w-32">Qty</th>
+                                            <th className="px-6 py-3 text-xs font-semibold text-slate-500 tracking-normal w-40">Unit Cost</th>
+                                            <th className="px-6 py-3 text-xs font-semibold text-slate-500 tracking-normal w-32 text-right">Total</th>
                                             <th className="px-4 py-3 w-10"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
                                         {selectedItems.map((item, idx) => (
                                             <tr key={item.variant_id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 tabular-nums">
                                                     <p className="text-sm font-semibold">{item.name}</p>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 tabular-nums">
                                                     <Input
                                                         type="number"
                                                         value={item.quantity || ""}
@@ -337,7 +337,7 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                                         className="h-9 text-sm"
                                                     />
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 tabular-nums">
                                                     <Input
                                                         type="number"
                                                         value={item.unit_cost || ""}
@@ -350,12 +350,12 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                                         className="h-9 text-sm text-right"
                                                     />
                                                 </td>
-                                                <td className="px-6 py-4 text-right text-sm font-medium text-slate-600 bg-slate-50/30">
+                                                <td className="px-6 py-4 text-right text-sm font-medium text-slate-600 bg-slate-50/30 tabular-nums">
                                                     ₹{(item.quantity * item.unit_cost).toLocaleString()}
                                                 </td>
-                                                <td className="px-4 py-4 text-right">
+                                                <td className="px-4 py-4 text-right tabular-nums">
                                                     <button onClick={() => setSelectedItems(selectedItems.filter((_, i) => i !== idx))}>
-                                                        <Trash2 className="w-4 h-4 text-slate-300 hover:text-red-500 transition-colors" />
+                                                        <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-500 transition-colors stroke-[1.5]" />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -363,9 +363,9 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                     </tbody>
                                 </table>
                             ) : (
-                                <div className="p-16 text-center text-slate-400 relative z-10">
+                                <div className="p-16 text-center text-slate-500 relative z-10">
                                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Package className="w-8 h-8 opacity-40 text-slate-500" />
+                                        <Package className="w-8 h-8 opacity-40 text-slate-500 stroke-[1.5]" />
                                     </div>
                                     <p className="text-sm font-medium mb-1 text-slate-600">No items added</p>
                                     <p className="text-xs">Search and select items from above to populate the order.</p>
@@ -377,8 +377,8 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                     {/* RIGHT SUMMARY */}
                     <div className="col-span-12 lg:col-span-4 space-y-6">
                         <div className="bg-white border rounded-lg p-6 sticky top-24">
-                            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <List className="w-4 h-4 text-indigo-600" /> Order Summary
+                            <h3 className="text-xs font-semibold text-slate-900 tracking-normal mb-6 flex items-center gap-2">
+                                <List className="w-4 h-4 text-slate-700 stroke-[1.5]" /> Order Summary
                             </h3>
                             <div className="space-y-4">
                                 <div className="flex justify-between text-sm">
@@ -389,18 +389,18 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                     <span className="text-slate-500 font-medium">Item Count</span>
                                     <span className="font-semibold text-slate-700">{selectedItems.reduce((acc, i) => acc + i.quantity, 0)} Units</span>
                                 </div>
-                                <div className="flex justify-between text-sm font-bold border-t pt-4">
+                                <div className="flex justify-between text-sm font-semibold border-t pt-4">
                                     <span>Grand Total</span>
-                                    <span className="text-indigo-600 text-xl tracking-tight">₹{selectedItems.reduce((acc, i) => acc + (i.quantity * i.unit_cost), 0).toLocaleString()}</span>
+                                    <span className="text-slate-700 text-xl tracking-tight">₹{selectedItems.reduce((acc, i) => acc + (i.quantity * i.unit_cost), 0).toLocaleString()}</span>
                                 </div>
                             </div>
                             
                             <Button
-                                className="w-full h-12 mt-6 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-900/10 transition-all"
+                                className="w-full h-12 mt-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs tracking-normal shadow-sm transition-colors"
                                 disabled={loading || !supplierId || selectedItems.length === 0}
                                 onClick={handleCreatePO}
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" /> : <Check className="w-4 h-4 mr-2 stroke-[1.5]" />}
                                 Complete Purchase
                             </Button>
                         </div>
@@ -411,17 +411,17 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
             {/* NEW VENDOR MODAL */}
             {isVendorModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-xl shadow-sm flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="p-6 border-b flex items-center justify-between bg-slate-50/50">
                             <div className="flex items-center gap-2">
-                                <Building className="w-5 h-5 text-indigo-600" />
-                                <h2 className="font-bold">Add New Vendor</h2>
+                                <Building className="w-5 h-5 text-slate-700 stroke-[1.5]" />
+                                <h2 className="font-semibold">Add New Vendor</h2>
                             </div>
-                            <button onClick={() => setIsVendorModalOpen(false)} aria-label="Close modal"><X className="w-5 h-5 text-slate-400 hover:text-slate-600 transition-colors" /></button>
+                            <button onClick={() => setIsVendorModalOpen(false)} aria-label="Close modal"><X className="w-5 h-5 text-slate-500 hover:text-slate-600 transition-colors stroke-[1.5]" /></button>
                         </div>
                         <form onSubmit={handleCreateVendor} className="p-6 space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Company/Vendor Name *</label>
+                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Company/Vendor Name *</label>
                                 <Input 
                                     value={newVendorName} 
                                     onChange={e => setNewVendorName(e.target.value)} 
@@ -432,9 +432,9 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Email Address</label>
                                 <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
                                     <Input 
                                         type="email"
                                         value={newVendorEmail} 
@@ -445,9 +445,9 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
+                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Phone Number</label>
                                 <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
                                     <Input 
                                         type="tel"
                                         value={newVendorPhone} 
@@ -462,7 +462,7 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                     type="button" 
                                     variant="ghost" 
                                     onClick={() => setIsVendorModalOpen(false)}
-                                    className="text-xs font-bold uppercase tracking-widest h-10"
+                                    className="text-xs font-semibold tracking-normal h-10"
                                     disabled={isCreatingVendor}
                                 >
                                     Cancel
@@ -470,9 +470,9 @@ export default function PurchaseClient({ initialSuppliers, initialProducts }: an
                                 <Button 
                                     type="submit" 
                                     disabled={isCreatingVendor || !newVendorName.trim()}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold uppercase tracking-widest px-6 h-10 transition-all shadow-md shadow-indigo-600/20"
+                                    className="bg-slate-900 hover:bg-slate-900 text-xs font-semibold tracking-normal px-6 h-10 transition-colors shadow-sm"
                                 >
-                                    {isCreatingVendor ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                                    {isCreatingVendor ? <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" /> : <Plus className="w-4 h-4 mr-2 stroke-[1.5]" />}
                                     Save Vendor
                                 </Button>
                             </div>

@@ -240,8 +240,8 @@ export default function PurchaseListClient({ initialOrders }: any) {
             cancelled: 'bg-red-50 text-red-600 ring-1 ring-red-600/10',
         }
         return (
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest leading-none ${map[status] || 'bg-slate-50 text-slate-500 ring-1 ring-slate-200'}`}>
-                {status === 'received' && <span className="w-1 h-1 rounded-full bg-emerald-600 mr-1.5 animate-pulse" />}
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold tracking-normal leading-none ${map[status] || 'bg-slate-50 text-slate-500 ring-1 ring-slate-200'}`}>
+                {status === 'received' && <span className="w-1 h-1 rounded-full bg-emerald-600 mr-1.5" />}
                 {status || 'draft'}
             </span>
         )
@@ -255,7 +255,7 @@ export default function PurchaseListClient({ initialOrders }: any) {
             cancelled: 'bg-red-50 text-red-600 ring-1 ring-red-600/20',
         }
         return (
-            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm ${colors[status] || 'bg-slate-50 text-slate-500 ring-1 ring-slate-200'}`}>
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-normal shadow-sm ${colors[status] || 'bg-slate-50 text-slate-500 ring-1 ring-slate-200'}`}>
                 {status || 'draft'}
             </span>
         )
@@ -266,7 +266,7 @@ export default function PurchaseListClient({ initialOrders }: any) {
             {/* Search + Actions bar */}
             <div className="flex items-center justify-between gap-4">
                 <div className="relative flex-1 max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
                     <Input
                         placeholder="Search by ref or supplier..."
                         value={searchQuery}
@@ -275,30 +275,30 @@ export default function PurchaseListClient({ initialOrders }: any) {
                     />
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 px-3 text-[10px] font-bold uppercase tracking-wider">
-                        <FileDown className="w-3.5 h-3.5 mr-1.5" /> Export CSV
+                    <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 px-3 text-xs font-semibold tracking-normal">
+                        <FileDown className="w-4 h-4 mr-1.5 stroke-[1.5]" /> Export CSV
                     </Button>
                 </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-4 duration-200 min-w-0 max-w-full">
                 <table className="w-full text-left border-collapse">
                     <thead className="bg-slate-50/50 border-b border-slate-100">
-                        <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">
-                            <th className="px-8 py-5 flex items-center gap-2 font-bold"><Hash className="w-3 h-3" /> Ref No.</th>
-                            <th className="px-6 py-5"><div className="flex items-center gap-2"><Building2 className="w-3 h-3" /> Supplier</div></th>
-                            <th className="px-6 py-5"><div className="flex items-center gap-2"><Calendar className="w-3 h-3" /> Date</div></th>
+                        <tr className="text-xs font-semibold text-slate-500 tracking-normal">
+                            <th className="px-8 py-5 flex items-center gap-2 font-semibold"><Hash className="w-4 h-4 stroke-[1.5]" /> Ref No.</th>
+                            <th className="px-6 py-5"><div className="flex items-center gap-2"><Building2 className="w-4 h-4 stroke-[1.5]" /> Supplier</div></th>
+                            <th className="px-6 py-5"><div className="flex items-center gap-2"><Calendar className="w-4 h-4 stroke-[1.5]" /> Date</div></th>
                             <th className="px-6 py-5">Status</th>
-                            <th className="px-8 py-5 text-right font-bold">Actions</th>
+                            <th className="px-8 py-5 text-right font-semibold">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                         {paginatedOrders.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="px-8 py-20 text-center">
+                                <td colSpan={5} className="px-8 py-20 text-center tabular-nums">
                                     <div className="flex flex-col items-center gap-3">
-                                        <FileText className="w-10 h-10 text-slate-200" />
-                                        <p className="text-sm font-medium text-slate-400">
+                                        <FileText className="w-10 h-10 text-slate-200 stroke-[1.5]" />
+                                        <p className="text-sm font-medium text-slate-500">
                                             {searchQuery ? "No purchase records match your search" : "No purchase records found"}
                                         </p>
                                     </div>
@@ -310,18 +310,18 @@ export default function PurchaseListClient({ initialOrders }: any) {
                                 const isOrdered = order.status === 'ordered'
                                 const isReceived = order.status === 'received'
                                 return (
-                                    <tr key={order.id} className="group hover:bg-slate-50/50 transition-all duration-200">
-                                        <td className="px-8 py-5 font-mono text-xs font-semibold text-slate-600">
-                                            {order.reference_number || <span className="text-slate-300 italic">No Ref.</span>}
+                                    <tr key={order.id} className="group hover:bg-slate-50/50 transition-colors duration-200">
+                                        <td className="px-8 py-5 font-mono text-xs font-semibold text-slate-600 tabular-nums">
+                                            {order.reference_number || <span className="text-slate-400">No Ref.</span>}
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <div className="text-sm font-bold text-slate-800">{order.suppliers?.name}</div>
+                                        <td className="px-6 py-5 tabular-nums">
+                                            <div className="text-sm font-semibold text-slate-800">{order.suppliers?.name}</div>
                                         </td>
-                                        <td className="px-6 py-5 text-xs text-slate-500 font-medium whitespace-nowrap">
+                                        <td className="px-6 py-5 text-xs text-slate-500 font-medium whitespace-nowrap tabular-nums">
                                             {new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                                         </td>
-                                        <td className="px-6 py-5">{statusBadge(order.status)}</td>
-                                        <td className="px-8 py-5 text-right">
+                                        <td className="px-6 py-5 tabular-nums">{statusBadge(order.status)}</td>
+                                        <td className="px-8 py-5 text-right tabular-nums">
                                             <div className="flex justify-end items-center gap-2">
                                                 {isDraft && (
                                                     <>
@@ -329,9 +329,9 @@ export default function PurchaseListClient({ initialOrders }: any) {
                                                             size="sm"
                                                             onClick={() => handleMarkOrdered(order.id)}
                                                             disabled={processingId === order.id}
-                                                            className="h-9 px-3 bg-amber-500 hover:bg-amber-600 text-white text-[9px] font-black tracking-widest uppercase border-none shadow-sm"
+                                                            className="h-9 px-3 bg-amber-700 hover:bg-amber-600 text-white text-xs font-semibold tracking-normal border-none shadow-sm"
                                                         >
-                                                            {processingId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3 mr-1.5" />}
+                                                            {processingId === order.id ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <CheckCircle className="w-4 h-4 mr-1.5 stroke-[1.5]" />}
                                                             Mark Ordered
                                                         </Button>
                                                         <Button
@@ -339,9 +339,9 @@ export default function PurchaseListClient({ initialOrders }: any) {
                                                             variant="ghost"
                                                             onClick={() => handleDeleteOrder(order.id)}
                                                             disabled={deleteId === order.id}
-                                                            className="h-9 px-2 text-slate-300 hover:text-red-500 hover:bg-red-50"
+                                                            className="h-9 px-2 text-slate-400 hover:text-red-500 hover:bg-red-50"
                                                         >
-                                                            {deleteId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                            {deleteId === order.id ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Trash2 className="w-4 h-4 stroke-[1.5]" />}
                                                         </Button>
                                                     </>
                                                 )}
@@ -350,9 +350,9 @@ export default function PurchaseListClient({ initialOrders }: any) {
                                                         size="sm"
                                                         onClick={() => handleReceiveOrder(order.id)}
                                                         disabled={processingId === order.id}
-                                                        className="h-9 px-4 bg-slate-900 border-none hover:bg-emerald-600 text-[10px] font-black tracking-widest uppercase transition-all duration-300 shadow-sm hover:shadow-emerald-600/20"
+                                                        className="h-9 px-4 bg-slate-900 border-none hover:bg-emerald-600 text-xs font-semibold tracking-normal transition-colors duration-300 shadow-sm"
                                                     >
-                                                        {processingId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PackageCheck className="w-3.5 h-3.5 mr-2" />}
+                                                        {processingId === order.id ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <PackageCheck className="w-4 h-4 mr-2 stroke-[1.5]" />}
                                                         Mark as Received
                                                     </Button>
                                                 )}
@@ -360,11 +360,11 @@ export default function PurchaseListClient({ initialOrders }: any) {
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => handleViewDetails(order)}
-                                                    className="h-9 px-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 group-hover:translate-x-1 transition-all duration-200"
+                                                    className="h-9 px-3 text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors duration-200"
                                                 >
-                                                    <Eye className="w-4 h-4 mr-2" />
-                                                    <span className="text-[10px] font-black tracking-widest uppercase">Details</span>
-                                                    <ChevronRight className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-all" />
+                                                    <Eye className="w-4 h-4 mr-2 stroke-[1.5]" />
+                                                    <span className="text-xs font-semibold tracking-normal">Details</span>
+                                                    <ChevronRight className="w-4 h-4 ml-1 opacity-0 group-hover:opacity-100 transition-colors stroke-[1.5]" />
                                                 </Button>
                                             </div>
                                         </td>
@@ -390,7 +390,7 @@ export default function PurchaseListClient({ initialOrders }: any) {
                             onClick={() => setCurrentPage(safePage - 1)}
                             className="h-8 w-8 p-0"
                         >
-                            <ArrowLeft className="w-3.5 h-3.5" />
+                            <ArrowLeft className="w-4 h-4 stroke-[1.5]" />
                         </Button>
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                             <Button
@@ -398,7 +398,7 @@ export default function PurchaseListClient({ initialOrders }: any) {
                                 variant={p === safePage ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => setCurrentPage(p)}
-                                className={`h-8 w-8 p-0 text-xs font-bold ${p === safePage ? 'bg-slate-900 text-white' : ''}`}
+                                className={`h-8 w-8 p-0 text-xs font-semibold ${p === safePage ? 'bg-slate-900 text-white' : ''}`}
                             >
                                 {p}
                             </Button>
@@ -410,7 +410,7 @@ export default function PurchaseListClient({ initialOrders }: any) {
                             onClick={() => setCurrentPage(safePage + 1)}
                             className="h-8 w-8 p-0"
                         >
-                            <ArrowRight className="w-3.5 h-3.5" />
+                            <ArrowRight className="w-4 h-4 stroke-[1.5]" />
                         </Button>
                     </div>
                 </div>
@@ -419,34 +419,34 @@ export default function PurchaseListClient({ initialOrders }: any) {
             {/* --- DOCUMENT VIEW OVERLAY --- */}
             {viewingOrder && (
                 <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex justify-center items-start overflow-y-auto py-8 sm:py-16 px-4 animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-4xl min-h-[11in] shadow-2xl rounded-xl flex flex-col relative animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 overflow-hidden">
+                    <div className="bg-white w-full max-w-4xl min-h-[11in] shadow-sm rounded-xl flex flex-col relative animate-in zoom-in-95 slide-in-from-bottom-8 duration-200 overflow-hidden">
 
                         {/* Status Bar */}
-                        <div className={`h-1.5 w-full ${viewingOrder.status === 'received' ? 'bg-emerald-500' : viewingOrder.status === 'ordered' ? 'bg-amber-500' : 'bg-indigo-600'}`} />
+                        <div className={`h-1.5 w-full ${viewingOrder.status === 'received' ? 'bg-emerald-500' : viewingOrder.status === 'ordered' ? 'bg-amber-500' : 'bg-slate-900'}`} />
 
                         {/* Internal Toolbar */}
                         <div className="px-8 py-5 border-b border-slate-100 bg-white flex justify-between items-center sticky top-0 z-10 no-print">
                             <div className="flex items-center gap-4">
                                 <div className="flex p-0.5 bg-slate-100 rounded-lg">
-                                    <Button variant="ghost" size="sm" className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-white hover:shadow-sm" onClick={() => window.print()}>
-                                        <Printer className="w-3.5 h-3.5 mr-2" /> Print PO
+                                    <Button variant="ghost" size="sm" className="h-8 px-3 text-xs font-semibold tracking-normal text-slate-600 hover:bg-white hover:shadow-sm" onClick={() => window.print()}>
+                                        <Printer className="w-4 h-4 mr-2 stroke-[1.5]" /> Print PO
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-white hover:shadow-sm" onClick={handleExportCSV}>
-                                        <Download className="w-3.5 h-3.5 mr-2" /> Export
+                                    <Button variant="ghost" size="sm" className="h-8 px-3 text-xs font-semibold tracking-normal text-slate-600 hover:bg-white hover:shadow-sm" onClick={handleExportCSV}>
+                                        <Download className="w-4 h-4 mr-2 stroke-[1.5]" /> Export
                                     </Button>
                                 </div>
                                 {viewingOrder.status === 'draft' && !isEditing && (
-                                    <Button variant="outline" size="sm" onClick={handleStartEdit} className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider text-indigo-600 border-indigo-200 hover:bg-indigo-50">
-                                        <Edit className="w-3.5 h-3.5 mr-1.5" /> Edit Items
+                                    <Button variant="outline" size="sm" onClick={handleStartEdit} className="h-8 px-3 text-xs font-semibold tracking-normal text-slate-700 border-slate-200 hover:bg-slate-50">
+                                        <Edit className="w-4 h-4 mr-1.5 stroke-[1.5]" /> Edit Items
                                     </Button>
                                 )}
                                 {isEditing && (
                                     <div className="flex items-center gap-2">
-                                        <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="h-8 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold uppercase tracking-wider">
-                                            {savingEdit ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                                        <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="h-8 px-4 bg-slate-900 hover:bg-slate-900 text-white text-xs font-semibold tracking-normal">
+                                            {savingEdit ? <Loader2 className="w-4 h-4 animate-spin mr-1 stroke-[1.5]" /> : null}
                                             Save Changes
                                         </Button>
-                                        <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                        <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="h-8 px-3 text-xs font-semibold tracking-normal text-slate-500">
                                             Cancel
                                         </Button>
                                     </div>
@@ -454,9 +454,9 @@ export default function PurchaseListClient({ initialOrders }: any) {
                             </div>
                             <button
                                 onClick={() => { setViewingOrder(null); setIsEditing(false) }}
-                                className="group w-10 h-10 flex items-center justify-center bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all duration-300"
+                                className="group w-10 h-10 flex items-center justify-center bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-500 rounded-lg transition-colors duration-300"
                             >
-                                <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                                <X className="w-5 h-5 transition-transform duration-300 stroke-[1.5]" />
                             </button>
                         </div>
 

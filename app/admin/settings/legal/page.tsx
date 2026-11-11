@@ -16,20 +16,20 @@ export default async function AdminLegalPage() {
     return (
         <div className="space-y-6">
             <div className="space-y-1">
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Store Policies</h1>
+                <h1 className="text-slate-900 text-2xl font-black tracking-tight">Store Policies</h1>
                 <p className="text-sm text-slate-500">Legal management</p>
             </div>
 
             <Tabs defaultValue="terms" className="space-y-6">
                 <TabsList className="bg-slate-100 p-1 rounded-xl h-auto flex flex-wrap md:inline-flex">
                     <TabsTrigger value="terms" className="rounded-lg px-6 py-2.5 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                        <FileText className="w-4 h-4 mr-2" /> Terms
+                        <FileText className="w-4 h-4 mr-2 stroke-[1.5]" /> Terms
                     </TabsTrigger>
                     <TabsTrigger value="privacy" className="rounded-lg px-6 py-2.5 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                        <ShieldCheck className="w-4 h-4 mr-2" /> Privacy
+                        <ShieldCheck className="w-4 h-4 mr-2 stroke-[1.5]" /> Privacy
                     </TabsTrigger>
                     <TabsTrigger value="returns" className="rounded-lg px-6 py-2.5 text-xs font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                        <RotateCcw className="w-4 h-4 mr-2" /> Returns
+                        <RotateCcw className="w-4 h-4 mr-2 stroke-[1.5]" /> Returns
                     </TabsTrigger>
                 </TabsList>
 

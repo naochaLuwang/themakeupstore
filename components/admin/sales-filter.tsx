@@ -35,27 +35,27 @@ function SalesFilterInner() {
     return (
         <div className="flex items-center gap-2">
             <Select value={range} onValueChange={handleRangeChange}>
-                <SelectTrigger className="w-[130px] h-9 rounded-lg bg-slate-100 border-none font-bold text-[10px] uppercase">
-                    <CalendarIcon className="w-3 h-3 mr-2" />
+                <SelectTrigger className="w-[130px] h-9 rounded-lg bg-slate-100 border-none font-semibold text-xs">
+                    <CalendarIcon className="w-4 h-4 mr-2 stroke-[1.5]" />
                     <SelectValue placeholder="Range" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="today" className="text-[10px] font-bold uppercase">Today</SelectItem>
-                    <SelectItem value="7d" className="text-[10px] font-bold uppercase">7 Days</SelectItem>
-                    <SelectItem value="30d" className="text-[10px] font-bold uppercase">30 Days</SelectItem>
-                    <SelectItem value="last_month" className="text-[10px] font-bold uppercase">Last Month</SelectItem>
-                    <SelectItem value="all" className="text-[10px] font-bold uppercase">All Time</SelectItem>
-                    <SelectItem value="custom" className="text-[10px] font-bold uppercase">Custom</SelectItem>
+                    <SelectItem value="today" className="text-xs font-semibold">Today</SelectItem>
+                    <SelectItem value="7d" className="text-xs font-semibold">7 Days</SelectItem>
+                    <SelectItem value="30d" className="text-xs font-semibold">30 Days</SelectItem>
+                    <SelectItem value="last_month" className="text-xs font-semibold">Last Month</SelectItem>
+                    <SelectItem value="all" className="text-xs font-semibold">All Time</SelectItem>
+                    <SelectItem value="custom" className="text-xs font-semibold">Custom</SelectItem>
                 </SelectContent>
             </Select>
 
             {range === "custom" && (
                 <div className="flex items-center gap-1 animate-in slide-in-from-right-2 duration-300">
-                    <input type="date" className="h-9 rounded-lg bg-slate-100 px-2 text-[10px] font-bold border-none" value={tempFrom} onChange={(e) => setTempFrom(e.target.value)} />
-                    <span className="text-[9px] font-black text-slate-300 uppercase">to</span>
-                    <input type="date" className="h-9 rounded-lg bg-slate-100 px-2 text-[10px] font-bold border-none" value={tempTo} onChange={(e) => setTempTo(e.target.value)} />
+                    <input type="date" className="h-9 rounded-lg bg-slate-100 px-2 text-xs font-semibold border-none" value={tempFrom} onChange={(e) => setTempFrom(e.target.value)} />
+                    <span className="text-xs font-semibold text-slate-400">to</span>
+                    <input type="date" className="h-9 rounded-lg bg-slate-100 px-2 text-xs font-semibold border-none" value={tempTo} onChange={(e) => setTempTo(e.target.value)} />
                     <button onClick={applyCustomRange} className="h-9 w-9 flex items-center justify-center bg-slate-900 text-white rounded-lg hover:bg-black">
-                        <Check className="w-3.5 h-3.5" />
+                        <Check className="w-4 h-4 stroke-[1.5]" />
                     </button>
                 </div>
             )}
@@ -65,7 +65,7 @@ function SalesFilterInner() {
 
 export function SalesFilter() {
     return (
-        <Suspense fallback={<div className="h-9 w-[130px] bg-slate-100 rounded-lg animate-pulse" />}>
+        <Suspense fallback={<div className="h-9 w-[130px] bg-slate-100 rounded-lg" />}>
             <SalesFilterInner />
         </Suspense>
     )

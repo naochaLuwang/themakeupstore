@@ -46,32 +46,32 @@ export function RevenueChart({ orders, startDate, endDate }: RevenueChartProps) 
     }, [orders, startDate, endDate])
 
     return (
-        <Card className="col-span-full">
-            <CardHeader>
-                <CardTitle className="text-base font-medium">Revenue Over Time</CardTitle>
+        <Card className="col-span-full gap-4 rounded-none border-0 bg-transparent p-0 shadow-none">
+            <CardHeader className="p-0">
+                <CardTitle className="text-xs font-normal text-slate-500">Revenue Over Time</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="#be185d" stopOpacity={0.12} />
+                                    <stop offset="95%" stopColor="#be185d" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                             <XAxis
                                 dataKey="date"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 12, fill: "#888" }}
+                                tick={{ fontSize: 12, fill: "#64748b" }}
                                 minTickGap={30}
                             />
                             <YAxis
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 12, fill: "#888" }}
+                                tick={{ fontSize: 12, fill: "#64748b" }}
                                 tickFormatter={(value) => `₹${value}`}
                             />
                             <Tooltip
@@ -84,7 +84,7 @@ export function RevenueChart({ orders, startDate, endDate }: RevenueChartProps) 
                             <Area
                                 type="monotone"
                                 dataKey="revenue"
-                                stroke="#8b5cf6"
+                                stroke="#be185d"
                                 strokeWidth={2}
                                 fillOpacity={1}
                                 fill="url(#colorRevenue)"

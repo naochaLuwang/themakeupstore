@@ -27,7 +27,7 @@ export default function OrderLabelPage() {
     }, [id])
 
     if (loading) return <div className="flex h-screen items-center justify-center">Loading label...</div>
-    if (!order) return <div className="p-10 text-center text-red-500 font-bold">Order not found</div>
+    if (!order) return <div className="p-10 text-center text-red-500 font-semibold">Order not found</div>
 
     const printLabel = () => {
         window.print()
@@ -75,11 +75,11 @@ export default function OrderLabelPage() {
 
             {/* Screen Controls */}
             <div className="fixed top-4 right-4 z-50 no-print flex gap-2">
-                <button onClick={printLabel} className="bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg hover:bg-black transition-colors">
-                    <Printer className="w-4 h-4" /> Print Label
+                <button onClick={printLabel} className="bg-slate-900 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow-sm hover:bg-black transition-colors">
+                    <Printer className="w-4 h-4 stroke-[1.5]" /> Print Label
                 </button>
-                <button onClick={closeLabel} className="bg-white text-slate-600 px-4 py-2 rounded-lg font-bold text-sm border border-slate-300 flex items-center gap-2 shadow-lg hover:bg-slate-50 transition-colors">
-                    <X className="w-4 h-4" /> Close
+                <button onClick={closeLabel} className="bg-white text-slate-600 px-4 py-2 rounded-lg font-semibold text-sm border border-slate-300 flex items-center gap-2 shadow-sm hover:bg-slate-50 transition-colors">
+                    <X className="w-4 h-4 stroke-[1.5]" /> Close
                 </button>
             </div>
 

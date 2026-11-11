@@ -122,7 +122,7 @@ export function ConcernForm({ products, initialData, categories }: ConcernFormPr
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 {/* Concern Details Section */}
                 <div className="space-y-6">
-                    <h3 className="text-lg font-bold text-slate-900">Concern Details</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">Concern Details</h3>
 
                     {/* Image Upload */}
                     <div className="space-y-2">
@@ -134,15 +134,15 @@ export function ConcernForm({ products, initialData, categories }: ConcernFormPr
                                     <button
                                         type="button"
                                         onClick={() => { setPreview(""); setSelectedFile(null) }}
-                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-lg p-1"
                                     >
-                                        <X className="w-3 h-3" />
+                                        <X className="w-4 h-4 stroke-[1.5]" />
                                     </button>
                                 </div>
                             ) : (
                                 <label className="w-32 h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition">
-                                    <ImagePlus className="w-6 h-6 text-gray-400" />
-                                    <span className="text-[10px] mt-2 text-gray-500">Upload</span>
+                                    <ImagePlus className="w-6 h-6 text-gray-400 stroke-[1.5]" />
+                                    <span className="text-xs mt-2 text-gray-500">Upload</span>
                                     <input type="file" className="hidden" accept="image/*" onChange={onImageSelect} />
                                 </label>
                             )}
@@ -179,17 +179,17 @@ export function ConcernForm({ products, initialData, categories }: ConcernFormPr
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-lg font-bold text-slate-900">Product Assignment</h3>
+                            <h3 className="text-lg font-semibold text-slate-900">Product Assignment</h3>
                             <p className="text-sm text-slate-500">Select products linked to this concern.</p>
                         </div>
-                        <span className="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+                        <span className="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                             {selectedIds.length} selected
                         </span>
                     </div>
 
                     {/* Search */}
                     <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 stroke-[1.5]" />
                         <Input
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
@@ -203,9 +203,9 @@ export function ConcernForm({ products, initialData, categories }: ConcernFormPr
                         <button
                             type="button"
                             onClick={() => setCategoryFilter("all")}
-                            className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                            className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
                                 categoryFilter === "all"
-                                    ? "bg-rose-500 text-white border-rose-500"
+                                    ? "bg-rose-700 text-white border-rose-500"
                                     : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
                             }`}
                         >
@@ -216,9 +216,9 @@ export function ConcernForm({ products, initialData, categories }: ConcernFormPr
                                 key={cat.id}
                                 type="button"
                                 onClick={() => setCategoryFilter(cat.id)}
-                                className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                                className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
                                     categoryFilter === cat.id
-                                        ? "bg-rose-500 text-white border-rose-500"
+                                        ? "bg-rose-700 text-white border-rose-500"
                                         : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
                                 }`}
                             >
@@ -231,7 +231,7 @@ export function ConcernForm({ products, initialData, categories }: ConcernFormPr
                     <div className="border rounded-2xl overflow-hidden max-h-[480px] overflow-y-auto">
                         {filteredProducts.length === 0 ? (
                             <div className="py-12 text-center">
-                                <p className="text-sm text-slate-400">No products found</p>
+                                <p className="text-sm text-slate-500">No products found</p>
                             </div>
                         ) : (
                             filteredProducts.map((product) => {
@@ -250,7 +250,7 @@ export function ConcernForm({ products, initialData, categories }: ConcernFormPr
                                             <Image src={product.thumbnail_url} alt={product.name} width={36} height={36} className="w-9 h-9 rounded-lg object-cover" />
                                         ) : (
                                             <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-                                                <span className="text-xs font-bold text-slate-400">{product.name[0]}</span>
+                                                <span className="text-xs font-semibold text-slate-500">{product.name[0]}</span>
                                             </div>
                                         )}
                                         <span className="text-sm font-medium text-slate-900">{product.name}</span>

@@ -73,18 +73,18 @@ export function AddProductSidebar({
     }
 
     return (
-        <div className="p-5 lg:p-6 border border-slate-200 rounded-3xl bg-white space-y-5 lg:sticky lg:top-6 shadow-sm">
+        <div className="p-5 lg:p-6 border border-slate-200 rounded-2xl bg-white space-y-5 lg:sticky lg:top-6 shadow-sm">
             {/* Header */}
             <div className="space-y-1">
                 <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-slate-900 rounded-lg text-white">
-                        <PackagePlus className="w-4 h-4" />
+                        <PackagePlus className="w-4 h-4 stroke-[1.5]" />
                     </div>
-                    <h3 className="font-black text-slate-900 text-sm lg:text-base tracking-tight uppercase">
+                    <h3 className="font-semibold text-slate-900 text-sm lg:text-base tracking-tight">
                         Assign Items
                     </h3>
                 </div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest pl-9">
+                <p className="text-xs text-slate-500 font-semibold tracking-normal pl-9">
                     {categoryName}
                 </p>
             </div>
@@ -92,7 +92,7 @@ export function AddProductSidebar({
             {/* Selection UI */}
             <div className="space-y-4">
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">
+                    <label className="text-xs font-semibold text-slate-500 ml-1 tracking-normal">
                         Choose Product
                     </label>
 
@@ -102,15 +102,15 @@ export function AddProductSidebar({
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={open}
-                                className="w-full h-12 justify-between rounded-xl border-slate-200 bg-white px-4 text-sm font-medium shadow-none hover:bg-slate-50 transition-all"
+                                className="w-full h-12 justify-between rounded-xl border-slate-200 bg-white px-4 text-sm font-medium shadow-none hover:bg-slate-50 transition-colors"
                             >
                                 {selectedId
                                     ? allProducts.find((p) => p.id === selectedId)?.name
                                     : "Search product catalog..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 stroke-[1.5]" />
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-2xl border-slate-200 shadow-2xl overflow-hidden" align="start">
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-2xl border-slate-200 shadow-lg overflow-hidden" align="start">
                             <Command className="bg-white">
                                 <CommandInput
                                     placeholder="Type to search..."
@@ -118,7 +118,7 @@ export function AddProductSidebar({
                                     onValueChange={setSearchTerm}
                                 />
                                 <CommandList className="max-h-[300px] no-scrollbar">
-                                    <CommandEmpty className="py-6 text-center text-xs text-slate-400">No results found.</CommandEmpty>
+                                    <CommandEmpty className="py-6 text-center text-xs text-slate-500">No results found.</CommandEmpty>
                                     <CommandGroup>
                                         {allProducts.map((product) => (
                                             <CommandItem
@@ -143,13 +143,13 @@ export function AddProductSidebar({
 
                 <Button
                     onClick={handleSingleLink}
-                    className="w-full h-12 rounded-xl bg-slate-900 text-white hover:bg-black font-bold transition-all shadow-lg shadow-black/5"
+                    className="w-full h-12 rounded-xl bg-slate-900 text-white hover:bg-black font-semibold transition-colors shadow-sm"
                     disabled={!selectedId || isPending}
                 >
                     {isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" />
                     ) : (
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="w-4 h-4 mr-2 stroke-[1.5]" />
                     )}
                     Link Selected
                 </Button>
@@ -160,30 +160,30 @@ export function AddProductSidebar({
                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl animate-in fade-in slide-in-from-top-2">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-1.5">
-                            <CheckSquare className="w-3.5 h-3.5 text-slate-400" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            <CheckSquare className="w-4 h-4 text-slate-500 stroke-[1.5]" />
+                            <p className="text-xs font-semibold tracking-normal text-slate-500">
                                 Match Found
                             </p>
                         </div>
-                        <span className="text-[10px] font-bold bg-white px-2 py-0.5 rounded-full border border-slate-100">
+                        <span className="text-xs font-semibold bg-white px-2 py-0.5 rounded-full border border-slate-100">
                             {filteredProducts.length} items
                         </span>
                     </div>
                     <Button
                         variant="outline"
                         size="sm"
-                        className="w-full bg-white border-slate-200 text-slate-900 hover:bg-slate-900 hover:text-white rounded-xl h-10 font-bold text-xs"
+                        className="w-full bg-white border-slate-200 text-slate-900 hover:bg-slate-900 hover:text-white rounded-xl h-10 font-semibold text-xs"
                         onClick={handleLinkAll}
                         disabled={isPending}
                     >
                         {isPending ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin stroke-[1.5]" />
                         ) : "Add All Results"}
                     </Button>
                 </div>
             )}
 
-            <p className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+            <p className="text-center text-xs text-slate-500 font-semibold tracking-normal">
                 Real-time Sync Active
             </p>
         </div>

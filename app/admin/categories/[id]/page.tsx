@@ -75,11 +75,11 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-b border-slate-100 pb-6 lg:border-none">
                     <div className="flex items-center gap-3">
                         <Button variant="outline" size="icon" asChild className="rounded-xl h-10 w-10 border-slate-200 shadow-sm shrink-0">
-                            <Link href="/admin/categories"><ChevronLeft className="w-5 h-5" /></Link>
+                            <Link href="/admin/categories"><ChevronLeft className="w-5 h-5 stroke-[1.5]" /></Link>
                         </Button>
                         <div>
-                            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">{category.name}</h1>
-                            <p className="text-[11px] lg:text-sm text-slate-500 uppercase font-bold tracking-wider">Inventory Management</p>
+                            <h1 className="text-slate-900 text-2xl font-black tracking-tight">{category.name}</h1>
+                            <p className="text-xs lg:text-sm text-slate-500 font-semibold tracking-normal">Inventory Management</p>
                         </div>
                     </div>
                 </div>
@@ -89,41 +89,41 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
                     {/* ASSIGNED PRODUCTS SECTION */}
                     <div className="lg:col-span-2 space-y-4">
                         <div className="flex items-center justify-between px-1">
-                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                <Package className="w-4 h-4 text-slate-400" />
+                            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                                <Package className="w-4 h-4 text-slate-500 stroke-[1.5]" />
                                 Assigned Products
-                                <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full ml-1">
+                                <span className="bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-1">
                                     {linkedProducts.length}
                                 </span>
                             </h3>
                         </div>
 
                         {/* DESKTOP TABLE */}
-                        <div className="hidden md:block border rounded-2xl bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
+                        <div className="hidden md:block border rounded-2xl bg-white shadow-sm overflow-x-auto min-w-0 max-w-full">
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-slate-50 border-b text-slate-500">
                                     <tr>
-                                        <th className="p-4 font-bold uppercase text-[10px] tracking-widest px-6">Product</th>
-                                        <th className="p-4 font-bold uppercase text-[10px] tracking-widest">Brand</th>
-                                        <th className="p-4 text-right font-bold uppercase text-[10px] tracking-widest px-6">Action</th>
+                                        <th className="p-4 font-semibold text-xs tracking-normal px-6">Product</th>
+                                        <th className="p-4 font-semibold text-xs tracking-normal">Brand</th>
+                                        <th className="p-4 text-right font-semibold text-xs tracking-normal px-6">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {linkedProducts.map((product) => (
                                         <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="p-4 px-6">
-                                                <p className="font-bold text-slate-900">{product.name}</p>
-                                                <p className="text-[10px] text-slate-400 font-mono">ID: {product.id.slice(0, 8)}</p>
+                                            <td className="p-4 px-6 tabular-nums">
+                                                <p className="font-semibold text-slate-900">{product.name}</p>
+                                                <p className="text-xs text-slate-500 font-mono">ID: {product.id.slice(0, 8)}</p>
                                             </td>
-                                            <td className="p-4">
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                                                    <Tag className="w-2.5 h-2.5" /> {product.brand || "UNBRANDED"}
+                                            <td className="p-4 tabular-nums">
+                                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                                    <Tag className="w-2.5 h-2.5 stroke-[1.5]" /> {product.brand || "UNBRANDED"}
                                                 </span>
                                             </td>
-                                            <td className="p-4 text-right px-6">
+                                            <td className="p-4 text-right px-6 tabular-nums">
                                                 <form action={unlinkProduct.bind(null, product.id)}>
-                                                    <Button variant="ghost" size="sm" className="h-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                                                        <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                                    <Button variant="ghost" size="sm" className="h-8 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                                                        <Trash2 className="w-4 h-4 mr-2 stroke-[1.5]" />
                                                         Remove
                                                     </Button>
                                                 </form>
@@ -138,22 +138,22 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
                         <div className="md:hidden space-y-3">
                             {linkedProducts.length === 0 && (
                                 <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-200">
-                                    <Package className="w-10 h-10 mx-auto mb-2 opacity-10" />
-                                    <p className="text-slate-400 text-sm">Empty Category</p>
+                                    <Package className="w-10 h-10 mx-auto mb-2 opacity-10 stroke-[1.5]" />
+                                    <p className="text-slate-500 text-sm">Empty Category</p>
                                 </div>
                             )}
                             {linkedProducts.map((product) => (
                                 <Card key={product.id} className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
                                     <CardContent className="p-4 flex items-center justify-between">
                                         <div className="min-w-0">
-                                            <p className="font-bold text-slate-900 text-sm truncate">{product.name}</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
+                                            <p className="font-semibold text-slate-900 text-sm truncate">{product.name}</p>
+                                            <p className="text-xs text-slate-500 font-semibold mt-0.5">
                                                 {product.brand || "No Brand"}
                                             </p>
                                         </div>
                                         <form action={unlinkProduct.bind(null, product.id)}>
                                             <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200 text-red-500 hover:bg-red-50">
-                                                <Trash2 className="w-4 h-4" />
+                                                <Trash2 className="w-4 h-4 stroke-[1.5]" />
                                             </Button>
                                         </form>
                                     </CardContent>

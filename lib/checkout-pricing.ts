@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { FREE_SHIPPING_PINCODES, FREE_SHIPPING_THRESHOLD } from '@/lib/cart-constants'
 import { merchandiseQuote, monetaryAmount, uuidPattern } from '@/lib/cart-quote'
 import { activeOffer, couponOfferMessage, roundMoney } from '@/lib/promotion-engine'
+import type { CouponDefinition } from '@/lib/order-edit'
 export { calculateBXGY } from '@/lib/promotion-engine'
 export type { BXGYRule, PromotionUse } from '@/lib/promotion-engine'
 export { positiveQuantity, uuidPattern } from '@/lib/cart-quote'
@@ -16,6 +17,7 @@ export async function checkoutQuote(db: SupabaseClient, userId: string, rawItems
   let promoEligibleVariantIds:string[]=[]
   let promoDiscount = 0
   let promoId: string | null = null
+  let couponDefinition: CouponDefinition | null = null
   if (input.promoCode && merchandise.hasAutomaticOffer) throw new Error(couponOfferMessage)
   if (input.promoCode) {
     const { data: promo, error: promoError } = await db.from('promo_codes').select('*,promo_code_products(product_id),promo_code_categories(category_id)').eq('code', input.promoCode.toUpperCase()).single()
@@ -28,6 +30,7 @@ export async function checkoutQuote(db: SupabaseClient, userId: string, rawItems
     promoDiscount = promo.discount_type === 'percentage' ? roundMoney(eligibleTotal * monetaryAmount(promo.discount_value) / 100) : monetaryAmount(promo.discount_value)
     promoDiscount = roundMoney(Math.min(promoDiscount, eligibleTotal, promo.max_discount_amount == null ? Infinity : Number(promo.max_discount_amount)))
     promoId = promo.id
+    couponDefinition = promo as CouponDefinition
   }
   if (!uuidPattern.test(input.shippingMethodId)) throw new Error('Please select a valid shipping option')
   const { data: shipping, error: shippingError } = await db.from('shipping_methods').select('id,zone_id,price,name,delivery_time_label,is_active').eq('id', input.shippingMethodId).single()
@@ -51,7 +54,7 @@ export async function checkoutQuote(db: SupabaseClient, userId: string, rawItems
     coinDiscount = Math.min(requestedCoins, Math.floor(Math.max(0, beforeBalances - giftCardDiscount)))
     if (coinDiscount > Number(points?.balance || 0)) throw new Error('Insufficient M Coins')
   }
-  return { ...merchandise, promoDiscount, promoId,promoEligibleVariantIds,
+  return { ...merchandise, promoDiscount, promoId,promoEligibleVariantIds,couponDefinition,
     shippingBasePrice:Number(shipping.price), shippingPrice, shippingLabel: shipping.name, deliveryTimeLabel: shipping.delivery_time_label,
     giftCardDiscount, coinDiscount, total: Math.max(0, roundMoney(beforeBalances - giftCardDiscount - coinDiscount)) }
 }

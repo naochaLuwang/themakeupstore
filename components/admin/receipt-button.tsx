@@ -78,9 +78,9 @@ export function ReceiptButton({ order }: ReceiptProps) {
     return (
         <button
             onClick={generateReceipt}
-            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-900"
+            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-900"
         >
-            <FileDown className="w-4 h-4" />
+            <FileDown className="w-4 h-4 stroke-[1.5]" />
         </button>
     );
 }

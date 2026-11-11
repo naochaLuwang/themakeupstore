@@ -18,9 +18,9 @@ export default function AdminError({
     return (
         <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
             <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
+                <AlertTriangle className="w-6 h-6 text-red-500 stroke-[1.5]" />
             </div>
-            <h2 className="text-xl font-black tracking-tight text-slate-900 mb-2">
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-2">
                 Something went wrong
             </h2>
             <p className="text-sm text-slate-500 max-w-md mb-8">
@@ -30,7 +30,7 @@ export default function AdminError({
                 onClick={() => reset()}
                 className="rounded-xl h-11 px-6 bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800"
             >
-                <RefreshCw className="w-4 h-4 mr-2" />
+                <RefreshCw className="w-4 h-4 mr-2 stroke-[1.5]" />
                 Try Again
             </Button>
         </div>

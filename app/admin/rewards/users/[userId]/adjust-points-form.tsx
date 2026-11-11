@@ -34,7 +34,7 @@ export function AdjustPointsForm({ userId }: { userId: string }) {
 
   return (
     <div className="rounded-2xl border bg-white p-5 shadow-sm">
-      <h3 className="text-sm font-bold text-slate-900 mb-4">Credit M Coins</h3>
+      <h3 className="text-sm font-semibold text-slate-900 mb-4">Credit M Coins</h3>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="relative">
@@ -44,9 +44,9 @@ export function AdjustPointsForm({ userId }: { userId: string }) {
             value={amount}
             onChange={e => setAmount(e.target.value)}
             placeholder="Coins to credit"
-            className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-all"
+            className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-colors"
           />
-          <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
         </div>
 
         <input
@@ -54,15 +54,15 @@ export function AdjustPointsForm({ userId }: { userId: string }) {
           value={note}
           onChange={e => setNote(e.target.value)}
           placeholder="Reason (e.g. compensation, promo bonus)"
-          className="w-full h-10 px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-all"
+          className="w-full h-10 px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-colors"
         />
 
         <button
           type="submit"
           disabled={isPending || !amount || !note.trim()}
-          className="w-full h-10 rounded-xl bg-rose-500 text-white text-sm font-bold hover:bg-rose-600 transition-colors disabled:opacity-40"
+          className="w-full h-10 rounded-xl bg-rose-700 text-white text-sm font-semibold hover:bg-rose-600 transition-colors disabled:opacity-40"
         >
-          {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Credit Coins"}
+          {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto stroke-[1.5]" /> : "Credit Coins"}
         </button>
       </form>
     </div>

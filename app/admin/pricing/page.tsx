@@ -21,7 +21,7 @@ export default async function PricingPage() {
     return (
         <div className="space-y-6">
             <div className="space-y-1">
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Pricing</h1>
+                <h1 className="text-slate-900 text-2xl font-black tracking-tight">Pricing</h1>
                 <p className="text-sm text-slate-500">Global MSRP and promotions management</p>
             </div>
 

@@ -25,7 +25,7 @@ export function DeleteProductButton({ productId, onDelete }: DeleteProductButton
                 type="submit"
                 className="h-9 w-9 rounded-xl text-red-500 hover:text-red-600 hover:bg-red-50"
             >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 stroke-[1.5]" />
             </Button>
         </form>
     )

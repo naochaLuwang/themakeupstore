@@ -15,7 +15,7 @@ export default async function TagsPage() {
     return (
         <div className="space-y-6">
             <div className="space-y-1">
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Tags</h1>
+                <h1 className="text-slate-900 text-2xl font-black tracking-tight">Tags</h1>
                 <p className="text-sm text-slate-500">Bulk manage product tags (badges on product cards)</p>
             </div>
 

@@ -43,8 +43,8 @@ export function DeleteCategoryButton({ id, name, isMobile }: DeleteCategoryButto
             <AlertDialogTrigger asChild>
                 {isMobile ? (
                     /* MOBILE STYLE: Full-width button for the card grid */
-                    <button className="w-full py-3 flex justify-center items-center gap-2 text-[10px] font-bold text-red-500 hover:bg-red-50 transition-colors">
-                        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    <button className="w-full py-3 flex justify-center items-center gap-2 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors">
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Trash2 className="w-4 h-4 stroke-[1.5]" />}
                         Delete
                     </button>
                 ) : (
@@ -52,31 +52,31 @@ export function DeleteCategoryButton({ id, name, isMobile }: DeleteCategoryButto
                     <Button
                         variant="outline"
                         size="icon"
-                        className="h-9 w-9 rounded-lg border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                        className="h-9 w-9 rounded-lg border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
                         disabled={loading}
                     >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Trash2 className="w-4 h-4 stroke-[1.5]" />}
                     </Button>
                 )}
             </AlertDialogTrigger>
 
-            <AlertDialogContent className="rounded-2xl border-slate-200 shadow-2xl">
+            <AlertDialogContent className="rounded-2xl border-slate-200 shadow-lg">
                 <AlertDialogHeader>
-                    <AlertDialogTitle className="text-xl font-black text-slate-900">
+                    <AlertDialogTitle className="text-xl font-semibold text-slate-900">
                         Delete Category?
                     </AlertDialogTitle>
                     <AlertDialogDescription className="text-slate-500">
-                        Are you sure you want to delete <span className="font-bold text-slate-900">"{name}"</span>? 
+                        Are you sure you want to delete <span className="font-semibold text-slate-900">"{name}"</span>?
                         This action cannot be undone and may affect products currently assigned to this category.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="gap-2 mt-4">
-                    <AlertDialogCancel className="rounded-xl border-slate-200 font-bold">
+                    <AlertDialogCancel className="rounded-xl border-slate-200 font-semibold">
                         Cancel
                     </AlertDialogCancel>
                     <AlertDialogAction
                         onClick={handleDelete}
-                        className="rounded-xl bg-red-500 hover:bg-red-600 font-bold"
+                        className="rounded-xl bg-red-500 hover:bg-red-600 font-semibold"
                     >
                         Confirm Delete
                     </AlertDialogAction>

@@ -94,22 +94,22 @@ export function BXGYForm({ products, categories, initialData, initialSelectedIds
         <form action={handleSubmit} className="space-y-8">
             {/* Rule Name */}
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rule Name</label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Rule Name</label>
                 <input name="name" defaultValue={initialData?.name} required
-                    className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                    className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                     placeholder="e.g., Buy 2 Get 1 Free" />
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Description</label>
                 <textarea name="description" defaultValue={initialData?.description} rows={2}
-                    className="w-full px-4 py-3 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none resize-none"
+                    className="w-full px-4 py-3 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none resize-none"
                     placeholder="Internal note" />
             </div>
 
             {/* Buy Configuration */}
             <div className="space-y-3">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Buy Condition</label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Buy Condition</label>
                 <div className="flex flex-wrap gap-2">
                     {[
                         { value: 'specific_products', label: 'Specific Products' },
@@ -117,31 +117,31 @@ export function BXGYForm({ products, categories, initialData, initialSelectedIds
                         { value: 'specific_brands', label: 'Specific Brands' },
                     ].map(opt => (
                         <button key={opt.value} type="button" onClick={() => setBuyType(opt.value)}
-                            className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${buyType === opt.value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                            className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${buyType === opt.value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
                             {opt.label}
                         </button>
                     ))}
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Buy Quantity</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Buy Quantity</label>
                     <input name="buy_quantity" type="number" readOnly value={2}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                         placeholder="How many to buy" />
                 </div>
                 {buyType === 'specific_products' && (
                     <div className="space-y-2">
                         <div className="relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 stroke-[1.5]" />
                             <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
-                                className="w-full h-10 pl-9 pr-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                                className="w-full h-10 pl-9 pr-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                                 placeholder="Search buy products..." />
                         </div>
                         <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-2 space-y-1">
                             {filteredProducts.map((p: any) => (
                                 <button key={p.id} type="button" onClick={() => toggleBuyProduct(p.id)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-all ${selectedBuyProductIds.includes(p.id) ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${selectedBuyProductIds.includes(p.id) ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
                                     {p.name}
-                                    {selectedBuyProductIds.includes(p.id) && <Check className="w-3 h-3" />}
+                                    {selectedBuyProductIds.includes(p.id) && <Check className="w-4 h-4 stroke-[1.5]" />}
                                 </button>
                             ))}
                         </div>
@@ -150,17 +150,17 @@ export function BXGYForm({ products, categories, initialData, initialSelectedIds
                 {buyType === 'specific_categories' && (
                     <div className="space-y-2">
                         <div className="relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 stroke-[1.5]" />
                             <input value={categorySearch} onChange={e => setCategorySearch(e.target.value)}
-                                className="w-full h-10 pl-9 pr-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                                className="w-full h-10 pl-9 pr-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                                 placeholder="Search categories..." />
                         </div>
                         <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-2 space-y-1">
                             {filteredCategories.map((c: any) => (
                                 <button key={c.id} type="button" onClick={() => toggleBuyCategory(c.id)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-all ${selectedBuyCategoryIds.includes(c.id) ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${selectedBuyCategoryIds.includes(c.id) ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
                                     {c.name}
-                                    {selectedBuyCategoryIds.includes(c.id) && <Check className="w-3 h-3" />}
+                                    {selectedBuyCategoryIds.includes(c.id) && <Check className="w-4 h-4 stroke-[1.5]" />}
                                 </button>
                             ))}
                         </div>
@@ -187,7 +187,7 @@ export function BXGYForm({ products, categories, initialData, initialSelectedIds
             </div>
 
             <fieldset className="space-y-3">
-                <legend className="text-xs font-bold text-slate-500 uppercase tracking-wider">Existing discounts</legend>
+                <legend className="text-xs font-semibold text-slate-500 tracking-normal">Existing discounts</legend>
                 {[
                     { value: 'replace_discounts', label: 'Replace existing discounts', description: 'Offer units use original prices. The cheapest original-price unit is free for every 3. Extra units keep their normal discounts. Applies even when the normal discount would be cheaper.' },
                     { value: 'combine_discounts', label: 'Combine with existing discounts', description: 'Keep current selling prices, including active sale prices. The cheapest selling-price unit is free for every 3.' },
@@ -208,13 +208,13 @@ export function BXGYForm({ products, categories, initialData, initialSelectedIds
             {/* Limits */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Usage Limit</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Usage Limit</label>
                     <input name="usage_limit" type="number" min={0} defaultValue={initialData?.usage_limit}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                         placeholder="∞" />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Per User Only</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Per User Only</label>
                     <label className="flex items-center gap-2 h-12 px-4 bg-slate-50 rounded-xl cursor-pointer">
                         <input name="once_per_user" type="checkbox" defaultChecked={initialData?.once_per_user}
                             className="w-4 h-4 rounded border-slate-300" />
@@ -226,14 +226,14 @@ export function BXGYForm({ products, categories, initialData, initialSelectedIds
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Date (IST)</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Start Date (IST)</label>
                     <input name="starts_at" type="datetime-local" defaultValue={toStoreDateTime(initialData?.starts_at)}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none" />
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none" />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Expiry Date (IST)</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Expiry Date (IST)</label>
                     <input name="expires_at" type="datetime-local" defaultValue={toStoreDateTime(initialData?.expires_at)}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none" />
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none" />
                 </div>
             </div>
 
@@ -241,14 +241,14 @@ export function BXGYForm({ products, categories, initialData, initialSelectedIds
             <div className="flex items-center gap-3">
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input name="is_active" type="checkbox" defaultChecked={initialData?.is_active ?? true} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-colors peer-checked:bg-slate-900"></div>
                 </label>
                 <span className="text-sm font-medium text-slate-700">Active</span>
             </div>
 
             <button type="submit" disabled={loading}
                 className="h-12 px-8 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors inline-flex items-center gap-2 disabled:opacity-50">
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading && <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />}
                 {initialData ? 'Update Rule' : 'Create Rule'}
             </button>
         </form>

@@ -99,18 +99,18 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
         <form action={handleSubmit} className="space-y-8">
             {/* Rule Name */}
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rule Name</label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Rule Name</label>
                 <input name="name" defaultValue={initialData?.name} required
-                    className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                    className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                     placeholder="e.g., Birthday Gift, Festival Offer"
                 />
             </div>
 
             {/* Description */}
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Description</label>
                 <textarea name="description" defaultValue={initialData?.description} rows={2}
-                    className="w-full px-4 py-3 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none resize-none"
+                    className="w-full px-4 py-3 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none resize-none"
                     placeholder="Internal note about this rule"
                 />
             </div>
@@ -118,9 +118,9 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
             <p className="rounded-xl border border-pink-100 bg-pink-50 p-4 text-sm text-slate-700">One fixed gift per order. Uses current selling prices before BXGY discounts, excluding delivery charges. The gift can be awarded alongside BXGY; coupons cannot be combined. If several gifts qualify, the highest-value available gift is selected.</p>
             {/* Gift Product */}
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Product <span className="text-slate-300 font-normal normal-case">(store product)</span></label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Gift Product <span className="text-slate-400 font-normal normal-case">(store product)</span></label>
                 <select name="gift_product_id" value={storeGiftId} onChange={e=>{setStoreGiftId(e.target.value);if(e.target.value)setDedicatedGiftId('')}}
-                    className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none">
+                    className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none">
                     <option value="">None — use gift product below</option>
                     {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -128,26 +128,26 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
 
             {/* Gift Product (New Table) */}
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Product <span className="text-slate-300 font-normal normal-case">(dedicated gift inventory)</span></label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Gift Product <span className="text-slate-400 font-normal normal-case">(dedicated gift inventory)</span></label>
                 <select name="gift_product_ref_id" value={dedicatedGiftId} onChange={e=>{setDedicatedGiftId(e.target.value);if(e.target.value)setStoreGiftId('')}}
-                    className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none">
+                    className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none">
                     <option value="">None — use store product above</option>
                     {giftProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
-                <p className="text-[11px] text-slate-400">Prefer selecting from dedicated gift inventory. Leave both as "None" if you need to go back.</p>
+                <p className="text-xs text-slate-500">Prefer selecting from dedicated gift inventory. Leave both as "None" if you need to go back.</p>
             </div>
 
             {/* Gift Quantity */}
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gift Quantity</label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Gift Quantity</label>
                 <input name="gift_quantity" type="number" readOnly value={1}
-                    className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                    className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                 />
             </div>
 
             {/* Trigger Type */}
             <div className="space-y-3">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Trigger Condition</label>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">Trigger Condition</label>
                 <div className="flex flex-wrap gap-2">
                     {[
                         { value: 'cart_total', label: 'Cart Total' },
@@ -156,7 +156,7 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
                         { value: 'specific_brands', label: 'Specific Brands' },
                     ].map(opt => (
                         <button key={opt.value} type="button" onClick={() => setTriggerType(opt.value)}
-                            className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${triggerType === opt.value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                            className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${triggerType === opt.value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
                             {opt.label}
                         </button>
                     ))}
@@ -166,23 +166,23 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
                         ? (initialData?.trigger_threshold ?? 0)
                         : (initialData?.trigger_threshold ?? 1)
                     }
-                    className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                    className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                     placeholder={triggerType === 'cart_total' ? "Minimum cart total (₹)" : "Minimum quantity of qualifying items"}
                 />
                 {triggerType === 'specific_products' && (
                     <div className="space-y-2">
                         <div className="relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 stroke-[1.5]" />
                             <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
-                                className="w-full h-10 pl-9 pr-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                                className="w-full h-10 pl-9 pr-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                                 placeholder="Search products..." />
                         </div>
                         <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-2 space-y-1">
                             {filteredProducts.map((p: any) => (
                                 <button key={p.id} type="button" onClick={() => toggleProduct(p.id)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-all ${selectedProductIds.includes(p.id) ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${selectedProductIds.includes(p.id) ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
                                     {p.name}
-                                    {selectedProductIds.includes(p.id) && <Check className="w-3 h-3" />}
+                                    {selectedProductIds.includes(p.id) && <Check className="w-4 h-4 stroke-[1.5]" />}
                                 </button>
                             ))}
                         </div>
@@ -191,17 +191,17 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
                 {triggerType === 'specific_categories' && (
                     <div className="space-y-2">
                         <div className="relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 stroke-[1.5]" />
                             <input value={categorySearch} onChange={e => setCategorySearch(e.target.value)}
-                                className="w-full h-10 pl-9 pr-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                                className="w-full h-10 pl-9 pr-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                                 placeholder="Search categories..." />
                         </div>
                         <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-2 space-y-1">
                             {filteredCategories.map((c: any) => (
                                 <button key={c.id} type="button" onClick={() => toggleCategory(c.id)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-all ${selectedCategoryIds.includes(c.id) ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${selectedCategoryIds.includes(c.id) ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
                                     {c.name}
-                                    {selectedCategoryIds.includes(c.id) && <Check className="w-3 h-3" />}
+                                    {selectedCategoryIds.includes(c.id) && <Check className="w-4 h-4 stroke-[1.5]" />}
                                 </button>
                             ))}
                         </div>
@@ -210,37 +210,37 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
                 {triggerType === 'specific_brands' && (
                     <input name="qualifying_brands" type="text"
                         defaultValue={initialSelectedIds?.brands?.join(', ')}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                         placeholder="Comma-separated brand names" />
                 )}
             </div>
 
             {/* Optional Minimum Cart Amount */}
             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Minimum Cart Amount <span className="text-slate-300 font-normal normal-case">(optional)</span>
+                <label className="text-xs font-semibold text-slate-500 tracking-normal">
+                    Minimum Cart Amount <span className="text-slate-400 font-normal normal-case">(optional)</span>
                 </label>
                 <input name="min_cart_amount" type="number" min={0} defaultValue={initialData?.min_cart_amount || ''}
-                    className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                    className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                     placeholder="e.g., 500 — leave empty for no minimum" />
-                <p className="text-[11px] text-slate-400">Cart must be at least this amount (₹) for the gift to apply, regardless of other conditions.</p>
+                <p className="text-xs text-slate-500">Cart must be at least this amount (₹) for the gift to apply, regardless of other conditions.</p>
             </div>
 
             {/* Limits */}
             <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Usage Limit</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Usage Limit</label>
                     <input name="usage_limit" type="number" min={0} defaultValue={initialData?.usage_limit}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none"
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none"
                         placeholder="∞" />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Max / Order</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Max / Order</label>
                     <input name="max_per_order" type="number" readOnly value={1}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none" />
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none" />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Per User Only</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Per User Only</label>
                     <label className="flex items-center gap-2 h-12 px-4 bg-slate-50 rounded-xl cursor-pointer">
                         <input name="once_per_user" type="checkbox" defaultChecked={initialData?.once_per_user}
                             className="w-4 h-4 rounded border-slate-300" />
@@ -252,14 +252,14 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Date (IST)</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Start Date (IST)</label>
                     <input name="starts_at" type="datetime-local" defaultValue={toStoreDateTime(initialData?.starts_at)}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none" />
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none" />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Expiry Date (IST)</label>
+                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Expiry Date (IST)</label>
                     <input name="expires_at" type="datetime-local" defaultValue={toStoreDateTime(initialData?.expires_at)}
-                        className="w-full h-12 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-all outline-none" />
+                        className="w-full h-10 px-4 text-sm bg-slate-50 border-2 border-transparent rounded-xl focus:bg-white focus:border-slate-900 transition-colors outline-none" />
                 </div>
             </div>
 
@@ -267,7 +267,7 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
             <div className="flex items-center gap-3">
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input name="is_active" type="checkbox" defaultChecked={initialData?.is_active ?? true} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-colors peer-checked:bg-slate-900"></div>
                 </label>
                 <span className="text-sm font-medium text-slate-700">Active</span>
             </div>
@@ -275,7 +275,7 @@ export function FreeGiftForm({ products, giftProducts, categories, initialData, 
             {/* Submit */}
             <button type="submit" disabled={loading}
                 className="h-12 px-8 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors inline-flex items-center gap-2 disabled:opacity-50">
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading && <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />}
                 {initialData ? 'Update Rule' : 'Create Rule'}
             </button>
         </form>

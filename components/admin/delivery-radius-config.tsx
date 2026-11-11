@@ -131,7 +131,7 @@ export default function DeliveryRadiusConfig() {
     if (loading) {
         return (
             <div className="rounded-2xl border bg-white p-6 shadow-sm flex items-center justify-center h-32">
-                <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 stroke-[1.5]" />
             </div>
         )
     }
@@ -142,11 +142,11 @@ export default function DeliveryRadiusConfig() {
             <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-100">
                 <div className="flex items-center gap-3">
                     <div className={`p-2.5 rounded-xl ${config.enabled ? 'bg-emerald-50' : 'bg-slate-50'}`}>
-                        <MapPin className={`w-5 h-5 ${config.enabled ? 'text-emerald-600' : 'text-slate-400'}`} />
+                        <MapPin className={`w-5 h-5 stroke-[1.5] ${config.enabled ? 'text-emerald-600' : 'text-slate-500'}`} />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-slate-900">Map-Based Delivery</h3>
-                        <p className="text-xs text-slate-400">Restrict deliveries to a radius around your store</p>
+                        <h3 className="text-sm font-semibold text-slate-900">Map-Based Delivery</h3>
+                        <p className="text-xs text-slate-500">Restrict deliveries to a radius around your store</p>
                     </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -154,7 +154,7 @@ export default function DeliveryRadiusConfig() {
                         checked={config.enabled}
                         onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
                     />
-                    <div className="w-10 h-6 bg-slate-200 rounded-full peer peer-checked:bg-emerald-500 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:shadow-sm after:transition-all" />
+                    <div className="w-10 h-6 bg-slate-200 rounded-full peer peer-checked:bg-emerald-500 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:shadow-sm after:transition-colors" />
                 </label>
             </div>
 
@@ -163,21 +163,21 @@ export default function DeliveryRadiusConfig() {
                     {/* Center point inputs */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Label</label>
+                            <label className="text-xs font-semibold text-slate-500 tracking-normal">Label</label>
                             <Input className="h-10 text-sm border-slate-200 bg-slate-50 rounded-xl"
                                 value={config.center_label}
                                 onChange={(e) => setConfig({ ...config, center_label: e.target.value })}
                                 placeholder="Main Store" />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Latitude</label>
+                            <label className="text-xs font-semibold text-slate-500 tracking-normal">Latitude</label>
                             <Input className="h-10 text-sm font-mono border-slate-200 bg-slate-50 rounded-xl"
                                 type="number" step="any"
                                 value={config.latitude}
                                 onChange={(e) => setConfig({ ...config, latitude: parseFloat(e.target.value) || 0 })} />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Longitude</label>
+                            <label className="text-xs font-semibold text-slate-500 tracking-normal">Longitude</label>
                             <Input className="h-10 text-sm font-mono border-slate-200 bg-slate-50 rounded-xl"
                                 type="number" step="any"
                                 value={config.longitude}
@@ -218,8 +218,8 @@ export default function DeliveryRadiusConfig() {
                         </MapContainer>
                     </div>
 
-                    <p className="text-xs text-slate-400 flex items-center gap-1">
-                        <Radius className="w-3 h-3" />
+                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                        <Radius className="w-4 h-4 stroke-[1.5]" />
                         Click the map or drag the marker to set center. Max radius: {maxRadius} km
                     </p>
 
@@ -227,13 +227,13 @@ export default function DeliveryRadiusConfig() {
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-1.5">
-                                <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
-                                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Delivery Charge Tiers</span>
+                                <IndianRupee className="w-4 h-4 text-slate-500 stroke-[1.5]" />
+                                <span className="text-xs font-semibold text-slate-500 tracking-normal">Delivery Charge Tiers</span>
                             </div>
                             <Button onClick={addTier} variant="outline" size="sm"
-                                className="h-7 px-2.5 text-[10px] font-semibold border-slate-200 rounded-lg"
+                                className="h-7 px-2.5 text-xs font-semibold border-slate-200 rounded-lg"
                             >
-                                <Plus className="w-3 h-3 mr-1" /> Add Tier
+                                <Plus className="w-4 h-4 mr-1 stroke-[1.5]" /> Add Tier
                             </Button>
                         </div>
                         <div className="space-y-1.5">
@@ -241,7 +241,7 @@ export default function DeliveryRadiusConfig() {
                                 <div key={i}
                                     className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-100"
                                 >
-                                    <span className="text-xs font-bold text-slate-300 w-5">{i + 1}</span>
+                                    <span className="text-xs font-semibold text-slate-400 w-5">{i + 1}</span>
                                     <div className="w-3 h-3 rounded-full shrink-0"
                                         style={{ backgroundColor: tierColors[i % tierColors.length] }} />
                                     <div className="flex items-center gap-1.5 flex-1">
@@ -249,24 +249,24 @@ export default function DeliveryRadiusConfig() {
                                             className="h-8 w-16 text-xs font-mono border-slate-200 bg-white rounded-lg px-2"
                                             value={tier.from_km}
                                             onChange={(e) => updateTier(i, { from_km: parseFloat(e.target.value) || 0 })} />
-                                        <span className="text-xs text-slate-400">—</span>
+                                        <span className="text-xs text-slate-500">—</span>
                                         <Input type="number" step="0.5" min="0"
                                             className="h-8 w-16 text-xs font-mono border-slate-200 bg-white rounded-lg px-2"
                                             value={tier.to_km}
                                             onChange={(e) => updateTier(i, { to_km: parseFloat(e.target.value) || 0 })} />
-                                        <span className="text-xs text-slate-400 font-mono">km</span>
+                                        <span className="text-xs text-slate-500 font-mono">km</span>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <span className="text-xs text-slate-400">₹</span>
+                                        <span className="text-xs text-slate-500">₹</span>
                                         <Input type="number" min="0"
-                                            className="h-8 w-20 text-xs font-mono border-slate-200 bg-white rounded-lg px-2 font-bold"
+                                            className="h-8 w-20 text-xs font-mono border-slate-200 bg-white rounded-lg px-2 font-semibold"
                                             value={tier.charge}
                                             onChange={(e) => updateTier(i, { charge: parseFloat(e.target.value) || 0 })} />
                                     </div>
                                     <button onClick={() => removeTier(i)}
-                                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors shrink-0"
                                     >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-4 h-4 stroke-[1.5]" />
                                     </button>
                                 </div>
                             ))}
@@ -276,7 +276,7 @@ export default function DeliveryRadiusConfig() {
                     {/* Summary */}
                     {config.tiers.length > 0 && (
                         <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Pricing Summary</p>
+                            <p className="text-xs font-semibold text-slate-500 tracking-normal mb-2">Pricing Summary</p>
                             <div className="space-y-0.5 text-xs text-slate-600">
                                 {config.tiers.map((tier, i) => (
                                     <div key={i} className="flex items-center gap-2">
@@ -290,9 +290,9 @@ export default function DeliveryRadiusConfig() {
 
                     <div className="flex justify-end">
                         <Button onClick={handleSave} disabled={saving}
-                            className="h-10 px-6 bg-slate-900 hover:bg-slate-800 text-xs font-bold uppercase tracking-wider rounded-xl"
+                            className="h-10 px-6 bg-slate-900 hover:bg-slate-800 text-xs font-semibold tracking-normal rounded-xl"
                         >
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" /> : <Save className="w-4 h-4 mr-2 stroke-[1.5]" />}
                             Save Settings
                         </Button>
                     </div>
