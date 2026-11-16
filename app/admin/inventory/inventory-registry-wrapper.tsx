@@ -1,26 +1,45 @@
 "use client"
 
-import { useState, useMemo, Fragment, useEffect } from "react"
+import { useState, useMemo, Fragment } from "react"
 import { useRouter } from "next/navigation"
 import { updateStock } from "@/app/actions/inventory"
 import { toast } from "sonner"
 import {
-    Loader2, Save, Search, Package, Square, CheckSquare,
+    Loader2, Save, Search, Package, Square, CheckSquare, MinusSquare,
     Zap,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
-    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 
 type VariantData = {
     id: string; sku: string; title: string; stock: number;
     price: number; discount_type?: string; discount_value?: number;
 }
-type ProductData = {
+export type ProductData = {
     id: string; name: string; brand?: string; thumbnail_url?: string;
     product_variants?: VariantData[];
     product_categories?: { category_id: string }[];
+}
+
+type StockFilter = "all" | "out" | "low" | "in"
+const MAX_STOCK = 2_147_483_647
+
+function matchesStockFilter(stock: number, filter: StockFilter) {
+    if (filter === "out") return stock <= 0
+    if (filter === "low") return stock > 0 && stock <= 10
+    if (filter === "in") return stock > 0
+    return true
+}
+
+function stockAdjustment(currentStock: number, input: string): number | null {
+    const clean = input.trim()
+    if (!/^[+-]?\d+$/.test(clean)) return null
+    const amount = Number(clean)
+    if (!Number.isSafeInteger(amount)) return null
+    const stock = /^[+-]/.test(clean) ? Math.max(0, currentStock + amount) : amount
+    return Number.isSafeInteger(stock) && stock >= 0 && stock <= MAX_STOCK ? stock : null
 }
 
 function computeSellingPrice(v: VariantData): number {
@@ -40,14 +59,18 @@ function stockLevel(stock: number) {
 
 export default function InventoryRegistryWrapper({
     initialProducts,
-    categories
+    categories,
+    initialSearch = "",
+    initialStock = "all",
 }: {
     initialProducts: ProductData[];
     categories: { id: string; name: string }[];
+    initialSearch?: string;
+    initialStock?: StockFilter;
 }) {
-    const [searchQuery, setSearchQuery] = useState("")
+    const [searchQuery, setSearchQuery] = useState(initialSearch)
     const [selectedCategory, setSelectedCategory] = useState("all")
-    const [stockFilter, setStockFilter] = useState("all")
+    const [stockFilter, setStockFilter] = useState<StockFilter>(initialStock)
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const router = useRouter()
     const [savingId, setSavingId] = useState<string | null>(null)
@@ -56,29 +79,26 @@ export default function InventoryRegistryWrapper({
     const [bulkValue, setBulkValue] = useState("10")
     const [isBulkUpdating, setIsBulkUpdating] = useState(false)
     const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 })
+    const [bulkError, setBulkError] = useState("")
+    const isUpdating = isBulkUpdating || savingId !== null
 
     const filteredProducts = useMemo(() => {
-        return initialProducts.filter((p) => {
-            const q = searchQuery.toLowerCase()
-            const matchesSearch =
+        const q = searchQuery.trim().toLowerCase()
+        return initialProducts.flatMap((p) => {
+            const matchesProduct =
                 !q ||
                 p.name.toLowerCase().includes(q) ||
-                p.brand?.toLowerCase().includes(q) ||
-                p.product_variants?.some((v) =>
-                    v.title?.toLowerCase().includes(q) ||
-                    v.sku?.toLowerCase().includes(q)
-                )
+                p.brand?.toLowerCase().includes(q)
             const matchesCategory =
                 selectedCategory === "all" ||
                 p.product_categories?.some((pc) => pc.category_id === selectedCategory)
+            if (!matchesCategory) return []
 
-            let matchesStock = true
-            const variants = p.product_variants || []
-            if (stockFilter === "out") matchesStock = variants.every((v) => v.stock === 0)
-            else if (stockFilter === "low") matchesStock = variants.some((v) => v.stock > 0 && v.stock <= 10)
-            else if (stockFilter === "in") matchesStock = variants.every((v) => v.stock > 10)
-
-            return matchesSearch && matchesCategory && matchesStock
+            const variants = (p.product_variants || []).filter((v) =>
+                matchesStockFilter(v.stock, stockFilter) &&
+                (matchesProduct || v.title?.toLowerCase().includes(q) || v.sku?.toLowerCase().includes(q))
+            )
+            return variants.length > 0 ? [{ ...p, product_variants: variants, totalVariants: p.product_variants?.length || 0 }] : []
         })
     }, [searchQuery, selectedCategory, stockFilter, initialProducts])
 
@@ -90,78 +110,101 @@ export default function InventoryRegistryWrapper({
         return ids
     }, [filteredProducts])
 
-    const selectedCount = selectedIds.size
+    const selectedVariantIds = allVariantIds.filter((id) => selectedIds.has(id))
+    const selectedCount = selectedVariantIds.length
+    const allSelected = allVariantIds.length > 0 && selectedCount === allVariantIds.length
+    const hasFilters = searchQuery !== "" || selectedCategory !== "all" || stockFilter !== "all"
+
+    const clearSelection = () => {
+        setSelectedIds(new Set())
+        setBulkError("")
+    }
 
     const toggleSelect = (id: string) => {
-        const next = new Set(selectedIds)
-        if (next.has(id)) next.delete(id); else next.add(id)
-        setSelectedIds(next)
+        setSelectedIds((previous) => {
+            const next = new Set(previous)
+            if (next.has(id)) next.delete(id); else next.add(id)
+            return next
+        })
     }
 
     const toggleSelectAll = () => {
-        if (selectedCount > 0) {
-            setSelectedIds(new Set())
-        } else {
-            setSelectedIds(new Set(allVariantIds))
-        }
+        setSelectedIds(allSelected ? new Set() : new Set(allVariantIds))
     }
 
     const handleSave = async (id: string, currentStock: number, input: string) => {
-        let newStock = currentStock
-        const clean = input.trim()
-        if (clean.startsWith("+")) {
-            newStock = currentStock + (parseInt(clean.slice(1)) || 0)
-        } else if (clean.startsWith("-")) {
-            newStock = Math.max(0, currentStock - (parseInt(clean.slice(1)) || 0))
-        } else if (clean !== "") {
-            newStock = parseInt(clean) || 0
-        } else {
-            return
+        if (isUpdating) return false
+        const newStock = stockAdjustment(currentStock, input)
+        if (newStock === null) {
+            toast.error("Enter a whole number, +N or -N")
+            return false
         }
-        if (newStock === currentStock) return
+        if (newStock === currentStock) return false
 
         setSavingId(id)
-        const result = await updateStock(id, newStock)
-        if (result.success) {
+        try {
+            const result = await updateStock(id, newStock)
+            if (!result.success) {
+                toast.error(result.message || "Error updating stock")
+                return false
+            }
             toast.success("Stock updated")
             router.refresh()
-        } else {
-            toast.error(result.message || "Error updating stock")
+            return true
+        } catch {
+            toast.error("Unable to save stock. Check the current stock before trying again.")
+            return false
+        } finally {
+            setSavingId(null)
         }
-        setSavingId(null)
     }
 
     const handleBulkApply = async () => {
-        const val = parseInt(bulkValue)
-        if (isNaN(val) || val <= 0) return toast.error("Enter a valid value")
+        if (isUpdating || selectedCount === 0) return
+        const val = stockAdjustment(0, bulkValue)
+        if (!/^\d+$/.test(bulkValue.trim()) || val === null || (bulkAction !== "set" && val === 0)) {
+            return toast.error(bulkAction === "set" ? "Enter a whole number of 0 or more" : "Enter a whole number greater than 0")
+        }
+
+        const variantsById = new Map(initialProducts.flatMap((p) => (p.product_variants || []).map((v) => [v.id, v] as const)))
+        const updates = selectedVariantIds.map((id) => {
+            const stock = variantsById.get(id)!.stock
+            const input = bulkAction === "set" ? String(val) : `${bulkAction === "add" ? "+" : "-"}${val}`
+            return { id, newStock: stockAdjustment(stock, input) }
+        })
+        if (updates.some((update) => update.newStock === null)) return toast.error("Stock value is too large")
 
         setIsBulkUpdating(true)
-        const ids = Array.from(selectedIds)
-        setBulkProgress({ current: 0, total: ids.length })
-
-        for (let i = 0; i < ids.length; i++) {
-            const id = ids[i]
-            setBulkProgress({ current: i + 1, total: ids.length })
-            // Find current stock
-            let currentStock = 0
-            for (const p of initialProducts) {
-                const v = p.product_variants?.find((x) => x.id === id)
-                if (v) { currentStock = v.stock; break }
+        setBulkError("")
+        setBulkProgress({ current: 0, total: updates.length })
+        const failedIds = new Set<string>()
+        let updatedCount = 0
+        try {
+            for (let i = 0; i < updates.length; i++) {
+                const { id, newStock } = updates[i]
+                try {
+                    const result = await updateStock(id, newStock!)
+                    if (result.success) updatedCount++
+                    else failedIds.add(id)
+                } catch {
+                    failedIds.add(id)
+                }
+                setBulkProgress({ current: i + 1, total: updates.length })
             }
-
-            let newStock = currentStock
-            if (bulkAction === "set") newStock = val
-            else if (bulkAction === "add") newStock = currentStock + val
-            else if (bulkAction === "subtract") newStock = Math.max(0, currentStock - val)
-
-            await updateStock(id, newStock)
+            setSelectedIds(failedIds)
+            router.refresh()
+            if (failedIds.size > 0) {
+                const message = `${updatedCount} updated; ${failedIds.size} could not be confirmed. Check current stock before retrying the selected variants.`
+                setBulkError(message)
+                toast.error(message)
+            } else {
+                setBulkOpen(false)
+                toast.success(`Updated ${updatedCount} variants`)
+            }
+        } finally {
+            setIsBulkUpdating(false)
+            setBulkProgress({ current: 0, total: 0 })
         }
-        setIsBulkUpdating(false)
-        setBulkProgress({ current: 0, total: 0 })
-        setSelectedIds(new Set())
-        setBulkOpen(false)
-        router.refresh()
-        toast.success(`Updated ${ids.length} variants`)
     }
 
     return (
@@ -171,17 +214,21 @@ export default function InventoryRegistryWrapper({
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
                     <Input
-                        placeholder="Search products or SKU..."
+                        aria-label="Search inventory"
+                        placeholder="Search products, shades or SKU..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => { setSearchQuery(e.target.value); clearSelection() }}
+                        disabled={isUpdating}
                         className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 rounded-lg"
                     />
                 </div>
                 <div className="relative shrink-0">
                     <FilterIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
                     <select
+                        aria-label="Filter by category"
                         value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        onChange={(e) => { setSelectedCategory(e.target.value); clearSelection() }}
+                        disabled={isUpdating}
                         className="pl-9 pr-8 h-9 rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 appearance-none cursor-pointer outline-none min-w-[140px]"
                     >
                         <option value="all">All Categories</option>
@@ -192,23 +239,41 @@ export default function InventoryRegistryWrapper({
                 </div>
                 <div className="relative shrink-0">
                     <select
+                        aria-label="Filter by stock"
                         value={stockFilter}
-                        onChange={(e) => setStockFilter(e.target.value)}
+                        onChange={(e) => { setStockFilter(e.target.value as StockFilter); clearSelection() }}
+                        disabled={isUpdating}
                         className="h-9 rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 appearance-none cursor-pointer outline-none min-w-[120px] px-3"
                     >
                         <option value="all">All Stock</option>
-                        <option value="low">Low (≤10)</option>
+                        <option value="low">Low Stock (1–10)</option>
                         <option value="out">Out of Stock</option>
-                        <option value="in">In Stock</option>
+                        <option value="in">In Stock (&gt;0)</option>
                     </select>
                 </div>
                 {selectedCount > 0 && (
                     <button
-                        onClick={() => setBulkOpen(true)}
+                        onClick={() => { setBulkError(""); setBulkOpen(true) }}
+                        disabled={isUpdating}
                         className="h-9 px-4 rounded-lg bg-slate-900 text-white text-xs font-semibold tracking-normal flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
                     >
                         <Zap className="w-4 h-4 stroke-[1.5]" />
                         Bulk ({selectedCount})
+                    </button>
+                )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <p role="status">
+                    Showing {allVariantIds.length} variant{allVariantIds.length !== 1 ? "s" : ""} across {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}. Filters apply to individual variants.
+                </p>
+                {hasFilters && (
+                    <button
+                        onClick={() => { setSearchQuery(""); setSelectedCategory("all"); setStockFilter("all"); clearSelection() }}
+                        disabled={isUpdating}
+                        className="font-medium text-slate-700 hover:text-slate-900 underline underline-offset-2 disabled:opacity-50"
+                    >
+                        Clear filters
                     </button>
                 )}
             </div>
@@ -219,8 +284,15 @@ export default function InventoryRegistryWrapper({
                     <thead>
                         <tr className="border-b border-slate-100 bg-slate-50/50">
                             <th className="py-3 px-4 w-10">
-                                <button onClick={toggleSelectAll} className="text-slate-400 hover:text-slate-500 transition-colors">
-                                    {selectedCount > 0 ? <CheckSquare className="w-4 h-4 stroke-[1.5]" /> : <Square className="w-4 h-4 stroke-[1.5]" />}
+                                <button
+                                    onClick={toggleSelectAll}
+                                    role="checkbox"
+                                    aria-label="Select all visible variants"
+                                    aria-checked={allSelected ? true : selectedCount > 0 ? "mixed" : false}
+                                    disabled={isUpdating || allVariantIds.length === 0}
+                                    className="text-slate-400 hover:text-slate-500 transition-colors disabled:opacity-40"
+                                >
+                                    {allSelected ? <CheckSquare className="w-4 h-4 stroke-[1.5]" /> : selectedCount > 0 ? <MinusSquare className="w-4 h-4 stroke-[1.5]" /> : <Square className="w-4 h-4 stroke-[1.5]" />}
                                 </button>
                             </th>
                             <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 tracking-normal">Product</th>
@@ -283,26 +355,28 @@ export default function InventoryRegistryWrapper({
                                                 )
                                             })()}
                                         </td>
-                                        <td className="py-2.5 px-4 text-center tabular-nums">
+                                        <td className="py-2.5 px-4 text-center tabular-nums" title="Stock across the variants shown below">
                                             <div className="flex items-center justify-center gap-2">
                                                 <span className={`text-sm font-semibold tabular-nums ${
-                                                    totalStock === 0 ? "text-red-600" :
+                                                    totalStock <= 0 ? "text-red-600" :
                                                     totalStock <= 10 ? "text-amber-600" :
                                                     "text-emerald-600"
                                                 }`}>
                                                     {totalStock}
                                                 </span>
                                                 <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-                                                    totalStock === 0 ? "bg-red-50 text-red-600" :
+                                                    totalStock <= 0 ? "bg-red-50 text-red-600" :
                                                     totalStock <= 10 ? "bg-amber-50 text-amber-600" :
                                                     "bg-emerald-50 text-emerald-600"
                                                 }`}>
-                                                    {totalStock === 0 ? "Out" : totalStock <= 10 ? "Low" : "OK"}
+                                                    {totalStock <= 0 ? "Out" : totalStock <= 10 ? "Low" : "OK"}
                                                 </span>
                                             </div>
                                         </td>
                                         <td colSpan={2} className="py-2.5 px-4 text-right tabular-nums">
-                                            <span className="text-xs text-slate-500">{variants.length} variant{variants.length !== 1 ? "s" : ""}</span>
+                                            <span className="text-xs text-slate-500">
+                                                {variants.length < product.totalVariants ? `${variants.length} of ${product.totalVariants}` : variants.length} variant{product.totalVariants !== 1 ? "s" : ""}
+                                            </span>
                                         </td>
                                     </tr>
                                     {/* Variant rows */}
@@ -320,6 +394,10 @@ export default function InventoryRegistryWrapper({
                                                 <td className="py-3 px-4 tabular-nums">
                                                     <button
                                                         onClick={() => toggleSelect(v.id)}
+                                                        role="checkbox"
+                                                        aria-label={`Select ${product.name} — ${v.title || "Default"}${v.sku ? ` (${v.sku})` : ""}`}
+                                                        aria-checked={isSelected}
+                                                        disabled={isUpdating}
                                                         className={`${isSelected ? "text-slate-700" : "text-slate-200"} hover:text-blue-400 transition-colors`}
                                                     >
                                                         {isSelected ? <CheckSquare className="w-4 h-4 stroke-[1.5]" /> : <Square className="w-4 h-4 stroke-[1.5]" />}
@@ -355,9 +433,12 @@ export default function InventoryRegistryWrapper({
                                                 </td>
                                                 <td className="py-3 px-4 text-right tabular-nums">
                                                     <StockInput
+                                                        key={`${v.id}:${v.stock}`}
+                                                        label={`${product.name} — ${v.title || "Default"}${v.sku ? ` (${v.sku})` : ""}`}
                                                         currentStock={v.stock}
                                                         onSave={(input) => handleSave(v.id, v.stock, input)}
                                                         isSaving={isSaving}
+                                                        disabled={isUpdating}
                                                     />
                                                 </td>
                                                 <td className="py-3 px-4 text-right tabular-nums" />
@@ -372,10 +453,11 @@ export default function InventoryRegistryWrapper({
             </div>
 
             {/* Bulk Dialog */}
-            <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+            <Dialog open={bulkOpen} onOpenChange={(open) => { if (!isBulkUpdating) setBulkOpen(open) }}>
                 <DialogContent className="sm:max-w-sm rounded-2xl">
                     <DialogHeader>
                         <DialogTitle className="text-sm font-semibold text-slate-900">Bulk Stock Update</DialogTitle>
+                        <DialogDescription>Update only the selected visible variants.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         <div className="flex gap-2">
@@ -383,6 +465,7 @@ export default function InventoryRegistryWrapper({
                                 <button
                                     key={action}
                                     onClick={() => setBulkAction(action)}
+                                    disabled={isBulkUpdating}
                                     className={`flex-1 h-10 rounded-xl text-xs font-semibold tracking-normal transition-colors ${
                                         bulkAction === action
                                             ? "bg-slate-900 text-white shadow-sm"
@@ -394,14 +477,17 @@ export default function InventoryRegistryWrapper({
                             ))}
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-500 tracking-normal">
+                            <label htmlFor="bulk-stock-value" className="text-xs font-semibold text-slate-500 tracking-normal">
                                 {bulkAction === "set" ? "Stock Value" : "Amount"}
                             </label>
                             <Input
+                                id="bulk-stock-value"
                                 type="number"
-                                min="0"
+                                min={bulkAction === "set" ? 0 : 1}
+                                step="1"
                                 value={bulkValue}
                                 onChange={(e) => setBulkValue(e.target.value)}
+                                disabled={isBulkUpdating}
                                 className="h-10 text-sm border-slate-200 bg-slate-50 rounded-xl"
                                 placeholder="e.g. 10"
                             />
@@ -426,9 +512,10 @@ export default function InventoryRegistryWrapper({
                             </div>
                         ) : (
                             <p className="text-xs text-slate-500">
-                                Apply to <strong className="text-slate-700">{selectedIds.size} variant{selectedIds.size !== 1 ? "s" : ""}</strong>
+                                Apply to <strong className="text-slate-700">{selectedCount} visible variant{selectedCount !== 1 ? "s" : ""}</strong>
                             </p>
                         )}
+                        {bulkError && <p role="alert" className="text-xs text-red-600">{bulkError}</p>}
                     </div>
                     <DialogFooter className="sm:justify-end gap-2">
                         <button
@@ -440,7 +527,7 @@ export default function InventoryRegistryWrapper({
                         </button>
                         <button
                             onClick={handleBulkApply}
-                            disabled={isBulkUpdating}
+                            disabled={isBulkUpdating || selectedCount === 0}
                             className="h-9 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold tracking-normal hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2"
                         >
                             {isBulkUpdating ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Zap className="w-4 h-4 stroke-[1.5]" />}
@@ -464,37 +551,37 @@ function FilterIcon({ className }: { className?: string }) {
 }
 
 function StockInput({
+    label,
     currentStock,
     onSave,
     isSaving,
+    disabled,
 }: {
+    label: string;
     currentStock: number;
-    onSave: (input: string) => Promise<void> | void;
+    onSave: (input: string) => Promise<boolean>;
     isSaving: boolean;
+    disabled: boolean;
 }) {
     const [input, setInput] = useState("")
 
-    useEffect(() => { setInput("") }, [currentStock])
-
     const hasValue = input.trim() !== ""
-
-    let preview = currentStock
-    const clean = input.trim()
-    if (clean.startsWith("+")) preview = currentStock + (parseInt(clean.slice(1)) || 0)
-    else if (clean.startsWith("-")) preview = Math.max(0, currentStock - (parseInt(clean.slice(1)) || 0))
-    else if (clean !== "") preview = parseInt(clean) || 0
-    else preview = currentStock
-
-    const hasChanges = preview !== currentStock
+    const preview = stockAdjustment(currentStock, input)
+    const invalid = hasValue && preview === null
+    const hasChanges = preview !== null && preview !== currentStock
 
     return (
         <div className="flex items-center justify-end gap-1.5">
             <input
                 type="text"
+                aria-label={`Adjust stock for ${label}`}
+                aria-invalid={invalid}
+                title="Enter a whole number to set stock, +N to add or -N to subtract"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                disabled={disabled}
                 className={`w-20 h-8 text-xs font-mono text-right rounded-lg border transition-colors px-2
-                    ${hasValue ? "border-amber-400 bg-white ring-2 ring-amber-100" : "border-slate-200 bg-slate-50"}
+                    ${invalid ? "border-red-400 bg-red-50" : hasValue ? "border-amber-400 bg-white ring-2 ring-amber-100" : "border-slate-200 bg-slate-50"}
                     [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300`}
                 placeholder="+N / -N"
             />
@@ -502,8 +589,9 @@ function StockInput({
                 <span className="text-xs font-semibold text-amber-600 whitespace-nowrap">→{preview}</span>
             )}
             <button
-                onClick={() => { onSave(input); setInput("") }}
-                disabled={isSaving || !hasChanges}
+                aria-label={`Save stock for ${label}`}
+                onClick={async () => { if (await onSave(input)) setInput("") }}
+                disabled={disabled || !hasChanges}
                 className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" /> : <Save className="w-4 h-4 stroke-[1.5]" />}

@@ -1,180 +1,235 @@
-"use client"
+'use client'
+import { useRef, useState } from 'react'
+import Link from 'next/link'
+import { Eye, ArrowUpRight, Pencil } from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { STATUS_LABELS } from '@/lib/order-status'
+import { directoryDateLabel } from '@/lib/admin-directory'
+import type { DashboardOrder } from '@/lib/admin-dashboard'
 
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import {
-    Sheet, SheetContent,
-} from "@/components/ui/sheet"
-import { Eye, Package, CreditCard, User, Calendar, Tag, X } from "lucide-react"
-
-const statusStyles: Record<string, string> = {
-    pending: "bg-amber-50 text-amber-600 border-amber-200",
-    packed: "bg-blue-50 text-blue-600 border-blue-200",
-    shipped: "bg-purple-50 text-purple-600 border-purple-200",
-    delivered: "bg-emerald-50 text-emerald-600 border-emerald-200",
-    cancelled: "bg-red-50 text-red-600 border-red-200",
-}
-
-export function RecentOrdersTable({ orders }: { orders: any[] }) {
-    const [selected, setSelected] = useState<any | null>(null)
-
+const money = (value: number | null) =>
+    value === null
+        ? 'Unknown'
+        : `${Number(value) < 0 ? '-' : ''}₹${Math.abs(Number(value) || 0).toLocaleString('en-IN', {
+              maximumFractionDigits: 2,
+          })}`
+export function RecentOrdersTable({ orders }: { orders: DashboardOrder[] }) {
+    const [selectedId, setSelectedId] = useState<string | null>(null)
+    const opener = useRef<HTMLButtonElement | null>(null)
+    const selected = orders.find((order) => order.id === selectedId)
     return (
         <>
-            <div className="relative w-full overflow-auto overflow-x-auto min-w-0 max-w-full">
-                <table className="w-full caption-bottom text-sm">
-                    <thead>
-                        <tr className="border-b border-slate-100">
-                            <th className="py-3 px-3 sm:px-5 text-left text-xs font-semibold text-slate-500 tracking-normal">Order ID</th>
-                            <th className="py-3 px-3 sm:px-5 text-left text-xs font-semibold text-slate-500 tracking-normal hidden sm:table-cell">Customer</th>
-                            <th className="py-3 px-3 sm:px-5 text-left text-xs font-semibold text-slate-500 tracking-normal">Status</th>
-                            <th className="py-3 px-3 sm:px-5 text-left text-xs font-semibold text-slate-500 tracking-normal">Total</th>
-                            <th className="py-3 px-3 sm:px-5 text-right text-xs font-semibold text-slate-500 tracking-normal">View</th>
+            <div className="w-full overflow-x-auto min-w-0 max-w-full">
+                <table className="w-full text-sm">
+                    <thead className="border-y border-slate-100 bg-slate-50">
+                        <tr>
+                            {['Order', 'Customer', 'Status', 'Total', 'View'].map((label) => (
+                                <th
+                                    key={label}
+                                    className="py-4 px-4 text-left text-xs font-semibold text-slate-500"
+                                >
+                                    {label}
+                                </th>
+                            ))}
                         </tr>
                     </thead>
-                    <tbody>
-                        {orders.length === 0 ? (
-                            <tr><td colSpan={5} className="h-24 text-center text-slate-500 text-xs tabular-nums">No orders found in this range.</td></tr>
-                        ) : (
-                            orders.map((order) => (
-                                <tr key={order.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                    <td className="py-3 px-3 sm:px-5 font-mono text-xs font-medium text-slate-700 truncate max-w-[80px] sm:max-w-none tabular-nums">#{order.id.slice(0, 8)}</td>
-                                    <td className="py-3 px-3 sm:px-5 text-xs text-slate-700 hidden sm:table-cell truncate max-w-[120px] tabular-nums">{order.profiles?.full_name || "Guest"}</td>
-                                    <td className="py-3 px-3 sm:px-5 tabular-nums">
-                                        <Badge variant="outline"
-                                            className={`text-xs font-semibold px-1.5 py-0.5 border ${statusStyles[order.status] || "bg-slate-50 text-slate-600"}`}
-                                        >
-                                            {order.status}
-                                        </Badge>
-                                    </td>
-                                    <td className="py-3 px-3 sm:px-5 text-xs font-semibold text-emerald-600 tabular-nums">₹{Number(order.total).toLocaleString('en-IN')}</td>
-                                    <td className="py-3 px-3 sm:px-5 text-right tabular-nums">
-                                        <button onClick={() => setSelected(order)}
-                                            className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                                        >
-                                            <Eye className="w-4 h-4 stroke-[1.5]" />
-                                            <span className="hidden sm:inline">View</span>
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
+                    <tbody className="divide-y divide-slate-100">
+                        {orders.length === 0 && (
+                            <tr>
+                                <td colSpan={5} className="p-8 text-center text-sm text-slate-500">
+                                    No orders
+                                </td>
+                            </tr>
                         )}
+                        {orders.map((order) => (
+                            <tr key={order.id}>
+                                <td className="py-3 px-4">
+                                    <Link
+                                        href={`/admin/orders/${order.id}`}
+                                        className="text-xs font-mono hover:underline"
+                                    >
+                                        #{order.id.slice(0, 8)}
+                                    </Link>
+                                </td>
+                                <td className="py-3 px-4 text-[13px] font-medium min-w-32">
+                                    {order.customer_name}
+                                </td>
+                                <td className="py-3 px-4 text-xs whitespace-nowrap">
+                                    <span
+                                        className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-medium ${
+                                            ['delivered', 'picked_up'].includes(order.status)
+                                                ? 'bg-emerald-50 text-emerald-700'
+                                                : ['failed_delivery', 'no_show', 'cancelled'].includes(
+                                                      order.status
+                                                  )
+                                                ? 'bg-rose-50 text-rose-700'
+                                                : 'bg-slate-100 text-slate-600'
+                                        }`}
+                                    >
+                                        {STATUS_LABELS[order.status] || order.status.replaceAll('_', ' ')}
+                                    </span>
+                                </td>
+                                <td className="py-3 px-4 tabular-nums text-[13px] font-semibold whitespace-nowrap">
+                                    {money(order.total)}
+                                </td>
+                                <td className="py-3 px-4">
+                                    <button
+                                        aria-label={`Quick view order ${order.id.slice(0, 8)}`}
+                                        onClick={(event) => {
+                                            opener.current = event.currentTarget
+                                            setSelectedId(order.id)
+                                        }}
+                                        className="rounded-lg h-9 w-9 border border-slate-200 inline-flex items-center justify-center"
+                                    >
+                                        <Eye className="h-4 w-4" />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
-
-            <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null) }}>
-                <SheetContent className="w-full sm:w-[480px] sm:max-w-[480px] p-0 overflow-y-auto [&>button]:flex [&>button]:h-9 [&>button]:w-9 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-lg [&>button]:border [&>button]:border-slate-200 [&>button]:bg-white">
-                    {selected && <QuickViewContent order={selected} onClose={() => setSelected(null)} />}
+            <Sheet
+                open={!!selected}
+                onOpenChange={(open) => {
+                    if (!open) setSelectedId(null)
+                }}
+            >
+                <SheetContent
+                    onCloseAutoFocus={(event) => {
+                        event.preventDefault()
+                        if (opener.current?.isConnected) opener.current.focus()
+                    }}
+                    className="w-full sm:w-[480px] sm:max-w-[480px] p-0 overflow-y-auto [&>button]:flex [&>button]:h-9 [&>button]:w-9 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-lg [&>button]:border [&>button]:border-slate-200 [&>button]:bg-white"
+                >
+                    {selected && (
+                        <div className="p-5 space-y-5">
+                            <SheetHeader className="p-0 pr-8">
+                                <SheetTitle>Order #{selected.id.slice(0, 8)}</SheetTitle>
+                                <SheetDescription>
+                                    {selected.customer_name} · {directoryDateLabel(selected.created_at, true)}{' '}
+                                    IST
+                                </SheetDescription>
+                            </SheetHeader>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                                <span className="rounded-lg bg-slate-100 px-2 py-1">
+                                    {STATUS_LABELS[selected.status] || selected.status}
+                                </span>
+                                <span className="rounded-lg bg-slate-100 px-2 py-1">
+                                    {selected.order_type === 'pickup' ? 'Pickup' : 'Delivery'}
+                                </span>
+                                <span className="rounded-lg bg-slate-100 px-2 py-1">
+                                    {selected.payment_method || 'Unknown method'} ·{' '}
+                                    {(selected.payment_status || 'Unknown').replaceAll('_', ' ')}
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <Link
+                                    href={`/admin/orders/${selected.id}`}
+                                    className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium"
+                                >
+                                    Open order
+                                    <ArrowUpRight className="h-3 w-3" />
+                                </Link>
+                                {['pending', 'confirmed', 'packed'].includes(selected.status) &&
+                                    !selected.cancellation_started_at && (
+                                        <Link
+                                            href={`/admin/orders/${selected.id}/edit`}
+                                            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium"
+                                        >
+                                            Edit order
+                                            <Pencil className="h-3 w-3" />
+                                        </Link>
+                                    )}
+                            </div>
+                            <section className="space-y-3">
+                                <h3 className="text-sm font-semibold">Items and shades</h3>
+                                {selected.items.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="rounded-xl border border-slate-200 p-3 text-sm"
+                                    >
+                                        <p className="font-medium break-words">
+                                            {item.product_name}
+                                            {item.is_gift && (
+                                                <span className="ml-2 text-xs text-emerald-700">
+                                                    Free gift
+                                                </span>
+                                            )}
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            {item.variant_title || 'Default'} · Qty {item.quantity} ·{' '}
+                                            {money(item.unit_price)} each
+                                        </p>
+                                        <p className="text-xs text-slate-600 mt-1">
+                                            {item.line_discount_amount === null ? 'Subtotal' : 'Line total'}:{' '}
+                                            {money(
+                                                Math.max(
+                                                    0,
+                                                    item.quantity * item.unit_price -
+                                                        (item.line_discount_amount || 0)
+                                                )
+                                            )}
+                                        </p>
+                                        {item.refunded_quantity > 0 && (
+                                            <p className="text-xs text-amber-700">
+                                                {item.refunded_quantity} refunded
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
+                            </section>
+                            <section className="space-y-2 text-sm">
+                                <h3 className="font-semibold">Saved pricing</h3>
+                                {[
+                                    [
+                                        'Item subtotal',
+                                        selected.items.reduce(
+                                            (sum, item) => sum + item.quantity * item.unit_price,
+                                            0
+                                        ),
+                                    ],
+                                    [
+                                        `Coupon discount${
+                                            selected.promo_code ? ` (${selected.promo_code})` : ''
+                                        }`,
+                                        -selected.promo_discount_amount,
+                                    ],
+                                    ['BXGY discount', -selected.bxgy_discount_amount],
+                                    [selected.shipping_label || 'Delivery', selected.shipping_price],
+                                    [
+                                        selected.additional_charges_label || 'Additional charges',
+                                        selected.additional_charges,
+                                    ],
+                                    ['Gift card', -selected.gift_card_discount],
+                                    ['Coins', -selected.coin_discount_amount],
+                                    ['Order total', selected.total],
+                                ].map(([label, amount], index) => (
+                                    <div key={index} className="flex justify-between gap-3">
+                                        <span className="text-slate-500">{label}</span>
+                                        <span className="tabular-nums shrink-0">{money(Number(amount))}</span>
+                                    </div>
+                                ))}
+                            </section>
+                            <section className="rounded-xl border bg-slate-50 p-4 space-y-2 text-sm">
+                                {(
+                                    [
+                                        ['Payments retained', selected.retained],
+                                        ['Recorded refunds', selected.refunded],
+                                        ['Outstanding payment', selected.balance_due],
+                                        ['Refund due', selected.refund_due],
+                                    ] as [string, number | null][]
+                                ).map(([label, value]) => (
+                                    <div key={label} className="flex justify-between gap-3">
+                                        <span className="text-slate-500">{label}</span>
+                                        <strong className="tabular-nums shrink-0">{money(value)}</strong>
+                                    </div>
+                                ))}
+                            </section>
+                        </div>
+                    )}
                 </SheetContent>
             </Sheet>
         </>
-    )
-}
-
-function QuickViewContent({ order, onClose }: { order: any; onClose: () => void }) {
-    const items = order.order_items || []
-    const subtotal = items.reduce((s: number, i: any) => s + (i.quantity || 1) * Number(i.unit_price || 0), 0)
-    const total = Number(order.total || 0)
-
-    return (
-        <div className="p-5 space-y-5">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="min-w-0 pr-12">
-                    <p className="truncate text-xs text-slate-500 font-mono">#{order.id}</p>
-                    <p className="text-base font-semibold text-slate-900 tracking-tight mt-0.5">Order Details</p>
-                </div>
-                <button onClick={onClose}
-                    className="hidden w-7 h-7 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                >
-                    <X className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                </button>
-            </div>
-
-            {/* Status badges */}
-            <div className="flex items-center gap-2">
-                <span className={`text-xs font-semibold px-2 py-1 rounded-md border ${
-                    statusStyles[order.status] || "bg-slate-50 text-slate-600"
-                }`}>
-                    {order.status}
-                </span>
-                <span className={`text-xs font-semibold px-2 py-1 rounded-md border ${
-                    order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-                    order.payment_status === 'refunded' ? 'bg-red-50 text-red-600 border-red-200' :
-                    'bg-amber-50 text-amber-600 border-amber-200'
-                }`}>
-                    {order.payment_status || "unpaid"}
-                </span>
-            </div>
-
-            {/* Info rows */}
-            <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50">
-                    <User className="w-4 h-4 text-slate-500 shrink-0 stroke-[1.5]" />
-                    <div className="min-w-0">
-                        <p className="text-xs text-slate-500">Customer</p>
-                        <p className="text-xs font-medium text-slate-700 truncate">{order.profiles?.full_name || "Guest"}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50">
-                    <Calendar className="w-4 h-4 text-slate-500 shrink-0 stroke-[1.5]" />
-                    <div className="min-w-0">
-                        <p className="text-xs text-slate-500">Date</p>
-                        <p className="text-xs font-medium text-slate-700">{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50">
-                    <CreditCard className="w-4 h-4 text-slate-500 shrink-0 stroke-[1.5]" />
-                    <div className="min-w-0">
-                        <p className="text-xs text-slate-500">Payment</p>
-                        <p className="text-xs font-medium text-slate-700">{order.payment_method || "COD"}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50">
-                    <Tag className="w-4 h-4 text-slate-500 shrink-0 stroke-[1.5]" />
-                    <div className="min-w-0">
-                        <p className="text-xs text-slate-500">Promo</p>
-                        <p className="text-xs font-medium text-slate-700">{order.promo_code || "—"}</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Items */}
-            <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                    <Package className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                    <span className="text-xs font-semibold text-slate-500 tracking-normal">Items ({items.length})</span>
-                </div>
-                <div className="space-y-1">
-                    {items.map((item: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-slate-50">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-xs font-medium text-slate-700 truncate">{item.product_name}</p>
-                                <p className="text-xs text-slate-500">×{item.quantity} @ ₹{Number(item.unit_price || 0).toLocaleString('en-IN')}</p>
-                            </div>
-                            <p className="text-xs font-semibold text-slate-700">₹{((item.quantity || 1) * Number(item.unit_price || 0)).toLocaleString('en-IN')}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Total */}
-            <div className="border-t border-slate-100 pt-3 space-y-1">
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>Subtotal</span>
-                    <span>₹{subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                {order.promo_code && (
-                    <div className="flex items-center justify-between text-xs text-emerald-600">
-                        <span>Discount ({order.promo_code})</span>
-                        <span>-₹{(subtotal - total).toLocaleString('en-IN')}</span>
-                    </div>
-                )}
-                <div className="flex items-center justify-between text-sm font-semibold text-slate-900 pt-1 border-t border-slate-100">
-                    <span>Total</span>
-                    <span>₹{total.toLocaleString('en-IN')}</span>
-                </div>
-            </div>
-        </div>
     )
 }

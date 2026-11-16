@@ -21,8 +21,10 @@ export default async function ProductsPage({
 
     const { data: categoriesList } = await supabase
         .from("categories")
-        .select("id, name")
+        .select("id, name, is_active")
         .order("name")
+
+    const inactiveCategoryIds = new Set((categoriesList || []).filter(category => category.is_active === false).map(category => category.id))
 
     let dbQuery = supabase
         .from("products")
@@ -52,8 +54,9 @@ export default async function ProductsPage({
         "use server"
         const { supabase } = await requireAdmin()
         const newStatus = currentStatus === "active" ? "inactive" : "active"
-        await supabase.from("products").update({ status: newStatus }).eq("id", id)
-        revalidatePath("/admin/products")
+        const { error } = await supabase.from("products").update({ status: newStatus }).eq("id", id)
+        if (error) throw new Error("Unable to update product visibility. Check its category status and refresh.")
+        revalidatePath("/", "layout")
     }
 
     async function deleteProduct(formData: FormData) {
@@ -106,6 +109,7 @@ export default async function ProductsPage({
                             {products?.map((product) => {
                                 const totalStock = product.product_variants?.reduce((acc: number, curr: any) => acc + (curr.stock || 0), 0) || 0
                                 const isActive = product.status === "active"
+                                const categoryInactive = inactiveCategoryIds.has(product.category_id) || product.product_categories?.some((link: { category_id: string }) => inactiveCategoryIds.has(link.category_id))
 
                                 return (
                                     <tr key={product.id} className={`group hover:bg-slate-50/50 transition-colors ${!isActive ? 'opacity-60' : ''}`}>
@@ -141,7 +145,7 @@ export default async function ProductsPage({
                                         <td className="py-4 px-6 text-right tabular-nums">
                                             <div className="flex justify-end items-center gap-2">
                                                 <form action={toggleStatus.bind(null, product.id, product.status)}>
-                                                    <Button variant="outline" size="icon" className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-colors text-slate-500">
+                                                    <Button disabled={!isActive && categoryInactive} title={categoryInactive ? "Activate the product categories first" : undefined} variant="outline" size="icon" className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-colors text-slate-500">
                                                         {isActive ? <EyeOff className="h-4 w-4 stroke-[1.5]" /> : <Eye className="h-4 w-4 text-emerald-500 stroke-[1.5]" />}
                                                     </Button>
                                                 </form>
@@ -163,6 +167,7 @@ export default async function ProductsPage({
                     {products?.map((product) => {
                         const totalStock = product.product_variants?.reduce((acc: number, curr: any) => acc + (curr.stock || 0), 0) || 0
                         const isActive = product.status === "active"
+                        const categoryInactive = inactiveCategoryIds.has(product.category_id) || product.product_categories?.some((link: { category_id: string }) => inactiveCategoryIds.has(link.category_id))
 
                         return (
                             <Card key={product.id} className={`rounded-2xl border bg-white shadow-sm overflow-hidden ${!isActive ? 'opacity-70' : ''}`}>
@@ -192,7 +197,7 @@ export default async function ProductsPage({
 
                                     <div className="grid grid-cols-3 border-t border-slate-100">
                                         <form action={toggleStatus.bind(null, product.id, product.status)} className="border-r border-slate-100">
-                                            <button className="w-full py-3 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-600 active:bg-slate-50 transition-colors">
+                                            <button disabled={!isActive && categoryInactive} title={categoryInactive ? "Activate the product categories first" : undefined} className="disabled:opacity-50 w-full py-3 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-600 active:bg-slate-50 transition-colors">
                                                 {isActive ? <EyeOff className="w-4 h-4 stroke-[1.5]" /> : <Eye className="w-4 h-4 text-emerald-500 stroke-[1.5]" />}
                                                 {isActive ? 'Hide' : 'Show'}
                                             </button>

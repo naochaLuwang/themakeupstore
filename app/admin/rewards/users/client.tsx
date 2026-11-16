@@ -1,290 +1,290 @@
-"use client"
+'use client'
 
-import { useState, useMemo } from "react"
-import { Coins, Users, ArrowUpRight, ArrowDownRight, Search, Filter, Eye, EyeOff, Star, Zap, Crown, Loader2 } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useState } from 'react'
+import Link from 'next/link'
+import { ArrowUpRight, Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { exportRewardUsers } from '@/app/actions/loyalty'
+import {
+    rewardDate,
+    rewardNumber,
+    rewardHref,
+    type rewardFilters,
+    type RewardDirectory,
+    type RewardParams,
+} from '@/lib/reward-users'
 
-const TIER_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: any }> = {
-  bronze: { label: "Bronze", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", icon: Star },
-  silver: { label: "Silver", color: "text-slate-600", bg: "bg-slate-100", border: "border-slate-300", icon: Zap },
-  gold: { label: "Gold", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-300", icon: Crown },
-}
-
-function formatDate(ts: string | null) {
-  if (!ts) return "—"
-  const d = new Date(ts)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  const days = Math.floor(diff / 86400000)
-  if (days === 0) return "Today"
-  if (days === 1) return "Yesterday"
-  if (days < 7) return `${days}d ago`
-  if (days < 30) return `${Math.floor(days / 7)}w ago`
-  return d.toLocaleDateString("en-IN", { month: "short", day: "numeric" })
-}
-
-export function AdminRewardsUsersClient({ users }: { users: any[] }) {
-  const router = useRouter()
-  const [search, setSearch] = useState("")
-  const [tierFilter, setTierFilter] = useState("all")
-  const [spentFilter, setSpentFilter] = useState("all")
-  const [hideZero, setHideZero] = useState(false)
-
-  const hasSpentUsers = users.filter(u => u.lifetime_spent > 0).length
-
-  const filtered = useMemo(() => {
-    let result = users
-    if (search) {
-      const q = search.toLowerCase()
-      result = result.filter(u =>
-        u.full_name?.toLowerCase().includes(q) ||
-        u.phone?.toLowerCase().includes(q) ||
-        u.user_id.toLowerCase().includes(q)
-      )
+export function AdminRewardsUsersClient({
+    report,
+    filters,
+}: {
+    report: RewardDirectory
+    filters: ReturnType<typeof rewardFilters>
+}) {
+    const [exporting, setExporting] = useState(false),
+        [error, setError] = useState('')
+    const params: RewardParams = {
+        q: filters.q,
+        tier: filters.tier,
+        spent: filters.spent,
+        hideZero: filters.hideZero ? '1' : '',
+        sort: filters.sort,
     }
-    if (tierFilter !== "all") {
-      result = result.filter(u => u.tier === tierFilter)
+    async function download() {
+        setExporting(true)
+        setError('')
+        try {
+            const csv = await exportRewardUsers(params),
+                url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+            const anchor = document.createElement('a')
+            anchor.href = url
+            anchor.download = 'reward-users.csv'
+            anchor.click()
+            URL.revokeObjectURL(url)
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Unable to export reward users.')
+        } finally {
+            setExporting(false)
+        }
     }
-    if (spentFilter === "spent") {
-      result = result.filter(u => u.lifetime_spent > 0)
-    }
-    if (spentFilter === "no-spent") {
-      result = result.filter(u => u.lifetime_spent === 0)
-    }
-    if (hideZero && !search) {
-      result = result.filter(u => u.balance > 0)
-    }
-    return result
-  }, [users, search, tierFilter, spentFilter, hideZero])
-
-  // Stats from full unfiltered data
-  const totalBalance = users.reduce((s: number, u: any) => s + Number(u.balance), 0)
-  const activeUsers = users.filter(u => u.balance > 0).length
-  const totalEarned = users.reduce((s: number, u: any) => s + Number(u.lifetime_earned), 0)
-  const totalSpent = users.reduce((s: number, u: any) => s + Number(u.lifetime_spent), 0)
-  const tierCounts = { gold: 0, silver: 0, bronze: 0 }
-  for (const u of users) tierCounts[u.tier as keyof typeof tierCounts]++
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-slate-900 text-2xl font-black tracking-tight">Reward Users</h1>
-        <p className="text-sm text-slate-500">
-          {users.length} total users · {activeUsers} with active coins
-        </p>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-              <Coins className="w-5 h-5 text-amber-600 stroke-[1.5]" />
-            </div>
-            <div>
-              <div className="text-2xl font-semibold text-slate-900">{totalBalance.toLocaleString("en-IN")}</div>
-              <div className="text-xs text-slate-500 font-semibold tracking-normal">Total Coins</div>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <Users className="w-5 h-5 text-emerald-600 stroke-[1.5]" />
-            </div>
-            <div>
-              <div className="text-2xl font-semibold text-emerald-600">{activeUsers}</div>
-              <div className="text-xs text-slate-500 font-semibold tracking-normal">Active Users</div>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <ArrowUpRight className="w-5 h-5 text-slate-700 stroke-[1.5]" />
-            </div>
-            <div>
-              <div className="text-2xl font-semibold text-slate-700">{totalEarned.toLocaleString("en-IN")}</div>
-              <div className="text-xs text-slate-500 font-semibold tracking-normal">Lifetime Earned</div>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
-              <ArrowDownRight className="w-5 h-5 text-rose-600 stroke-[1.5]" />
-            </div>
-            <div>
-              <div className="text-2xl font-semibold text-rose-600">{totalSpent.toLocaleString("en-IN")}</div>
-              <div className="text-xs text-slate-500 font-semibold tracking-normal">Lifetime Spent · {hasSpentUsers} user{hasSpentUsers === 1 ? "" : "s"}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tier Breakdown */}
-      <div className="flex items-center gap-3">
-        {(["gold", "silver", "bronze"] as const).map(tier => {
-          const cfg = TIER_CONFIG[tier]
-          const Icon = cfg.icon
-          return (
-            <div key={tier} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${cfg.border} ${cfg.bg}`}>
-              <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
-              <span className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</span>
-              <span className="text-xs font-semibold text-slate-900">{tierCounts[tier]}</span>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
-          <input
-            type="text"
-            placeholder="Search by name, phone, or user ID..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-colors"
-          />
-        </div>
-
-        {/* Tier filter */}
-        <div className="relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none stroke-[1.5]" />
-          <select
-            value={tierFilter}
-            onChange={e => setTierFilter(e.target.value)}
-            className="h-10 pl-9 pr-8 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 focus:outline-none focus:border-rose-300 appearance-none cursor-pointer"
-          >
-            <option value="all">All Tiers</option>
-            <option value="gold">Gold</option>
-            <option value="silver">Silver</option>
-            <option value="bronze">Bronze</option>
-          </select>
-        </div>
-
-        {/* Spent filter */}
-        <div className="relative">
-          <ArrowDownRight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none stroke-[1.5]" />
-          <select
-            value={spentFilter}
-            onChange={e => setSpentFilter(e.target.value)}
-            className="h-10 pl-9 pr-8 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 focus:outline-none focus:border-rose-300 appearance-none cursor-pointer"
-          >
-            <option value="all">All Redemptions</option>
-            <option value="spent">Spent M Coins ({hasSpentUsers})</option>
-            <option value="no-spent">Never Spent</option>
-          </select>
-        </div>
-
-        {/* Hide zero toggle */}
-        <button
-          onClick={() => setHideZero(!hideZero)}
-          className={`h-10 px-4 rounded-xl border text-xs font-semibold transition-colors inline-flex items-center gap-2 ${
-            hideZero
-              ? "bg-rose-700 text-white border-rose-500"
-              : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          {hideZero ? <EyeOff className="w-4 h-4 stroke-[1.5]" /> : <Eye className="w-4 h-4 stroke-[1.5]" />}
-          {hideZero ? "Zero Hidden" : "Zero Visible"}
-        </button>
-      </div>
-
-      {/* Results count */}
-      <div className="text-xs text-slate-500 font-semibold">
-        Showing {filtered.length} of {users.length} users
-      </div>
-
-      {/* Table */}
-      {filtered.length > 0 ? (
-        <div className="rounded-2xl border bg-white overflow-x-auto shadow-sm min-w-0 max-w-full">
-          <table className="w-full">
-            <thead className="bg-slate-50/50">
-              <tr className="text-xs font-semibold text-slate-600 tracking-normal">
-                <th className="py-4 px-6 text-left">User</th>
-                <th className="py-4 px-6 text-right">Balance</th>
-                <th className="py-4 px-6 text-right">Earned</th>
-                <th className="py-4 px-6 text-right">Spent</th>
-                <th className="py-4 px-6 text-center">Pending</th>
-                <th className="py-4 px-6 text-center">Tier</th>
-                <th className="py-4 px-6 text-right">Last Active</th>
-                <th className="py-4 px-6 text-center w-12"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((user) => {
-                const tierCfg = TIER_CONFIG[user.tier] || TIER_CONFIG.bronze
-                const TierIcon = tierCfg.icon
-                return (
-                  <tr key={user.user_id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-6 tabular-nums">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900">{user.full_name}</div>
-                        <div className="text-xs text-slate-500">{user.phone || "No phone"}</div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-right tabular-nums">
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums">{user.balance.toLocaleString("en-IN")}</span>
-                      <span className="text-xs text-slate-500 ml-1">coins</span>
-                    </td>
-                    <td className="py-4 px-6 text-right tabular-nums">
-                      <span className="text-sm font-semibold text-emerald-600 tabular-nums">{user.lifetime_earned.toLocaleString("en-IN")}</span>
-                    </td>
-                    <td className="py-4 px-6 text-right tabular-nums">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className={`text-sm font-semibold tabular-nums ${user.lifetime_spent > 0 ? "text-rose-600" : "text-slate-400"}`}>{user.lifetime_spent.toLocaleString("en-IN")}</span>
-                        {user.lifetime_spent > 0 && (
-                          <span className="inline-flex items-center text-xs font-semibold tracking-normal text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-full">Redeemed</span>
+    return (
+        <div className="space-y-6">
+            <header className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Reward users</h1>
+                    <p className="mt-1 text-sm text-slate-500">
+                        {rewardNumber(report.total)} matching customers ·{' '}
+                        {rewardNumber(report.summary.active)} with available coins
+                    </p>
+                </div>
+                <Button variant="outline" disabled={exporting || !report.total} onClick={download}>
+                    <Download className="h-4 w-4" />
+                    {exporting ? 'Exporting…' : 'Export filtered CSV'}
+                </Button>
+            </header>
+            {error && (
+                <p
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                >
+                    {error}
+                </p>
+            )}
+            <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {[
+                    ['Available coins', report.summary.balance],
+                    ['Lifetime earned (stored)', report.summary.earned],
+                    ['Coins spent', report.summary.spent],
+                    ['Pending coins', report.summary.pending],
+                ].map(([label, value]) => (
+                    <div key={label} className="min-w-0 rounded-2xl border bg-white p-5 shadow-sm">
+                        <dt className="text-xs text-slate-500">{label}</dt>
+                        <dd className="mt-2 break-words text-xl font-semibold tabular-nums">
+                            {rewardNumber(Number(value))}
+                        </dd>
+                    </div>
+                ))}
+            </dl>
+            <section
+                aria-label="Reward user filters"
+                className="rounded-2xl border bg-white p-5 shadow-sm space-y-4"
+            >
+                <form
+                    action="/admin/rewards/users"
+                    method="get"
+                    className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+                >
+                    <label className="min-w-0 space-y-2 text-xs font-medium text-slate-600 sm:col-span-2 xl:col-span-2">
+                        Name, email, phone or user ID
+                        <Input
+                            key={filters.q}
+                            name="q"
+                            defaultValue={filters.q}
+                            maxLength={200}
+                            placeholder="Search customers"
+                            className="h-10 border-slate-200"
+                        />
+                    </label>
+                    <label className="space-y-2 text-xs font-medium text-slate-600">
+                        Stored tier
+                        <select
+                            key={filters.tier}
+                            name="tier"
+                            defaultValue={filters.tier}
+                            className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                        >
+                            <option value="all">All tiers</option>
+                            <option value="gold">Gold</option>
+                            <option value="silver">Silver</option>
+                            <option value="bronze">Bronze</option>
+                        </select>
+                    </label>
+                    <label className="space-y-2 text-xs font-medium text-slate-600">
+                        Redemptions
+                        <select
+                            key={filters.spent}
+                            name="spent"
+                            defaultValue={filters.spent}
+                            className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                        >
+                            <option value="all">All customers</option>
+                            <option value="spent">Have spent coins</option>
+                            <option value="no-spent">Never spent coins</option>
+                        </select>
+                    </label>
+                    <label className="space-y-2 text-xs font-medium text-slate-600">
+                        Sort by
+                        <select
+                            key={filters.sort}
+                            name="sort"
+                            defaultValue={filters.sort}
+                            className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                        >
+                            {[
+                                ['balance', 'Highest balance'],
+                                ['earned', 'Highest earned'],
+                                ['spent', 'Highest spent'],
+                                ['pending', 'Highest pending'],
+                                ['name', 'Name A–Z'],
+                                ['activity', 'Latest activity'],
+                            ].map(([value, label]) => (
+                                <option key={value} value={value}>
+                                    {label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2 xl:col-span-5">
+                        <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                            <input
+                                key={String(filters.hideZero)}
+                                type="checkbox"
+                                name="hideZero"
+                                value="1"
+                                defaultChecked={filters.hideZero}
+                                className="h-4 w-4 accent-pink-700"
+                            />
+                            Hide zero balances
+                        </label>
+                        <div className="flex items-center gap-4">
+                            <Link href="/admin/rewards/users" className="text-xs text-slate-600 underline">
+                                Clear filters
+                            </Link>
+                            <Button type="submit" className="h-10 bg-slate-900 text-white">
+                                Apply filters
+                            </Button>
+                        </div>
+                    </div>
+                </form>
+                <p className="text-xs text-slate-500">
+                    Summaries use all matching customers. Stored lifetime earnings and tiers are retained;
+                    historical discrepancies require review.
+                </p>
+            </section>
+            <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[900px] text-left text-sm">
+                        <thead className="border-b bg-slate-50 text-xs text-slate-500">
+                            <tr>
+                                {[
+                                    'Customer',
+                                    'Balance',
+                                    'Earned (stored)',
+                                    'Spent',
+                                    'Pending',
+                                    'Tier',
+                                    'Last reward activity / joined',
+                                    '',
+                                ].map((label, index) => (
+                                    <th key={index} className="px-6 py-4 font-medium">
+                                        {label}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {report.users.length ? (
+                                report.users.map((user) => (
+                                    <tr key={user.user_id} className="hover:bg-slate-50/50">
+                                        <td className="px-6 py-4">
+                                            <Link
+                                                href={`/admin/rewards/users/${user.user_id}`}
+                                                className="font-semibold hover:underline"
+                                            >
+                                                {user.full_name}
+                                            </Link>
+                                            <p className="mt-1 text-xs text-slate-500 break-words">
+                                                {user.email || 'No email'}
+                                            </p>
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                {user.phone || 'No phone'}
+                                            </p>
+                                        </td>
+                                        <td className="px-6 py-4 font-semibold tabular-nums">
+                                            {rewardNumber(user.balance)}
+                                        </td>
+                                        <td className="px-6 py-4 tabular-nums">
+                                            {rewardNumber(user.lifetime_earned)}
+                                        </td>
+                                        <td className="px-6 py-4 tabular-nums">
+                                            {rewardNumber(user.lifetime_spent)}
+                                        </td>
+                                        <td className="px-6 py-4 tabular-nums">
+                                            {rewardNumber(user.pending)}
+                                        </td>
+                                        <td className="px-6 py-4 capitalize">{user.tier}</td>
+                                        <td className="px-6 py-4 text-xs text-slate-500">
+                                            {user.last_activity ? rewardDate(user.last_activity) : '—'}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <Link
+                                                href={`/admin/rewards/users/${user.user_id}`}
+                                                aria-label={`View rewards for ${user.full_name}`}
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200"
+                                            >
+                                                <ArrowUpRight className="h-4 w-4" />
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
+                                        No customers match these filters.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <nav
+                    aria-label="Reward user pages"
+                    className="flex flex-wrap items-center justify-between gap-3 border-t p-5 text-sm"
+                >
+                    <span className="text-slate-500">
+                        Page {report.page} of {report.totalPages} · {rewardNumber(report.total)} customers
+                    </span>
+                    <div className="flex gap-3">
+                        {report.page > 1 && (
+                            <Link
+                                href={rewardHref('/admin/rewards/users', params, report.page - 1)}
+                                className="rounded-lg border px-3 py-2"
+                            >
+                                Previous
+                            </Link>
                         )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-center tabular-nums">
-                      {user.pending > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                          {user.pending}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-center tabular-nums">
-                      <span className={`inline-flex items-center gap-1 text-xs font-semibold tracking-normal px-2 py-1 rounded-full border ${tierCfg.bg} ${tierCfg.border} ${tierCfg.color}`}>
-                        <TierIcon className="w-3 h-3" />
-                        {tierCfg.label}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-right tabular-nums">
-                      <span className="text-xs text-slate-500">{formatDate(user.last_activity)}</span>
-                    </td>
-                    <td className="py-4 px-6 text-center tabular-nums">
-                      <Link
-                        href={`/admin/rewards/users/${user.user_id}`}
-                        className="rounded-lg h-8 w-8 border border-slate-200 hover:bg-slate-100 transition-colors inline-flex items-center justify-center text-slate-500"
-                      >
-                        <ArrowUpRight className="w-4 h-4 stroke-[1.5]" />
-                      </Link>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                        {report.page < report.totalPages && (
+                            <Link
+                                href={rewardHref('/admin/rewards/users', params, report.page + 1)}
+                                className="rounded-lg border px-3 py-2"
+                            >
+                                Next
+                            </Link>
+                        )}
+                    </div>
+                </nav>
+            </div>
         </div>
-      ) : (
-        <div className="rounded-2xl border bg-white p-12 text-center shadow-sm">
-          <Coins className="w-10 h-10 text-slate-200 mx-auto mb-3 stroke-[1.5]" />
-          <p className="text-sm font-semibold text-slate-500">No users found</p>
-          <p className="text-xs text-slate-400 mt-1">
-            {search ? "Try a different search term" : hideZero ? "All users have 0 balance — toggle to show" : "No users match the filters"}
-          </p>
-        </div>
-      )}
-    </div>
-  )
+    )
 }

@@ -44,7 +44,7 @@ export function AdminRewardsClient({ stats, stuckPending }: { stats: any; stuckP
         setBackfilling(true)
         try {
             const res = await backfillDeliveredOrderPoints()
-            toast.success(`Backfilled ${res.backfilled} order(s)`)
+            toast.success(`Backfilled ${res.backfilled} order(s).${res.remaining ? ` ${res.remaining} still eligible; run again to continue.` : ''}`)
             router.refresh()
         } catch (err: any) {
             toast.error(err.message || "Backfill failed")

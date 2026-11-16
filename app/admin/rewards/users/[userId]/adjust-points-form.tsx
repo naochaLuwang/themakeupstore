@@ -1,70 +1,197 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { adminAdjustPoints } from "@/app/actions/loyalty"
-import { toast } from "sonner"
-import { Loader2, Plus } from "lucide-react"
+import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { adminAdjustPoints } from '@/app/actions/loyalty'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+    MAX_ADMIN_CREDIT,
+    rewardNumber,
+    validateCredit,
+    type CreditRequest,
+    type CreditReceipt,
+} from '@/lib/reward-users'
 
-export function AdjustPointsForm({ userId }: { userId: string }) {
-  const router = useRouter()
-  const [amount, setAmount] = useState("")
-  const [note, setNote] = useState("")
-  const [isPending, setIsPending] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const numAmount = Number(amount)
-    if (!numAmount || numAmount <= 0) { toast.error("Enter a valid amount"); return }
-    if (!note.trim()) { toast.error("Add a reason note"); return }
-
-    setIsPending(true)
-    const res = await adminAdjustPoints(userId, numAmount, note.trim())
-
-    if (res.success) {
-      toast.success(`Credited ${numAmount} coins`)
-      setAmount("")
-      setNote("")
-      router.refresh()
-    } else {
-      toast.error(res.message || "Failed to adjust points")
+export function AdjustPointsForm({
+    userId,
+    customerName,
+    currentBalance,
+}: {
+    userId: string
+    customerName: string
+    currentBalance: number
+}) {
+    const router = useRouter()
+    const [amount, setAmount] = useState(''),
+        [note, setNote] = useState('')
+    const [review, setReview] = useState<CreditRequest | null>(null)
+    const [pending, setPending] = useState(false),
+        [uncertain, setUncertain] = useState(false)
+    const [error, setError] = useState(''),
+        [receipt, setReceipt] = useState<CreditReceipt | null>(null)
+    const inFlight = useRef(false)
+    function prepare(event: React.FormEvent) {
+        event.preventDefault()
+        const request = {
+            requestId: crypto.randomUUID(),
+            userId,
+            amount: Number(amount),
+            note: note.trim(),
+            expectedBalance: currentBalance,
+        }
+        try {
+            validateCredit(request)
+            setError('')
+            setReview(request)
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Check the credit details.')
+        }
     }
-    setIsPending(false)
-  }
-
-  return (
-    <div className="rounded-2xl border bg-white p-5 shadow-sm">
-      <h3 className="text-sm font-semibold text-slate-900 mb-4">Credit M Coins</h3>
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="relative">
-          <input
-            type="number"
-            min="1"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            placeholder="Coins to credit"
-            className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-colors"
-          />
-          <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
-        </div>
-
-        <input
-          type="text"
-          value={note}
-          onChange={e => setNote(e.target.value)}
-          placeholder="Reason (e.g. compensation, promo bonus)"
-          className="w-full h-10 px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300/20 transition-colors"
-        />
-
-        <button
-          type="submit"
-          disabled={isPending || !amount || !note.trim()}
-          className="w-full h-10 rounded-xl bg-rose-700 text-white text-sm font-semibold hover:bg-rose-600 transition-colors disabled:opacity-40"
-        >
-          {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto stroke-[1.5]" /> : "Credit Coins"}
-        </button>
-      </form>
-    </div>
-  )
+    async function confirm() {
+        if (!review || inFlight.current) return
+        inFlight.current = true
+        setPending(true)
+        setError('')
+        try {
+            const result = await adminAdjustPoints(review)
+            if (!result.success) {
+                setError(result.message)
+                setUncertain(result.uncertain)
+                if (!result.uncertain) {
+                    setReview(null)
+                    router.refresh()
+                }
+                return
+            }
+            setReceipt(result.receipt)
+            setReview(null)
+            setUncertain(false)
+            setAmount('')
+            setNote('')
+            router.refresh()
+        } catch {
+            setUncertain(true)
+            setError('Unable to confirm this credit. Retry the same request or reload and check the history.')
+        } finally {
+            inFlight.current = false
+            setPending(false)
+        }
+    }
+    return (
+        <section aria-label="Credit coins" className="rounded-2xl border bg-white p-5 shadow-sm space-y-4">
+            <h2 className="text-sm font-semibold text-slate-900">Credit M Coins</h2>
+            {error && (
+                <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    {error}
+                </p>
+            )}
+            {receipt ? (
+                <div role="status" className="space-y-3 text-sm">
+                    <p className="font-semibold text-emerald-800">
+                        Credited {rewardNumber(receipt.amount)} coins.
+                    </p>
+                    <p>
+                        Balance after credit: <strong>{rewardNumber(receipt.balance_after)}</strong>
+                    </p>
+                    <p className="text-xs text-slate-500 break-all">Receipt: {receipt.id}</p>
+                    <a href={`/admin/rewards/users/${userId}`} className="inline-block underline">
+                        Reload for another credit
+                    </a>
+                </div>
+            ) : review ? (
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold">Review credit</h3>
+                    <dl className="space-y-3 text-sm">
+                        <div>
+                            <dt className="text-xs text-slate-500">Customer</dt>
+                            <dd className="font-semibold break-words">{customerName}</dd>
+                            <dd className="mt-1 break-all text-xs text-slate-500">{userId}</dd>
+                        </div>
+                        <div className="flex flex-wrap justify-between gap-2">
+                            <dt>Available balance</dt>
+                            <dd className="tabular-nums">{rewardNumber(review.expectedBalance)}</dd>
+                        </div>
+                        <div className="flex flex-wrap justify-between gap-2">
+                            <dt>Credit</dt>
+                            <dd className="font-semibold tabular-nums">+{rewardNumber(review.amount)}</dd>
+                        </div>
+                        <div className="flex flex-wrap justify-between gap-2 border-t pt-3">
+                            <dt>Balance after credit</dt>
+                            <dd className="font-semibold tabular-nums">
+                                {rewardNumber(review.expectedBalance + review.amount)}
+                            </dd>
+                        </div>
+                    </dl>
+                    <p className="whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-3 text-sm">
+                        {review.note}
+                    </p>
+                    <Button
+                        disabled={pending}
+                        onClick={confirm}
+                        className="w-full bg-pink-700 text-white hover:bg-pink-800"
+                    >
+                        {pending ? 'Confirming…' : uncertain ? 'Retry same credit' : 'Confirm credit'}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        disabled={pending || uncertain}
+                        className="w-full"
+                        onClick={() => {
+                            setReview(null)
+                            setError('')
+                        }}
+                    >
+                        Edit credit
+                    </Button>
+                    {uncertain && (
+                        <a href={`/admin/rewards/users/${userId}`} className="block text-xs underline">
+                            Reload and check transaction history
+                        </a>
+                    )}
+                </div>
+            ) : (
+                <form onSubmit={prepare} className="space-y-4">
+                    <p className="text-xs text-slate-500">
+                        Credit 1–{rewardNumber(MAX_ADMIN_CREDIT)} whole coins. Each credit records your
+                        identity and reason.
+                    </p>
+                    <label className="block space-y-2 text-xs font-medium text-slate-600">
+                        Coins to credit
+                        <Input
+                            aria-label="Coins to credit"
+                            type="number"
+                            min="1"
+                            max={MAX_ADMIN_CREDIT}
+                            step="1"
+                            value={amount}
+                            onChange={(event) => setAmount(event.target.value)}
+                            required
+                            className="h-10 border-slate-200"
+                        />
+                    </label>
+                    <label className="block space-y-2 text-xs font-medium text-slate-600">
+                        Reason
+                        <textarea
+                            aria-label="Credit reason"
+                            value={note}
+                            onChange={(event) => setNote(event.target.value)}
+                            minLength={3}
+                            maxLength={500}
+                            required
+                            className="min-h-24 w-full rounded-lg border border-slate-200 p-3 text-sm"
+                        />
+                    </label>
+                    <p className="text-xs text-slate-500">{note.length}/500 characters</p>
+                    <Button
+                        type="submit"
+                        disabled={pending || !amount || note.trim().length < 3}
+                        className="w-full bg-slate-900 text-white"
+                    >
+                        Review credit
+                    </Button>
+                </form>
+            )}
+        </section>
+    )
 }

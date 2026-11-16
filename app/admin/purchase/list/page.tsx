@@ -1,33 +1,28 @@
-import { createClient } from "@/utils/supabase/server"
-import PurchaseListClient from "./list-client"
+import Link from 'next/link'
+import { getPurchaseDirectory } from '@/app/actions/purchases'
+import { purchaseFilters, type PurchaseParams } from '@/lib/purchases'
+import PurchaseListClient from './list-client'
 
-export default async function PurchaseListPage() {
-    const supabase = await createClient()
-
-    // Query the main purchase_orders table and join the suppliers table
-    const { data: orders, error } = await supabase
-        .from('purchase_orders')
-        .select(`
-            *,
-            suppliers (
-                name
-            )
-        `)
-        .order('created_at', { ascending: false })
-
-    if (error) {
-        console.error("Fetch Error:", error)
-    }
-
-    return (
-        <div className="space-y-6">
-            <div className="flex items-end justify-between">
-                <div>
-                    <h1 className="text-2xl font-black tracking-tight">Procurement History</h1>
-                    <p className="text-sm text-slate-500">Manage and inward inventory</p>
+export default async function PurchaseListPage({ searchParams }: { searchParams: Promise<PurchaseParams> }) {
+    const params = await searchParams
+    let filters, report
+    try {
+        filters = purchaseFilters(params)
+        report = await getPurchaseDirectory(params)
+    } catch (error) {
+        return (
+            <div className="space-y-6">
+                <h1 className="text-2xl font-black tracking-tight">Purchase history</h1>
+                <div role="alert" className="rounded-2xl border bg-white p-6 shadow-sm">
+                    <p className="text-sm text-red-700">
+                        {error instanceof Error ? error.message : 'Unable to load purchases.'}
+                    </p>
+                    <Link href="/admin/purchase/list" className="mt-3 inline-block text-sm underline">
+                        Reset and retry
+                    </Link>
                 </div>
             </div>
-            <PurchaseListClient initialOrders={orders || []} />
-        </div>
-    )
+        )
+    }
+    return <PurchaseListClient report={report} filters={filters} />
 }

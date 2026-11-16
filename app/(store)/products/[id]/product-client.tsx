@@ -190,7 +190,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                 if (similarCatIds.size > 0) {
                     const { data: catInfo } = await supabase
                         .from("categories")
-                        .select("id, parent_id")
+                        .select("id, parent_id").eq("is_active", true)
                         .in("id", Array.from(similarCatIds))
                     const subCats = (catInfo || []).filter((c: any) => c.parent_id)
                     const parentCats = (catInfo || []).filter((c: any) => !c.parent_id)
@@ -201,7 +201,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         targetCatIds = parentCats.map((c: any) => c.id)
                         const { data: children } = await supabase
                             .from("categories")
-                            .select("id")
+                            .select("id").eq("is_active", true)
                             .in("parent_id", targetCatIds)
                         if (children?.length) children.forEach((c: any) => targetCatIds.push(c.id))
                     }
@@ -216,7 +216,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         const ids = [...new Set(catProducts.map((c: any) => c.product_id))]
                         const { data: similar } = await supabase
                             .from("products")
-                            .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
+                            .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)").eq("status", "active")
                             .in("id", ids)
                             .limit(10)
                         if (similar) setSimilarProducts(similar.filter((p: any) => p.thumbnail_url))
@@ -226,7 +226,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                 if (initialProduct.brand) {
                     const { data: brandData } = await supabase
                         .from("products")
-                        .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)")
+                        .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)").eq("status", "active")
                         .eq("brand", initialProduct.brand)
                         .neq("id", initialProduct.id)
                         .limit(10)

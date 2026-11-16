@@ -15,6 +15,7 @@ export async function GET(request: Request) {
         const { data, error } = await supabase
             .from("products")
             .select("id, name, thumbnail_url")
+            .eq("status", "active")
             .ilike("name", `%${q}%`)
             .order("name", { ascending: true })
             .limit(10)

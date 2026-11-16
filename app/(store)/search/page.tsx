@@ -66,11 +66,11 @@ export default function SearchPage() {
     }, [])
 
     const fetchExclusiveBrands = async () => {
-        const { data: parent } = await supabase.from("categories").select("id").eq("slug", "exclusive").single()
+        const { data: parent } = await supabase.from("categories").select("id").eq("is_active", true).eq("slug", "exclusive").single()
         if (!parent) return
         const { data } = await supabase
             .from("categories")
-            .select("id, name, slug, image_url")
+            .select("id, name, slug, image_url").eq("is_active", true)
             .eq("parent_id", parent.id)
             .order("name")
         if (data) setExclusiveBrands(data)
@@ -93,7 +93,7 @@ export default function SearchPage() {
 
     const fetchFilterOptions = async () => {
         const [catResult, brandResult] = await Promise.all([
-            supabase.from("categories").select("id, name, slug").order("name"),
+            supabase.from("categories").select("id, name, slug").eq("is_active", true).order("name"),
             supabase.from("products").select("brand").eq("status", "active").not("brand", "is", null),
         ])
 

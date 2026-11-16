@@ -1,0 +1,11 @@
+import { beforeEach,expect,it,vi } from 'vitest'
+import { requireAdmin } from './admin'
+const mocks=vi.hoisted(()=>({getUser:vi.fn(),select:vi.fn(),eq:vi.fn(),single:vi.fn(),service:vi.fn()}))
+vi.mock('@/utils/supabase/server',()=>({createClient:async()=>({auth:{getUser:mocks.getUser},from:()=>({select:mocks.select})})}))
+vi.mock('@/utils/supabase/admin',()=>({createAdminClient:mocks.service}))
+beforeEach(()=>{vi.clearAllMocks();mocks.getUser.mockResolvedValue({data:{user:{id:'operator',user_metadata:{is_admin:true}}}});mocks.select.mockReturnValue({eq:mocks.eq});mocks.eq.mockReturnValue({single:mocks.single});mocks.single.mockResolvedValue({data:{is_admin:true,user_type:'retail',deleted_at:null},error:null});mocks.service.mockResolvedValue({service:true})})
+it('requires a verified signed-in user before creating a service client',async()=>{mocks.getUser.mockResolvedValueOnce({data:{user:null}});await expect(requireAdmin()).rejects.toThrow('Authentication required');expect(mocks.service).not.toHaveBeenCalled()})
+it('does not authorize user-editable metadata claims',async()=>{mocks.single.mockResolvedValueOnce({data:{is_admin:false,user_type:'retail',deleted_at:null},error:null});await expect(requireAdmin()).rejects.toThrow('Unauthorized');expect(mocks.service).not.toHaveBeenCalled()})
+it('rejects deleted administrator profiles',async()=>{mocks.single.mockResolvedValueOnce({data:{is_admin:true,user_type:'admin',deleted_at:'2026-11-14T00:00:00Z'},error:null});await expect(requireAdmin()).rejects.toThrow('Unauthorized');expect(mocks.service).not.toHaveBeenCalled()})
+it('fails closed when reading the stored role fails',async()=>{mocks.single.mockResolvedValueOnce({data:null,error:{code:'failure'}});await expect(requireAdmin()).rejects.toThrow('Unauthorized');expect(mocks.service).not.toHaveBeenCalled()})
+it('accepts either protected role representation and returns the authenticated actor',async()=>{mocks.single.mockResolvedValueOnce({data:{is_admin:false,user_type:'admin',deleted_at:null},error:null});expect(await requireAdmin()).toMatchObject({user:{id:'operator'},supabase:{service:true}});expect(mocks.select).toHaveBeenCalledWith('is_admin, user_type, deleted_at')})

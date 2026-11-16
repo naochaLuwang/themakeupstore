@@ -20,7 +20,7 @@ export default function FunSizePage() {
         async function getFunSizeProducts() {
             try {
                 setLoading(true)
-                const { data: category } = await supabase.from("categories").select("id").eq("slug", "fun-size").single()
+                const { data: category } = await supabase.from("categories").select("id").eq("is_active", true).eq("slug", "fun-size").single()
                 if (!category) return
 
                 const { data: junctionData } = await supabase.from("product_categories").select("product_id").eq("category_id", category.id)

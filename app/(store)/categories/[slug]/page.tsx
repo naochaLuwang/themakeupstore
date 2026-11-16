@@ -11,7 +11,7 @@ export async function generateMetadata(
     const supabase = await createClient()
     let category: any
     try {
-        const { data: cat } = await supabase.from("categories").select("name, description, image_url").eq("slug", slug).single()
+        const { data: cat } = await supabase.from("categories").select("name, description, image_url").eq("is_active", true).eq("slug", slug).single()
         category = cat
     } catch {
         return {}
@@ -37,7 +37,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
     const { data: category } = await supabase
         .from("categories")
-        .select("*, parent:parent_id(id, name, slug)")
+        .select("*, parent:parent_id(id, name, slug)").eq("is_active", true)
         .eq("slug", slug)
         .single()
 
@@ -48,7 +48,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     if (category.parent_id) {
         const { data: subs } = await supabase
             .from("categories")
-            .select("id, name, slug, image_url")
+            .select("id, name, slug, image_url").eq("is_active", true)
             .eq("parent_id", category.parent_id)
             .order("name")
         subcategories = subs || []

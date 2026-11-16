@@ -177,7 +177,7 @@ export default function SkincareRoutineFinder({ open, onClose }: Props) {
         // Fetch skincare parent categories
         const { data: parents } = await supabase
             .from("categories")
-            .select("id, slug, name")
+            .select("id, slug, name").eq("is_active", true)
             .in("slug", ["skincare", "face"])
 
         if (!parents || parents.length === 0) {
@@ -191,7 +191,7 @@ export default function SkincareRoutineFinder({ open, onClose }: Props) {
         // Fetch all subcategories under skincare/face
         const { data: subCats } = await supabase
             .from("categories")
-            .select("id, slug, name")
+            .select("id, slug, name").eq("is_active", true)
             .in("parent_id", parentIds)
 
         const allSkincareCats = [...parents, ...(subCats || [])]

@@ -6,9 +6,9 @@ import subprocess
 import uuid
 
 socket = os.environ['TMS_ORDER_EDIT_PG_SOCKET']
-if not socket.startswith('/private/tmp/tms-order-edit-pg.') or not socket.endswith('/socket'):
+if not socket.startswith(('/private/tmp/tms-order-edit-pg.', '/private/tmp/tms-reward-users-pg.')) or not socket.endswith('/socket'):
     raise SystemExit('Refusing a connection outside the isolated order-edit cluster')
-connection = [shutil.which('psql'), '-h', socket, '-p', '55439', '-d', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1']
+connection = [os.environ.get('TMS_TEST_PSQL') or shutil.which('psql'), '-h', socket, '-p', os.environ.get('TMS_ORDER_EDIT_PG_PORT', '55439'), '-d', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1']
 
 
 def query(sql, check=True):
@@ -46,6 +46,7 @@ def race(first, second):
 
 admin, customer, other = uid(), uid(), uid()
 query(f"INSERT INTO profiles(id,is_admin) VALUES('{admin}',true),('{customer}',false),('{other}',false);")
+query(f"UPDATE profiles SET is_admin=true WHERE id='{admin}';")
 query(f"INSERT INTO loyalty_points(user_id,balance) VALUES('{customer}',500);")
 
 

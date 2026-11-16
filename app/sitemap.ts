@@ -28,10 +28,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.6,
     }))
 
-    // Fetch all categories
+    // Fetch active categories
     const { data: categories } = await supabase
         .from('categories')
         .select('slug')
+        .eq('is_active', true)
 
     const categoryRoutes: MetadataRoute.Sitemap = (categories || []).map((c) => ({
         url: `${baseUrl}/categories/${c.slug}`,

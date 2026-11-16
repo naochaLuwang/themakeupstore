@@ -1,566 +1,816 @@
-import { createClient } from "@/utils/supabase/server"
-import { DateRangePicker } from "@/components/admin/date-range-picker"
-import { RecentOrdersTable } from "@/components/admin/recent-orders-table"
-import { Suspense } from "react"
-import dynamic from "next/dynamic"
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import {
-    Loader2, TrendingUp, AlertCircle, CheckCircle2,
-    MessageSquare, UserPlus, BarChart3,
-    ShoppingBag, ArrowUpRight, Box, ShoppingCart,
-    Users, CircleDollarSign, Activity, Sparkles, Zap, Bell,
-    ArrowUp, ArrowDown, Hourglass, Layers,
-    Eye, CreditCard, RefreshCw, Target, Flame, CalendarDays,
-    Mail, User, BadgePercent, PackagePlus, Send, Tag
-} from "lucide-react"
-import { format, startOfDay, endOfDay, subDays, parseISO, differenceInDays, getDay } from "date-fns"
-import Link from "next/link"
+    ArrowDown,
+    ArrowUp,
+    ArrowUpRight,
+    ChevronRight,
+    Plus,
+    Loader2,
+    ClipboardList,
+    PackageSearch,
+    ShoppingBag,
+    Users,
+    Receipt,
+    ShoppingCart,
+    Tags,
+    Zap,
+    Award,
+    Megaphone,
+    BarChart3,
+    Truck,
+} from 'lucide-react'
+import { getAdminDashboard } from '@/app/actions/admin-dashboard'
+import { DASHBOARD_QUEUES, dashboardChange, dashboardHref, type DashboardParams } from '@/lib/admin-dashboard'
+import { ALL_STATUSES, STATUS_LABELS } from '@/lib/order-status'
+import { DateRangePicker } from '@/components/admin/date-range-picker'
+import { RecentOrdersTable } from '@/components/admin/recent-orders-table'
+import { DashboardOrderFilter, DashboardRefresh } from './dashboard-refresh'
 
-const RevenueChart = dynamic(() => import("@/components/admin/revenue-chart").then(m => ({ default: m.RevenueChart })), {
-    loading: () => <div className="rounded-2xl border bg-white p-6 shadow-sm h-80 flex items-center justify-center"><Loader2 className="w-6 h-6 text-slate-400 animate-spin stroke-[1.5]" /></div>,
-})
-import { Badge } from "@/components/ui/badge"
-
-// ─── Stat Card (compact) ───
-
-function StatCard({ label, value, subtitle, icon, change, className = "" }: {
-    label: string; value: string; subtitle?: string; icon: React.ReactNode; change?: number; className?: string
-}) {
-    return (
-        <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-4 xl:p-5 shadow-sm ${className}`}>
-            <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-xs font-medium text-slate-500 tracking-normal truncate">{label}</span>
-                <div className="h-7 w-7 flex shrink-0 items-center justify-center rounded-lg bg-slate-50">
-                    <div className="h-4 w-4 text-slate-500 [&>svg]:size-4 [&>svg]:stroke-[1.5]">{icon}</div>
-                </div>
+const RevenueChart = dynamic(
+    () => import('@/components/admin/revenue-chart').then((module) => module.RevenueChart),
+    {
+        loading: () => (
+            <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
             </div>
-            <div className="flex flex-wrap items-end justify-between gap-2">
-                <p className="text-xl xl:text-2xl leading-tight font-semibold text-slate-900 tabular-nums tracking-tight">{value}</p>
-                {change !== undefined && (
-                    <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-1 py-0.5 rounded ${
-                        change >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'
-                    }`}>
-                        {change >= 0 ? <ArrowUp className="w-2.5 h-2.5 stroke-[1.5]" /> : <ArrowDown className="w-2.5 h-2.5 stroke-[1.5]" />}
-                        {Math.abs(change).toFixed(0)}%
-                    </span>
-                )}
-            </div>
-            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
-        </div>
-    )
+        ),
+    }
+)
+const money = (value: number) => `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+const percent = (part: number, total: number) => (total > 0 ? (part / total) * 100 : 0)
+const queueLabels: Record<keyof typeof DASHBOARD_QUEUES, string> = {
+    confirmation: 'Unconfirmed',
+    dispatch: 'Awaiting dispatch',
+    failed: 'Failed deliveries',
+    pickup: 'Missed pickups',
+    payment: 'Outstanding payments',
+    refund: 'Refunds due',
+    settlement: 'Payment review',
 }
 
-function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>
+const shortcuts = [
+    { label: 'Orders', href: '/admin/orders', icon: ClipboardList },
+    { label: 'Inventory', href: '/admin/inventory', icon: PackageSearch },
+    { label: 'Products', href: '/admin/products', icon: ShoppingBag },
+    { label: 'Customers', href: '/admin/customers', icon: Users },
+    { label: 'Purchases', href: '/admin/purchase', icon: Receipt },
+    { label: 'Cart recovery', href: '/admin/abandoned-carts', icon: ShoppingCart },
+    { label: 'Promotions', href: '/admin/promos', icon: Tags },
+    { label: 'Flash sales', href: '/admin/flash-sales', icon: Zap },
+    { label: 'Rewards', href: '/admin/rewards/users', icon: Award },
+    { label: 'Broadcast', href: '/admin/broadcast', icon: Megaphone },
+    { label: 'Reports', href: '/admin/reports/sales', icon: BarChart3 },
+    { label: 'Shipping', href: '/admin/shipping', icon: Truck },
+]
+type MetricCard = {
+    label: string
+    value: number
+    display: string
+    prior?: number
+    href?: string
+    detail?: string
 }
 
-function SectionTitle({ icon, label, right }: { icon: React.ReactNode; label: string; right?: React.ReactNode }) {
-    return (
-        <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2">
-                <span className="inline-flex shrink-0 text-slate-400 [&>svg]:size-4 [&>svg]:stroke-[1.5]">{icon}</span>
-                <span className="text-sm font-semibold text-slate-900 tracking-normal">{label}</span>
-            </div>
-            {right}
-        </div>
-    )
-}
-
-// ─── Day of week chart (inline, compact) ───
-
-function DayOfWeekChart({ orders }: { orders: any[] }) {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    const buckets = days.map(() => ({ total: 0, count: 0 }))
-    orders.forEach((o: any) => {
-        const d = getDay(new Date(o.created_at))
-        buckets[d].total += Number(o.total || 0)
-        buckets[d].count++
-    })
-    const maxR = Math.max(...buckets.map(b => b.total), 1)
-    return (
-        <div className="grid grid-cols-7 gap-1 h-32 pt-9 pb-5 mt-3">
-            {buckets.map((b, i) => (
-                <div key={i} className="relative flex h-full min-w-0 items-end">
-                    <span className="absolute bottom-full left-0 mb-1 w-full break-all text-center text-[11px] leading-4 font-medium text-slate-500 tabular-nums">₹{Math.round(b.total / 1000)}k</span>
-                    <div className="w-full rounded-t-sm bg-slate-300" style={{ height: `${(b.total / maxR) * 100}%` }} />
-                    <span className="absolute top-full left-0 mt-1 w-full text-center text-xs text-slate-500 font-semibold">{days[i]}</span>
-                </div>
-            ))}
-        </div>
-    )
-}
-
-// ─── Progress bar mini ───
-
-function MiniPct({ value, max, color }: { value: number; max: number; color: string }) {
-    const pct = max > 0 ? (value / max) * 100 : 0
-    return (
-        <div className="min-w-0 flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
-            <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-        </div>
-    )
-}
-
-// ─── Page ───
-
-export default async function AdminDashboard({ searchParams }: {
-    searchParams: Promise<{ from?: string; to?: string }>
-}) {
-    const { from, to } = await searchParams
-    const supabase = await createClient()
-
-    const now = new Date()
-    const end = to ? endOfDay(parseISO(to)) : endOfDay(now)
-    const start = from ? startOfDay(parseISO(from)) : startOfDay(subDays(now, 30))
-    const periodDays = differenceInDays(end, start) || 1
-    const priorStart = subDays(start, periodDays)
-    const priorEnd = subDays(start, 1)
-
-    const toIso = (d: Date) => d.toISOString()
-    const [startDate, endDate, pStart, pEnd, todayStart, todayEnd] = [
-        toIso(start), toIso(end), toIso(priorStart), toIso(priorEnd),
-        toIso(startOfDay(now)), toIso(endOfDay(now)),
-    ]
-
-    let ordersRes: any, priorRes: any, todayRes: any, msgsRes: any, wlRes: any, invRes: any, refundRes: any,
-        trafficRes: any, catRes: any, newCustRes: any,
-        sessions24hRes: any, orders24hRes: any
-    const since24h = toIso(subDays(now, 1))
+export default async function AdminDashboard({ searchParams }: { searchParams: Promise<DashboardParams> }) {
+    const params = await searchParams
+    let report
     try {
-        [ordersRes, priorRes, todayRes, msgsRes, wlRes, invRes, refundRes,
-            trafficRes, catRes, newCustRes, sessions24hRes, orders24hRes] = await Promise.all([
-            supabase.from("orders").select(`id,total,status,payment_status,payment_method,promo_code,created_at,user_id,
-                order_items(quantity,product_name,product_id,unit_price),profiles!orders_user_id_fkey(full_name)`)
-                .gte("created_at", startDate).lte("created_at", endDate).order("created_at", { ascending: false }),
-            supabase.from("orders").select("id,total,status,payment_status,created_at")
-                .gte("created_at", pStart).lte("created_at", pEnd),
-            supabase.from("orders").select("id,total,status,created_at", { count: "exact" })
-                .gte("created_at", todayStart).lte("created_at", todayEnd),
-            supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "unread"),
-            supabase.from("wholesale_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
-            supabase.from("product_variants").select("id,stock"),
-            supabase.from("orders").select("id", { count: "exact" }).eq("payment_status", "refunded")
-                .gte("created_at", startDate).lte("created_at", endDate),
-            supabase.from("traffic_log").select("id", { count: "exact", head: true }).gte("created_at", since24h),
-            supabase.from("product_categories").select("product_id,categories!inner(name)"),
-            supabase.from("orders").select("user_id")
-                .lt("created_at", startDate).not("user_id", "is", null),
-            supabase.from("traffic_log").select("session_id").gte("created_at", since24h),
-            supabase.from("orders").select("id", { count: "exact" })
-                .gte("created_at", since24h).not("status", "eq", "cancelled"),
-        ])
-    } catch {
-        ordersRes = { data: [], count: 0 }
-        priorRes = { data: [] }
-        todayRes = { data: [], count: 0 }
-        msgsRes = { count: 0 }
-        wlRes = { count: 0 }
-        invRes = { data: [] }
-        refundRes = { count: 0 }
-        trafficRes = { count: 0 }
-        catRes = { data: [] }
-        newCustRes = { data: [] }
-        sessions24hRes = { data: [] }
-        orders24hRes = { count: 0 }
+        report = await getAdminDashboard(params)
+    } catch (error) {
+        return (
+            <div className="space-y-6">
+                <h1 className="text-2xl font-black tracking-tight">Dashboard</h1>
+                <div role="alert" className="rounded-2xl border bg-white p-5 shadow-sm">
+                    <p className="text-sm text-red-700">
+                        {error instanceof Error ? error.message : 'Dashboard unavailable.'}
+                    </p>
+                    <Link href="/admin" className="mt-3 inline-block text-sm underline">
+                        Reset dashboard
+                    </Link>
+                </div>
+            </div>
+        )
     }
-
-    // ── Derived ──
-    const orders = ordersRes.data || []
-    const net = orders.filter((o: any) => o.status !== 'cancelled')
-    const prior = (priorRes.data || []).filter((o: any) => o.status !== 'cancelled')
-    const todayNet = (todayRes.data || []).filter((o: any) => o.status !== 'cancelled')
-    const todayRev = todayNet.reduce((s: number, o: any) => s + Number(o.total || 0), 0)
-    const todayCnt = todayNet.length
-
-    // Get contact messages and wholesale for activity (not just count)
-    const msgsData = await supabase.from("contact_messages")
-        .select("id,name,subject,created_at,status").order("created_at", { ascending: false }).limit(3)
-    const wlData = await supabase.from("wholesale_applications")
-        .select("id,company_name,created_at,status").order("created_at", { ascending: false }).limit(3)
-
-    const recentMsgs = msgsData.data || []
-    const recentWl = wlData.data || []
-
-    const sumR = (o: any[]) => o.reduce((s: number, x: any) => s + Number(x.total || 0), 0)
-    const calc = (o: any[]) => ({
-        rev: sumR(o), cnt: o.length,
-        del: o.filter((x: any) => x.status === 'delivered').length,
-        full: o.length > 0 ? (o.filter((x: any) => x.status === 'delivered').length / o.length) * 100 : 0,
-        cust: new Set(o.map((x: any) => x.user_id).filter(Boolean)).size,
-        pend: o.filter((x: any) => x.status === 'pending' || x.status === 'packed').length,
-        aov: o.length > 0 ? Math.round(sumR(o) / o.length) : 0,
-    })
-    const c = calc(net), p = calc(prior)
-    const pct = (c: number, p: number) => p > 0 ? ((c - p) / p) * 100 : c > 0 ? 100 : 0
-
-    const totalVar = invRes.data?.length || 0
-    const inStock = (invRes.data || []).filter((v: any) => v.stock > 0).length
-    const refundCount = refundRes.count || 0
-    const returnRate = c.cnt > 0 ? (refundCount / c.cnt) * 100 : 0
-    const promoOrders = net.filter((o: any) => o.promo_code).length
-    const promoRate = c.cnt > 0 ? (promoOrders / c.cnt) * 100 : 0
-    const unreadMsg = msgsRes.count || 0
-    const pendingWl = wlRes.count || 0
-    const traffic24h = trafficRes.count || 0
-    const uniqueSessions24h = new Set((sessions24hRes.data || []).map((s: any) => s.session_id)).size
-    const orders24h = orders24hRes.count || 0
-    const conversion = uniqueSessions24h > 0 ? ((orders24h / uniqueSessions24h) * 100) : 0
-
-    // New vs returning customers
-    const returningIds = new Set((newCustRes.data || []).map((r: any) => r.user_id).filter(Boolean))
-    const orderUserIds = net.map((o: any) => o.user_id).filter(Boolean)
-    const totalCustomers = new Set(orderUserIds).size
-    const returning = orderUserIds.filter((id: any) => returningIds.has(id)).length
-    const isUnique = new Set()
-    const returningUnique = orderUserIds.filter((id: any) => {
-        if (isUnique.has(id)) return false
-        isUnique.add(id)
-        return returningIds.has(id)
-    }).length
-    const returningCount = returningUnique
-    const newCount = totalCustomers - returningCount
-
-    // Payment methods
-    const pmBuckets = new Map<string, number>()
-    net.forEach((o: any) => {
-        const pm = o.payment_method || "COD"
-        pmBuckets.set(pm, (pmBuckets.get(pm) || 0) + 1)
-    })
-    const pmTotal = [...pmBuckets.values()].reduce((a, b) => a + b, 0)
-
-    // Categories
-    const prodCatMap = new Map<string, string>()
-    catRes.data?.forEach((pc: any) => {
-        if (!prodCatMap.has(pc.product_id)) prodCatMap.set(pc.product_id, pc.categories?.name || "Uncategorized")
-    })
-    const catItems = new Map<string, number>()
-    net.forEach((o: any) => {
-        o.order_items?.forEach((oi: any) => {
-            const cat = prodCatMap.get(oi.product_id) || "Uncategorized"
-            catItems.set(cat, (catItems.get(cat) || 0) + (oi.quantity || 1))
-        })
-    })
-    const topCats = [...catItems.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
-
-    // Top products (from order_items)
-    const prodMap = new Map<string, { name: string; category: string; qty: number; rev: number }>()
-    net.forEach((o: any) => {
-        o.order_items?.forEach((oi: any) => {
-            const key = oi.product_name || "Unknown"
-            const cat = prodCatMap.get(oi.product_id) || "Uncategorized"
-            const e = prodMap.get(key) || { name: key, category: cat, qty: 0, rev: 0 }
-            e.qty += oi.quantity || 1
-            e.rev += (oi.quantity || 1) * Number(oi.unit_price || 0)
-            prodMap.set(key, e)
-        })
-    })
-    const topProds = [...prodMap.values()].sort((a, b) => b.qty - a.qty).slice(0, 5)
-
-    // Status breakdown
-    const statusBD = [
-        { label: "Pending", cnt: orders.filter((o: any) => o.status === 'pending').length, color: "text-amber-600", bg: "bg-amber-400" },
-        { label: "Packed", cnt: orders.filter((o: any) => o.status === 'packed').length, color: "text-blue-600", bg: "bg-blue-400" },
-        { label: "Shipped", cnt: orders.filter((o: any) => o.status === 'shipped').length, color: "text-purple-600", bg: "bg-purple-400" },
-        { label: "Delivered", cnt: orders.filter((o: any) => o.status === 'delivered').length, color: "text-emerald-600", bg: "bg-emerald-400" },
-        { label: "Cancelled", cnt: orders.filter((o: any) => o.status === 'cancelled').length, color: "text-red-600", bg: "bg-red-400" },
+    const { sections, range, filters, asOf } = report
+    const orders = sections.orders.data,
+        operations = sections.operations.data,
+        inventory = sections.inventory.data
+    const audience = sections.audience.data,
+        activity = sections.activity.data
+    const current = orders?.current,
+        previous = orders?.previous
+    const filtered = Boolean(filters.queue || filters.status)
+    const orderRows = filtered ? operations?.orders : orders?.recent
+    const orderTitle = filters.queue
+        ? queueLabels[filters.queue]
+        : filters.status
+        ? STATUS_LABELS[filters.status]
+        : 'Recent orders'
+    const statuses = [
+        ...ALL_STATUSES,
+        ...(operations?.statuses
+            .map((item) => item.status)
+            .filter((status) => !ALL_STATUSES.includes(status as (typeof ALL_STATUSES)[number])) || []),
     ]
-
-    // PM colors
-    const pmColors: Record<string, string> = {
-        "COD": "bg-slate-400",
-        "razorpay": "bg-slate-400",
-        "stripe": "bg-slate-400",
-        "prepaid": "bg-slate-400",
-        "card": "bg-slate-400",
-        "upi": "bg-slate-400",
-        "paypal": "bg-slate-400",
-    }
-
+    const queueHref = (queue: keyof typeof DASHBOARD_QUEUES) =>
+        dashboardHref(params, { queue, status: undefined, page: undefined })
+    const today = new Date(new Date(asOf).getTime() + 19_800_000).toISOString().slice(0, 10)
+    const cards: MetricCard[] =
+        current && previous && orders
+            ? [
+                  {
+                      label: 'Order value',
+                      value: current.orderValue,
+                      display: money(current.orderValue),
+                      prior: previous.orderValue,
+                  },
+                  {
+                      label: 'Payments retained',
+                      value: current.retained,
+                      display: money(current.retained),
+                      prior: previous.retained,
+                  },
+                  {
+                      label: 'Outstanding payments',
+                      value: current.outstanding,
+                      display: money(current.outstanding),
+                      href: queueHref('payment'),
+                  },
+                  {
+                      label: 'Refunds due',
+                      value: current.refundDue,
+                      display: money(current.refundDue),
+                      href: queueHref('refund'),
+                  },
+                  {
+                      label: 'Today’s order value',
+                      value: orders.today.orderValue,
+                      display: money(orders.today.orderValue),
+                      detail: orders.today.count + ' orders',
+                      href:
+                          dashboardHref(params, {
+                              from: today,
+                              to: today,
+                              queue: undefined,
+                              status: undefined,
+                              page: undefined,
+                          }) + '#dashboard-orders',
+                  },
+                  {
+                      label: 'Orders',
+                      value: current.count,
+                      display: current.count.toLocaleString('en-IN'),
+                      prior: previous.count,
+                      href:
+                          dashboardHref(params, { queue: undefined, status: undefined, page: undefined }) +
+                          '#dashboard-orders',
+                  },
+                  {
+                      label: 'Average order',
+                      value: current.count ? current.orderValue / current.count : 0,
+                      display: money(current.count ? current.orderValue / current.count : 0),
+                      prior: previous.count ? previous.orderValue / previous.count : 0,
+                  },
+                  {
+                      label: 'Fulfilled',
+                      value: percent(current.completed, current.count),
+                      display: percent(current.completed, current.count).toFixed(1) + '%',
+                      detail: current.completed + ' / ' + current.count,
+                  },
+              ]
+            : []
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div className="min-w-0">
-                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Dashboard</h1>
-                    <p className="mt-1 text-sm text-slate-500">{format(start, "MMM dd, yyyy")} — {format(end, "MMM dd, yyyy")}</p>
+            <header className="grid grid-cols-[1fr_auto] items-center gap-3 sm:flex sm:flex-wrap">
+                <h1 className="min-w-0 text-2xl font-black tracking-tight text-slate-900 sm:mr-auto">
+                    Dashboard
+                </h1>
+                <Link
+                    href="/admin/products/add"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 text-xs font-semibold text-white hover:bg-slate-800 sm:order-last"
+                >
+                    <Plus className="h-4 w-4" />
+                    New product
+                </Link>
+                <div className="col-span-2 flex items-center gap-2">
+                    <DateRangePicker from={range.from} to={range.to} />
+                    <DashboardRefresh asOf={asOf} />
                 </div>
-                <div className="w-full sm:w-auto sm:shrink-0">
-                    <DateRangePicker />
-                </div>
-            </div>
-
-            {ordersRes.error && (
-                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 stroke-[1.5]" />
-                    <p className="text-xs font-medium text-red-700">Failed to load dashboard data.</p>
-                </div>
-            )}
-
-            {/* Row 1: Real-time / Today metrics */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-                <StatCard label="Today Revenue" value={`₹${todayRev.toLocaleString('en-IN')}`} icon={<TrendingUp />} />
-                <StatCard label="Today Orders" value={todayCnt.toString()} icon={<ShoppingCart />} />
-                <StatCard label="Fulfillment" value={`${c.full.toFixed(0)}%`} subtitle={`${c.del} delivered`} icon={<CheckCircle2 />}
-                    change={pct(c.full, p.full)} />
-                <StatCard label="Conversion" value={`${conversion.toFixed(1)}%`} subtitle="Last 24h" icon={<Target />} />
-                <StatCard label="Refund Rate" value={`${returnRate.toFixed(1)}%`} subtitle={`${refundCount} refunded`}
-                    icon={<RefreshCw />} change={returnRate > 5 ? -100 : 100} />
-                <StatCard label="Visitors 24h" value={traffic24h.toLocaleString()} icon={<Eye />} />
-            </div>
-
-            {/* Row 2: Period stats with comparison */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-                <StatCard label="Revenue" value={`₹${(c.rev / 1000).toFixed(1)}K`} subtitle={`${c.cnt} orders`}
-                    icon={<CircleDollarSign />} change={pct(c.rev, p.rev)} />
-                <StatCard label="Avg Order" value={`₹${c.aov.toLocaleString()}`} icon={<BarChart3 />} change={pct(c.aov, p.aov)} />
-                <StatCard label="Customers" value={c.cust.toString()} icon={<Users />} change={pct(c.cust, p.cust)} />
-                <StatCard label="Pending" value={c.pend.toString()} icon={<Hourglass />} change={pct(c.pend, p.pend)} />
-                <StatCard label="Stock Health"
-                    value={`${totalVar > 0 ? Math.round((inStock / totalVar) * 100) : 0}%`}
-                    subtitle={`${inStock}/${totalVar}`} icon={<Box />} />
-            </div>
-
-            {/* Quick Actions */}
-            <SectionCard className="p-3">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                    {[
-                        { label: "New Product", href: "/admin/products/add", icon: PackagePlus },
-                        { label: "Broadcast", href: "/admin/broadcast", icon: Send },
-                        { label: "Promos", href: "/admin/promos", icon: Tag },
-                        { label: "Messages", href: "/admin/messages", icon: MessageSquare },
-                        { label: "Stock", href: "/admin/stock", icon: Box },
-                        { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
-                        { label: "Customers", href: "/admin/customers", icon: Users },
-                        { label: "Reports", href: "/admin/reports/sales", icon: BarChart3 },
-                    ].map(a => (
-                        <Link key={a.label} href={a.href}
-                            className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50 transition-colors"
+            </header>
+            {Object.entries(sections).map(
+                ([name, section]) =>
+                    section.error && (
+                        <div
+                            key={name}
+                            role="alert"
+                            className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
                         >
-                            <a.icon className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                            <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{a.label}</span>
-                            <ArrowUpRight className="w-2.5 h-2.5 text-slate-400 hidden sm:block stroke-[1.5]" />
-                        </Link>
-                    ))}
-                </div>
-            </SectionCard>
-
-            {/* Row 3: Charts area */}
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-                <SectionCard className="min-w-0 p-5 xl:col-span-6">
-                    <SectionTitle icon={<Activity />} label="Revenue Flow" />
-                    <RevenueChart orders={net} startDate={startDate} endDate={endDate} />
-                </SectionCard>
-                <SectionCard className="min-w-0 p-5 xl:col-span-3">
-                    <SectionTitle icon={<Flame />} label="Top Products" />
-                    {topProds.length === 0 ? (
-                        <p className="text-xs text-slate-500 text-center py-6">No data</p>
-                    ) : (
-                        <div className="space-y-1.5">
-                            {topProds.map((p, i) => (
-                                <div key={p.name} className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-slate-400 w-4">{i + 1}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-slate-700 truncate font-medium">{p.name}</p>
-                                        <p className="text-xs text-slate-500 truncate">{p.category}</p>
-                                    </div>
-                                    <span className="text-xs font-semibold text-slate-500">{p.qty}</span>
-                                    <div className="hidden sm:block w-12"><MiniPct value={p.qty} max={topProds[0].qty} color="bg-slate-400" /></div>
-                                </div>
-                            ))}
+                            <span className="capitalize">{name} unavailable</span>
+                            <Link href={dashboardHref(params)} className="text-xs font-medium underline">
+                                Retry
+                            </Link>
                         </div>
-                    )}
-                </SectionCard>
-                <SectionCard className="min-w-0 p-5 xl:col-span-3">
-                    <SectionTitle icon={<Layers />} label="Orders" />
-                    <div className="space-y-1.5">
-                        {statusBD.map(s => (
-                            <div key={s.label} className="flex items-center justify-between gap-1">
-                                <span className={`text-xs ${s.color}`}>{s.label}</span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-slate-700">{s.cnt}</span>
-                                    <div className={`w-2 h-2 rounded-full shrink-0 ${s.bg}`} />
+                    )
+            )}
+            <section aria-label="Financial overview" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                {cards.length ? (
+                    cards.map((card) => {
+                        const change =
+                            card.prior !== undefined && card.value !== card.prior
+                                ? dashboardChange(card.value, card.prior)
+                                : null
+                        const positive = card.prior !== undefined && card.value > card.prior
+                        const content = (
+                            <>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs font-medium text-slate-500">{card.label}</span>
+                                    {card.href && (
+                                        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                    )}
                                 </div>
+                                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                                    <strong className="break-all text-xl font-semibold tracking-tight tabular-nums text-slate-900 sm:text-2xl">
+                                        {card.display}
+                                    </strong>
+                                    {change && (
+                                        <span
+                                            aria-label={`${change} versus previous period`}
+                                            className={`inline-flex items-center gap-1 text-xs font-medium tabular-nums ${
+                                                positive
+                                                    ? 'text-emerald-700'
+                                                    : card.prior !== undefined && card.value < card.prior
+                                                    ? 'text-rose-700'
+                                                    : 'text-slate-400'
+                                            }`}
+                                        >
+                                            {positive ? (
+                                                <ArrowUp className="h-3 w-3" />
+                                            ) : card.prior !== undefined && card.value < card.prior ? (
+                                                <ArrowDown className="h-3 w-3" />
+                                            ) : null}
+                                            {change}
+                                        </span>
+                                    )}
+                                </div>
+                                {card.detail && (
+                                    <div className="mt-2 text-[11px] tabular-nums text-slate-400">
+                                        {card.detail}
+                                    </div>
+                                )}
+                            </>
+                        )
+                        return card.href ? (
+                            <Link
+                                key={card.label}
+                                href={card.href}
+                                className="min-w-0 rounded-2xl border bg-white p-5 shadow-sm hover:border-slate-300"
+                            >
+                                {content}
+                            </Link>
+                        ) : (
+                            <div
+                                key={card.label}
+                                className="min-w-0 rounded-2xl border bg-white p-5 shadow-sm"
+                            >
+                                {content}
                             </div>
+                        )
+                    })
+                ) : (
+                    <div className="col-span-2 rounded-2xl border bg-white p-5 text-sm text-slate-500 xl:col-span-4">
+                        Financial metrics unavailable.
+                    </div>
+                )}
+            </section>
+
+            <nav
+                aria-label="Quick actions"
+                className="grid grid-cols-3 gap-1 rounded-2xl border bg-white p-3 shadow-sm sm:grid-cols-4 xl:grid-cols-6"
+            >
+                {shortcuts.map(({ label, href, icon: Icon }) => (
+                    <Link
+                        key={href}
+                        href={href}
+                        className="group flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-center hover:bg-pink-50 sm:flex-row sm:justify-start sm:gap-3 sm:px-3 sm:text-left"
+                    >
+                        <Icon className="h-4 w-4 shrink-0 text-slate-400 group-hover:text-pink-700" />
+                        <span className="text-[11px] font-medium text-slate-700 group-hover:text-pink-800 sm:text-xs">
+                            {label}
+                        </span>
+                    </Link>
+                ))}
+            </nav>
+            <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <section
+                    aria-label="Order trends"
+                    className="min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm"
+                >
+                    <div className="p-5">
+                        {orders ? (
+                            <RevenueChart data={orders.trend} />
+                        ) : (
+                            <p className="py-24 text-center text-sm text-slate-500">Trends unavailable</p>
+                        )}
+                    </div>
+                </section>
+                <section
+                    aria-label="Needs attention"
+                    className="overflow-hidden rounded-2xl border bg-white shadow-sm"
+                >
+                    <div className="flex items-center justify-between gap-3 px-5 py-4">
+                        <h2 className="text-sm font-semibold">Needs attention</h2>
+                        <span className="text-[11px] text-slate-400">All dates</span>
+                    </div>
+                    {operations ? (
+                        <div className="border-t divide-y divide-slate-100">
+                            {Object.entries(queueLabels).map(([key, label]) => {
+                                const queue = key as keyof typeof DASHBOARD_QUEUES,
+                                    count = operations.attention[queue]
+                                return (
+                                    <Link
+                                        key={queue}
+                                        href={queueHref(queue)}
+                                        aria-label={`${DASHBOARD_QUEUES[queue]}: ${count}`}
+                                        aria-current={filters.queue === queue ? 'page' : undefined}
+                                        className={`group flex items-center gap-3 px-5 py-3 text-sm transition-colors ${
+                                            filters.queue === queue ? 'bg-pink-50' : 'hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                                count
+                                                    ? ['failed', 'pickup', 'refund'].includes(queue)
+                                                        ? 'bg-rose-500'
+                                                        : 'bg-amber-500'
+                                                    : 'bg-slate-200'
+                                            }`}
+                                        />
+                                        <span className="min-w-0 flex-1 text-xs text-slate-600">{label}</span>
+                                        <strong
+                                            className={`tabular-nums ${
+                                                count ? 'text-slate-900' : 'text-slate-400'
+                                            }`}
+                                        >
+                                            {count}
+                                        </strong>
+                                        <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-600" />
+                                    </Link>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <p className="px-5 pb-5 text-sm text-slate-500">Unavailable</p>
+                    )}
+                </section>
+            </div>
+            <section
+                aria-label="Order pipeline"
+                className="rounded-2xl border bg-white p-5 shadow-sm space-y-4"
+            >
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold">Order status</h2>
+                    <span className="text-[11px] text-slate-400">All dates</span>
+                </div>
+                {operations ? (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                        {statuses.map((status) => (
+                            <Link
+                                key={status}
+                                href={
+                                    dashboardHref(params, { status, queue: undefined, page: undefined }) +
+                                    '#dashboard-orders'
+                                }
+                                aria-current={filters.status === status ? 'page' : undefined}
+                                className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 hover:bg-slate-50 ${
+                                    filters.status === status
+                                        ? 'border-pink-200 bg-pink-50'
+                                        : 'border-slate-100'
+                                }`}
+                            >
+                                <span className="text-[11px] text-slate-600">
+                                    {STATUS_LABELS[status] || status.replaceAll('_', ' ')}
+                                </span>
+                                <strong className="text-sm tabular-nums">
+                                    {operations.statuses.find((item) => item.status === status)?.count || 0}
+                                </strong>
+                            </Link>
                         ))}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-3 mb-2">
-                        <CalendarDays className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                        <span className="text-sm font-semibold text-slate-900 tracking-normal">Day of Week</span>
+                ) : (
+                    <p className="text-sm text-slate-500">Unavailable</p>
+                )}
+            </section>
+            <section
+                id="dashboard-orders"
+                aria-label="Order queue"
+                className="min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm"
+            >
+                <div className="flex flex-wrap items-center justify-between gap-3 p-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-sm font-semibold">{orderTitle}</h2>
+                        <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500">
+                            {filtered ? 'All dates' : 'Selected dates'}
+                        </span>
+                        {filtered && operations && (
+                            <span className="text-xs text-slate-400">{operations.total}</span>
+                        )}
                     </div>
-                    <DayOfWeekChart orders={net} />
-                </SectionCard>
-            </div>
-
-            {/* Row 4: Tables */}
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-                <SectionCard className="min-w-0 overflow-hidden xl:col-span-7">
-                    <div className="p-5 pb-0">
-                        <SectionTitle icon={<ShoppingBag />} label="Recent Orders"
-                            right={<Link href="/admin/orders" className="text-xs font-semibold text-slate-700 hover:text-slate-700">View All →</Link>} />
+                    <div className="flex flex-wrap items-center gap-3">
+                        <DashboardOrderFilter
+                            params={params}
+                            statuses={statuses.map((status) => ({
+                                value: status,
+                                label: STATUS_LABELS[status] || status.replaceAll('_', ' '),
+                                count:
+                                    operations?.statuses.find((item) => item.status === status)?.count || 0,
+                            }))}
+                            status={filters.status}
+                            queueLabel={filters.queue ? queueLabels[filters.queue] : undefined}
+                            disabled={!operations}
+                        />
+                        {filtered && (
+                            <Link
+                                href={dashboardHref(params, {
+                                    queue: undefined,
+                                    status: undefined,
+                                    page: undefined,
+                                })}
+                                className="text-xs text-slate-500 underline"
+                            >
+                                Clear filter
+                            </Link>
+                        )}
+                        <Link
+                            href="/admin/orders"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-slate-600"
+                        >
+                            View all
+                            <ArrowUpRight className="h-3 w-3" />
+                        </Link>
                     </div>
-                    <RecentOrdersTable orders={orders.slice(0, 8)} />
-                </SectionCard>
-                <SectionCard className="min-w-0 p-5 xl:col-span-3">
-                    <SectionTitle icon={<BarChart3 />} label="Top Categories" />
-                    {topCats.length === 0 ? (
-                        <p className="text-xs text-slate-500 text-center py-6">No data</p>
-                    ) : (
-                        <div className="space-y-2">
-                            {topCats.map(([cat, cnt]) => (
-                                <div key={cat} className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-600 flex-1 truncate">{cat}</span>
-                                    <span className="text-xs font-semibold text-slate-500">{cnt}</span>
-                                    <MiniPct value={cnt} max={topCats[0][1]} color="bg-slate-400" />
-                                </div>
-                            ))}
+                </div>
+                {orderRows ? (
+                    <RecentOrdersTable orders={orderRows} />
+                ) : (
+                    <p className="px-5 pb-5 text-sm text-slate-500">
+                        {filtered ? 'Order filter unavailable' : 'Recent orders unavailable'}
+                    </p>
+                )}
+                {filtered && operations && (
+                    <nav
+                        aria-label="Dashboard order pages"
+                        className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-xs"
+                    >
+                        <span className="text-slate-500">
+                            Page {operations.page} of {operations.totalPages}
+                        </span>
+                        <div className="flex gap-3">
+                            {operations.page > 1 && (
+                                <Link
+                                    href={dashboardHref(params, { page: String(operations.page - 1) })}
+                                    className="rounded-lg border px-3 py-2"
+                                >
+                                    Previous
+                                </Link>
+                            )}
+                            {operations.page < operations.totalPages && (
+                                <Link
+                                    href={dashboardHref(params, { page: String(operations.page + 1) })}
+                                    className="rounded-lg border px-3 py-2"
+                                >
+                                    Next
+                                </Link>
+                            )}
                         </div>
-                    )}
-                </SectionCard>
-                <SectionCard className="min-w-0 p-5 xl:col-span-2">
-                    <SectionTitle icon={<CreditCard />} label="Payment" />
-                    {pmBuckets.size === 0 ? (
-                        <p className="text-xs text-slate-500 text-center py-6">No data</p>
-                    ) : (
-                        <div className="space-y-1.5">
-                            {[...pmBuckets.entries()].sort((a, b) => b[1] - a[1]).map(([pm, cnt]) => (
-                                <div key={pm}>
-                                    <div className="flex items-center justify-between mb-0.5">
-                                        <span className="text-xs text-slate-500 font-medium">{pm}</span>
-                                        <span className="text-xs font-semibold text-slate-700">{pmTotal > 0 ? Math.round((cnt / pmTotal) * 100) : 0}%</span>
-                                    </div>
-                                    <MiniPct value={cnt} max={pmTotal} color={pmColors[pm] || "bg-slate-400"} />
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </SectionCard>
-            </div>
-
-            {/* Row 5: Activity + Low Stock + Bottom Stats */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <SectionCard className="min-w-0 p-5">
-                    <SectionTitle icon={<Bell />} label="Recent Activity"
-                        right={<Link href="/admin/messages" className="text-xs font-semibold text-slate-700 hover:text-slate-700">View</Link>} />
-                    {recentMsgs.length === 0 && recentWl.length === 0 ? (
-                        <p className="text-xs text-slate-500 text-center py-4">No recent activity</p>
-                    ) : (
-                        <div className="space-y-2">
-                            {recentMsgs.map((msg: any) => (
-                                <div key={msg.id} className="flex items-start gap-2">
-                                    <div className="p-1 rounded-md bg-amber-50 mt-0.5">
-                                        <MessageSquare className="w-4 h-4 text-amber-600 stroke-[1.5]" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-xs font-medium text-slate-700 truncate">{msg.name}</p>
-                                        <p className="text-xs text-slate-500 truncate">{msg.subject}</p>
-                                    </div>
-                                    <Badge variant="outline" className="text-xs shrink-0 h-5 px-1 font-medium">{msg.status}</Badge>
-                                </div>
-                            ))}
-                            {recentWl.map((w: any) => (
-                                <div key={w.id} className="flex items-start gap-2">
-                                    <div className="p-1 rounded-md bg-slate-50 mt-0.5">
-                                        <UserPlus className="w-4 h-4 text-slate-700 stroke-[1.5]" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-xs font-medium text-slate-700 truncate">{w.company_name}</p>
-                                        <p className="text-xs text-slate-500">Wholesale Application</p>
-                                    </div>
-                                    <Badge variant="outline" className="text-xs shrink-0 h-5 px-1 font-medium">{w.status}</Badge>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </SectionCard>
-                <Suspense fallback={
-                    <SectionCard className="min-w-0 p-5 flex items-center justify-center h-32">
-                        <Loader2 className="w-4 h-4 animate-spin text-slate-400 stroke-[1.5]" />
-                    </SectionCard>
-                }>
-                    <LowStockPanel />
-                </Suspense>
-                <SectionCard className="min-w-0 p-5">
-                    <SectionTitle icon={<Sparkles />} label="Quick Metrics" />
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                            <div className="flex items-center gap-2">
-                                <BadgePercent className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                                <span className="text-xs text-slate-600">Promo Rate</span>
-                            </div>
-                            <span className="text-xs font-semibold text-slate-800">{promoRate.toFixed(1)}%</span>
-                        </div>
-                        <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                            <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                                <span className="text-xs text-slate-600">New Customers</span>
-                            </div>
-                            <span className="text-xs font-semibold text-slate-800">{newCount}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                            <div className="flex items-center gap-2">
-                                <RefreshCw className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                                <span className="text-xs text-slate-600">Returning</span>
-                            </div>
-                            <span className="text-xs font-semibold text-slate-800">{returningCount}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                            <div className="flex items-center gap-2">
-                                <Mail className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                                <span className="text-xs text-slate-600">Unread Msgs</span>
-                            </div>
-                            <span className="text-xs font-semibold text-slate-800">{unreadMsg}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-1.5">
-                            <div className="flex items-center gap-2">
-                                <UserPlus className="w-4 h-4 text-slate-500 stroke-[1.5]" />
-                                <span className="text-xs text-slate-600">Wholesale Pending</span>
-                            </div>
-                            <span className="text-xs font-semibold text-slate-800">{pendingWl}</span>
-                        </div>
+                    </nav>
+                )}
+            </section>
+            <div className="grid gap-4 lg:grid-cols-3">
+                <section
+                    aria-label="Stock alerts"
+                    className="min-w-0 rounded-2xl border bg-white p-5 shadow-sm space-y-4"
+                >
+                    <div className="flex items-center justify-between gap-3">
+                        <h2 className="text-sm font-semibold">Stock alerts</h2>
+                        <Link
+                            href="/admin/inventory"
+                            aria-label="View inventory"
+                            className="text-slate-400 hover:text-slate-700"
+                        >
+                            <ArrowUpRight className="h-4 w-4" />
+                        </Link>
                     </div>
-                </SectionCard>
+                    {inventory ? (
+                        <>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Link
+                                    href="/admin/inventory?stock=out"
+                                    className="rounded-xl bg-rose-50 px-4 py-3"
+                                >
+                                    <span className="text-xs text-rose-700">Out of stock</span>
+                                    <strong className="mt-1 block text-xl font-semibold tabular-nums text-rose-900">
+                                        {inventory.out}
+                                    </strong>
+                                </Link>
+                                <Link
+                                    href="/admin/inventory?stock=low"
+                                    className="rounded-xl bg-amber-50 px-4 py-3"
+                                >
+                                    <span className="text-xs text-amber-700">Low stock</span>
+                                    <strong className="mt-1 block text-xl font-semibold tabular-nums text-amber-900">
+                                        {inventory.low}
+                                    </strong>
+                                </Link>
+                            </div>
+                            <div className="divide-y divide-slate-100">
+                                {inventory.items.slice(0, 4).map((item) => (
+                                    <Link
+                                        key={item.id}
+                                        href={`/admin/inventory?stock=${
+                                            item.stock <= 0 ? 'out' : 'low'
+                                        }&q=${encodeURIComponent(item.sku || item.name)}`}
+                                        className="flex items-center justify-between gap-3 py-3"
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="truncate text-xs font-medium">{item.name}</p>
+                                            <p className="mt-1 truncate text-[11px] text-slate-500">
+                                                {item.title || 'Default'}
+                                                {item.sku ? ` · ${item.sku}` : ''}
+                                            </p>
+                                        </div>
+                                        <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-600">
+                                            {item.stock <= 0 ? 'Out' : item.stock}
+                                        </span>
+                                    </Link>
+                                ))}
+                                {!inventory.items.length && (
+                                    <p className="py-4 text-sm text-slate-500">No stock alerts</p>
+                                )}
+                            </div>
+                            <div className="flex justify-between gap-3 border-t pt-3 text-xs text-slate-500">
+                                <span>In stock</span>
+                                <span className="tabular-nums">
+                                    {inventory.available} / {inventory.total}
+                                </span>
+                            </div>
+                        </>
+                    ) : (
+                        <p className="text-sm text-slate-500">Unavailable</p>
+                    )}
+                </section>
+                <section
+                    aria-label="Customer and cart summary"
+                    className="rounded-2xl border bg-white p-5 shadow-sm space-y-4"
+                >
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-sm font-semibold">Customers</h2>
+                        <Link
+                            href="/admin/customers"
+                            aria-label="View customers"
+                            className="text-slate-400 hover:text-slate-700"
+                        >
+                            <ArrowUpRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                    {audience ? (
+                        <>
+                            <dl className="grid grid-cols-2 gap-x-4 gap-y-5">
+                                {[
+                                    ['Ordered', audience.ordering],
+                                    ['First-time', audience.new],
+                                    ['Returning', audience.returning],
+                                    ['Registered', audience.registered],
+                                ].map(([label, value]) => (
+                                    <div key={label}>
+                                        <dt className="text-xs text-slate-500">{label}</dt>
+                                        <dd className="mt-1 text-xl font-semibold tabular-nums">{value}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                            <div className="space-y-3 border-t pt-4">
+                                <h3 className="text-xs font-semibold text-slate-600">
+                                    Carts <span className="ml-1 font-normal text-slate-400">Live</span>
+                                </h3>
+                                {[
+                                    [
+                                        'Pending recovery',
+                                        audience.carts.pending,
+                                        '/admin/abandoned-carts?status=pending',
+                                    ],
+                                    [
+                                        'Emails sent',
+                                        audience.carts.sent,
+                                        '/admin/abandoned-carts?status=sent',
+                                    ],
+                                    ['Active · 1h', audience.carts.recent, '/admin/live-carts'],
+                                ].map(([label, value, href]) => (
+                                    <Link
+                                        key={label}
+                                        href={String(href)}
+                                        className="flex items-center justify-between gap-3 text-xs"
+                                    >
+                                        <span className="text-slate-500">{label}</span>
+                                        <strong className="tabular-nums">{value}</strong>
+                                    </Link>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <p className="text-sm text-slate-500">Unavailable</p>
+                    )}
+                </section>
+                <section
+                    aria-label="Recent activity"
+                    className="rounded-2xl border bg-white p-5 shadow-sm space-y-4"
+                >
+                    <h2 className="text-sm font-semibold">Activity</h2>
+                    {activity ? (
+                        <>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    ['Messages', activity.unread, '/admin/messages'],
+                                    ['Wholesale', activity.wholesale, '/admin/wholesale'],
+                                ].map(([label, value, href]) => (
+                                    <Link
+                                        key={label}
+                                        href={String(href)}
+                                        className="rounded-xl bg-slate-50 px-4 py-3"
+                                    >
+                                        <span className="text-xs text-slate-500">{label}</span>
+                                        <strong className="mt-1 block text-xl font-semibold tabular-nums">
+                                            {value}
+                                        </strong>
+                                    </Link>
+                                ))}
+                            </div>
+                            <div className="divide-y divide-slate-100">
+                                {activity.events.slice(0, 3).map((event) => (
+                                    <Link
+                                        key={`${event.kind}:${event.id}`}
+                                        href={
+                                            event.kind === 'message' ? '/admin/messages' : '/admin/wholesale'
+                                        }
+                                        className="flex items-start justify-between gap-3 py-3"
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="truncate text-xs font-medium">{event.name}</p>
+                                            <p className="mt-1 truncate text-[11px] text-slate-500">
+                                                {event.label}
+                                            </p>
+                                        </div>
+                                        <time className="shrink-0 text-[10px] text-slate-400">
+                                            {new Date(event.created_at).toLocaleDateString('en-IN', {
+                                                timeZone: 'Asia/Kolkata',
+                                                day: 'numeric',
+                                                month: 'short',
+                                            })}
+                                        </time>
+                                    </Link>
+                                ))}
+                                {!activity.events.length && (
+                                    <p className="py-4 text-sm text-slate-500">No recent activity</p>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <p className="text-sm text-slate-500">Unavailable</p>
+                    )}
+                </section>
             </div>
+            <section aria-label="Store analytics" className="grid gap-4 lg:grid-cols-3">
+                <section
+                    aria-label="Weekday order value"
+                    className="min-w-0 rounded-2xl border bg-white p-5 shadow-sm space-y-4"
+                >
+                    <h2 className="text-sm font-semibold">By weekday</h2>
+                    {orders ? (
+                        <div className="flex h-36 items-end gap-3 pt-4">
+                            {Array.from({ length: 7 }, (_, day) => {
+                                const bucket = orders.weekday.find((item) => item.day === day),
+                                    value = bucket?.orderValue || 0,
+                                    max = Math.max(1, ...orders.weekday.map((item) => item.orderValue)),
+                                    label = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day]
+                                return (
+                                    <div
+                                        key={day}
+                                        className="flex h-full min-w-0 flex-1 flex-col justify-end gap-2 text-center"
+                                    >
+                                        <div
+                                            role="img"
+                                            aria-label={`${label}: ${money(value)}`}
+                                            title={money(value)}
+                                            className="min-h-px rounded-t bg-slate-300"
+                                            style={{ height: `${(value / max) * 100}%` }}
+                                        />
+                                        <span className="text-[10px] text-slate-500">{label}</span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-slate-500">Unavailable</p>
+                    )}
+                </section>
+                <section
+                    aria-label="Payment methods"
+                    className="rounded-2xl border bg-white p-5 shadow-sm space-y-4"
+                >
+                    <h2 className="text-sm font-semibold">Payment methods</h2>
+                    {orders && current ? (
+                        <>
+                            {orders.payments.map((payment) => (
+                                <div key={payment.method} className="space-y-2">
+                                    <div className="flex justify-between gap-3 text-xs">
+                                        <span className="capitalize text-slate-500">
+                                            {(
+                                                {
+                                                    cod: 'Cash on delivery',
+                                                    razorpay: 'Razorpay',
+                                                    upi: 'UPI',
+                                                    b2b_invoice: 'B2B invoice',
+                                                } as Record<string, string>
+                                            )[payment.method] || payment.method.replaceAll('_', ' ')}
+                                        </span>
+                                        <strong className="tabular-nums">
+                                            {payment.count} ·{' '}
+                                            {percent(payment.count, current.count).toFixed(1)}%
+                                        </strong>
+                                    </div>
+                                    <div className="h-1 overflow-hidden rounded-full bg-slate-100">
+                                        <div
+                                            className="h-full rounded-full bg-slate-400"
+                                            style={{ width: `${percent(payment.count, current.count)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            <dl className="grid grid-cols-2 gap-3 border-t pt-3 text-xs">
+                                {[
+                                    [
+                                        'Coupon use',
+                                        `${percent(current.promoOrders, current.count).toFixed(1)}%`,
+                                    ],
+                                    [
+                                        'Refund rate',
+                                        `${percent(current.refundOrders, current.allCount).toFixed(1)}%`,
+                                    ],
+                                    ['Refunded', money(current.refunded)],
+                                    ['Unknown payments', String(current.unknownPayments)],
+                                ].map(([label, value]) => (
+                                    <div key={label}>
+                                        <dt className="text-slate-500">{label}</dt>
+                                        <dd className="mt-1 font-semibold tabular-nums">{value}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        </>
+                    ) : (
+                        <p className="text-sm text-slate-500">Unavailable</p>
+                    )}
+                </section>
+                <section
+                    aria-label="Top products and categories"
+                    className="min-w-0 rounded-2xl border bg-white p-5 shadow-sm space-y-4"
+                >
+                    <h2 className="text-sm font-semibold">Top products</h2>
+                    {orders ? (
+                        <>
+                            {orders.products.slice(0, 5).map((product, index) => (
+                                <div
+                                    key={`${product.id}:${index}`}
+                                    className="flex items-start justify-between gap-3 text-xs"
+                                >
+                                    <span className="truncate text-slate-500">{product.name}</span>
+                                    <strong className="shrink-0 tabular-nums">{product.quantity}</strong>
+                                </div>
+                            ))}
+                            <h3 className="border-t pt-3 text-xs font-semibold">Categories</h3>
+                            {orders.categories.slice(0, 3).map((category) => (
+                                <div key={category.name} className="flex justify-between gap-3 text-xs">
+                                    <span className="text-slate-500">{category.name}</span>
+                                    <strong className="tabular-nums">{category.quantity}</strong>
+                                </div>
+                            ))}
+                        </>
+                    ) : (
+                        <p className="text-sm text-slate-500">Unavailable</p>
+                    )}
+                </section>
+                {audience && (
+                    <dl className="grid grid-cols-2 gap-4 rounded-2xl border bg-white p-5 shadow-sm lg:col-span-3">
+                        {[
+                            ['Page views · 24h', audience.traffic.views],
+                            ['Browsers · 24h', audience.traffic.browsers],
+                        ].map(([label, value]) => (
+                            <div key={label} className="space-y-2 text-xs">
+                                <dt className="text-slate-500">{label}</dt>
+                                <dd className="text-xl font-semibold tabular-nums">{value}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                )}
+            </section>
         </div>
     )
 }
-
-// ─── Low Stock Panel ───
-
-async function LowStockPanel() {
-    const supabase = await createClient()
-    const { data: items } = await supabase
-        .from("product_variants")
-        .select(`id, sku, title, stock, products(name)`)
-        .lte("stock", 10).order("stock", { ascending: true }).limit(6)
-
-    return (
-        <SectionCard className="min-w-0 p-5 h-full">
-            <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-amber-500 stroke-[1.5]" />
-                    <span className="text-sm font-semibold text-slate-900 tracking-normal">Low Stock</span>
-                </div>
-                <Link href="/admin/stock" className="text-xs font-semibold text-slate-700 hover:text-slate-700">View All →</Link>
-            </div>
-            {!items?.length ? (
-                <p className="text-xs text-slate-500 text-center py-6">All stocked up!</p>
-            ) : (
-                <div className="space-y-1.5">
-                    {items.map((item: any) => (
-                        <div key={item.id} className="flex items-center justify-between gap-3 py-2 border-b border-slate-100 last:border-0">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-xs font-medium text-slate-700 truncate">{item.products?.name}</p>
-                                <p className="text-xs text-slate-500 font-mono">{item.sku}</p>
-                            </div>
-                            <div className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-                                item.stock === 0 ? 'bg-red-50 text-red-600' :
-                                item.stock <= 3 ? 'bg-orange-50 text-orange-600' :
-                                'bg-amber-50 text-amber-600'
-                            }`}>{item.stock}</div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </SectionCard>
-    )
-}
-

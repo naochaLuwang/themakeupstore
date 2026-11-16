@@ -27,7 +27,7 @@ export default function SkincareAccessoriesPage() {
 
                 const { data: parents } = await supabase
                     .from('categories')
-                    .select('id, name, slug')
+                    .select('id, name, slug').eq("is_active", true)
                     .in('slug', ['skincare', 'accessories'])
 
                 if (!parents || parents.length === 0) {
@@ -39,7 +39,7 @@ export default function SkincareAccessoriesPage() {
 
                 const { data: subs } = await supabase
                     .from('categories')
-                    .select('id, name, slug, image_url')
+                    .select('id, name, slug, image_url').eq("is_active", true)
                     .in('parent_id', parentIds)
                     .order('name', { ascending: true })
 

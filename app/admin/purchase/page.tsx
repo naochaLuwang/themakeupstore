@@ -1,28 +1,23 @@
-import { createClient } from "@/utils/supabase/server"
-import PurchaseClient from "./purchase-client"
+import { searchPurchaseSuppliers } from '@/app/actions/purchases'
+import Link from 'next/link'
+import PurchaseClient from './purchase-client'
 
 export default async function PurchasePage() {
-    const supabase = await createClient()
-
-    const { data: suppliers } = await supabase
-        .from('suppliers')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-    const { data: products } = await supabase
-        .from('products')
-        .select(`
-            id, 
-            name, 
-            brand,
-            product_variants (id, title, stock, sku, price)
-        `)
-        .eq('status', 'active')
-
-    return (
-        <PurchaseClient
-            initialSuppliers={suppliers || []}
-            initialProducts={products || []}
-        />
-    )
+    let suppliers
+    try {
+        suppliers = await searchPurchaseSuppliers()
+    } catch {
+        return (
+            <div className="space-y-6">
+                <h1 className="text-2xl font-black tracking-tight">New purchase</h1>
+                <div role="alert" className="rounded-2xl border bg-white p-6 text-sm text-red-700 shadow-sm">
+                    Unable to load suppliers.{' '}
+                    <Link href="/admin/purchase" className="underline">
+                        Try again
+                    </Link>
+                </div>
+            </div>
+        )
+    }
+    return <PurchaseClient initialSuppliers={suppliers} />
 }

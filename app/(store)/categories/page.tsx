@@ -48,7 +48,7 @@ export default function CategoriesPage() {
             try {
                 const { data, error } = await supabase
                     .from("categories")
-                    .select("id, name, slug, parent_id, image_url")
+                    .select("id, name, slug, parent_id, image_url").eq("is_active", true)
                     .order("name", { ascending: true })
                 if (error) throw error
                 setAllCategories(data || [])

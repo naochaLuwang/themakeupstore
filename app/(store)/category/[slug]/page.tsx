@@ -11,7 +11,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
     const { data: parent } = await supabase
         .from("categories")
-        .select("id, name, slug, image_url")
+        .select("id, name, slug, image_url").eq("is_active", true)
         .eq("slug", slug)
         .single()
 
@@ -22,7 +22,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     if (parent) {
         const [subsResult, concernsResult] = await Promise.all([
             supabase.from("categories")
-                .select("id, name, slug, image_url")
+                .select("id, name, slug, image_url").eq("is_active", true)
                 .eq("parent_id", parent.id)
                 .order("name"),
             supabase.from("concerns")

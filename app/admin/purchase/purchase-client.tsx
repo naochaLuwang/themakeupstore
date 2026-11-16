@@ -1,485 +1,586 @@
-"use client"
+'use client'
 
-import { useState, useMemo, useRef, useEffect } from "react"
-import { Plus, Trash2, Search, Loader2, Package, X, ChevronRight, Building, Phone, Mail, Check, List } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { createClient } from "@/utils/supabase/client"
-import { toast } from "sonner"
+import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Plus, Search, Trash2, Loader2, ArrowUpRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+    createPurchaseSupplier,
+    savePurchase,
+    searchPurchaseProducts,
+    searchPurchaseSuppliers,
+} from '@/app/actions/purchases'
+import {
+    purchaseMoney,
+    validatePurchaseDraft,
+    type PurchaseDraft,
+    type PurchaseProduct,
+    type Supplier,
+} from '@/lib/purchases'
 
-export default function PurchaseClient({ initialSuppliers, initialProducts }: any) {
-    const [suppliersList, setSuppliersList] = useState<any[]>(initialSuppliers || [])
-    const [selectedItems, setSelectedItems] = useState<any[]>([])
-    
-    // Supplier Combobox State
-    const [supplierId, setSupplierId] = useState("")
-    const [supplierSearch, setSupplierSearch] = useState("")
-    const [isSupplierOpen, setIsSupplierOpen] = useState(false)
-    const supplierDropdownRef = useRef<HTMLDivElement>(null)
+type Item = PurchaseProduct & { quantity: string; unit_cost: string }
+const field = 'h-10 rounded-lg border-slate-200 text-sm'
 
-    // Product Search Combobox State
-    const [productSearchQuery, setProductSearchQuery] = useState("")
-    const [isProductSearchOpen, setIsProductSearchOpen] = useState(false)
-    const productDropdownRef = useRef<HTMLDivElement>(null)
-
-    const [reference, setReference] = useState("")
-    const [loading, setLoading] = useState(false)
-
-    // Vendor Modal States
-    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false)
-    const [newVendorName, setNewVendorName] = useState("")
-    const [newVendorEmail, setNewVendorEmail] = useState("")
-    const [newVendorPhone, setNewVendorPhone] = useState("")
-    const [isCreatingVendor, setIsCreatingVendor] = useState(false)
-
-    const supabase = createClient()
-
-    // Handle clicks outside of dropdowns
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(event.target as Node)) {
-                setIsSupplierOpen(false)
-            }
-            if (productDropdownRef.current && !productDropdownRef.current.contains(event.target as Node)) {
-                setIsProductSearchOpen(false)
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => document.removeEventListener("mousedown", handleClickOutside)
-    }, [])
-
-    const filteredSuppliers = useMemo(() => {
-        return suppliersList.filter(s => s.name.toLowerCase().includes(supplierSearch.toLowerCase()))
-    }, [supplierSearch, suppliersList])
-
-    const filteredProducts = useMemo(() => {
-        if (!productSearchQuery.trim()) return []
-        const query = productSearchQuery.toLowerCase()
-        return initialProducts.filter((p: any) => {
-            const productNameMatch = p.name.toLowerCase().includes(query)
-            const variantMatch = p.product_variants.some((v: any) =>
-                v.title.toLowerCase().includes(query)
-            )
-            return productNameMatch || variantMatch
-        })
-    }, [productSearchQuery, initialProducts])
-
-    // Find the currently selected supplier name for display
-    const selectedSupplierName = useMemo(() => {
-        const s = suppliersList.find(sup => sup.id === supplierId)
-        return s ? s.name : ""
-    }, [supplierId, suppliersList])
+export default function PurchaseClient({ initialSuppliers }: { initialSuppliers: Supplier[] }) {
+    const router = useRouter()
+    const [suppliers, setSuppliers] = useState(initialSuppliers)
+    const [supplierQuery, setSupplierQuery] = useState('')
+    const [supplier, setSupplier] = useState<Supplier | null>(null)
+    const [supplierError, setSupplierError] = useState('')
+    const [query, setQuery] = useState('')
+    const [products, setProducts] = useState<PurchaseProduct[]>([])
+    const [searching, setSearching] = useState(false)
+    const [searchError, setSearchError] = useState('')
+    const [items, setItems] = useState<Item[]>([])
+    const [reference, setReference] = useState('')
+    const [expected, setExpected] = useState('')
+    const [notes, setNotes] = useState('')
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState('')
+    const [pending, setPending] = useState<{ id: string; payload: PurchaseDraft } | null>(null)
+    const [vendorOpen, setVendorOpen] = useState(false)
+    const [vendorBusy, setVendorBusy] = useState(false)
+    const [vendorError, setVendorError] = useState('')
+    const vendorRequest = useRef<Supplier | null>(null)
+    const locked = busy || Boolean(pending)
 
     useEffect(() => {
-        if (selectedSupplierName && !isSupplierOpen) {
-            setSupplierSearch(selectedSupplierName)
+        let current = true
+        const timer = setTimeout(() => {
+            setSupplierError('')
+            searchPurchaseSuppliers(supplierQuery)
+                .then((result) => {
+                    if (current) setSuppliers(result)
+                })
+                .catch(() => {
+                    if (current) setSupplierError('Unable to search suppliers. Change the search to retry.')
+                })
+        }, 200)
+        return () => {
+            current = false
+            clearTimeout(timer)
         }
-    }, [selectedSupplierName, isSupplierOpen])
+    }, [supplierQuery])
+    useEffect(() => {
+        let current = true
+        setProducts([])
+        setSearchError('')
+        setSearching(query.trim().length >= 2)
+        if (query.trim().length < 2) return
+        const timer = setTimeout(() => {
+            searchPurchaseProducts(query)
+                .then((result) => {
+                    if (current) setProducts(result)
+                })
+                .catch(() => {
+                    if (current) setSearchError('Unable to search products. Change the search to retry.')
+                })
+                .finally(() => {
+                    if (current) setSearching(false)
+                })
+        }, 200)
+        return () => {
+            current = false
+            clearTimeout(timer)
+        }
+    }, [query])
+    useEffect(() => {
+        if (!items.length) return
+        const warn = (event: BeforeUnloadEvent) => {
+            event.preventDefault()
+        }
+        window.addEventListener('beforeunload', warn)
+        return () => window.removeEventListener('beforeunload', warn)
+    }, [items.length])
 
-    const addItem = (variant: any, productName: string, productId: string) => {
-        if (selectedItems.find(i => i.variant_id === variant.id)) {
-            toast.error("Item already added")
+    const payload: PurchaseDraft = {
+        supplier_id: supplier?.id || '',
+        reference_number: reference.trim(),
+        expected_on: expected,
+        notes: notes.trim(),
+        items: items.map((item) => ({
+            variant_id: item.variant_id,
+            quantity: item.quantity.trim() ? Number(item.quantity) : NaN,
+            unit_cost: item.unit_cost.trim() ? Number(item.unit_cost) : NaN,
+        })),
+    }
+    let validation = '',
+        total: number | null = null
+    try {
+        total = validatePurchaseDraft(payload)
+    } catch (e) {
+        validation = (e as Error).message
+    }
+
+    async function save() {
+        const request = pending || { id: crypto.randomUUID(), payload }
+        try {
+            validatePurchaseDraft(request.payload)
+        } catch (e) {
+            setError((e as Error).message)
             return
         }
-        setSelectedItems([...selectedItems, {
-            variant_id: variant.id,
-            product_id: productId,
-            name: `${productName} (${variant.title})`,
-            quantity: 1,
-            unit_cost: variant.price || 0,
-            mrp: variant.price || 0
-        }])
-        setProductSearchQuery("")
-        setIsProductSearchOpen(false)
-    }
-
-    const handleCreatePO = async () => {
-        setLoading(true)
+        setBusy(true)
+        setError('')
         try {
-            const ref = reference.trim() || `PO-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(Date.now()).slice(-4)}`
-            const total = selectedItems.reduce((acc, i) => acc + (i.quantity * i.unit_cost), 0)
-
-            const { data: po, error: poError } = await supabase
-                .from('purchase_orders')
-                .insert({ supplier_id: supplierId, reference_number: ref, status: 'draft', total_cost: total })
-                .select().single()
-            if (poError) throw poError
-
-            const { error: itemsError } = await supabase.from('purchase_order_items').insert(
-                selectedItems.map(item => ({
-                    purchase_order_id: po.id,
-                    product_id: item.product_id,
-                    variant_id: item.variant_id,
-                    quantity: item.quantity,
-                    unit_cost: item.unit_cost,
-                    mrp: item.mrp
-                }))
-            )
-            if (itemsError) throw itemsError
-
-            toast.success("Purchase order saved successfully")
-            setSelectedItems([]); setReference(""); setSupplierId(""); setSupplierSearch("");
-        } catch (err: any) { toast.error(err.message) }
-        finally { setLoading(false) }
-    }
-
-    const handleCreateVendor = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!newVendorName.trim()) return toast.error("Vendor name is required")
-        setIsCreatingVendor(true)
-        try {
-            const { data, error } = await supabase
-                .from('suppliers')
-                .insert({
-                    name: newVendorName.trim(),
-                    email: newVendorEmail.trim() || null,
-                    phone: newVendorPhone.trim() || null
-                })
-                .select()
-                .single()
-            
-            if (error) throw error
-            
-            setSuppliersList([data, ...suppliersList])
-            setSupplierId(data.id)
-            setSupplierSearch(data.name)
-            toast.success("Vendor created successfully")
-            setIsVendorModalOpen(false)
-            setNewVendorName("")
-            setNewVendorEmail("")
-            setNewVendorPhone("")
-        } catch (err: any) {
-            toast.error(err.message || "Failed to create vendor")
+            const result = await savePurchase(request.id, 0, request.payload)
+            if (!result.ok) {
+                setPending(result.uncertain ? request : null)
+                setError(result.error)
+                return
+            }
+            setItems([])
+            setPending(null)
+            router.push(`/admin/purchase/${result.purchase.id}`)
+        } catch {
+            setPending(request)
+            setError('Unable to confirm the save. Retry the same save or check the purchase below.')
         } finally {
-            setIsCreatingVendor(false)
+            setBusy(false)
+        }
+    }
+    async function newSupplier(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault()
+        setVendorBusy(true)
+        setVendorError('')
+        const form = new FormData(event.currentTarget)
+        const value = vendorRequest.current || {
+            id: crypto.randomUUID(),
+            name: String(form.get('name') || ''),
+            email: String(form.get('email') || ''),
+            phone: String(form.get('phone') || ''),
+            address: String(form.get('address') || ''),
+            contact_person: String(form.get('contact_person') || ''),
+        }
+        if (!value.name.trim()) {
+            setVendorError('Enter a supplier name.')
+            setVendorBusy(false)
+            return
+        }
+        vendorRequest.current = value
+        try {
+            const created = await createPurchaseSupplier(value)
+            setSupplier(created)
+            setSuppliers((list) => [created, ...list.filter((item) => item.id !== created.id)])
+            setVendorOpen(false)
+            vendorRequest.current = null
+        } catch (e) {
+            if (e instanceof Error && e.message.startsWith('Check the supplier')) vendorRequest.current = null
+            setVendorError(
+                e instanceof Error ? e.message : 'Unable to save supplier. Retry the same request.'
+            )
+        } finally {
+            setVendorBusy(false)
         }
     }
 
     return (
-        <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-            {/* Main Section - Removed Compact Sidebar for wider layout */}
-            <main className="flex-1 w-full">
-                {/* TOOLBAR */}
-                <header className="h-16 bg-white border-b px-8 flex items-center justify-between sticky top-0 z-20">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                        <span className="text-slate-500">Inventory</span>
-                        <ChevronRight className="w-4 h-4 text-slate-400 stroke-[1.5]" />
-                        <span>Create Purchase Order</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Button variant="outline" className="h-9 px-4 text-xs font-semibold" onClick={() => setSelectedItems([])}>Clear</Button>
-                        <Button
-                            className="h-9 px-4 text-xs font-semibold bg-slate-900 hover:bg-slate-900 transition-colors"
-                            disabled={loading || !supplierId || selectedItems.length === 0}
-                            onClick={handleCreatePO}
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" /> : <Plus className="w-4 h-4 mr-2 stroke-[1.5]" />}
-                            Save Purchase Order
-                        </Button>
-                    </div>
-                </header>
-
-                <div className="p-8 max-w-6xl mx-auto grid grid-cols-12 gap-6">
-                    {/* LEFT FORM */}
-                    <div className="col-span-12 lg:col-span-8 space-y-6">
-                        {/* SUPPLIER & HEADER */}
-                        <div className="bg-white border rounded-lg p-6 grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5 flex flex-col relative" ref={supplierDropdownRef}>
-                                <div className="flex items-center justify-between">
-                                    <label className="text-xs font-semibold text-slate-500 tracking-normal">Vendor</label>
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setIsVendorModalOpen(true)}
-                                        className="text-xs font-semibold text-slate-700 tracking-normal hover:underline flex items-center gap-1"
-                                    >
-                                        <Plus className="w-4 h-4 stroke-[1.5]" /> New Vendor
-                                    </button>
-                                </div>
-                                <div className="relative">
-                                    <Input
-                                        placeholder="Search supplier..."
-                                        value={isSupplierOpen ? supplierSearch : (selectedSupplierName || supplierSearch)}
-                                        onChange={e => {
-                                            setSupplierSearch(e.target.value)
-                                            setIsSupplierOpen(true)
-                                            if (e.target.value === "") setSupplierId("")
-                                        }}
-                                        onFocus={() => {
-                                            setIsSupplierOpen(true)
-                                            setSupplierSearch("")
-                                        }}
-                                        className="h-10 text-sm bg-slate-50 focus:bg-white transition-colors cursor-text pr-8"
-                                    />
-                                    <ChevronRight className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 transition-transform stroke-[1.5] ${isSupplierOpen ? 'rotate-90' : ''}`} />
-                                </div>
-                                
-                                {/* Searchable Supplier Dropdown */}
-                                {isSupplierOpen && (
-                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-sm z-30 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
-                                        {filteredSuppliers.length === 0 ? (
-                                            <div className="p-4 text-sm text-slate-500 text-center">No suppliers found.</div>
-                                        ) : (
-                                            <ul className="py-1">
-                                                {filteredSuppliers.map(s => (
-                                                    <li 
-                                                        key={s.id}
-                                                        onClick={() => {
-                                                            setSupplierId(s.id)
-                                                            setSupplierSearch(s.name)
-                                                            setIsSupplierOpen(false)
-                                                        }}
-                                                        className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors ${supplierId === s.id ? 'bg-slate-50 text-slate-700 font-medium' : ''}`}
-                                                    >
-                                                        {s.name}
-                                                        {supplierId === s.id && <Check className="w-4 h-4 text-slate-700 stroke-[1.5]" />}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Reference No.</label>
-                                <Input
-                                    value={reference}
-                                    onChange={e => setReference(e.target.value)}
-                                    placeholder="e.g. PO-2024-001"
-                                    className="h-10 text-sm bg-slate-50 focus:bg-white"
-                                />
-                            </div>
-                        </div>
-
-                        {/* LINE ITEMS */}
-                        <div className="bg-white border rounded-lg overflow-visible flex flex-col">
-                            {/* Inline Add Item Search Header */}
-                            <div className="p-4 border-b bg-slate-50/50 relative z-20" ref={productDropdownRef}>
-                                <div className="relative max-w-md mx-auto w-full">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 z-10 stroke-[1.5]" />
-                                    <Input
-                                        placeholder="Search and add line items..."
-                                        value={productSearchQuery}
-                                        onChange={e => {
-                                            setProductSearchQuery(e.target.value)
-                                            setIsProductSearchOpen(true)
-                                        }}
-                                        onFocus={() => setIsProductSearchOpen(true)}
-                                        className="pl-9 h-10 w-full bg-white shadow-sm transition-colors focus:ring-2 ring-pink-600/10 text-sm font-medium"
-                                    />
-                                    
-                                    {/* Inline Product Search Dropdown */}
-                                    {isProductSearchOpen && productSearchQuery.trim() !== "" && (
-                                        <div className="absolute top-full mt-2 left-0 right-0 bg-white border rounded-lg shadow-sm z-30 max-h-80 overflow-y-auto w-[150%] -ml-[25%] animate-in fade-in zoom-in-95 origin-top">
-                                            {filteredProducts.length === 0 ? (
-                                                <div className="p-8 text-center flex flex-col items-center">
-                                                    <Package className="w-8 h-8 text-slate-200 mb-2 stroke-[1.5]" />
-                                                    <span className="text-sm font-semibold text-slate-500">No products found</span>
-                                                    <span className="text-xs text-slate-500">Try adjusting your search</span>
-                                                </div>
-                                            ) : (
-                                                <div className="divide-y">
-                                                    {filteredProducts.map((p: any) => (
-                                                        <div key={p.id} className="p-3">
-                                                            <div className="text-xs font-semibold text-slate-500 tracking-normal mb-1">{p.brand || 'No Brand'}</div>
-                                                            <div className="font-semibold text-sm mb-2 text-slate-800">{p.name}</div>
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                {p.product_variants.map((v: any) => {
-                                                                    const isAdded = selectedItems.find(i => i.variant_id === v.id)
-                                                                    return (
-                                                                        <button
-                                                                            key={v.id}
-                                                                            onClick={() => addItem(v, p.name, p.id)}
-                                                                            disabled={!!isAdded}
-                                                                            className={`flex items-center justify-between p-2 rounded border text-left text-xs transition-colors ${isAdded ? 'bg-slate-50 border-transparent opacity-50 cursor-not-allowed' : 'bg-white hover:border-slate-200 hover:bg-slate-50'}`}
-                                                                        >
-                                                                            <span className="font-medium truncate mr-2">{v.title}</span>
-                                                                            {isAdded ? <Check className="w-4 h-4 text-slate-500 flex-shrink-0 stroke-[1.5]" /> : <Plus className="w-4 h-4 text-slate-700 flex-shrink-0 stroke-[1.5]" />}
-                                                                        </button>
-                                                                    )
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            
-                            {selectedItems.length > 0 ? (
-                                <table className="w-full text-left border-collapse z-10 relative">
-                                    <thead className="bg-slate-50/80 border-b">
-                                        <tr>
-                                            <th className="px-6 py-3 text-xs font-semibold text-slate-500 tracking-normal">Item Details</th>
-                                            <th className="px-6 py-3 text-xs font-semibold text-slate-500 tracking-normal w-32">Qty</th>
-                                            <th className="px-6 py-3 text-xs font-semibold text-slate-500 tracking-normal w-40">Unit Cost</th>
-                                            <th className="px-6 py-3 text-xs font-semibold text-slate-500 tracking-normal w-32 text-right">Total</th>
-                                            <th className="px-4 py-3 w-10"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {selectedItems.map((item, idx) => (
-                                            <tr key={item.variant_id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-6 py-4 tabular-nums">
-                                                    <p className="text-sm font-semibold">{item.name}</p>
-                                                </td>
-                                                <td className="px-6 py-4 tabular-nums">
-                                                    <Input
-                                                        type="number"
-                                                        value={item.quantity || ""}
-                                                        onChange={e => {
-                                                            const val = parseInt(e.target.value);
-                                                            const copy = [...selectedItems];
-                                                            copy[idx].quantity = isNaN(val) ? 0 : val;
-                                                            setSelectedItems(copy);
-                                                        }}
-                                                        className="h-9 text-sm"
-                                                    />
-                                                </td>
-                                                <td className="px-6 py-4 tabular-nums">
-                                                    <Input
-                                                        type="number"
-                                                        value={item.unit_cost || ""}
-                                                        onChange={e => {
-                                                            const val = parseFloat(e.target.value);
-                                                            const copy = [...selectedItems];
-                                                            copy[idx].unit_cost = isNaN(val) ? 0 : val;
-                                                            setSelectedItems(copy);
-                                                        }}
-                                                        className="h-9 text-sm text-right"
-                                                    />
-                                                </td>
-                                                <td className="px-6 py-4 text-right text-sm font-medium text-slate-600 bg-slate-50/30 tabular-nums">
-                                                    ₹{(item.quantity * item.unit_cost).toLocaleString()}
-                                                </td>
-                                                <td className="px-4 py-4 text-right tabular-nums">
-                                                    <button onClick={() => setSelectedItems(selectedItems.filter((_, i) => i !== idx))}>
-                                                        <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-500 transition-colors stroke-[1.5]" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            ) : (
-                                <div className="p-16 text-center text-slate-500 relative z-10">
-                                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Package className="w-8 h-8 opacity-40 text-slate-500 stroke-[1.5]" />
-                                    </div>
-                                    <p className="text-sm font-medium mb-1 text-slate-600">No items added</p>
-                                    <p className="text-xs">Search and select items from above to populate the order.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* RIGHT SUMMARY */}
-                    <div className="col-span-12 lg:col-span-4 space-y-6">
-                        <div className="bg-white border rounded-lg p-6 sticky top-24">
-                            <h3 className="text-xs font-semibold text-slate-900 tracking-normal mb-6 flex items-center gap-2">
-                                <List className="w-4 h-4 text-slate-700 stroke-[1.5]" /> Order Summary
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500 font-medium">Subtotal</span>
-                                    <span className="font-semibold text-slate-700">₹{selectedItems.reduce((acc, i) => acc + (i.quantity * i.unit_cost), 0).toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500 font-medium">Item Count</span>
-                                    <span className="font-semibold text-slate-700">{selectedItems.reduce((acc, i) => acc + i.quantity, 0)} Units</span>
-                                </div>
-                                <div className="flex justify-between text-sm font-semibold border-t pt-4">
-                                    <span>Grand Total</span>
-                                    <span className="text-slate-700 text-xl tracking-tight">₹{selectedItems.reduce((acc, i) => acc + (i.quantity * i.unit_cost), 0).toLocaleString()}</span>
-                                </div>
-                            </div>
-                            
-                            <Button
-                                className="w-full h-12 mt-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs tracking-normal shadow-sm transition-colors"
-                                disabled={loading || !supplierId || selectedItems.length === 0}
-                                onClick={handleCreatePO}
-                            >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" /> : <Check className="w-4 h-4 mr-2 stroke-[1.5]" />}
-                                Complete Purchase
-                            </Button>
-                        </div>
-                    </div>
+        <div className="space-y-6">
+            <header className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-black tracking-tight">New purchase</h1>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Build a supplier order. Stock changes only when a delivery is recorded.
+                    </p>
                 </div>
-            </main>
-
-            {/* NEW VENDOR MODAL */}
-            {isVendorModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-md rounded-xl shadow-sm flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-6 border-b flex items-center justify-between bg-slate-50/50">
-                            <div className="flex items-center gap-2">
-                                <Building className="w-5 h-5 text-slate-700 stroke-[1.5]" />
-                                <h2 className="font-semibold">Add New Vendor</h2>
-                            </div>
-                            <button onClick={() => setIsVendorModalOpen(false)} aria-label="Close modal"><X className="w-5 h-5 text-slate-500 hover:text-slate-600 transition-colors stroke-[1.5]" /></button>
-                        </div>
-                        <form onSubmit={handleCreateVendor} className="p-6 space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Company/Vendor Name *</label>
-                                <Input 
-                                    value={newVendorName} 
-                                    onChange={e => setNewVendorName(e.target.value)} 
-                                    placeholder="e.g. Acme Corp" 
-                                    required
-                                    autoFocus
-                                    className="h-11"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Email Address</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
-                                    <Input 
-                                        type="email"
-                                        value={newVendorEmail} 
-                                        onChange={e => setNewVendorEmail(e.target.value)} 
-                                        placeholder="contact@acme.com" 
-                                        className="pl-10 h-11"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-500 tracking-normal">Phone Number</label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 stroke-[1.5]" />
-                                    <Input 
-                                        type="tel"
-                                        value={newVendorPhone} 
-                                        onChange={e => setNewVendorPhone(e.target.value)} 
-                                        placeholder="+1 234 567 8900" 
-                                        className="pl-10 h-11"
-                                    />
-                                </div>
-                            </div>
-                            <div className="pt-4 flex items-center justify-end gap-3 mt-2">
-                                <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    onClick={() => setIsVendorModalOpen(false)}
-                                    className="text-xs font-semibold tracking-normal h-10"
-                                    disabled={isCreatingVendor}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button 
-                                    type="submit" 
-                                    disabled={isCreatingVendor || !newVendorName.trim()}
-                                    className="bg-slate-900 hover:bg-slate-900 text-xs font-semibold tracking-normal px-6 h-10 transition-colors shadow-sm"
-                                >
-                                    {isCreatingVendor ? <Loader2 className="w-4 h-4 animate-spin mr-2 stroke-[1.5]" /> : <Plus className="w-4 h-4 mr-2 stroke-[1.5]" />}
-                                    Save Vendor
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
+                <Link
+                    href="/admin/purchase/list"
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium"
+                >
+                    Purchase history <ArrowUpRight className="h-4 w-4" />
+                </Link>
+            </header>
+            {error && (
+                <div
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                >
+                    {error}
+                    {pending && (
+                        <Link className="mt-2 block underline" href={`/admin/purchase/${pending.id}`}>
+                            Check saved purchase
+                        </Link>
+                    )}
                 </div>
             )}
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="min-w-0 space-y-6">
+                    <section
+                        className="rounded-2xl border bg-white p-6 shadow-sm space-y-5"
+                        aria-label="Supplier and purchase details"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h2 className="text-sm font-semibold">Supplier</h2>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={locked}
+                                onClick={() => {
+                                    vendorRequest.current = null
+                                    setVendorError('')
+                                    setVendorOpen(true)
+                                }}
+                            >
+                                <Plus className="h-4 w-4" /> Add supplier
+                            </Button>
+                        </div>
+                        <Input
+                            aria-label="Search suppliers"
+                            placeholder="Search supplier name"
+                            value={supplierQuery}
+                            disabled={locked}
+                            onChange={(event) => setSupplierQuery(event.target.value)}
+                            className={field}
+                        />
+                        {supplierError && (
+                            <p role="alert" className="text-sm text-red-700">
+                                {supplierError}
+                            </p>
+                        )}
+                        <select
+                            aria-label="Supplier"
+                            value={supplier?.id || ''}
+                            disabled={locked}
+                            onChange={(event) =>
+                                setSupplier(suppliers.find((item) => item.id === event.target.value) || null)
+                            }
+                            className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                        >
+                            <option value="">Choose a supplier</option>
+                            {supplier && !suppliers.some((item) => item.id === supplier.id) && (
+                                <option value={supplier.id}>{supplier.name}</option>
+                            )}
+                            {suppliers.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                    {item.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-slate-500">
+                            Up to 25 matches. Search to find another supplier.
+                            {supplier?.phone ? ` Selected: ${supplier.phone}` : ''}
+                        </p>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <label className="space-y-2 text-xs font-medium text-slate-600">
+                                Reference (optional)
+                                <Input
+                                    value={reference}
+                                    maxLength={100}
+                                    disabled={locked}
+                                    onChange={(event) => setReference(event.target.value)}
+                                    placeholder="Generated when left blank"
+                                    className={field}
+                                />
+                            </label>
+                            <label className="space-y-2 text-xs font-medium text-slate-600">
+                                Expected delivery
+                                <Input
+                                    type="date"
+                                    value={expected}
+                                    disabled={locked}
+                                    onChange={(event) => setExpected(event.target.value)}
+                                    className={`${field} w-full min-w-0`}
+                                />
+                            </label>
+                        </div>
+                        <label className="block space-y-2 text-xs font-medium text-slate-600">
+                            Notes
+                            <textarea
+                                value={notes}
+                                maxLength={2000}
+                                disabled={locked}
+                                onChange={(event) => setNotes(event.target.value)}
+                                className="min-h-20 w-full rounded-lg border border-slate-200 p-3 text-sm"
+                                placeholder="Supplier instructions or invoice reference"
+                            />
+                        </label>
+                    </section>
+                    <section
+                        aria-label="Purchase items"
+                        className="min-w-0 rounded-2xl border bg-white shadow-sm"
+                    >
+                        <div className="space-y-3 border-b p-5">
+                            <h2 className="text-sm font-semibold">Order items</h2>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                                <Input
+                                    aria-label="Search purchase products"
+                                    value={query}
+                                    disabled={locked}
+                                    onChange={(event) => setQuery(event.target.value)}
+                                    placeholder="Search product, shade, SKU or brand"
+                                    className={`${field} pl-9`}
+                                />
+                            </div>
+                            {searching && (
+                                <p role="status" className="text-xs text-slate-500">
+                                    Searching products…
+                                </p>
+                            )}
+                            {searchError && (
+                                <p role="alert" className="text-sm text-red-700">
+                                    {searchError}
+                                </p>
+                            )}
+                            {!searching && !searchError && query.trim().length >= 2 && !products.length && (
+                                <p className="text-sm text-slate-500">No matching products.</p>
+                            )}
+                            {products.length > 0 && (
+                                <div
+                                    className="max-h-72 overflow-y-auto divide-y rounded-lg border"
+                                    aria-label="Product results"
+                                >
+                                    {products.map((product) => (
+                                        <button
+                                            key={product.variant_id}
+                                            disabled={
+                                                locked ||
+                                                items.some((item) => item.variant_id === product.variant_id)
+                                            }
+                                            onClick={() => {
+                                                setItems((list) => [
+                                                    ...list,
+                                                    {
+                                                        ...product,
+                                                        quantity: '1',
+                                                        unit_cost:
+                                                            product.last_cost === null
+                                                                ? ''
+                                                                : String(product.last_cost),
+                                                    },
+                                                ])
+                                                setQuery('')
+                                            }}
+                                            className="flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-slate-50 disabled:opacity-40"
+                                        >
+                                            <span className="min-w-0">
+                                                <span className="block text-sm font-medium break-words">
+                                                    {product.name} · {product.title || 'Default'}
+                                                </span>
+                                                <span className="mt-1 block text-xs text-slate-500 break-words">
+                                                    {product.sku || 'No SKU'} · {product.brand || 'No brand'}{' '}
+                                                    · {product.stock} in stock
+                                                    {product.status !== 'active'
+                                                        ? ` · ${product.status}`
+                                                        : ''}
+                                                </span>
+                                            </span>
+                                            <Plus className="h-4 w-4 shrink-0" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {products.length === 30 && (
+                                <p className="text-xs text-slate-500">
+                                    Showing 30 matches. Refine your search for an exact shade.
+                                </p>
+                            )}
+                        </div>
+                        {!items.length ? (
+                            <p className="p-8 text-center text-sm text-slate-500">
+                                Search above to add the exact product shade.
+                            </p>
+                        ) : (
+                            <div className="divide-y">
+                                {items.map((item, index) => (
+                                    <div key={item.variant_id} className="space-y-4 p-5">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <h3 className="text-sm font-semibold break-words">
+                                                    {item.name} · {item.title || 'Default'}
+                                                </h3>
+                                                <p className="mt-1 text-xs text-slate-500 break-words">
+                                                    {item.sku || 'No SKU'} · Selling price{' '}
+                                                    {purchaseMoney(item.selling_price)}
+                                                </p>
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    {item.last_cost === null
+                                                        ? 'No received purchase cost yet. Enter the supplier cost.'
+                                                        : `Last received purchase cost: ${purchaseMoney(
+                                                              item.last_cost
+                                                          )}`}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                aria-label={`Remove ${item.name} ${item.title || 'Default'}`}
+                                                className="h-9 w-9 shrink-0 rounded-lg border-slate-200"
+                                                disabled={locked}
+                                                onClick={() =>
+                                                    setItems((list) =>
+                                                        list.filter(
+                                                            (row) => row.variant_id !== item.variant_id
+                                                        )
+                                                    )
+                                                }
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                            <label className="space-y-2 text-xs text-slate-600">
+                                                Quantity
+                                                <Input
+                                                    aria-label={`Quantity ${item.sku || index + 1}`}
+                                                    type="number"
+                                                    min="1"
+                                                    max="1000000"
+                                                    step="1"
+                                                    value={item.quantity}
+                                                    disabled={locked}
+                                                    onChange={(event) =>
+                                                        setItems((list) =>
+                                                            list.map((row, i) =>
+                                                                i === index
+                                                                    ? { ...row, quantity: event.target.value }
+                                                                    : row
+                                                            )
+                                                        )
+                                                    }
+                                                    className={field}
+                                                />
+                                            </label>
+                                            <label className="space-y-2 text-xs text-slate-600">
+                                                Unit cost (₹)
+                                                <Input
+                                                    aria-label={`Unit cost ${item.sku || index + 1}`}
+                                                    type="number"
+                                                    min="0"
+                                                    max="10000000"
+                                                    step="0.01"
+                                                    value={item.unit_cost}
+                                                    disabled={locked}
+                                                    onChange={(event) =>
+                                                        setItems((list) =>
+                                                            list.map((row, i) =>
+                                                                i === index
+                                                                    ? {
+                                                                          ...row,
+                                                                          unit_cost: event.target.value,
+                                                                      }
+                                                                    : row
+                                                            )
+                                                        )
+                                                    }
+                                                    placeholder="Enter cost"
+                                                    className={field}
+                                                />
+                                            </label>
+                                            <div className="col-span-2 self-end text-sm sm:col-span-1 sm:text-right">
+                                                <span className="text-xs text-slate-500 sm:block">
+                                                    Line total{' '}
+                                                </span>
+                                                <strong className="tabular-nums">
+                                                    {item.quantity &&
+                                                    item.unit_cost &&
+                                                    Number.isFinite(
+                                                        Number(item.quantity) * Number(item.unit_cost)
+                                                    )
+                                                        ? purchaseMoney(
+                                                              Number(item.quantity) * Number(item.unit_cost)
+                                                          )
+                                                        : '—'}
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                </div>
+                <aside className="h-fit rounded-2xl border bg-white p-5 shadow-sm xl:sticky xl:top-24 space-y-4">
+                    <h2 className="text-sm font-semibold">Purchase summary</h2>
+                    <div className="flex justify-between gap-3 text-sm">
+                        <span className="text-slate-500">Product shades</span>
+                        <strong>{items.length}</strong>
+                    </div>
+                    <div className="flex justify-between gap-3 border-t pt-4">
+                        <span className="text-sm font-medium">Total cost</span>
+                        <strong className="text-xl tabular-nums">
+                            {total === null ? '—' : purchaseMoney(total)}
+                        </strong>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                        Supplier costs only. Saving a draft does not change stock.
+                    </p>
+                    {validation && items.length > 0 && <p className="text-xs text-slate-600">{validation}</p>}
+                    <Button
+                        className="w-full bg-slate-900 text-white hover:bg-slate-800"
+                        disabled={busy || (!pending && Boolean(validation))}
+                        onClick={save}
+                    >
+                        {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {pending ? 'Retry same save' : 'Save draft'}
+                    </Button>
+                </aside>
+            </div>
+            <Dialog
+                open={vendorOpen}
+                onOpenChange={(open) => {
+                    if (!vendorBusy) setVendorOpen(open)
+                }}
+            >
+                <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Add supplier</DialogTitle>
+                        <DialogDescription>Save supplier contact details for purchase orders.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={newSupplier} className="space-y-4">
+                        {vendorError && (
+                            <p role="alert" className="text-sm text-red-700">
+                                {vendorError}
+                            </p>
+                        )}
+                        <fieldset
+                            disabled={vendorBusy || Boolean(vendorRequest.current)}
+                            className="space-y-4"
+                        >
+                            <label className="block space-y-2 text-sm">
+                                Supplier name
+                                <Input name="name" required maxLength={150} className={field} />
+                            </label>
+                            <label className="block space-y-2 text-sm">
+                                Contact person
+                                <Input name="contact_person" maxLength={150} className={field} />
+                            </label>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <label className="space-y-2 text-sm">
+                                    Email
+                                    <Input name="email" type="email" maxLength={254} className={field} />
+                                </label>
+                                <label className="space-y-2 text-sm">
+                                    Phone
+                                    <Input name="phone" type="tel" maxLength={40} className={field} />
+                                </label>
+                            </div>
+                            <label className="block space-y-2 text-sm">
+                                Address
+                                <textarea
+                                    name="address"
+                                    maxLength={1000}
+                                    className="min-h-20 w-full rounded-lg border p-3 text-sm"
+                                />
+                            </label>
+                        </fieldset>
+                        <Button
+                            type="submit"
+                            disabled={vendorBusy}
+                            className="w-full bg-slate-900 text-white"
+                        >
+                            {vendorBusy
+                                ? 'Saving…'
+                                : vendorRequest.current
+                                ? 'Retry supplier save'
+                                : 'Save supplier'}
+                        </Button>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

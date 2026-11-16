@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Link from "next/link"
 import Image from "next/image"
 import { Plus, Pencil, ImageIcon, LinkIcon } from "lucide-react"
+import { CategoryStatusButton } from "@/components/admin/category-status-button"
 import { DeleteCategoryButton } from "@/components/admin/delete-category-button"
 import { SearchInput } from "@/components/admin/search-input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -53,13 +54,14 @@ export default async function CategoriesPage({ searchParams }: {
                             <TableHead className="py-4 px-6 font-semibold text-slate-600 text-xs tracking-normal">Name</TableHead>
                             <TableHead className="py-4 px-6 font-semibold text-slate-600 text-xs tracking-normal">Slug</TableHead>
                             <TableHead className="py-4 px-6 font-semibold text-slate-600 text-xs tracking-normal">Parent</TableHead>
+                            <TableHead className="py-4 px-6 font-semibold text-slate-600 text-xs tracking-normal">Status</TableHead>
                             <TableHead className="py-4 px-6 text-right font-semibold text-slate-600 text-xs tracking-normal">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {categories?.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-32 text-center text-slate-500 font-medium tabular-nums">
+                                <TableCell colSpan={6} className="h-32 text-center text-slate-500 font-medium tabular-nums">
                                     No categories found.
                                 </TableCell>
                             </TableRow>
@@ -90,8 +92,14 @@ export default async function CategoriesPage({ searchParams }: {
                                         <span className="text-slate-400">—</span>
                                     )}
                                 </TableCell>
+                                <TableCell className="py-4 px-6">
+                                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${cat.is_active !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                        {cat.is_active !== false ? 'Active' : 'Inactive'}
+                                    </span>
+                                </TableCell>
                                 <TableCell className="py-4 px-6 text-right tabular-nums">
                                     <div className="flex justify-end gap-2">
+                                        <CategoryStatusButton id={cat.id} name={cat.name} active={cat.is_active !== false} />
                                         <Button variant="outline" size="icon" asChild className="rounded-lg h-9 w-9 border border-slate-200 hover:bg-slate-100 transition-colors text-slate-500">
                                             <Link href={`/admin/categories/${cat.id}`}><LinkIcon className="w-4 h-4 stroke-[1.5]" /></Link>
                                         </Button>
@@ -135,9 +143,15 @@ export default async function CategoriesPage({ searchParams }: {
                                         )}
                                     </div>
                                     <p className="text-xs text-slate-500 truncate">{cat.slug}</p>
+                                    <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${cat.is_active !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                        {cat.is_active !== false ? 'Active' : 'Inactive'}
+                                    </span>
                                 </div>
                             </div>
 
+                            <div className="flex justify-end border-t border-slate-100 px-4 py-3">
+                                <CategoryStatusButton id={cat.id} name={cat.name} active={cat.is_active !== false} />
+                            </div>
                             <div className="grid grid-cols-3 divide-x divide-slate-100 border-t border-slate-100">
                                 <Link href={`/admin/categories/${cat.id}`} className="py-3 flex justify-center items-center gap-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
                                     <LinkIcon className="w-4 h-4 stroke-[1.5]" /> View

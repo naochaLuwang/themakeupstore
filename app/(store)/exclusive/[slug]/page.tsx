@@ -76,7 +76,7 @@ export default function ExclusiveCategoryPage() {
         try {
             const { data: catData } = await supabase
                 .from("categories")
-                .select("id, name, slug, parent_id")
+                .select("id, name, slug, parent_id").eq("is_active", true)
                 .eq("slug", slug)
                 .single()
 
@@ -86,7 +86,7 @@ export default function ExclusiveCategoryPage() {
             if (catData.parent_id) {
                 const { data: siblings } = await supabase
                     .from("categories")
-                    .select("name, slug, image_url")
+                    .select("name, slug, image_url").eq("is_active", true)
                     .eq("parent_id", catData.parent_id)
                 if (siblings) setSiblingCategories(siblings)
             }

@@ -73,7 +73,7 @@ export default function ExclusivePage() {
         try {
             const { data: parent } = await supabase
                 .from("categories")
-                .select("id, name, slug")
+                .select("id, name, slug").eq("is_active", true)
                 .eq("slug", "exclusive")
                 .single()
 
@@ -81,7 +81,7 @@ export default function ExclusivePage() {
 
             const { data: subs } = await supabase
                 .from("categories")
-                .select("id, name, slug, image_url")
+                .select("id, name, slug, image_url").eq("is_active", true)
                 .eq("parent_id", parent.id)
                 .order("name", { ascending: true })
 

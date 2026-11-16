@@ -17,7 +17,7 @@ export default async function EssentialsCategoryPage({
     // 1. Fetch current category
     const { data: category, error: catError } = await supabase
         .from("categories")
-        .select("id, name, slug, parent_id")
+        .select("id, name, slug, parent_id").eq("is_active", true)
         .eq("slug", slug)
         .single()
 
@@ -26,14 +26,14 @@ export default async function EssentialsCategoryPage({
     // 2. Fetch parent ("essentials")
     const { data: parent } = await supabase
         .from("categories")
-        .select("id, slug")
+        .select("id, slug").eq("is_active", true)
         .eq("id", category.parent_id)
         .single()
 
     // 3. Fetch sibling subcategories (for the nav pills)
     const { data: siblings } = await supabase
         .from("categories")
-        .select("name, slug, image_url")
+        .select("name, slug, image_url").eq("is_active", true)
         .eq("parent_id", category.parent_id)
         .order("name", { ascending: true })
 
@@ -47,7 +47,7 @@ export default async function EssentialsCategoryPage({
         for (const extraSlug of additionalSlugs) {
             const { data: parentCat } = await supabase
                 .from("categories")
-                .select("id")
+                .select("id").eq("is_active", true)
                 .eq("slug", extraSlug)
                 .is("parent_id", null)
                 .single()
@@ -59,7 +59,7 @@ export default async function EssentialsCategoryPage({
             // Fetch all subcategories under this parent
             const { data: children } = await supabase
                 .from("categories")
-                .select("id")
+                .select("id").eq("is_active", true)
                 .eq("parent_id", parentCat.id)
 
             if (children) {

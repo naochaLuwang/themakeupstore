@@ -1,8 +1,9 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
-import { createAdminClient } from "@/utils/supabase/admin"
 import { requireAdmin } from "@/lib/admin"
+import { revalidatePath } from "next/cache"
+import type { RecoveryResult } from "@/lib/admin-directory"
 
 // ─── Save cart server-side (called from client on cart changes) ───
 export async function saveCart(items: {
@@ -60,102 +61,79 @@ export async function saveCart(items: {
   return { success: true }
 }
 
-// ─── Get cart contents (for recovery email) ───
-export async function getAbandonedCarts() {
-  await requireAdmin()
-  const supabase = await createAdminClient()
-
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-
-  const { data } = await supabase
-    .from("carts")
-    .select(`
-      id, user_id, updated_at,
-      profiles!inner(id, full_name),
-      cart_items(product_id, product_variant_id, quantity, unit_price,
-        products!inner(id, name, slug, thumbnail_url))
-    `)
-    .lt("updated_at", oneHourAgo)
-    .is("abandoned_email_sent_at", null)
-    .order("updated_at", { ascending: false })
-
-  if (!data) return []
-
-  // Fetch emails from auth.users (profiles table doesn't have email)
-  const userIds = data.map(c => c.user_id).filter(Boolean)
-  const { data: authUsers } = await supabase
-    .from("auth.users")
-    .select("id, email")
-    .in("id", userIds)
-
-  const emailMap = new Map(authUsers?.map(u => [u.id, u.email]) || [])
-
-  return data.map(cart => ({
-    ...cart,
-    profiles: {
-      ...(cart as any).profiles,
-      email: emailMap.get(cart.user_id || "") || null,
-    },
-  }))
+type RecoveryCandidate = {
+  id: string; user_id: string; updated_at: string;
+  profiles: { full_name: string | null };
+  cart_items: { quantity: number; products: { name: string } | null }[];
 }
 
-// ─── Send recovery emails for abandoned carts ───
-export async function sendRecoveryEmails() {
-  await requireAdmin()
+// The explicit page IDs bound the operation. Eligibility and contact details are
+// read again on the server; the browser cannot supply recipients or email content.
+export async function sendRecoveryEmails(cartIds: string[]): Promise<RecoveryResult> {
+  const { supabase } = await requireAdmin()
+  if (!Array.isArray(cartIds) || cartIds.length > 25 || cartIds.some(id => typeof id !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+    throw new Error('Select up to 25 valid carts.')
+  }
+  const ids = [...new Set(cartIds)]
+  const outcomes: RecoveryResult['outcomes'] = []
+  if (ids.length === 0) return { sent: 0, failed: 0, skipped: 0, unconfirmed: 0, outcomes }
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!baseUrl || !serviceKey) throw new Error('Recovery email service is not configured.')
 
-  const EDGE_FUNCTION_URL =
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") +
-    "/functions/v1/send-abandoned-cart"
-  const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const cutoff = new Date(Date.now() - 3_600_000).toISOString()
+  const { data, error } = await supabase.from('carts').select(`
+    id,user_id,updated_at,profiles!inner(full_name,deleted_at),
+    cart_items!inner(quantity,products(name))
+  `).in('id', ids).lt('updated_at', cutoff).is('abandoned_email_sent_at', null)
+    .is('profiles.deleted_at', null).gt('cart_items.quantity', 0)
+  if (error) throw new Error('Unable to check cart eligibility. No emails were sent.')
+  const candidates = new Map(((data || []) as unknown as RecoveryCandidate[]).map(cart => [cart.id, cart]))
 
-  const carts = await getAbandonedCarts()
-  const results: { email: string; success: boolean; status?: string }[] = []
-
-  for (const cart of carts) {
-    const profile = (cart as any).profiles as any
-    const email = profile?.email
-    const userName = profile?.full_name || "there"
-    const items = (cart as any).cart_items || []
-
-    if (!email) { results.push({ email: "no-email", success: false, status: "no email on profile" }); continue }
-
+  for (const id of ids) {
+    const cart = candidates.get(id)
+    if (!cart || !cart.cart_items.length) { outcomes.push({ id, status: 'skipped' }); continue }
+    let attempted = false
     try {
-      let ok = false
-      let status = "skipped"
-      if (EDGE_FUNCTION_URL && ANON_KEY) {
-        const resp = await fetch(EDGE_FUNCTION_URL, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${ANON_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            userName,
-            itemCount: items.length,
-            itemNames: items.map((i: any) => (i as any).products?.name).filter(Boolean).join(", "),
-            cartUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://themakeupstorewangkhei.com"}/cart`,
-          }),
-        })
-        const body = await resp.text()
-        status = `${resp.status}: ${body.slice(0, 100)}`
-        ok = resp.ok
+      const { data: contact, error: contactError } = await supabase.auth.admin.getUserById(cart.user_id)
+      if (contactError) { outcomes.push({ id, status: 'failed', message: 'Unable to read the customer email.' }); continue }
+      const email = contact.user?.email
+      if (!email) { outcomes.push({ id, status: 'skipped', message: 'Email unavailable.' }); continue }
+      const { data: current, error: currentError } = await supabase.from('carts')
+        .select('id,cart_items!inner(quantity)').eq('id', id).eq('updated_at', cart.updated_at)
+        .is('abandoned_email_sent_at', null).lt('updated_at', cutoff).gt('cart_items.quantity', 0).maybeSingle()
+      if (currentError) { outcomes.push({ id, status: 'failed', message: 'Unable to recheck the cart.' }); continue }
+      if (!current) { outcomes.push({ id, status: 'skipped' }); continue }
+      attempted = true
+      const response = await fetch(`${baseUrl}/functions/v1/send-abandoned-cart`, {
+        method: 'POST', headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email, userName: cart.profiles.full_name || 'there',
+          itemCount: cart.cart_items.reduce((sum, item) => sum + item.quantity, 0),
+          itemNames: cart.cart_items.map(item => item.products?.name).filter(Boolean).sort().join(', '),
+          recoveryKey: `cart-recovery/${id}`,
+        }), signal: AbortSignal.timeout(20_000),
+      })
+      if (!response.ok) {
+        outcomes.push({ id, status: response.status >= 500 ? 'unconfirmed' : 'failed', message: 'The email service could not confirm sending.' })
+        continue
       }
-
-      if (ok) {
-        const admin = await createAdminClient()
-        await admin.from("carts").update({ abandoned_email_sent_at: new Date().toISOString() }).eq("id", cart.id)
-      }
-
-      results.push({ email, success: ok, status })
-    } catch (err: any) {
-      results.push({ email, success: false, status: `error: ${err?.message?.slice(0, 100) || "unknown"}` })
+      const { data: marked, error: markError } = await supabase.from('carts')
+        .update({ abandoned_email_sent_at: new Date().toISOString() }).eq('id', id)
+        .eq('updated_at', cart.updated_at).is('abandoned_email_sent_at', null).select('id')
+      if (markError || !marked?.length) {
+        outcomes.push({ id, status: 'unconfirmed', message: 'Email accepted, but its saved status could not be confirmed.' })
+      } else outcomes.push({ id, status: 'sent' })
+    } catch {
+      outcomes.push({ id, status: attempted ? 'unconfirmed' : 'failed', message: 'Unable to confirm the request. Check before retrying.' })
     }
   }
-
+  revalidatePath('/admin/abandoned-carts')
   return {
-    sent: results.filter(r => r.success).length,
-    failed: results.filter(r => !r.success).length,
-    debug: results,
+    sent: outcomes.filter(result => result.status === 'sent').length,
+    failed: outcomes.filter(result => result.status === 'failed').length,
+    skipped: outcomes.filter(result => result.status === 'skipped').length,
+    unconfirmed: outcomes.filter(result => result.status === 'unconfirmed').length, outcomes,
   }
 }

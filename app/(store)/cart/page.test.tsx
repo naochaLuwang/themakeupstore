@@ -21,7 +21,7 @@ vi.mock('@/app/actions/promo',()=>({validatePromoCode:vi.fn()}))
 vi.mock('sonner',()=>({toast:{success:vi.fn(),error:vi.fn()}}))
 vi.mock('@/utils/supabase/client',()=>({createClient:()=>({
   auth:{onAuthStateChange:()=>({data:{subscription:{unsubscribe:()=>{}}}})},
-  from:()=>({select:()=>({in:()=>({limit:async()=>({data:[]})})})}),
+  from:()=>({select:()=>({eq:()=>({in:()=>({limit:async()=>({data:[]})})})})}),
 })}))
 
 const item:CartItem={id:'p',productId:'p',variantId:'v',categoryId:'c',categoryIds:['c'],brand:'Milani',name:'Lipstick',variantTitle:'Rose',

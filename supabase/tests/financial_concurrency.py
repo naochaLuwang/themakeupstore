@@ -6,7 +6,7 @@ import subprocess
 import uuid
 
 socket = os.environ["TMS_TEST_PG_SOCKET"]
-if not socket.startswith("/private/tmp/tms-finance-pg."):
+if not socket.startswith(("/private/tmp/tms-finance-pg.", "/private/tmp/tms-reward-users-pg.")):
     raise SystemExit("Refusing a connection outside the isolated local test cluster")
 psql = os.environ.get("TMS_TEST_PSQL") or shutil.which("psql")
 connection = [psql, "-h", socket, "-p", os.environ.get("TMS_TEST_PG_PORT", "55435"), "-d", "postgres", "-qAt", "-v", "ON_ERROR_STOP=1"]

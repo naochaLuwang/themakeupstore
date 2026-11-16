@@ -43,7 +43,7 @@ export default function BrandsPage() {
             try {
                 const { data, error } = await supabase
                     .from("categories")
-                    .select("id, name, slug, image_url, parent_id, parent:parent_id (slug)")
+                    .select("id, name, slug, image_url, parent_id, parent:parent_id (slug)").eq("is_active", true)
                     .not("parent_id", "is", null)
                     .order("name", { ascending: true })
 

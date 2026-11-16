@@ -19,7 +19,7 @@ function db():SupabaseClient{
 beforeEach(()=>{
  vi.useRealTimers()
  tables={product_variants:[{id:ids[0],product_id:ids[1],title:'Default',price:1000,stock:100,is_default:true,discount_type:'percentage',discount_value:20,
- products:{name:'Lipstick',brand:'B',category_id:null,discount_type:'none',discount_value:0,thumbnail_url:'image'}}],product_categories:[{product_id:ids[1],category_id:ids[5]}],
+ products:{status:'active',name:'Lipstick',brand:'B',category_id:null,discount_type:'none',discount_value:0,thumbnail_url:'image'}}],product_categories:[{product_id:ids[1],category_id:ids[5]}],
  buy_x_get_y:[{id:ids[2],name:'Buy 2 Get 1',buy_type:'specific_products',buy_quantity:2,get_type:'cheapest_free',get_discount_type:'free',get_discount_value:100,max_per_order:null,is_active:true}],
  bxgy_buy_products:[{bxgy_id:ids[2],product_id:ids[1]}],
  free_gifts:[{id:ids[3],name:'Spend gift',gift_product_id:null,gift_product_ref_id:ids[4],gift_variant_id:null,gift_quantity:1,trigger_type:'cart_total',trigger_threshold:2000,is_active:true}],
@@ -28,6 +28,18 @@ beforeEach(()=>{
 })
 const cart=(qty:number)=>[{variantId:ids[0],quantity:qty,price:1,productId:'forged'}]
 const input=()=>({shippingMethodId:ids[6],pincode:'795001'})
+it('blocks an inactive product in an existing cart even when its variant has stock',async()=>{
+ tables.product_variants[0].products={...(tables.product_variants[0].products as Row),status:'inactive'}
+ await expect(merchandiseQuote(db(),null,cart(1))).rejects.toMatchObject({name:'CartStockError',stock:[{variantId:ids[0],stock:0}]})
+ await expect(checkoutQuote(db(),ids[8],cart(1),input())).rejects.toBeInstanceOf(CartStockError)
+ expect(tables.product_variants[0].stock).toBe(100)
+})
+it('does not grant an inactive store product as a fixed gift',async()=>{
+ tables.free_gifts[0]={...tables.free_gifts[0],gift_product_ref_id:null,gift_product_id:ids[1]}
+ tables.products=[{id:ids[1],status:'inactive',name:'Hidden gift',thumbnail_url:'i'}]
+ const quote=await merchandiseQuote(db(),null,cart(3))
+ expect(quote.freeItems).toHaveLength(0)
+})
 it.each([0,2])('returns current variant stock when %i units cannot cover the cart, and rejects checkout',async stock=>{
  tables.product_variants[0].stock=stock
  await expect(merchandiseQuote(db(),null,cart(3))).rejects.toMatchObject({name:'CartStockError',stock:[{variantId:ids[0],stock}]})
@@ -79,7 +91,7 @@ it('selects one available fixed gift deterministically across multiple eligible 
  tables.gift_products[1].stock=0;q=await merchandiseQuote(db(),null,cart(6));expect(q.freeItems.map(g=>g.name)).toEqual(['Gift pouch'])
 })
 it('resolves a store gift default variant and shares its stock with paid units',async()=>{
- tables.free_gifts[0]={...tables.free_gifts[0],gift_product_ref_id:null,gift_product_id:ids[1]};tables.products=[{id:ids[1],name:'Lipstick',thumbnail_url:'i'}]
+ tables.free_gifts[0]={...tables.free_gifts[0],gift_product_ref_id:null,gift_product_id:ids[1]};tables.products=[{id:ids[1],status:'active',name:'Lipstick',thumbnail_url:'i'}]
  tables.product_variants[0].stock=3
  expect((await merchandiseQuote(db(),null,cart(3))).freeItems).toHaveLength(0)
  tables.product_variants[0].stock=4
@@ -106,7 +118,7 @@ it('does not discard coin or gift-credit paise when calculating the amount payab
 it('keeps fractional coupon amounts and target-line allocations consistent',async()=>{
  tables.buy_x_get_y=[];tables.free_gifts=[]
  tables.promo_codes=[{id:ids[9],code:'TARGET',apply_to:'specific_products',is_active:true,discount_type:'percentage',discount_value:2.5,promo_code_products:[{product_id:ids[1]}],promo_code_categories:[]}]
- tables.product_variants[0].price=100;tables.product_variants[0].discount_type='none';tables.product_variants[0].products={name:'P',brand:'B',category_id:null,discount_type:'none',discount_value:0}
+ tables.product_variants[0].price=100;tables.product_variants[0].discount_type='none';tables.product_variants[0].products={status:'active',name:'P',brand:'B',category_id:null,discount_type:'none',discount_value:0}
  const q=await checkoutQuote(db(),ids[8],cart(1),{...input(),promoCode:'TARGET'})
  expect(q.promoDiscount).toBe(2.5);expect(q.total).toBe(147.5);expect(q.promoEligibleVariantIds).toEqual([ids[0]])
 })
@@ -152,9 +164,9 @@ it('preserves paise in original-price units and exact stored price groups',async
 it('combines different selected brands in the canonical server quote',async()=>{
  tables.free_gifts=[]
  tables.buy_x_get_y[0]={...tables.buy_x_get_y[0],buy_type:'specific_brands',pricing_mode:'replace_discounts'}
- tables.product_variants[0].products={name:'Milani',brand:'Milani',discount_type:'percentage',discount_value:20}
+ tables.product_variants[0].products={status:'active',name:'Milani',brand:'Milani',discount_type:'percentage',discount_value:20}
  tables.bxgy_buy_brands=[{bxgy_id:ids[2],brand:'Milani'},{bxgy_id:ids[2],brand:'RELOVE'}]
- tables.product_variants.push({...tables.product_variants[0],id:ids[8],product_id:ids[9],price:500,products:{name:'RELOVE',brand:'RELOVE',discount_type:'none',discount_value:0}})
+ tables.product_variants.push({...tables.product_variants[0],id:ids[8],product_id:ids[9],price:500,products:{status:'active',name:'RELOVE',brand:'RELOVE',discount_type:'none',discount_value:0}})
  const q=await checkoutQuote(db(),ids[3],[...cart(2),{variantId:ids[8],quantity:1}],input())
  expect(q).toMatchObject({subtotal:2500,bxgyDiscount:500,total:2050})
  expect(q.discounts[0].variant_id).toBe(ids[8])

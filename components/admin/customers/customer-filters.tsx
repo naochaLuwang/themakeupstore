@@ -1,61 +1,56 @@
 "use client"
 
-import { Suspense } from "react"
-import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useDebouncedCallback } from "use-debounce"
+import { Suspense, type FormEvent } from 'react'
+import Link from 'next/link'
+import { Input } from '@/components/ui/input'
+import { Search } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 function CustomerFiltersInner() {
     const router = useRouter()
     const searchParams = useSearchParams()
-
-    const updateParams = useDebouncedCallback((key: string, value: string) => {
-        const params = new URLSearchParams(searchParams)
-        if (value) {
-            params.set(key, value)
-        } else {
-            params.delete(key)
+    function apply(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault()
+        const values = new FormData(event.currentTarget)
+        const params = new URLSearchParams()
+        for (const key of ['q', 'from', 'to']) {
+            const value = String(values.get(key) || '').trim()
+            if (value) params.set(key, value)
         }
-        params.delete("page")
-        router.push(`?${params.toString()}`)
-    }, 300)
-
+        router.push(`/admin/customers${params.size ? `?${params}` : ''}`)
+    }
     return (
-        <div className="flex min-w-0 flex-col items-start gap-3 xl:flex-row xl:items-center">
-            <div className="relative max-w-sm flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 stroke-[1.5]" />
-                <Input
-                    placeholder="Search customers..."
-                    className="pl-10 h-11 rounded-xl border-slate-200"
-                    defaultValue={searchParams.get("q")?.toString()}
-                    onChange={(e) => updateParams("q", e.target.value)}
-                />
+        <form key={searchParams.toString()} onSubmit={apply} className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-end">
+            <div className="flex-1 min-w-0 space-y-1.5">
+                <label htmlFor="customer-search" className="text-xs font-medium text-slate-500">Customer search</label>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 stroke-[1.5]" />
+                    <Input id="customer-search" name="q" placeholder="Name, email or phone..." maxLength={200}
+                        className="pl-10 h-10 rounded-xl border-slate-200" defaultValue={searchParams.get('q') || ''} />
+                </div>
             </div>
-            <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:w-auto sm:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
-                <span className="text-xs font-medium text-slate-500">From</span>
-                <input
-                    type="date"
-                    defaultValue={searchParams.get("from")?.toString()}
-                    onChange={(e) => updateParams("from", e.target.value)}
-                    className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm sm:w-[150px]"
-                />
-                <span className="text-xs font-medium text-slate-500">To</span>
-                <input
-                    type="date"
-                    defaultValue={searchParams.get("to")?.toString()}
-                    onChange={(e) => updateParams("to", e.target.value)}
-                    className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm sm:w-[150px]"
-                />
+            <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="customer-from" className="text-xs font-medium text-slate-500">Joined from</label>
+                    <input id="customer-from" name="from" type="date" defaultValue={searchParams.get('from') || ''}
+                        className="h-10 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm sm:w-[150px]" />
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="customer-to" className="text-xs font-medium text-slate-500">Joined to</label>
+                    <input id="customer-to" name="to" type="date" defaultValue={searchParams.get('to') || ''}
+                        className="h-10 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm sm:w-[150px]" />
+                </div>
             </div>
-        </div>
+            <div className="flex items-center gap-3">
+                <button type="submit" className="h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-medium">Search</button>
+                {(searchParams.get('q') || searchParams.get('from') || searchParams.get('to')) && (
+                    <Link href="/admin/customers" className="text-sm font-medium text-slate-600 hover:text-slate-900">Clear filters</Link>
+                )}
+            </div>
+        </form>
     )
 }
 
 export function CustomerFilters() {
-    return (
-        <Suspense fallback={<div className="h-11 w-full bg-slate-100 rounded-xl" />}>
-            <CustomerFiltersInner />
-        </Suspense>
-    )
+    return <Suspense fallback={<div className="h-10 w-full bg-slate-100 rounded-xl" />}><CustomerFiltersInner /></Suspense>
 }

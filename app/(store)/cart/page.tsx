@@ -82,7 +82,7 @@ export default function CartPage() {
             const productIds = [...new Set(items.map((i: any) => i.productId))]
             supabase
                 .from("products")
-                .select("*, product_categories(category_id), product_variants(id, price, stock, title, image_url)")
+                .select("*, product_categories(category_id), product_variants(id, price, stock, title, image_url)").eq("status", "active")
                 .in("id", productIds)
                 .limit(1)
                 .then(({ data }: any) => {
@@ -91,7 +91,7 @@ export default function CartPage() {
                         if (brand) {
                             supabase
                                 .from("products")
-                                .select("*, product_categories(category_id), product_variants(id, price, stock, title, image_url)")
+                                .select("*, product_categories(category_id), product_variants(id, price, stock, title, image_url)").eq("status", "active")
                                 .eq("brand", brand)
                                 .not("id", "in", `(${productIds.join(",")})`)
                                 .limit(6)

@@ -39,7 +39,7 @@ export async function merchandiseQuote(db: SupabaseClient, userId: string | null
   })
   if (new Set(ids).size !== ids.length) throw new Error('Duplicate product variant in cart')
   const [variantResult, definitionResult, flashResult] = await Promise.allSettled([
-    db.from('product_variants').select('id,product_id,title,price,stock,image_url,discount_type,discount_value,products(name,brand,thumbnail_url,category_id,discount_type,discount_value)').in('id', ids),
+    db.from('product_variants').select('id,product_id,title,price,stock,image_url,discount_type,discount_value,products(name,brand,thumbnail_url,category_id,status,discount_type,discount_value)').in('id', ids),
     loadPromotionDefinitions(db),
     db.from('flash_sales').select('*').eq('is_active', true).gte('ends_at', new Date().toISOString()),
   ])
@@ -48,7 +48,8 @@ export async function merchandiseQuote(db: SupabaseClient, userId: string | null
   const rows = variantRes.data || []
   const stock = ids.map(variantId => {
     const variant = rows.find(r => r.id === variantId)
-    return { variantId, stock: variant?.products && Number.isFinite(Number(variant.stock)) ? Math.max(0, Math.floor(Number(variant.stock))) : 0 }
+    const product = variant?.products as unknown as { status?: string } | null
+    return { variantId, stock: variant && product?.status === 'active' && Number.isFinite(Number(variant.stock)) ? Math.max(0, Math.floor(Number(variant.stock))) : 0 }
   })
   const unavailable = paid.find(item => stock.find(s => s.variantId === item.variantId)!.stock < item.quantity)
   if (unavailable) {

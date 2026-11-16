@@ -1,0 +1,21 @@
+-- Disposable database only. Procurement columns follow the repository db.sql snapshot.
+CREATE ROLE anon;
+CREATE ROLE authenticated;
+CREATE ROLE service_role BYPASSRLS;
+CREATE SCHEMA auth;
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+CREATE TABLE public.profiles(id uuid PRIMARY KEY, is_admin boolean NOT NULL DEFAULT false, user_type text DEFAULT 'retail');
+CREATE TABLE public.products(id uuid PRIMARY KEY, name text NOT NULL, brand text, status text DEFAULT 'active');
+CREATE TABLE public.product_variants(id uuid PRIMARY KEY, product_id uuid REFERENCES public.products(id), title text, sku text, stock integer DEFAULT 0, price numeric);
+CREATE TABLE public.suppliers(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),name text NOT NULL,contact_person text,email text,phone text,address text,created_at timestamptz DEFAULT now());
+CREATE TABLE public.purchase_orders(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),supplier_id uuid REFERENCES public.suppliers(id),status text DEFAULT 'draft' CHECK(status IN('draft','ordered','received','cancelled')),total_cost numeric DEFAULT 0,reference_number text UNIQUE,received_at timestamptz,created_at timestamptz DEFAULT now());
+CREATE TABLE public.purchase_order_items(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),purchase_order_id uuid REFERENCES public.purchase_orders(id),product_id uuid REFERENCES public.products(id),variant_id uuid REFERENCES public.product_variants(id),quantity integer NOT NULL CHECK(quantity>0),unit_cost numeric NOT NULL,mrp numeric);
+CREATE TABLE public.stock_ledger(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),variant_id uuid REFERENCES public.product_variants(id),change_amount integer NOT NULL,entry_type text NOT NULL CHECK(entry_type IN('purchase','sale','return','adjustment','initial')),reference_id uuid,created_at timestamptz DEFAULT now());
+GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon,authenticated,service_role;
+INSERT INTO profiles VALUES('10000000-0000-0000-0000-000000000001',true,'admin'),('10000000-0000-0000-0000-000000000002',false,'retail');
+INSERT INTO suppliers(id,name,address) VALUES('20000000-0000-0000-0000-000000000001','Fixture Supplier','Test address');
+INSERT INTO products(id,name,brand) VALUES('30000000-0000-0000-0000-000000000001','Lipstick','FOREVER52');
+INSERT INTO product_variants VALUES('40000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001','Rose','LIP-ROSE',10,500),('40000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000001',NULL,'LIP-DEFAULT',10,500);
+INSERT INTO purchase_orders(id,supplier_id,status,total_cost,reference_number) VALUES('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','received',300,'LEGACY');
+INSERT INTO purchase_order_items(purchase_order_id,product_id,variant_id,quantity,unit_cost) VALUES('50000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001',3,100);

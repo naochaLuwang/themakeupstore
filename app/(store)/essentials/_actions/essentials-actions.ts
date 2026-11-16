@@ -10,7 +10,7 @@ export async function fetchEssentialsInitialData() {
     // 1. Fetch parent category 'essentials'
     const { data: parent, error: parentError } = await supabase
         .from('categories')
-        .select('id, name, slug')
+        .select('id, name, slug').eq("is_active", true)
         .eq('slug', 'essentials')
         .single()
 
@@ -21,7 +21,7 @@ export async function fetchEssentialsInitialData() {
     // 2. Fetch subcategories
     const { data: subs } = await supabase
         .from('categories')
-        .select('id, name, slug, image_url')
+        .select('id, name, slug, image_url').eq("is_active", true)
         .eq('parent_id', parent.id)
         .order('name', { ascending: true })
 

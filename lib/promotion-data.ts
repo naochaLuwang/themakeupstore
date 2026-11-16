@@ -57,7 +57,7 @@ export async function loadPromotionSnapshot(db: SupabaseClient, ownerId: string 
   const [used, variants, products, dedicated] = await Promise.all([
     ownerId && ids.length ? db.from('checkout_promotion_uses').select('kind,promotion_id').eq('user_id', ownerId).in('promotion_id', ids) : Promise.resolve({ data: [], error: null }),
     storeIds.length ? db.from('product_variants').select('id,product_id,title,price,stock,is_default,image_url').in('product_id', storeIds) : Promise.resolve({ data: [], error: null }),
-    storeIds.length ? db.from('products').select('id,name,thumbnail_url').in('id', storeIds) : Promise.resolve({ data: [], error: null }),
+    storeIds.length ? db.from('products').select('id,name,thumbnail_url').eq('status', 'active').in('id', storeIds) : Promise.resolve({ data: [], error: null }),
     dedicatedIds.length ? db.from('gift_products').select('id,name,price,stock,is_active,images').in('id', dedicatedIds) : Promise.resolve({ data: [], error: null }),
   ])
   if ([used, variants, products, dedicated].some(r => r.error)) throw new Error('Could not check offer availability')

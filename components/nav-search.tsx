@@ -81,7 +81,7 @@ export function NavSearch() {
             setLoading(true)
             const { data, error } = await supabase
                 .from('products')
-                .select('id, name, thumbnail_url, brand')
+                .select('id, name, thumbnail_url, brand').eq("status", "active")
                 .textSearch("search_vector", query, { type: "websearch", config: "english" })
                 .limit(5)
 

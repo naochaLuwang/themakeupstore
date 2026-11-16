@@ -22,7 +22,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 product_images(*),
                 product_variants(*, variant_images(*)),
                 product_reviews(id, rating, title, comment, created_at, user_name, is_approved)
-            `)
+            `).eq("status", "active")
             .eq("id", id)
             .eq("product_reviews.is_approved", true)
             .order("created_at", { foreignTable: "product_reviews", ascending: false })
@@ -180,7 +180,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     if (data.brand) {
         const { data: catMatch } = await supabase
             .from("categories")
-            .select("slug, parent:parent_id(slug)")
+            .select("slug, parent:parent_id(slug)").eq("is_active", true)
             .ilike("name", data.brand)
             .maybeSingle()
         

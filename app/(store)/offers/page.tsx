@@ -33,7 +33,7 @@ export default function MidYearSalePage() {
       try {
         const { data: cats } = await supabase
           .from('categories')
-          .select('id, name, slug')
+          .select('id, name, slug').eq("is_active", true)
 
         if (!cats) { setLoading(false); return }
 

@@ -29,7 +29,7 @@ export default function NewArrivalsPage() {
         async function getNewArrivals() {
             try {
                 setLoading(true)
-                const { data: category } = await supabase.from('categories').select('id').eq('slug', 'new-arrivals').single()
+                const { data: category } = await supabase.from('categories').select('id').eq("is_active", true).eq('slug', 'new-arrivals').single()
                 if (!category) return
 
                 const { data: junctionData } = await supabase.from('product_categories').select('product_id').eq('category_id', category.id)
