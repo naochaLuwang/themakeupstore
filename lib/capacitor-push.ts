@@ -174,7 +174,9 @@ async function completeRegistration(
         return {
           ok: false,
           reason:
-            'Notification permission denied. Enable it in Android Settings → Apps → THE MAKEUP STORE → Notifications, then tap Enable here.',
+            Capacitor.getPlatform() === 'ios'
+              ? 'Notification permission denied. Enable notifications for The Makeup Store in iPhone Settings, then tap Enable here.'
+              : 'Notification permission denied. Enable it in Android Settings → Apps → THE MAKEUP STORE → Notifications, then tap Enable here.',
         }
       }
     }
@@ -196,6 +198,10 @@ async function completeRegistration(
 
   let token: string | undefined
   try {
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('StoreShell')) {
+      const { StoreShell } = await import('@/lib/ios-native')
+      await StoreShell.setPushAutoInit({ enabled: true })
+    }
     const result = await FirebaseMessaging.getToken()
     token = result.token
   } catch (err) {
@@ -246,6 +252,10 @@ export async function unregisterFCM(options: { disable?: boolean } = {}) {
   if (unregistering) return unregistering
   unregistering = (async () => {
     if (inFlight) await inFlight.catch(() => {})
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('StoreShell')) {
+      const { StoreShell } = await import('@/lib/ios-native')
+      await StoreShell.setPushAutoInit({ enabled: false })
+    }
     await FirebaseMessaging.deleteToken()
   })().finally(() => { unregistering = null; notifyPushChange() })
   return unregistering

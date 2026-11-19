@@ -61,14 +61,11 @@ const handleGoogleLogin = useCallback(async () => {
                     toast.error(err?.message || 'Google sign-in failed')
                 }
             } else {
-                // iOS or other platforms: standard OAuth flow — return to the app
-                // via custom scheme (Capacitor opens non-app URLs in Safari, so the
-                // https callback would complete in Safari and the app never gets it)
-                const { error } = await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: { redirectTo: isCapacitor ? 'themakeupstore://auth/callback' : `${window.location.origin}/auth/callback` },
+                const { signInIOSGoogle } = await import('@/lib/ios-auth')
+                await signInIOSGoogle({
+                    success: () => { router.replace('/'); router.refresh() },
+                    failure: () => toast.error('Google sign-in could not be completed. Please try again.'),
                 })
-                if (error) toast.error(error.message)
             }
         } else {
             // Web
@@ -78,7 +75,7 @@ const handleGoogleLogin = useCallback(async () => {
             })
             if (error) toast.error(error.message)
         }
-    }, [isCapacitor, supabase])
+    }, [isCapacitor, supabase, router])
 
 const handleAppleLogin = useCallback(async () => {
         try {
@@ -132,10 +129,9 @@ const handleAppleLogin = useCallback(async () => {
                 if (error) toast.error(error.message)
             }
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err ?? '')
-            // ASAuthorizationError.canceled = error 1000
-            if (/1000|cancel/i.test(msg)) return
-            toast.error(msg || 'Sign in with Apple failed')
+            const { isAppleSignInCancelled } = await import('@/lib/ios-auth')
+            if (isAppleSignInCancelled(err)) return
+            toast.error('Sign in with Apple failed. Please try again.')
         }
     }, [isCapacitor, capPlatform, supabase])
 

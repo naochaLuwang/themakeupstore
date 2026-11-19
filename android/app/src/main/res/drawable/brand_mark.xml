@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Geometry transformed from assets/icon.svg; original brand artwork retained. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="288dp" android:height="288dp" android:viewportWidth="432" android:viewportHeight="432">
+  <group android:translateX="24.18" android:translateY="24.18">
+    <clip-path android:pathData="M99.195,99.195 L284.445,99.195 L284.445,284.445 L99.195,284.445 Z" />
+    <path android:pathData="M110.668,156.047 L110.668,273.023" android:fillColor="@android:color/transparent" android:strokeColor="#000000" android:strokeWidth="17.9532" android:strokeLineCap="round" />
+    <path android:pathData="M272.777,115.918 L272.777,273.020" android:fillColor="@android:color/transparent" android:strokeColor="#000000" android:strokeWidth="17.9532" android:strokeLineCap="round" />
+    <path android:pathData="M118.957,111.934 L224.094,269.242" android:fillColor="@android:color/transparent" android:strokeColor="#000000" android:strokeWidth="17.9532" android:strokeLineCap="round" />
+    <path android:pathData="M272.031,117.078 L212.125,205.531" android:fillColor="@android:color/transparent" android:strokeColor="#000000" android:strokeWidth="17.9532" android:strokeLineCap="round" />
+    <path android:pathData="M111.676,157.121 L191.133,271.746" android:fillColor="@android:color/transparent" android:strokeColor="#000000" android:strokeWidth="17.9532" android:strokeLineCap="round" />
+    <path android:name="accent0" android:pathData="M110.668,156.047 L110.668,273.023" android:fillColor="@android:color/transparent" android:strokeColor="#FC2779" android:strokeWidth="17.9532" android:strokeLineCap="round" android:trimPathStart="0" android:trimPathEnd="0" />
+    <path android:name="accent1" android:pathData="M272.777,115.918 L272.777,273.020" android:fillColor="@android:color/transparent" android:strokeColor="#FC2779" android:strokeWidth="17.9532" android:strokeLineCap="round" android:trimPathStart="0" android:trimPathEnd="0" />
+    <path android:name="accent2" android:pathData="M118.957,111.934 L224.094,269.242" android:fillColor="@android:color/transparent" android:strokeColor="#FC2779" android:strokeWidth="17.9532" android:strokeLineCap="round" android:trimPathStart="0" android:trimPathEnd="0" />
+    <path android:name="accent3" android:pathData="M272.031,117.078 L212.125,205.531" android:fillColor="@android:color/transparent" android:strokeColor="#FC2779" android:strokeWidth="17.9532" android:strokeLineCap="round" android:trimPathStart="0" android:trimPathEnd="0" />
+    <path android:name="accent4" android:pathData="M111.676,157.121 L191.133,271.746" android:fillColor="@android:color/transparent" android:strokeColor="#FC2779" android:strokeWidth="17.9532" android:strokeLineCap="round" android:trimPathStart="0" android:trimPathEnd="0" />
+  </group>
+</vector>

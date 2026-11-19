@@ -5,10 +5,41 @@ import Capacitor
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    private var pendingAPNSToken: Data?
+    private var bridgeAppearance: NSObjectProtocol?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        bridgeAppearance = NotificationCenter.default.addObserver(forName: .capacitorViewDidAppear, object: nil, queue: .main) { [weak self] _ in
+            // A token may arrive before the bridge's messaging plugin is observing.
+            if let token = self?.pendingAPNSToken {
+                NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: token)
+            }
+        }
         return true
+    }
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        pendingAPNSToken = deviceToken
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        let lock = NSLock()
+        var completed = false
+        let finish: (UIBackgroundFetchResult) -> Void = { result in
+            lock.lock()
+            let shouldFinish = !completed
+            completed = true
+            lock.unlock()
+            if shouldFinish { completionHandler(result) }
+        }
+        NotificationCenter.default.post(name: Notification.Name("didReceiveRemoteNotification"), object: finish, userInfo: userInfo)
+        // Complete even if the bridge has not loaded, without a second completion if it has.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { finish(.noData) }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

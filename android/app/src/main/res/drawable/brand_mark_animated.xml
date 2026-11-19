@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" android:drawable="@drawable/brand_mark">
+  <target android:name="accent0" android:animation="@animator/brand_trace_0" />
+  <target android:name="accent1" android:animation="@animator/brand_trace_1" />
+  <target android:name="accent2" android:animation="@animator/brand_trace_2" />
+  <target android:name="accent3" android:animation="@animator/brand_trace_3" />
+  <target android:name="accent4" android:animation="@animator/brand_trace_4" />
+</animated-vector>

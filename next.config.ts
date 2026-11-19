@@ -43,6 +43,13 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: '/.well-known/apple-app-site-association',
+        headers: [
+          { key: 'Content-Type', value: 'application/json' },
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
+        ],
+      },
+      {
         source: '/icon-:size(192|512)x:size2(192|512).png',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },

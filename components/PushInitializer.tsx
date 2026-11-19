@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { createClient } from '@/utils/supabase/client';
+import AndroidAppRuntime from '@/components/AndroidAppRuntime';
+import IOSAppRuntime from '@/components/IOSAppRuntime';
 
 function isCapacitor() {
   return Capacitor.isNativePlatform()
@@ -100,42 +102,11 @@ export default function PushInitializer() {
 
       try {
         const { App } = await import('@capacitor/app');
-        await trackListener(App.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
-          if (canGoBack) {
-            window.history.back()
-          } else {
-            App.exitApp()
-          }
-        }));
         await trackListener(App.addListener('appStateChange', ({ isActive }) => {
           if (isActive) retryRegistration().catch((err) => console.warn('[Push] Resume registration failed:', err));
         }));
-
-        // OAuth return from Google sign-in (themakeupstore://auth/callback?code=...)
-        await trackListener(App.addListener('appUrlOpen', async ({ url }: { url: string }) => {
-          try {
-            if (!url.startsWith('themakeupstore://')) return
-            const parsed = new URL(url)
-            const errDesc = parsed.searchParams.get('error_description') || parsed.searchParams.get('error')
-            if (errDesc) {
-              console.error('[Auth deep link] provider error:', errDesc)
-              return
-            }
-            const code = parsed.searchParams.get('code')
-            if (!code) return
-            const { error } = await supabase.auth.exchangeCodeForSession(code)
-            if (error) {
-              console.error('[Auth deep link] exchange failed:', error.message)
-              return
-            }
-            // Session cookies now set for the app origin — land on home
-            window.location.href = '/'
-          } catch (err) {
-            console.error('[Auth deep link] failed:', err)
-          }
-        }));
-      } catch (err) {
-        console.error('Back button handler failed:', err)
+      } catch {
+        console.warn('[Push] App lifecycle setup failed');
       }
 
       try {
@@ -169,9 +140,9 @@ export default function PushInitializer() {
     };
   }, [supabase]);
 
-  return isOffline ? (
+  return <><AndroidAppRuntime /><IOSAppRuntime />{isOffline ? (
     <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-white text-center text-xs font-bold py-2 px-4 tracking-wide uppercase">
       You&apos;re offline — some features may not work
     </div>
-  ) : null;
+  ) : null}</>;
 }

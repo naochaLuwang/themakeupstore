@@ -4,8 +4,7 @@ import { FileDown } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { Capacitor } from "@capacitor/core"
-import { Filesystem, Directory } from "@capacitor/filesystem"
-import { Share } from "@capacitor/share"
+import { toast } from "sonner"
 
 interface ReceiptProps {
     order: {
@@ -14,7 +13,7 @@ interface ReceiptProps {
         status: string;
         payment_status: string;
         created_at: string;
-        profiles: any;
+        profiles: { full_name?: string | null } | { full_name?: string | null }[] | null;
     }
 }
 
@@ -52,27 +51,31 @@ export function ReceiptButton({ order }: ReceiptProps) {
         });
 
         // Summary
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
+        const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
         doc.setFontSize(12);
         doc.text(`Total Amount: INR ${order.total}`, 14, finalY);
         doc.text(`Payment Status: ${order.payment_status.toUpperCase()}`, 14, finalY + 7);
 
-        doc.save(`Receipt-${order.id.slice(0, 8)}.pdf`);
-
-        if (Capacitor.isNativePlatform()) {
-            const fileName = `Receipt-${order.id.slice(0, 8)}.pdf`
-            const pdfBase64 = doc.output("datauristring").split(",")[1]
+        if (Capacitor.getPlatform() === 'android') {
             try {
-                await Filesystem.writeFile({
-                    path: `Download/${fileName}`,
-                    data: pdfBase64,
-                    directory: Directory.External,
-                })
-                await Share.share({ title: fileName, url: `file://${fileName}`, dialogTitle: "Save Receipt" })
-            } catch (e) {
-                console.error("File save error:", e)
+                const { shareAndroidReceipt } = await import('@/lib/android-receipt')
+                await shareAndroidReceipt(`Receipt-${order.id.slice(0, 8)}.pdf`, doc.output('datauristring').split(',')[1])
+            } catch {
+                toast.error('Unable to share the receipt. Please try again.')
             }
+            return
         }
+
+        if (Capacitor.getPlatform() === 'ios') {
+            try {
+                const { shareIOSReceipt } = await import('@/lib/ios-receipt')
+                await shareIOSReceipt(`Receipt-${order.id.slice(0, 8)}.pdf`, doc.output('datauristring').split(',')[1])
+            } catch {
+                toast.error('Unable to share the receipt. Please try again.')
+            }
+            return
+        }
+        doc.save(`Receipt-${order.id.slice(0, 8)}.pdf`);
     };
 
     return (

@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["VJ6CZ336M8.com.themakeupstorewangkhei.twa"],
+        "components": [
+          { "/": "/api/*", "exclude": true },
+          { "/": "/_next/*", "exclude": true },
+          { "/": "/.well-known/*", "exclude": true },
+          { "/": "/*" }
+        ]
+      }
+    ]
+  }
+}

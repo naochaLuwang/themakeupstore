@@ -32,7 +32,6 @@ export async function nativeGoogleSignIn(): Promise<{ idToken: string; email: st
 
   try {
     const result = await GoogleOneTapAuth.signInWithGoogleButtonFlowForNativePlatform()
-    console.log('Google sign-in result:', JSON.stringify(result))
     if (result.isSuccess && result.success) {
       return {
         idToken: result.success.idToken,
@@ -41,12 +40,11 @@ export async function nativeGoogleSignIn(): Promise<{ idToken: string; email: st
         nonce: rawNonce!,
       }
     }
-    const errorDetail = JSON.stringify(result)
-    console.error('Google sign-in not successful:', errorDetail)
-    throw new Error(errorDetail)
-  } catch (err: any) {
-    console.error('Google sign-in error:', err?.message || err)
-    throw err
+    throw new Error('Google sign-in did not complete. Please try again.')
+  } catch {
+    // Native results may contain identity tokens and account details.
+    console.warn('[Google sign-in] Native authentication did not complete')
+    throw new Error('Google sign-in did not complete. Please try again.')
   }
 }
 

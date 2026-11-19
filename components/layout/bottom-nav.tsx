@@ -10,12 +10,17 @@ import {
     LayoutGrid,
 } from "lucide-react"
 import { motion } from "framer-motion"
+import { Capacitor } from '@capacitor/core'
 
 export function BottomNav() {
     const pathname = usePathname()
     const isCheckoutPage = pathname.startsWith('/checkout')
 
     const triggerHaptic = () => {
+        if (Capacitor.getPlatform() === 'android' && Capacitor.isPluginAvailable('Haptics')) {
+            void import('@capacitor/haptics').then(({ Haptics, ImpactStyle }) => Haptics.impact({ style: ImpactStyle.Light })).catch(() => {})
+            return
+        }
         if (typeof window !== "undefined" && window.navigator.vibrate) {
             window.navigator.vibrate(12)
         }

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  platform: 'android',
+  nativeShell: true,
+  setPushAutoInit: vi.fn(),
   listeners: {} as Record<string, (event: unknown) => void>,
   schedule: vi.fn(),
   deleteToken: vi.fn(),
@@ -16,8 +19,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@capacitor/core', () => ({ Capacitor: {
-  isNativePlatform: () => true, getPlatform: () => 'android',
+  isNativePlatform: () => true, getPlatform: () => mocks.platform,
+  isPluginAvailable: () => mocks.nativeShell,
 } }))
+vi.mock('@/lib/ios-native', () => ({ StoreShell: { setPushAutoInit: mocks.setPushAutoInit } }))
 vi.mock('@capacitor-firebase/messaging', () => ({ FirebaseMessaging: {
   isSupported: async () => ({ isSupported: true }),
   checkPermissions: mocks.permission,
@@ -47,6 +52,9 @@ beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
   window.localStorage.clear()
+  mocks.platform = 'android'
+  mocks.nativeShell = true
+  mocks.setPushAutoInit.mockResolvedValue(undefined)
   mocks.getSession.mockResolvedValue({ data: { session: { user: { id: 'user-a' } } } })
   mocks.getToken.mockResolvedValue({ token: 'device-token' })
   mocks.cleanup.mockResolvedValue({ error: null })
@@ -153,4 +161,29 @@ it('disables only the current user and device, preserving other device rows', as
   expect(mocks.cleanup).toHaveBeenCalledWith({ user_id: 'user-a', fcm_token: 'device-token' })
   expect(mocks.deleteToken).toHaveBeenCalledOnce()
   expect(push.isPushDisabled()).toBe(true)
+})
+
+
+it('enables iOS Firebase auto-init after permission and before creating a token', async () => {
+  mocks.platform = 'ios'
+  const { registerForFCM } = await import('./capacitor-push')
+  expect((await registerForFCM()).ok).toBe(true)
+  expect(mocks.setPushAutoInit).toHaveBeenCalledWith({ enabled: true })
+  expect(mocks.setPushAutoInit.mock.invocationCallOrder[0]).toBeGreaterThan(mocks.permission.mock.invocationCallOrder[0])
+  expect(mocks.setPushAutoInit.mock.invocationCallOrder[0]).toBeLessThan(mocks.getToken.mock.invocationCallOrder[0])
+})
+
+it('stops iOS auto-init before revoking the current Firebase token', async () => {
+  mocks.platform = 'ios'
+  const { unregisterFCM } = await import('./capacitor-push')
+  await unregisterFCM()
+  expect(mocks.setPushAutoInit).toHaveBeenCalledWith({ enabled: false })
+  expect(mocks.setPushAutoInit.mock.invocationCallOrder[0]).toBeLessThan(mocks.deleteToken.mock.invocationCallOrder[0])
+})
+
+it('keeps push compatible with an older iOS binary without StoreShell', async () => {
+  mocks.platform = 'ios'; mocks.nativeShell = false
+  const { registerForFCM } = await import('./capacitor-push')
+  expect((await registerForFCM()).ok).toBe(true)
+  expect(mocks.setPushAutoInit).not.toHaveBeenCalled()
 })

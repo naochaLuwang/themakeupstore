@@ -47,7 +47,7 @@ yarn-error.log*
 next-env.d.ts
 
 # Capacitor / Android
-/android/
+# Native Android source is versioned; its own .gitignore excludes generated files.
 /.capacitor/
 
 # APK builds
@@ -85,7 +85,10 @@ WHATSAPP_SETUP_GUIDE.md
 /db.sql
 
 # Dev-only debug scripts (load secrets from .env.local)
-/scripts/
+/scripts/*
+!/scripts/android-build.mjs
+!/scripts/ios-build.mjs
+!/scripts/test-ios-native.mjs
 
 # Cloudinary -> Supabase migration artifact (old_url -> storage path)
 /cloudinary-migration-mapping.jsonl

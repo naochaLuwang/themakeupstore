@@ -348,3 +348,11 @@ body::-webkit-scrollbar {
 #store-header {
   padding-top: env(safe-area-inset-top, 0px);
 }
+
+html[data-native-platform="android"] .pb-safe {
+  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+
+html[data-native-platform="ios"] .pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
