@@ -8,12 +8,17 @@ import { requestFingerprint, paymentClient } from '@/lib/verified-payment'
 import type { EditRequest } from '@/lib/order-edit'
 import { notifyBackInStock } from './back-in-stock-notify'
 import { variantFlashPricing, type FlashSaleRow } from '@/lib/flash-sale-helper'
+import { validManualDiscountAmount } from '@/lib/order-discounts'
 
 const requestSchema = z
   .object({
     orderId: z.string().uuid(),
     revision: z.string().regex(/^[a-f0-9]{32}$/),
     pricingMode: z.enum(['preserve', 'current']),
+    manualDiscount: z.object({
+      amount: z.number().refine(validManualDiscountAmount, 'Invalid manual discount amount'),
+      reason: z.string().trim().max(1000),
+    }).refine((d) => d.amount === 0 || d.reason.length >= 3, 'Enter a manual discount reason').optional(),
     items: z
       .array(z.object({ variantId: z.string().uuid(), quantity: z.number().int().min(1).max(1000) }))
       .min(1)

@@ -374,7 +374,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/AppRelease.entitlements;
 				APS_ENVIRONMENT = production;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = "";
@@ -391,7 +391,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.themakeupstorewangkhei.twa;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "THE MAKEUP STORE";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "THE MAKEUP STORE iOS Release 2026-11-19";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

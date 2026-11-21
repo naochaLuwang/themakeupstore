@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { finishEditSettlement } from './order-edit-server'
+import { finishEditSettlement, orderEditReviewHash } from './order-edit-server'
+import type { OrderEditQuote } from './order-edit'
 const mocks = vi.hoisted(() => ({ refund: vi.fn(), fetch: vi.fn(), rpc: vi.fn() }))
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/verified-payment', async (original) => ({
@@ -51,4 +52,13 @@ it('records manual receipts without sending money', async () => {
     p_id: 'request',
     p_reference: 'UPI-123',
   })
+})
+it('binds the discount amount, retained request and reason to the reviewed quote', () => {
+  const quote = { total: 0, manualDiscount: 100, manualDiscountRequested: 150,
+    manualDiscountReason: 'Service concession', validUntil: 1 } as OrderEditQuote
+  const hash = orderEditReviewHash(quote)
+  expect(orderEditReviewHash({ ...quote, validUntil: 2 })).toBe(hash)
+  expect(orderEditReviewHash({ ...quote, manualDiscount: 90 })).not.toBe(hash)
+  expect(orderEditReviewHash({ ...quote, manualDiscountRequested: 200 })).not.toBe(hash)
+  expect(orderEditReviewHash({ ...quote, manualDiscountReason: 'Different concession' })).not.toBe(hash)
 })

@@ -80,6 +80,19 @@ it('rejects duplicate variants and invalid quantities before calculating', async
   )
   expect(mocks.calculate).not.toHaveBeenCalled()
 })
+it('validates discount amounts and reasons before calculating', async () => {
+  for (const amount of [-1, Infinity, NaN, 0.001, 10.00000000001, 100_000_001])
+    expect((await previewOrderEdit({ ...request, manualDiscount: { amount, reason: 'Valid reason' } })).success).toBe(false)
+  expect((await previewOrderEdit({ ...request, manualDiscount: { amount: 10, reason: ' ' } })).success).toBe(false)
+  expect(mocks.calculate).not.toHaveBeenCalled()
+  expect((await previewOrderEdit({ ...request, manualDiscount: { amount: 1.15, reason: 'Valid amount' } })).success).toBe(true)
+})
+it('sends validated discount intent to canonical calculation without trusting a supplied quote', async () => {
+  const manualDiscount = { amount: 12.25, reason: 'Customer concession' }
+  expect((await saveOrderEdit({ ...save, manualDiscount, quote: { total: 1 } } as typeof save)).success).toBe(true)
+  expect(mocks.calculate).toHaveBeenCalledWith(db, { ...request, manualDiscount })
+  expect(mocks.rpc).toHaveBeenCalledWith('commit_order_amendment', expect.objectContaining({ p_quote: { total: 100 } }))
+})
 it('recalculates the saved quote and passes only trusted amounts to the transaction', async () => {
   expect((await saveOrderEdit({ ...save, total: 1 } as typeof save)).success).toBe(true)
   expect(mocks.rpc).toHaveBeenCalledWith(

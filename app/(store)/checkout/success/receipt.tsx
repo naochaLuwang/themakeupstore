@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useReducedMotion } from "framer-motion"
 import Link from "next/link"
+import { orderDiscounts, type OrderDiscountFields } from "@/lib/order-discounts"
 
 interface OrderItem {
     id: string
@@ -14,7 +15,7 @@ interface OrderItem {
     is_gift: boolean
 }
 
-interface Order {
+interface Order extends OrderDiscountFields {
     id: string
     created_at: string
     total: number
@@ -28,6 +29,8 @@ interface Order {
     bxgy_discount_amount: number
     gift_card_discount?: number
     coin_discount_amount: number
+    additional_charges?: number
+    additional_charges_label?: string | null
     shipping_address: any
     order_items: OrderItem[]
 }
@@ -66,7 +69,8 @@ export function ReceiptPage({ order }: { order: Order }) {
     const subtotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
     const shipping = Number(order.shipping_price) || 0
     const total = Number(order.total) || 0
-    const promoDiscount = Number(order.promo_discount_amount) || 0
+    const discounts = orderDiscounts(order)
+    const promoDiscount = discounts.coupon
     const { day, month, year, time } = formatDate(order.created_at)
     const shortId = order.id.slice(0, 8).toUpperCase()
     const addr = order.shipping_address || {}
@@ -280,6 +284,8 @@ export function ReceiptPage({ order }: { order: Order }) {
                                 <span className="tabular-nums" style={{ color: "#77736B" }}>-{formatCurrency(promoDiscount)}</span>
                             </div>
                         )}
+                        {discounts.manual > 0 && <div className="flex justify-between mb-2"><span style={{ color: "#77736B" }}>Manual discount</span><span className="tabular-nums" style={{ color: "#77736B" }}>-{formatCurrency(discounts.manual)}</span></div>}
+                        {Number(order.additional_charges)>0 && <div className="flex justify-between mb-2"><span>{order.additional_charges_label || 'Extra charges'}</span><span className="tabular-nums">{formatCurrency(Number(order.additional_charges))}</span></div>}
                         {Number(order.bxgy_discount_amount)>0 && <div className="flex justify-between text-sm"><span>Buy 2 Get 1 Free</span><span>-{formatCurrency(Number(order.bxgy_discount_amount))}</span></div>}
                         {Number(order.gift_card_discount)>0 && <div className="flex justify-between text-sm"><span>Gift Card</span><span>-{formatCurrency(Number(order.gift_card_discount))}</span></div>}
                         {Number(order.coin_discount_amount) > 0 && (

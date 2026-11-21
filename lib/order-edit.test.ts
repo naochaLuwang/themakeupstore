@@ -10,6 +10,8 @@ import {
 import type { PricedItem } from './cart-quote'
 import type { PromotionSnapshot } from './promotion-preview'
 import type { BXGYRule } from './promotion-engine'
+import { refundableLineAmount } from './order-amounts'
+import { orderDiscounts } from './order-discounts'
 
 const item = (id: string, price = 100): PricedItem => ({
   variantId: id,
@@ -220,8 +222,88 @@ describe('order amendment pricing', () => {
     const o = order()
     o.promo_discount_amount = 500
     const q = quote(o)
-    expect(q.promoDiscount).toBe(200)
+    expect(q.promoDiscount).toBe(0)
+    expect(q.manualDiscount).toBe(200)
+    expect(q.manualDiscountRequested).toBe(500)
     expect(q.total).toBe(50)
+  })
+  it('adds and removes a manual discount without changing quantities or cash received', () => {
+    const o = order()
+    o.payment_status = 'paid'
+    const r = { ...request([{ variantId: 'a', quantity: 3 }]), manualDiscount: { amount: 50.25, reason: 'Service adjustment' } }
+    const q = quote(o, r)
+    expect(q.total).toBe(299.75)
+    expect(q.refundDue).toBe(0.25)
+    expect(q.cashReceived).toBe(300)
+    expect(q.manualDiscountReason).toBe('Service adjustment')
+    o.manual_discount_amount = 50.25
+    o.manual_discount_requested = 50.25
+    const removed = quote(o, { ...r, manualDiscount: { amount: 0, reason: 'Concession withdrawn' } })
+    expect(removed.total).toBe(350)
+    expect(removed.balanceDue).toBe(50)
+  })
+  it('allocates coupon and manual savings separately, with exact partial refunds', () => {
+    const o = order()
+    o.promo_code = 'SAVE'
+    o.offer_snapshot = { pricing_context: {
+      snapshot: snapshot(),
+      bases: {},
+      coupon: { id: 'coupon', code: 'SAVE', apply_to: 'specific_products', discount_type: 'amount',
+        discount_value: 10, min_order_amount: 0, max_discount_amount: null,
+        promo_code_products: [{ product_id: 'product-a' }], promo_code_categories: [] },
+    } }
+    const q = quote(o, { ...request([{ variantId: 'a', quantity: 3 }, { variantId: 'b', quantity: 1 }]),
+      manualDiscount: { amount: 15.01, reason: 'Extra concession' } })
+    expect(q.promoDiscount).toBe(10)
+    expect(q.manualDiscount).toBe(15.01)
+    expect(q.lines.reduce((n, l) => n + l.line_discount_amount, 0)).toBeCloseTo(25.01)
+    expect(q.total).toBe(524.99)
+    const first = q.lines[0]
+    let refunded = 0
+    for (let i = 0; i < first.quantity; i++) refunded += refundableLineAmount({ ...first, refunded_quantity: i }, 1)
+    expect(refunded).toBeCloseTo(first.unit_price * first.quantity - first.line_discount_amount)
+  })
+  it('applies manual savings after BXGY and never discounts free units or delivery', () => {
+    const s = snapshot()
+    s.bxgyRules = [bxgy]
+    const q = quote(order(), { ...request([{ variantId: 'a', quantity: 3 }], 'current'),
+      manualDiscount: { amount: 500, reason: 'Merchandise concession' } }, s)
+    expect(q.bxgyDiscount).toBe(100)
+    expect(q.manualDiscount).toBe(200)
+    expect(q.total).toBe(50)
+    expect(q.lines.every((l) => l.line_discount_amount <= l.quantity * l.unit_price)).toBe(true)
+  })
+  it('retains the requested discount across a saved cap and a later basket increase', () => {
+    const o = order()
+    const small = quote(o, { ...request(), manualDiscount: { amount: 500, reason: 'Agreed concession' } })
+    o.manual_discount_amount = small.manualDiscount
+    o.manual_discount_requested = small.manualDiscountRequested
+    o.manual_discount_reason = small.manualDiscountReason
+    expect(quote(o, request([{ variantId: 'a', quantity: 6 }])).manualDiscount).toBe(500)
+  })
+  it('validates discount input and requires a reason when adding or removing a discount', () => {
+    for (const amount of [-1, 0.001, 10.00000000001, NaN, Infinity, 100_000_001])
+      expect(() => quote(order(), { ...request(), manualDiscount: { amount, reason: 'Test' } })).toThrow('manual discount')
+    expect(() => quote(order(), { ...request(), manualDiscount: { amount: 1, reason: ' ' } })).toThrow('reason')
+    const o = order()
+    o.manual_discount_requested = 10
+    expect(() => quote(o, { ...request(), manualDiscount: { amount: 0, reason: '' } })).toThrow('reason')
+    expect(quote(order(), { ...request(), manualDiscount: { amount: 1.15, reason: 'Valid paise' } }).manualDiscount).toBe(1.15)
+  })
+  it('returns unused credits after manual savings without increasing credit spending', () => {
+    const o = order()
+    o.gift_card_discount = 150
+    o.coin_discount_amount = 100
+    const q = quote(o, { ...request(), manualDiscount: { amount: 200, reason: 'Service concession' } })
+    expect(q.total).toBe(0)
+    expect(q.giftCardDiscount).toBe(50)
+    expect(q.giftCreditReturned).toBe(100)
+    expect(q.coinsReturned).toBe(100)
+  })
+  it('recognizes legacy discounts without confusing coupons or double counting migrated discounts', () => {
+    expect(orderDiscounts({ promo_discount_amount: 30 }).manual).toBe(30)
+    expect(orderDiscounts({ promo_code: 'SAVE', promo_discount_amount: 30, manual_discount_amount: 20, manual_discount_requested: 25 }))
+      .toMatchObject({ coupon: 30, manual: 20, requested: 25 })
   })
   it('rejects insufficient stock, missing products and an empty order', () => {
     expect(() => quote(order(), request([{ variantId: 'a', quantity: 11 }]))).toThrow('Only 10')

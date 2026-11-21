@@ -24,6 +24,7 @@ import {
   settleOrderEdit,
 } from '@/app/actions/order-edits'
 import { cancelOrderAndRestoreStock } from '@/app/actions/orders'
+import { orderDiscounts, validManualDiscountAmount } from '@/lib/order-discounts'
 import {
   editBlockReason,
   formatOrderMoney as money,
@@ -55,6 +56,8 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
   const [context, setContext] = useState(initialContext)
   const [draft, setDraft] = useState(() => quantities(initialContext))
   const [pricingMode, setPricingMode] = useState<EditPricingMode>('preserve')
+  const [discountAmount, setDiscountAmount] = useState(() => String(orderDiscounts(initialContext.order).requested))
+  const [discountReason, setDiscountReason] = useState(() => orderDiscounts(initialContext.order).reason)
   const [reason, setReason] = useState('')
   const [review, setReview] = useState<Review | null>(null)
   const [previewing, setPreviewing] = useState(false)
@@ -84,8 +87,12 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
   const summaryRef = useRef<HTMLDivElement>(null)
   const { order } = context
   const original = quantities(context)
+  const savedDiscount = orderDiscounts(order)
+  const validDiscount = validManualDiscountAmount(Number(discountAmount)) &&
+    (!(Number(discountAmount) > 0 || savedDiscount.requested > 0) || discountReason.trim().length >= 3)
   const dirty =
     pricingMode !== 'preserve' ||
+    Number(discountAmount) !== savedDiscount.requested || discountReason.trim() !== savedDiscount.reason.trim() ||
     JSON.stringify(Object.entries(draft).sort()) !== JSON.stringify(Object.entries(original).sort())
   const pending = context.settlements.find((s) => s.status === 'reserved')
   const blocked =
@@ -97,6 +104,7 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
     orderId: order.id,
     revision: context.revision,
     pricingMode,
+    manualDiscount: { amount: Number(discountAmount), reason: discountReason.trim() },
     items: Object.entries(draft)
       .sort()
       .map(([variantId, quantity]) => ({ variantId, quantity })),
@@ -115,6 +123,8 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
     setError('')
     setReviewOpen(false)
     setPricingMode('preserve')
+    setDiscountAmount(String(orderDiscounts(next.order).requested))
+    setDiscountReason(orderDiscounts(next.order).reason)
     setReason('')
     setSettlementError('')
     saveAttempt.current = null
@@ -140,7 +150,7 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
     setReview(null)
     setError('')
     setReviewOpen(false)
-    if (!dirty || blocked || !hasItems || !validQuantities) {
+    if (!dirty || blocked || !hasItems || !validQuantities || !validDiscount) {
       setPreviewing(false)
       return
     }
@@ -163,7 +173,7 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
       active = false
       clearTimeout(timer)
     }
-  }, [requestJson, dirty, blocked, hasItems, validQuantities])
+  }, [requestJson, dirty, blocked, hasItems, validQuantities, validDiscount])
 
   useEffect(() => {
     let active = true
@@ -346,9 +356,14 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
       -(quote?.bxgyDiscount ?? Number(order.bxgy_discount_amount || 0)),
     ],
     [
-      'Order discount',
-      -Number(order.promo_discount_amount || 0),
-      -(quote?.promoDiscount ?? Number(order.promo_discount_amount || 0)),
+      'Coupon savings',
+      -savedDiscount.coupon,
+      -(quote?.promoDiscount ?? savedDiscount.coupon),
+    ],
+    [
+      'Manual discount',
+      -savedDiscount.manual,
+      -(quote?.manualDiscount ?? savedDiscount.manual),
     ],
     [
       'Delivery',
@@ -660,6 +675,39 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
                     ? 'Existing quantities keep their price basis. Added quantities use current selling prices. Original offer eligibility is checked again.'
                     : 'Every item is recalculated using today’s selling prices and available offers.'}
                 </p>
+                <div className="space-y-2 border-t border-slate-100 pt-4 !mt-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="order-manual-discount" className="text-xs font-semibold text-slate-600">
+                      Manual discount · ₹
+                    </label>
+                    {Number(discountAmount) > 0 && (
+                      <button type="button" disabled={busy} className="text-xs font-semibold text-pink-700 underline"
+                        onClick={() => { setReview(null); setDiscountAmount('0') }}>
+                        Remove discount
+                      </button>
+                    )}
+                  </div>
+                  <Input id="order-manual-discount" type="number" min="0" max="100000000" step="0.01"
+                    value={discountAmount} disabled={busy} aria-describedby="order-manual-discount-help"
+                    aria-invalid={!validManualDiscountAmount(Number(discountAmount))}
+                    onChange={(e) => { setReview(null); setDiscountAmount(e.target.value) }} />
+                  <p id="order-manual-discount-help" className="text-xs leading-relaxed text-slate-500">
+                    Added after coupon and BXGY savings, before delivery and credits. Capped at the remaining merchandise value.
+                  </p>
+                  <label htmlFor="order-manual-discount-reason" className="block text-xs font-semibold text-slate-600">
+                    Discount reason
+                  </label>
+                  <Input id="order-manual-discount-reason" value={discountReason} maxLength={1000} disabled={busy}
+                    aria-required={Number(discountAmount) > 0 || savedDiscount.requested > 0}
+                    aria-invalid={(Number(discountAmount) > 0 || savedDiscount.requested > 0) && discountReason.trim().length < 3}
+                    placeholder="For example: customer service adjustment"
+                    onChange={(e) => { setReview(null); setDiscountReason(e.target.value) }} />
+                  {!validDiscount && (
+                    <p role="alert" className="text-xs text-rose-700">
+                      Enter a non-negative amount with up to two decimal places and a reason of at least 3 characters.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
             <div className="mt-5 grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-3 text-sm">
@@ -749,6 +797,8 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
                   onClick={() => {
                     setDraft(original)
                     setPricingMode('preserve')
+                    setDiscountAmount(String(savedDiscount.requested))
+                    setDiscountReason(savedDiscount.reason)
                     setReason('')
                     setReview(null)
                     setError('')
@@ -936,6 +986,12 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
                         Delivery {money(saved.shipping_price || 0)} · Gift card{' '}
                         {money(saved.gift_card_discount || 0)} · M Coins {saved.coin_discount_amount || 0}
                       </p>
+                      <p className="mb-2 text-slate-500">
+                        Coupon {money(orderDiscounts(saved).coupon)} · Manual discount {money(orderDiscounts(saved).manual)}
+                        {orderDiscounts(saved).requested > orderDiscounts(saved).manual &&
+                          ` (requested ${money(orderDiscounts(saved).requested)})`}
+                      </p>
+                      {orderDiscounts(saved).reason && <p className="mb-2 break-words text-slate-500">Discount reason: {orderDiscounts(saved).reason}</p>}
                       {Number(saved.edit_version) > 0 && (
                         <p className="mb-2 text-slate-500">
                           Received {money(saved.edit_paid_amount || 0)} · To collect{' '}
@@ -989,6 +1045,14 @@ export function OrderEditor({ initialContext }: { initialContext: OrderEditConte
               <span>New total</span>
               <span>{money(quote?.total || 0)}</span>
             </p>
+            {!!quote?.promoDiscount && <p>Coupon savings: {money(quote.promoDiscount)}</p>}
+            {quote && (quote.manualDiscountRequested > 0 || savedDiscount.requested > 0) && (
+              <div className="rounded-xl border border-slate-200 p-3">
+                <p className="font-semibold">Manual discount: {money(quote.manualDiscount)}</p>
+                {quote.manualDiscountRequested > quote.manualDiscount && <p>Requested: {money(quote.manualDiscountRequested)}</p>}
+                <p className="mt-1 break-words text-slate-600">{quote.manualDiscountReason}</p>
+              </div>
+            )}
             {!!quote?.balanceDue && <p className="text-amber-800">To collect: {money(quote.balanceDue)}</p>}
             {!!quote?.refundDue && (
               <p className="text-rose-700">

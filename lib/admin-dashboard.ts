@@ -49,6 +49,7 @@ export type DashboardOrder = {
     payment_method: string | null
     shipping_price: number
     shipping_label: string | null
+    manual_discount_amount?: number
     promo_discount_amount: number
     bxgy_discount_amount: number
     gift_card_discount: number

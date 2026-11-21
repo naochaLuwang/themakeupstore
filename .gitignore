@@ -57,6 +57,8 @@ next-env.d.ts
 # Keystore / signing
 *.keystore
 *.jks
+*.p8
+*.p12
 
 # Supabase temp files
 supabase/.temp/

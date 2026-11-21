@@ -3,6 +3,7 @@ import type { PromotionSnapshot } from '@/lib/promotion-preview'
 import { evaluatePromotionSnapshot } from '@/lib/promotion-preview'
 import { checkoutOrderItems } from '@/lib/checkout-order-items'
 import { roundMoney } from '@/lib/promotion-engine'
+import { orderDiscounts, validManualDiscountAmount, type OrderDiscountFields } from '@/lib/order-discounts'
 
 export type EditPricingMode = 'preserve' | 'current'
 export interface OrderEditItem {
@@ -37,7 +38,7 @@ export interface EditPriceContext {
   coupon: CouponDefinition | null
   bases: Record<string, { price: number; mrp: number; categoryIds: string[]; brand: string }>
 }
-export interface EditableOrder {
+export interface EditableOrder extends OrderDiscountFields {
   id: string
   user_id: string | null
   status: string
@@ -75,6 +76,7 @@ export interface EditRequest {
   revision: string
   items: { variantId: string; quantity: number }[]
   pricingMode: EditPricingMode
+  manualDiscount?: { amount: number; reason: string }
 }
 export interface EditLine {
   source_item_id: string | null
@@ -94,6 +96,9 @@ export interface OrderEditQuote {
   lines: EditLine[]
   subtotal: number
   promoDiscount: number
+  manualDiscount: number
+  manualDiscountRequested: number
+  manualDiscountReason: string
   bxgyDiscount: number
   shippingPrice: number
   giftCardDiscount: number
@@ -306,21 +311,26 @@ export function priceOrderEdit(
         )
       } else warnings.push('The coupon was removed because the revised items no longer qualify.')
     }
-  } else if (!order.promo_code && Number(order.promo_discount_amount) > 0) {
-    promoDiscount = Math.min(
-      Number(order.promo_discount_amount),
-      Math.max(0, priced.subtotal - priced.bxgyDiscount)
-    )
-    warnings.push(
-      'The existing manual order discount has been retained, capped at the revised merchandise amount.'
-    )
   } else if (order.promo_code)
     warnings.push('The original coupon is no longer available for this pricing choice.')
+  const savedDiscount = orderDiscounts(order)
+  const manualDiscountRequested = request.manualDiscount?.amount ?? savedDiscount.requested
+  const manualDiscountReason = (request.manualDiscount?.reason ?? savedDiscount.reason).trim()
+  if (!validManualDiscountAmount(manualDiscountRequested))
+    throw new Error('Enter a manual discount from ₹0 to ₹100,000,000 with at most two decimal places.')
+  if ((manualDiscountRequested > 0 || savedDiscount.requested > 0) &&
+      (manualDiscountReason.length < 3 || manualDiscountReason.length > 1000))
+    throw new Error('Enter a manual discount reason from 3 to 1,000 characters.')
+  const manualDiscount = roundMoney(Math.min(manualDiscountRequested,
+    Math.max(0, roundMoney(priced.subtotal - priced.bxgyDiscount - promoDiscount))))
+  if (manualDiscount < manualDiscountRequested)
+    warnings.push(`Manual discount capped at ${formatOrderMoney(manualDiscount)}. The requested ${formatOrderMoney(manualDiscountRequested)} is retained for later edits.`)
   const usedSourceIds = new Set<string>()
   const nextBases: EditPriceContext['bases'] = {}
   const lines: EditLine[] = checkoutOrderItems({
     ...priced,
     promoDiscount,
+    manualDiscount,
     promoEligibleVariantIds: eligible,
   }).map((line, index) => {
     const key = line.product_variant_id!
@@ -390,7 +400,7 @@ export function priceOrderEdit(
   const beforeCredits = roundMoney(
     Math.max(
       0,
-      priced.subtotal - priced.bxgyDiscount - promoDiscount + catalog.shippingPrice + additionalCharges
+      priced.subtotal - priced.bxgyDiscount - promoDiscount - manualDiscount + catalog.shippingPrice + additionalCharges
     )
   )
   const giftCardDiscount = Math.min(Number(order.gift_card_discount || 0), beforeCredits)
@@ -418,6 +428,9 @@ export function priceOrderEdit(
     lines,
     subtotal: priced.subtotal,
     promoDiscount,
+    manualDiscount,
+    manualDiscountRequested,
+    manualDiscountReason,
     bxgyDiscount: priced.bxgyDiscount,
     shippingPrice: catalog.shippingPrice,
     giftCardDiscount,

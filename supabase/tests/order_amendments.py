@@ -77,14 +77,16 @@ def line(o, quantity=1, price=100, source=True):
             'is_gift': False, 'line_discount_amount': 0, 'promotion_allocations': []}
 
 
-def amendment(o, lines, gift=0, coins=0, key=None, request_hash='a'*64, revision=None, catalog=None, reason='Customer replacement'):
+def amendment(o, lines, gift=0, coins=0, key=None, request_hash='a'*64, revision=None, catalog=None, reason='Customer replacement', manual=None, coupon=0, bxgy=0):
     revision = revision or scalar(f"SELECT order_edit_revision('{o['id']}')")
     variants = sorted(set([o['variant']] + [i['product_variant_id'] for i in lines if i['product_variant_id']]))
     array = 'ARRAY[' + ','.join("'%s'::uuid" % v for v in variants) + ']'
     catalog = catalog or scalar(f'SELECT order_edit_catalog_revision({array})')
-    quote = {'lines': lines, 'promoDiscount': 0, 'bxgyDiscount': 0, 'shippingPrice': 0, 'giftCardDiscount': gift, 'coinDiscount': coins,
+    quote = {'lines': lines, 'promoDiscount': coupon, 'bxgyDiscount': bxgy, 'shippingPrice': 0, 'giftCardDiscount': gift, 'coinDiscount': coins,
              'total': sum(i['quantity']*i['unit_price']-i['line_discount_amount'] for i in lines)-gift-coins,
              'validUntil': 4102444800000, 'priceContext': {'snapshot': {}, 'coupon': None, 'bases': {str(n): {'price': l['unit_price'], 'mrp': l['mrp'], 'categoryIds': [], 'brand': ''} for n,l in enumerate(lines)}}, 'promotions': [], 'pricingMode': 'preserve'}
+    if manual is not None:
+        quote.update(manualDiscount=manual['applied'], manualDiscountRequested=manual['requested'], manualDiscountReason=manual['reason'])
     return f"SELECT commit_order_amendment('{o['id']}','{key or uid()}','{request_hash}','{admin}','{reason}','{revision}',{array},'{catalog}',{js(quote)});"
 
 

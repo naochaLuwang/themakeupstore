@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Printer, ArrowLeft, Globe, ShieldCheck, CheckCircle2, Clock, AlertCircle, Loader2, Truck, Ticket, Pencil, X, Calendar, ShoppingBag, PackageCheck, RotateCcw, Wallet, Coins, Tag } from "lucide-react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
+import { orderDiscounts } from "@/lib/order-discounts"
 import { refundableLineAmount } from "@/lib/order-amounts"
 import { getPendingOrderRefund, processPartialRefund, updateOrderDeliveryPartner, updateOrderTypeSecure } from "@/app/actions/orders"
 import { toast } from "sonner"
@@ -108,7 +109,8 @@ export default function OrderInvoicePage() {
         acc + (Number(item.unit_price) * item.quantity), 0)
 
     const productSavings = subtotalMRP - subtotalActual
-    const promoDiscount = Number(order.promo_discount_amount) || 0
+    const discounts = orderDiscounts(order)
+    const promoDiscount = discounts.coupon
 
     const TIMESTAMP_FIELDS: Record<string, string> = {
         confirmed_at: "Confirmed",
@@ -484,16 +486,15 @@ export default function OrderInvoicePage() {
                     {promoDiscount > 0 && (
                         <div>
                             <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-bold text-emerald-600 uppercase`}>
-                                <span className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {order.promo_code || 'Manual Discount'}</span>
+                                <span className="flex items-center gap-1"><Ticket className="w-3 h-3" /> {order.promo_code}</span>
                                 <span>-₹{promoDiscount.toLocaleString()}</span>
                             </div>
-                            {order.discount_remark && !order.promo_code && (
-                                <div className={`${isThermal ? 'text-[7px]' : 'w-full sm:w-64'} mt-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl sm:text-right`}>
-                                    <p className="text-xs font-semibold text-emerald-800 leading-tight">{order.discount_remark}</p>
-                                </div>
-                            )}
                         </div>
                     )}
+                    {discounts.manual > 0 && <div>
+                        <div className={`${isThermal ? 'flex justify-between' : 'w-full sm:w-64 flex justify-between'} text-xs font-bold text-emerald-600 uppercase`}><span>Manual Discount</span><span>-₹{discounts.manual.toLocaleString('en-IN')}</span></div>
+                        {discounts.reason && <p className="mt-1 w-full break-words text-xs text-slate-500 sm:w-64">{discounts.reason}</p>}
+                    </div>}
                     {Number(order.bxgy_discount_amount)>0 && <div className={`${isThermal?'flex justify-between':'w-full sm:w-64 flex justify-between'} text-xs font-bold text-pink-600 uppercase`}><span>Buy 2 Get 1 Free</span><span>-₹{Number(order.bxgy_discount_amount).toLocaleString()}</span></div>}
                     {Number(order.gift_card_discount)>0 && <div className={`${isThermal?'flex justify-between':'w-full sm:w-64 flex justify-between'} text-xs font-bold text-slate-600 uppercase`}><span>Gift Card</span><span>-₹{Number(order.gift_card_discount).toLocaleString()}</span></div>}
                     {Number(order.coin_discount_amount) > 0 && (

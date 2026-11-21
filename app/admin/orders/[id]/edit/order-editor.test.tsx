@@ -77,7 +77,9 @@ const fixture = (): OrderEditContext => ({
   },
 })
 function quote(request: EditRequest): OrderEditQuote {
-  const total = request.items.reduce((sum, i) => sum + (i.variantId === a ? 1000 : 500) * i.quantity, 0)
+  const subtotal = request.items.reduce((sum, i) => sum + (i.variantId === a ? 1000 : 500) * i.quantity, 0)
+  const manualDiscount = Math.min(subtotal, request.manualDiscount?.amount || 0)
+  const total = subtotal - manualDiscount
   return {
     lines: request.items.map((i) => ({
       source_item_id: null,
@@ -93,8 +95,11 @@ function quote(request: EditRequest): OrderEditQuote {
       line_discount_amount: 0,
       promotion_allocations: [],
     })),
-    subtotal: total,
+    subtotal,
     promoDiscount: 0,
+    manualDiscount,
+    manualDiscountRequested: request.manualDiscount?.amount || 0,
+    manualDiscountReason: request.manualDiscount?.reason || '',
     bxgyDiscount: 0,
     shippingPrice: 0,
     giftCardDiscount: 0,
@@ -232,6 +237,57 @@ it('offers cancellation rather than saving an empty order', async () => {
   await click('Cancel order')
   expect(document.querySelector('[role="dialog"]')).toHaveTextContent('Cancel the entire order?')
   expect(mocks.cancel).not.toHaveBeenCalled()
+})
+it('reviews and saves a discount-only edit with its reason and revised refund', async () => {
+  await render()
+  await input('#order-manual-discount', '200.25')
+  await input('#order-edit-reason', 'Customer service adjustment')
+  await tick()
+  expect(mocks.preview).not.toHaveBeenCalled()
+  expect(button('Review changes')).toBeDisabled()
+  await input('#order-manual-discount-reason', 'Damaged packaging concession')
+  await tick()
+  expect(mocks.preview).toHaveBeenCalledWith(expect.objectContaining({
+    manualDiscount: { amount: 200.25, reason: 'Damaged packaging concession' },
+    items: [{ variantId: a, quantity: 1 }, { variantId: b, quantity: 2 }],
+  }))
+  expect(container).toHaveTextContent('Refund due: ₹200.25')
+  await click('Review changes')
+  const dialog = document.querySelector('[role="dialog"]')!
+  expect(dialog).toHaveTextContent('Manual discount: ₹200.25')
+  expect(dialog).toHaveTextContent('Damaged packaging concession')
+  expect(mocks.save).not.toHaveBeenCalled()
+  await click('Save changes', dialog)
+  expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({
+    manualDiscount: { amount: 200.25, reason: 'Damaged packaging concession' },
+  }))
+})
+it('can remove an existing discount and discard back to the saved requested amount', async () => {
+  const context = fixture()
+  context.order.manual_discount_amount = 200
+  context.order.manual_discount_requested = 300
+  context.order.manual_discount_reason = 'Agreed concession'
+  await render(context)
+  expect(container.querySelector('#order-manual-discount')).toHaveValue(300)
+  await click('Remove discount')
+  await tick()
+  expect(mocks.preview).toHaveBeenCalledWith(expect.objectContaining({ manualDiscount: { amount: 0, reason: 'Agreed concession' } }))
+  await click('Discard draft')
+  expect(container.querySelector('#order-manual-discount')).toHaveValue(300)
+  expect(button('Review changes')).toBeDisabled()
+  expect(mocks.save).not.toHaveBeenCalled()
+})
+it('rejects fractional paise and clears a previously valid discount review', async () => {
+  await render()
+  await input('#order-manual-discount', '10')
+  await input('#order-manual-discount-reason', 'Service concession')
+  await input('#order-edit-reason', 'Customer adjustment')
+  await tick()
+  expect(button('Review changes')).toBeEnabled()
+  await input('#order-manual-discount', '10.001')
+  await tick()
+  expect(button('Review changes')).toBeDisabled()
+  expect(mocks.preview).toHaveBeenCalledTimes(1)
 })
 it('records a refund only after the admin confirms the actual transaction', async () => {
   const context = fixture()

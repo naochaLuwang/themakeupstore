@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { Eye, ArrowUpRight, Pencil } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { orderDiscounts } from '@/lib/order-discounts'
 import { STATUS_LABELS } from '@/lib/order-status'
 import { directoryDateLabel } from '@/lib/admin-directory'
 import type { DashboardOrder } from '@/lib/admin-dashboard'
@@ -193,8 +194,9 @@ export function RecentOrdersTable({ orders }: { orders: DashboardOrder[] }) {
                                         `Coupon discount${
                                             selected.promo_code ? ` (${selected.promo_code})` : ''
                                         }`,
-                                        -selected.promo_discount_amount,
+                                        -orderDiscounts(selected).coupon,
                                     ],
+                                    ['Manual discount', -orderDiscounts(selected).manual],
                                     ['BXGY discount', -selected.bxgy_discount_amount],
                                     [selected.shipping_label || 'Delivery', selected.shipping_price],
                                     [

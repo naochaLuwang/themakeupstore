@@ -1,3 +1,4 @@
+import { orderDiscounts } from "@/lib/order-discounts"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
@@ -78,7 +79,7 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
             id, status, created_at, shipping_label, shipping_price,
             shipping_address, total, payment_status, payment_method,
             edit_version, edit_paid_amount, edit_balance_due, edit_refund_due,
-            order_type, promo_code, promo_discount_amount,
+            order_type, promo_code, promo_discount_amount, manual_discount_amount,
             delivery_partner_id, tracking_number,
             delivered_at, confirmed_at, out_for_delivery_at,
             failed_delivery_at, ready_for_pickup_at, picked_up_at, no_show_at,
@@ -236,6 +237,7 @@ export default async function PublicTrackingPage(props: { params: tParams }) {
                                 <p className="font-medium text-slate-900 capitalize">{order.order_type}</p>
                             </div>
                         )}
+                        {orderDiscounts(order).manual > 0 && <div className="col-span-2"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Manual discount</p><p className="font-medium text-slate-900">-₹{orderDiscounts(order).manual.toLocaleString('en-IN')}</p></div>}
                         {order.promo_code && Number(order.promo_discount_amount)>0 && (
                             <div className="col-span-2">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Promo Code</p>

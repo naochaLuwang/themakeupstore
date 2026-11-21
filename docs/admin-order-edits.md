@@ -2,6 +2,30 @@
 
 Implemented locally on 10 November 2026. Requires the migration below and a matching web deployment. No production orders, stock, balances or payments were changed during development.
 
+## Manual discounts — 21 November 2026
+
+Implemented locally; migration and matching web deployment remain pending.
+
+- **Review totals → Manual discount · ₹** accepts a fixed amount with up to two decimal places, from zero to ₹100,000,000. Add, change or remove it independently of item quantities. A discount reason (3–1,000 characters) and the existing amendment reason/review/save are required. Removing a discount also records its reason.
+- Manual savings can combine with coupons and BXGY. They apply to paid merchandise after those offers, before delivery, extra charges and redeemed credits. They do not change campaign/gift qualification thresholds or discount delivery, extra charges or free units.
+- The applied amount is capped at remaining merchandise. The requested amount is retained separately and shown in review when capped, so a later basket increase can restore the agreed amount. Previously returned credits are never spent again automatically.
+- Dedicated `manual_discount_amount`, `manual_discount_requested` and `manual_discount_reason` fields separate the concession from `promo_discount_amount`. Historical no-code discounts remain readable in their original column and are separated only during the next reviewed amendment; migration does not backfill rows. Where a legacy reason was absent, review labels it “Retained existing manual discount”.
+- The server calculates exact per-line allocations after coupon/BXGY savings; partial refunds use those net line amounts. Requested/applied discount and reason participate in the review hash and before/after audit. Stock/payment/credit/retry/revision guards remain part of the same transaction. Old tabs cannot erase a dedicated discount by omitting the new quote fields.
+- Invoice/thermal invoice, customer order history, checkout receipt, UUID tracking and dashboard quick view show manual savings separately. The internal reason is displayed in the admin invoice/history, not public tracking/customer summaries. The checkout receipt also includes existing extra charges and gift-card credit in its fetched breakdown.
+- Save changes updates the amount to collect/refund; payment recording and actual Razorpay/manual refunds still use the separate settlement workflow.
+
+### Rollout
+
+Apply `supabase/migrations/20261121090717_admin_order_manual_discounts.sql` **after all earlier pending migrations**, including order amendments and reporting, before deploying this web revision in the existing checkout maintenance window. Do not reapply the older order-amendment/reporting function definitions afterward. The migration adds fields and replaces the service-only amendment RPC; if dashboard reporting is installed, it also extends its existing private detail projection while preserving grants. No new environment variable or native build is required.
+
+### Verification
+
+- All 605 web tests, TypeScript and the production web build pass. Changed core/editor modules are lint-clean; existing invoice/customer lint debt is unchanged.
+- Isolated PostgreSQL checks cover the earlier amendment suite plus discount-only save/removal/replay, unchanged stock, legacy conversion, caps across later increases, coupon coexistence, exact successive partial refunds, invalid inputs, credit rollback/return/cancellation, competing discount drafts and duplicate concurrent saves. Migration reapplication preserves every order; dashboard amounts and service-only/fixed-search-path invoker privileges are checked.
+- Run `TMS_ORDER_EDIT_PG_SOCKET=/private/tmp/tms-order-edit-pg.<test-directory>/socket python3 supabase/tests/order_manual_discounts.py` after preparing the original isolated amendment fixture and applying the new migration. It imports/runs the baseline amendment suite first; it refuses non-fixture connections. It does not exercise real Razorpay transfers.
+- Security advisors ran against the disposable fixture. Findings are limited to its legacy trigger search paths and intentionally incomplete base-table RLS setup; neither changed function is flagged. This is not a production security-advisor result.
+- Browser checks mount the actual editor with intercepted/mock actions at 320/390/1440px: a ₹200.25 discount alongside a ₹100 coupon gives ₹1,699.75 from ₹2,000 merchandise, with ₹200.25 due back against ₹1,900 received. Explicit review/save, removal/discard, dialog bounds and no page overflow/errors pass. No production SQL, orders, stock, credit, payment, email or native files were changed.
+
 ## Admin workflow
 
 Open **Orders → Edit** or **Order invoice → Edit order**. Both desktop and mobile lists have the action again.
@@ -25,7 +49,7 @@ Older orders that used offers but lack those definitions require the explicit **
 
 Retail additions use the same normal/flash-price selection and promotion engine as checkout. Wholesale additions use the configured primary-category wholesale rate, matching existing wholesale order creation; retail automatic campaigns are not newly awarded to wholesale orders. The catalog search displays retail prices and the review explains the wholesale amounts.
 
-Delivery is recalculated against the original active method/address and the store's free-delivery threshold. If the original method is inactive, deleted or no longer belongs to the address, the saved delivery charge is retained with a review warning. Existing manual discounts are retained but capped at revised merchandise; existing extra charges remain unchanged. This editor does not accept arbitrary browser-supplied unit prices or introduce new credit spending.
+Delivery is recalculated against the original active method/address and the store's free-delivery threshold. If the original method is inactive, deleted or no longer belongs to the address, the saved delivery charge is retained with a review warning. Manual discounts can be changed in the reviewed draft and are capped at revised merchandise after other offers; existing extra charges remain unchanged. This editor does not accept arbitrary browser-supplied unit prices or introduce new credit spending.
 
 ## Payments, credits and cancellation
 

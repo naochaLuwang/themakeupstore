@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client"
 import { ArrowLeft, Package, Clock, Truck, CheckCircle2, RefreshCw, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useCart } from "@/components/store/use-cart"
+import { orderDiscounts } from "@/lib/order-discounts"
 import { cancelOrderAndRestoreStock } from "@/app/actions/orders"
 
 const STEP_MAP: Record<string, number> = {
@@ -278,13 +279,14 @@ export default function OrderDetailPage() {
     const isActive = ["pending", "confirmed", "packed"].includes(order.status?.toLowerCase())
     const isDelivered = ["delivered", "picked_up"].includes(order.status?.toLowerCase())
     const address = order.shipping_address as any
-    const discount = Number(order.promo_discount_amount) || 0
+    const discounts = orderDiscounts(order)
+    const discount = discounts.coupon
     const bxgyDiscount = Number(order.bxgy_discount_amount) || 0
     const giftCardDiscount = Number(order.gift_card_discount) || 0
     const coinDiscount = Number(order.coin_discount_amount) || 0
     const shipping = Number(order.shipping_price) || 0
     const additionalCharges = Number(order.additional_charges || 0)
-    const subtotal = Number(order.total) + discount + bxgyDiscount + giftCardDiscount + coinDiscount - shipping - additionalCharges
+    const subtotal = Number(order.total) + discount + discounts.manual + bxgyDiscount + giftCardDiscount + coinDiscount - shipping - additionalCharges
 
     const statusColors: Record<string, string> = {
         pending: "#F59E0B",
@@ -481,6 +483,7 @@ export default function OrderDetailPage() {
                                 <span className="text-[13px] font-medium text-green-600">-₹{discount}</span>
                             </div>
                         )}
+                        {discounts.manual > 0 && <div className="flex justify-between mb-1.5"><span className="text-[13px] text-green-600">Manual discount</span><span className="text-[13px] font-medium text-green-600">-₹{discounts.manual.toLocaleString('en-IN')}</span></div>}
                         {bxgyDiscount > 0 && <div className="flex justify-between mb-1.5"><span className="text-[13px] text-green-600">Buy 2 Get 1 savings</span><span className="text-[13px] font-medium text-green-600">-₹{bxgyDiscount.toLocaleString('en-IN')}</span></div>}
                         {giftCardDiscount > 0 && (
                             <div className="flex justify-between mb-1.5">
