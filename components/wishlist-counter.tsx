@@ -25,7 +25,7 @@ export function WishlistCounter({ initialCount, userId }: { initialCount: number
     }, [updateCount])
 
     return (
-        <Link href="/profile/wishlist" className="relative p-2 flex items-center">
+        <Link href="/profile/wishlist" aria-label={count ? `Wishlist, ${count} items` : 'Wishlist'} className="relative h-10 w-10 justify-center flex items-center">
             <Heart className="w-5 h-5 text-red-500 fill-red-500" />
             {count > 0 && (
                 <span className="absolute top-0 right-0 bg-primary text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">

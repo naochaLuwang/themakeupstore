@@ -1,38 +1,17 @@
-import { NextResponse } from "next/server"
-import { createClient } from "@/utils/supabase/server"
+import { NextResponse } from 'next/server'
+import { readCatalogState } from '@/lib/storefront-catalog'
+import { searchStoreCatalog } from '@/lib/storefront-catalog-server'
 
 export async function GET(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url)
-        const q = searchParams.get("q") || ""
-
-        if (q.length < 2) {
-            return NextResponse.json({ products: [] })
-        }
-
-        const supabase = await createClient()
-
-        const { data, error } = await supabase
-            .from("products")
-            .select("id, name, thumbnail_url")
-            .eq("status", "active")
-            .ilike("name", `%${q}%`)
-            .order("name", { ascending: true })
-            .limit(10)
-
-        if (error) {
-            return NextResponse.json({ products: [] })
-        }
-
-        const products = (data || []).map((p: { id: string; name: string; thumbnail_url: string | null }) => ({
-            id: p.id,
-            product_name: p.name,
-            thumbnail_url: p.thumbnail_url,
-            category_name: null,
-        }))
-
-        return NextResponse.json({ products })
-    } catch {
-        return NextResponse.json({ products: [] })
-    }
+  const params = new URL(request.url).searchParams
+  const state = readCatalogState(params, params.get('mode') !== 'browse')
+  try {
+    const result = await searchStoreCatalog(state, {
+      category: params.get('scope')?.slice(0, 100), extraCategories: params.getAll('extra').slice(0, 5),
+      concern: params.get('concern')?.slice(0, 100),
+    }, params.get('suggest') === '1' ? 5 : undefined)
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'public, max-age=0, must-revalidate' } })
+  } catch {
+    return NextResponse.json({ error: 'Products could not be loaded. Please retry.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
+  }
 }

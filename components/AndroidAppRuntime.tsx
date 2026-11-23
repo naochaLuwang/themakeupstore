@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
+import { consumeReturnPath } from '@/lib/storefront-navigation'
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -22,7 +23,7 @@ export default function AndroidAppRuntime() {
     const handleUrl = createAndroidLinkHandler({
       navigate: path => { if (!disposed) router.push(path) },
       exchangeCode: code => supabase.auth.exchangeCodeForSession(code),
-      signedIn: () => { if (!disposed) { router.replace('/'); router.refresh() } },
+      signedIn: () => { if (!disposed) { router.replace(consumeReturnPath()); router.refresh() } },
       authFailed: () => { if (!disposed) toast.error('Sign-in could not be completed. Please try again.') },
     })
     const track = async (pending: Promise<PluginListenerHandle>) => {

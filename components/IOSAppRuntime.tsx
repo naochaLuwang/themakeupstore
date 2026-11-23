@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
+import { consumeReturnPath } from '@/lib/storefront-navigation'
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -23,7 +24,7 @@ export default function IOSAppRuntime() {
       if (!link || disposed) return
       if (link.type === 'route') { router.push(link.path); return }
       await completeIOSAuth(url, {
-        success: () => { if (!disposed) { router.replace('/'); router.refresh() } },
+        success: () => { if (!disposed) { router.replace(consumeReturnPath()); router.refresh() } },
         failure: () => { if (!disposed) toast.error('Sign-in could not be completed. Please try again.') },
       })
     }

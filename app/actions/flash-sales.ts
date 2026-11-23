@@ -6,7 +6,7 @@ import { flashReadIds } from '@/lib/flash-sale-data'
 import { FLASH_CACHE_TAG } from '@/lib/flash-sale-cache'
 import { uuidPattern } from '@/lib/cart-quote'
 
-function invalidate() { revalidateTag(FLASH_CACHE_TAG,{expire:0}); revalidatePath('/admin/flash-sales') }
+function invalidate() { revalidateTag('storefront-discovery-catalog',{expire:0}); revalidateTag(FLASH_CACHE_TAG,{expire:0}); revalidatePath('/admin/flash-sales') }
 function validId(id:string) { if(!uuidPattern.test(id))throw new Error('Invalid campaign ID') }
 async function validateTargets(db:Awaited<ReturnType<typeof requireAdmin>>['supabase'], input:FlashSaleInput) {
   const t=normalizedTargets(input)

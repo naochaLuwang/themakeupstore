@@ -15,7 +15,7 @@ export function CartButton() {
     if (!mounted) return <ShoppingCart className="w-5 h-5 text-slate-400" />;
 
     return (
-        <Link href="/cart" className="relative p-2  rounded-full transition-colors">
+        <Link href="/cart" aria-label={mounted && total > 0 ? `Shopping bag, ${total} items` : "Shopping bag"} className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors">
             <div className="relative">
                 <ShoppingCart className="w-5 h-5" />
                 {total > 0 && (

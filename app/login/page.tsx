@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation"
 import { motion, useReducedMotion } from "framer-motion"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
+import { rememberReturnPath, consumeReturnPath, pendingReturnPath } from "@/lib/storefront-navigation"
+import { discoveryEvent } from "@/lib/storefront-events"
 import {
     Mail, Lock, User, Phone, ArrowRight,
     Loader2, Eye, EyeOff
@@ -22,12 +24,18 @@ export default function AuthPage() {
     const supabase = createClient()
     const router = useRouter()
 
-    useEffect(() => { setMounted(true); document.title = "Sign In | THE MAKEUP STORE WANGKHEI" }, [])
+    useEffect(() => {
+        const next = new URLSearchParams(window.location.search).get('next')
+        if (next) rememberReturnPath(next)
+        setMounted(true); document.title = "Sign In | THE MAKEUP STORE WANGKHEI"
+    }, [])
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
             if (event === 'SIGNED_IN' && session) {
-                router.push("/")
+                const target = consumeReturnPath(new URLSearchParams(window.location.search).get('next'))
+                discoveryEvent('login_continue', { destination: new URL(target, window.location.origin).pathname })
+                router.replace(target)
                 router.refresh()
             }
         })
@@ -40,6 +48,7 @@ export default function AuthPage() {
         : undefined
 
 const handleGoogleLogin = useCallback(async () => {
+        rememberReturnPath(pendingReturnPath(new URLSearchParams(window.location.search).get('next')))
         if (isCapacitor) {
             // Detect platform: use Google One Tap only on Android; use web OAuth on iOS
             const isAndroid = (window as any).Capacitor?.getPlatform()?.toLowerCase() === 'android'
@@ -63,7 +72,7 @@ const handleGoogleLogin = useCallback(async () => {
             } else {
                 const { signInIOSGoogle } = await import('@/lib/ios-auth')
                 await signInIOSGoogle({
-                    success: () => { router.replace('/'); router.refresh() },
+                    success: () => { router.replace(consumeReturnPath(new URLSearchParams(window.location.search).get('next'))); router.refresh() },
                     failure: () => toast.error('Google sign-in could not be completed. Please try again.'),
                 })
             }
@@ -78,6 +87,7 @@ const handleGoogleLogin = useCallback(async () => {
     }, [isCapacitor, supabase, router])
 
 const handleAppleLogin = useCallback(async () => {
+        rememberReturnPath(pendingReturnPath(new URLSearchParams(window.location.search).get('next')))
         try {
             if (isCapacitor) {
                 // Native Apple sign-in (iOS only) — Android has no native Apple login

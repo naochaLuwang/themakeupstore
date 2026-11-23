@@ -1,7 +1,7 @@
 "use server"
 
 import { categorySchema } from "@/lib/validations/category"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 import { uploadStoreImage } from "@/lib/storage"
 
@@ -40,6 +40,7 @@ export async function createCategory(formData: FormData) {
 
         if (error) throw error
 
+        revalidateTag("storefront-discovery-catalog", { expire: 0 })
         revalidatePath("/admin/categories")
         revalidatePath("/exclusive")
         return { success: true }
@@ -81,6 +82,7 @@ export async function updateCategory(categoryId: string, formData: FormData) {
 
         if (error) throw error
 
+        revalidateTag("storefront-discovery-catalog", { expire: 0 })
         revalidatePath("/admin/categories")
         revalidatePath(`/exclusive/${validatedFields.data.slug}`)
         return { success: true }
@@ -102,6 +104,7 @@ export async function deleteCategory(id: string) {
             return { error: error.message }
         }
 
+        revalidateTag("storefront-discovery-catalog", { expire: 0 })
         revalidatePath("/admin/categories")
         revalidatePath("/exclusive")
         return { success: true }

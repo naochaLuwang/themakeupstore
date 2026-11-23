@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { requireAdmin } from "@/lib/admin"
 import { uploadStoreImage, deleteStoreImage } from "@/lib/storage"
 
@@ -106,6 +106,7 @@ export async function createProduct(formData: FormData) {
             })
         }
 
+        revalidateTag("storefront-discovery-catalog", { expire: 0 })
         revalidatePath("/admin/products")
         return { success: true }
     } catch (error: any) {
@@ -238,6 +239,7 @@ export async function updateProduct(productId: string, formData: FormData) {
             }).eq("product_id", productId).eq("is_default", true)
         }
 
+        revalidateTag("storefront-discovery-catalog", { expire: 0 })
         revalidatePath("/admin/products")
         revalidatePath(`/products/${payload.slug}`)
         return { success: true }

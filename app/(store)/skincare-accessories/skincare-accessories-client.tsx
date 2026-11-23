@@ -5,37 +5,16 @@ import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { Sparkles, ChevronRight } from "lucide-react"
-import { ProductCard } from "@/components/store/product-card"
 import { Breadcrumbs } from "@/components/store/breadcrumbs"
 import SkincareRoutineFinder from "@/components/store/skincare-routine-finder"
 
 interface Props {
-    initialSubcategories: any[];
-    initialProducts: any[];
-    hasMore: boolean;
-    loadingMore: boolean;
-    onLoadMore: () => void;
+    initialSubcategories: { id: string; name: string; slug: string }[];
+    children: React.ReactNode;
 }
 
-export default function SkincareAccessoriesClient({
-    initialSubcategories,
-    initialProducts,
-    hasMore,
-    loadingMore,
-    onLoadMore
-}: Props) {
+export default function SkincareAccessoriesClient({ initialSubcategories, children }: Props) {
     const [routineOpen, setRoutineOpen] = React.useState(false)
-    const sentinelRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-        if (!hasMore || loadingMore) return;
-        const observer = new IntersectionObserver(
-            (entries) => entries[0].isIntersecting && onLoadMore(),
-            { threshold: 0.1, rootMargin: "200px" }
-        );
-        if (sentinelRef.current) observer.observe(sentinelRef.current);
-        return () => observer.disconnect();
-    }, [hasMore, loadingMore, onLoadMore]);
 
     return (
         <div className="min-h-screen bg-stone-50 text-stone-900">
@@ -199,51 +178,8 @@ export default function SkincareAccessoriesClient({
                                     All Selections
                                 </h2>
                             </div>
-                            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400">
-                                {initialProducts.length} Pieces
-                            </span>
                         </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12 pt-12">
-                            {initialProducts.map((product, i) => (
-                                <motion.div
-                                    key={product.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true, margin: "-50px" }}
-                                    transition={{ duration: 0.5, delay: (i % 4) * 0.1 }}
-                                >
-                                    <ProductCard product={product} />
-                                </motion.div>
-                            ))}
-                        </div>
-
-                        <div
-                            ref={sentinelRef}
-                            className="mt-20 py-16 flex flex-col items-center"
-                        >
-                            {hasMore ? (
-                                <div className="flex flex-col items-center gap-5">
-                                    <div className="w-8 h-8 rounded-full border border-stone-200 flex items-center justify-center">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-bounce" />
-                                    </div>
-                                    <span className="text-[10px] font-medium uppercase tracking-[0.4em] text-stone-400">
-                                        {loadingMore ? "Discovering more..." : "Scroll for more"}
-                                    </span>
-                                </div>
-                            ) : (
-                                <div className="text-center">
-                                    <div className="flex items-center justify-center gap-3 mb-3">
-                                        <div className="h-[1px] w-12 bg-stone-200" />
-                                        <div className="w-1.5 h-1.5 rounded-full bg-stone-300" />
-                                        <div className="h-[1px] w-12 bg-stone-200" />
-                                    </div>
-                                    <span className="text-[10px] font-medium uppercase tracking-[0.4em] text-stone-300">
-                                        End of Collection
-                                    </span>
-                                </div>
-                            )}
-                        </div>
+                        {children}
                     </div>
                 </section>
             </main>

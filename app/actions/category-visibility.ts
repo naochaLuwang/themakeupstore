@@ -22,6 +22,7 @@ export async function setCategoryVisibility(id: string, active: boolean, expecte
             return { error: 'Unable to update category status. Refresh and try again.' }
         }
         revalidatePath('/', 'layout')
+        revalidateTag('storefront-discovery-catalog', { expire: 0 })
         revalidateTag(PROMOTION_CACHE_TAG, { expire: 0 })
         return { success: true, products: Number(data?.products ?? 0), categories: Number(data?.categories ?? 0) }
     } catch {

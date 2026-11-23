@@ -44,14 +44,18 @@ export function BottomNav() {
                     {/* PRIMARY NAV ITEMS */}
                     <div className="flex flex-1 items-center justify-around">
                         {navItems.map((item) => {
-                            const isActive = pathname === item.href
+                            const isActive = item.href === '/' ? pathname === '/'
+                                : item.href === '/brands' ? /^\/(brands|exclusive|essentials)(\/|$)/.test(pathname)
+                                : item.href === '/categories' ? /^\/(categories|category|concern)(\/|$)/.test(pathname)
+                                : pathname.startsWith(item.href)
 
                             return (
                                 <Link
                                     key={item.name}
+                                    aria-current={isActive ? "page" : undefined}
                                     href={item.href}
                                     onClick={triggerHaptic}
-                                    className="relative flex flex-col items-center justify-center flex-1 group"
+                                    className="relative flex flex-col items-center justify-center flex-1 min-h-12 group"
                                 >
                                     {/* Nykaa Signature: Moving Background Capsule */}
                                     <div className="relative py-1 px-4 rounded-2xl transition-all">
@@ -75,7 +79,7 @@ export function BottomNav() {
                                         )}
                                     </div>
 
-                                    <span className={`text-[9px] mt-1 font-bold uppercase tracking-tight transition-colors duration-300 ${isActive ? "text-[#fc2779]" : "text-slate-400"}`}>
+                                    <span className={`text-[11px] mt-1 font-semibold transition-colors duration-300 ${isActive ? "text-[#fc2779]" : "text-slate-400"}`}>
                                         {item.name}
                                     </span>
                                 </Link>

@@ -6,6 +6,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Heart, ShoppingBag, Plus, X, Check, Palette, Star, StarHalf, ThumbsUp, Clock, Sparkles } from "lucide-react"
+import { rememberBrowseOrigin } from "@/lib/storefront-navigation"
+import { rememberViewedProduct } from "@/lib/storefront-history"
 import { createClient } from "@/utils/supabase/client"
 import { useCart } from "@/components/store/use-cart"
 import { motion, AnimatePresence } from "framer-motion"
@@ -89,7 +91,7 @@ function RatingStars({ rating, size = 10 }: { rating: number; size?: number }) {
 
 
 
-export function ProductCard({ product, priority, activeFlashSale, upcomingFlashSale }: { product: any; priority?: boolean; activeFlashSale?: ActiveFlashSale | null; upcomingFlashSale?: ActiveFlashSale | null }) {
+export function ProductCard({ product, priority, activeFlashSale, upcomingFlashSale, catalogSales }: { product: any; priority?: boolean; activeFlashSale?: ActiveFlashSale | null; upcomingFlashSale?: ActiveFlashSale | null; catalogSales?: FlashSaleRow[] }) {
     const [isWishlisted, setIsWishlisted] = useState(false)
     const [isPending, setIsPending] = useState(false)
     const [showVariantSelector, setShowVariantSelector] = useState(false)
@@ -103,7 +105,7 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
     const { activePromo } = useProductPromo(product.id, product.category_id, product.brand, productCategoryIds)
 
     const { sales: contextSales, now, loaded } = useFlashSales()
-    const sales = useMemo(() => loaded ? contextSales : [activeFlashSale, upcomingFlashSale].filter((s): s is ActiveFlashSale => !!s), [loaded, contextSales, activeFlashSale, upcomingFlashSale])
+    const sales = useMemo(() => catalogSales ?? (loaded ? contextSales : [activeFlashSale, upcomingFlashSale].filter((s): s is ActiveFlashSale => !!s)), [catalogSales, loaded, contextSales, activeFlashSale, upcomingFlashSale])
     const pricing = productFlashPricing(product, sales, now)
     const flashSaleLive = pricing.flashSale
     const flashSaleUpcoming = sales.filter(s => flashSaleStatus(s, now) === 'scheduled' &&
@@ -198,7 +200,7 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
         const prev = isWishlisted
         setIsWishlisted(!prev)
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { setIsWishlisted(prev); setIsPending(false); return router.push("/login") }
+        if (!user) { setIsWishlisted(prev); setIsPending(false); return router.push("/login?" + new URLSearchParams({ next: window.location.pathname + window.location.search })) }
         try {
             if (prev) {
                 await supabase.from("wishlist").delete().eq("user_id", user.id).eq("product_id", product.id)
@@ -213,11 +215,15 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
         }
     }
 
+    const rememberVisit = () => {
+        rememberBrowseOrigin(location.pathname === '/' ? 'home' : location.pathname === '/search' ? 'search results' : document.querySelector('h1')?.textContent || 'shop')
+        rememberViewedProduct({ id: product.id, name: product.name, thumbnail_url: product.thumbnail_url || null })
+    }
     return (
         <div className="group relative flex flex-col bg-white border border-black/[0.06] h-full transition-all duration-300 hover:z-10 hover:shadow-[0_0_20px_rgba(0,0,0,0.04)]">
 
             {/* IMAGE SECTION */}
-            <Link href={`/products/${product.id}`} className="block relative aspect-square overflow-hidden bg-[#F8F8F8]">
+            <Link href={`/products/${product.id}`} onClick={rememberVisit} className="block relative aspect-square overflow-hidden bg-[#F8F8F8]">
                 {product.thumbnail_url ? (
                     <Image
                         src={product.thumbnail_url}
@@ -306,7 +312,7 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
                 )}
 
                 <h3 className="text-[13px] font-medium text-slate-800 leading-[18px] h-[38px] overflow-hidden">
-                    {product.name}
+                    <Link href={`/products/${product.id}`} onClick={rememberVisit} className="hover:underline focus-visible:underline">{product.name}</Link>
                 </h3>
 
                 {/* VARIANT SWATCHES */}

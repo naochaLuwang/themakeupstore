@@ -1,5 +1,6 @@
 "use client"
 
+import { ProductNavigation } from "@/components/store/product-navigation"
 import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -357,7 +358,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
 
     const toggleWishlist = async () => {
         if (wishlistLoading) return
-        if (!user) { router.push("/login"); return }
+        if (!user) { router.push("/login?" + new URLSearchParams({ next: window.location.pathname + window.location.search })); return }
         const prev = isWishlisted
         setIsWishlisted(!prev)
         setWishlistLoading(true)
@@ -574,6 +575,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
 
     return (
         <div className="min-h-screen bg-white">
+            <ProductNavigation name={product.name} category={product.product_categories?.find((c: { category?: { slug: string; name: string } | null }) => c.category)?.category} />
             {/* Mobile Layout */}
             <div className="md:hidden pb-24">
                 {/* Image Gallery */}

@@ -1,31 +1,5 @@
-import { createClient } from "@/utils/supabase/server"
-import ShopClient from "./shop-client"
-
-export const metadata = {
-    title: "Shop All Products | THE MAKEUP STORE WANGKHEI",
-    description: "Browse our latest collection of premium products.",
-}
-
-export default async function ShopPage({
-    searchParams,
-}: {
-    searchParams: Promise<{ q?: string; search?: string }>
-}) {
-    const supabase = await createClient()
-    const params = await searchParams
-    const query = params.q || params.search || ""
-
-    // Initial Data Fetch
-    let supabaseQuery = supabase
-        .from('products')
-        .select(`*, product_variants(id, price, stock, discount_type, discount_value, title, image_url), product_categories(category_id)`)
-        .eq('status', 'active')
-
-    if (query) {
-        supabaseQuery = supabaseQuery.textSearch("search_vector", query, { type: "websearch", config: "english" })
-    }
-
-    const { data: products } = await supabaseQuery.order('created_at', { ascending: false }).limit(100)
-
-    return <ShopClient initialProducts={products || []} />
+import { CatalogListing, type CatalogSearchParams } from '@/components/store/catalog-listing'
+export const metadata = { title: 'Shop all products', description: 'Browse makeup, skincare and beauty products.' }
+export default async function ShopPage({ searchParams }: { searchParams: Promise<CatalogSearchParams> }) {
+  return <div className="min-h-screen bg-white"><h1 className="sr-only">Shop all products</h1><CatalogListing title="Shop all products" presentation="shop" searchParams={await searchParams} /></div>
 }

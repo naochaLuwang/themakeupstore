@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { ArrowRight, ChevronDown } from "lucide-react"
+import { rememberBrowseOrigin, restoreBrowseScroll } from "@/lib/storefront-navigation"
 import { Skeleton } from "boneyard-js/react"
 
 const cardTints = [
@@ -37,14 +38,33 @@ const categoryImageMap: Record<string, string> = {
     "makeup-brushes": "brush.png", "makeup-remover--wipes": "brush.png",
 }
 
+const subscribeCategoryUrl = (listener: () => void) => {
+    window.addEventListener('popstate', listener)
+    window.addEventListener('storefront:browse-state', listener)
+    return () => { window.removeEventListener('popstate', listener); window.removeEventListener('storefront:browse-state', listener) }
+}
 export default function CategoriesPage() {
     const [allCategories, setAllCategories] = useState<any[]>([])
-    const [expandedId, setExpandedId] = useState<string | null>(null)
+    const categoryUrl = useSyncExternalStore(subscribeCategoryUrl, () => window.location.search, () => '')
+    const group = new URLSearchParams(categoryUrl).get('group')
+    const expandedId = allCategories.find(c => c.slug === group)?.id || null
+    const setExpandedId = (id: string | null) => {
+        const params = new URLSearchParams(window.location.search)
+        const slug = allCategories.find(c => c.id === id)?.slug
+        if (slug) params.set('group', slug)
+        else params.delete('group')
+        window.history.replaceState(null, '', '/categories' + (params.size ? '?' + params : ''))
+        window.dispatchEvent(new Event('storefront:browse-state'))
+    }
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState("")
+    const [retry, setRetry] = useState(0)
     const supabase = createClient()
 
     useEffect(() => {
         async function fetchCategories() {
+            setLoading(true)
+            setError("")
             try {
                 const { data, error } = await supabase
                     .from("categories")
@@ -52,14 +72,15 @@ export default function CategoriesPage() {
                     .order("name", { ascending: true })
                 if (error) throw error
                 setAllCategories(data || [])
-            } catch (e) {
-                console.error(e)
+                requestAnimationFrame(() => restoreBrowseScroll(window.location.pathname + window.location.search))
+            } catch {
+                setError("Categories could not be loaded. Please retry.")
             } finally {
                 setLoading(false)
             }
         }
         fetchCategories()
-    }, [supabase])
+    }, [supabase, retry])
 
     const { parents, childrenMap } = useMemo(() => {
         const excludedSlugs = ["exclusive", "essentials", "new-arrivals"]
@@ -100,7 +121,7 @@ export default function CategoriesPage() {
                 </div>
             </div>
         }>
-                <div className="min-h-screen bg-white">
+                <div className="min-h-screen bg-white" onClickCapture={event => { if ((event.target as HTMLElement).closest('a[href]')) rememberBrowseOrigin('categories') }}>
                     <div className="max-w-2xl mx-auto px-5 pt-2 pb-24">
                         {/* Header */}
                         <div className="mb-6">
@@ -112,6 +133,7 @@ export default function CategoriesPage() {
                             </p>
                         </div>
 
+                        {error && <div role="alert" className="rounded-xl border border-slate-200 p-5 text-sm text-slate-700"><p>{error}</p><button onClick={() => setRetry(value => value + 1)} className="mt-3 min-h-11 rounded-lg border border-slate-300 px-4 font-semibold">Retry</button></div>}
                         {/* Category Cards */}
                         {parents.length > 0 ? (
                             <div className="space-y-[18px]">
@@ -197,7 +219,8 @@ export default function CategoriesPage() {
                                                         onClick={() =>
                                                             setExpandedId(isExpanded ? null : parent.id)
                                                         }
-                                                        className="w-full text-left rounded-[26px] min-h-[180px] overflow-hidden relative border-0 outline-none"
+                                                        aria-expanded={isExpanded}
+                                                        className="w-full text-left rounded-[26px] min-h-[180px] overflow-hidden relative border-0 focus-visible:outline-2 focus-visible:outline-pink-600"
                                                         style={{
                                                             borderBottomLeftRadius: isExpanded ? 0 : 26,
                                                             borderBottomRightRadius: isExpanded ? 0 : 26,
@@ -220,6 +243,7 @@ export default function CategoriesPage() {
                                                 >
                                                     <div className="h-px mx-6 bg-white/70" />
                                                     <div className="px-5 pt-[18px] pb-[14px] space-y-2.5">
+                                                        <Link href={`/category/${parent.slug}`} className="flex min-h-12 items-center justify-between rounded-xl bg-white px-5 text-sm font-semibold text-slate-900">Shop all {parent.name}<ArrowRight className="h-4 w-4" /></Link>
                                                         {children.map((child: any) => (
                                                             <Link
                                                                 key={child.id}
