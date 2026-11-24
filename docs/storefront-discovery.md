@@ -2,6 +2,16 @@
 
 Implemented locally on 22 November 2026. Web deployment is pending.
 
+## Requested restoration — 24 November 2026
+
+`/brands` reads categories directly, independently of products and promotions. Active child categories use the original non-brand name exclusions, alphabetical ordering, Exclusive/Essentials grouping, category logos and category destinations. Categories with no products remain listed; inactive ancestors, missing parents and cycles stay hidden. Product `brand` values no longer create directory tiles.
+
+Storefront search and collection grids display all matching products in one continuous list. The 24-product limit and Previous/Next controls are removed; legacy `page` query parameters are ignored. Filtering, sorting, variant stock, flash pricing and Back/scroll restoration remain. Suggestions still return at most five products. Database range reads remain internal so database row limits cannot truncate the catalog.
+
+Validation: all 655 web tests pass (the full suite followed by the added category-reader regression), as do TypeScript and the production build. Production browser checks at 390 and 1440 pixels verify 44 category brands, category-only destinations, brand search/clear, all 839 Shop products and all 85 lipstick results even with legacy `page=2`, with no product pagination, horizontal overflow or page errors. Browser checks stubbed traffic logging and allowed read-only catalog/cart requests; no production data was written. Web deployment remains pending; no SQL or native changes are required by this restoration.
+
+The implementation and validation notes below describe the original 22 November work; this restoration supersedes their directory and product-pagination behavior.
+
 ## Customer behavior
 
 - The header accepts Enter, supports arrow-key suggestions and Escape, and sends View all to a results page that reads the query. Search remains accessible on phones, tablets and desktops.

@@ -10,14 +10,13 @@ export interface CatalogProduct extends CatalogPricingProduct {
   product_categories: { category_id: string }[]
   product_concerns?: { concern_id: string }[]
 }
-export interface CatalogState { q: string; categories: string[]; brands: string[]; price: string; inStock: boolean; sort: CatalogSort; page: number }
+export interface CatalogState { q: string; categories: string[]; brands: string[]; price: string; inStock: boolean; sort: CatalogSort }
 export interface CatalogScope { category?: string; extraCategories?: string[]; concern?: string }
 export interface CatalogResult {
-  products: CatalogProduct[]; total: number; page: number; pageSize: number; hasMore: boolean
+  products: CatalogProduct[]; total: number
   facets: { brands: string[]; categories: CatalogCategory[] }
   suggestions: { name: string; slug: string }[]; sales: FlashSaleRow[]; validUntil: number
 }
-export const CATALOG_PAGE_SIZE = 24
 export const CATALOG_PRICES = [
   { value: 'under-500', label: 'Under ₹500', min: 0, max: 500 },
   { value: '500-1000', label: '₹500–₹1,000', min: 500, max: 1000 },
@@ -31,13 +30,11 @@ export const CATALOG_SORTS: { value: CatalogSort; label: string }[] = [
 const list = (values: string[]) => [...new Set(values.map(v => v.trim()).filter(Boolean))].slice(0, 30).sort()
 export function readCatalogState(params: URLSearchParams, search = false): CatalogState {
   const rawSort = params.get('sort')
-  const rawPage = Number(params.get('page'))
   return { q: (params.get('q') || params.get('search') || '').trim().slice(0, 150),
     categories: list(params.getAll('category')), brands: list(params.getAll('brand')),
     price: CATALOG_PRICES.some(p => p.value === params.get('price')) ? params.get('price')! : '',
     inStock: params.get('stock') === 'in',
     sort: CATALOG_SORTS.some(s => s.value === rawSort) ? rawSort as CatalogSort : search ? 'relevance' : 'newest',
-    page: Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1,
   }
 }
 export function catalogParams(state: CatalogState, search = false) {
@@ -48,7 +45,6 @@ export function catalogParams(state: CatalogState, search = false) {
   if (state.price) params.set('price', state.price)
   if (state.inStock) params.set('stock', 'in')
   if (state.sort !== (search ? 'relevance' : 'newest')) params.set('sort', state.sort)
-  if (state.page > 1) params.set('page', String(state.page))
   return params
 }
 export const normalizeSearch = (value: string) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
@@ -117,7 +113,7 @@ export function categoryDescendants(categories: CatalogCategory[], slugs: string
   return ids
 }
 export function queryCatalog(products: CatalogProduct[], categories: CatalogCategory[], sales: FlashSaleRow[], state: CatalogState,
-  scope: CatalogScope = {}, now = Date.now(), pageSize = CATALOG_PAGE_SIZE, concerns: CatalogConcern[] = []): CatalogResult {
+  scope: CatalogScope = {}, now = Date.now(), limit?: number, concerns: CatalogConcern[] = []): CatalogResult {
   const byId = new Map(categories.map(c => [c.id, c]))
   const visible = (id: string) => {
     const seen = new Set<string>()
@@ -159,14 +155,13 @@ export function queryCatalog(products: CatalogProduct[], categories: CatalogCate
     if (state.sort === 'name') return a.product.name.localeCompare(b.product.name) || a.product.id.localeCompare(b.product.id)
     return Date.parse(b.product.created_at) - Date.parse(a.product.created_at) || a.product.id.localeCompare(b.product.id)
   })
-  const page = Math.min(state.page, Math.max(1, Math.ceil(filtered.length / pageSize)))
   const times = sales.flatMap(s => [Date.parse(s.starts_at), Date.parse(s.ends_at)]).filter(t => t > now)
-  return { products: filtered.slice((page - 1) * pageSize, page * pageSize).map(({ product: p }) => ({
+  return { products: filtered.slice(0, limit).map(({ product: p }) => ({
     id: p.id, name: p.name, slug: p.slug, brand: p.brand, thumbnail_url: p.thumbnail_url,
     created_at: p.created_at, has_variants: p.has_variants, tag: p.tag, category_id: p.category_id,
     base_price: p.base_price, discount_type: p.discount_type, discount_value: p.discount_value,
     product_categories: p.product_categories, product_variants: p.product_variants,
-  })), total: filtered.length, page, pageSize, hasMore: page * pageSize < filtered.length,
+  })), total: filtered.length,
     facets: { brands: [...new Map(rows.map(r => r.product.brand).filter((b): b is string => !!b).map(b => [normalizeSearch(b), b])).values()].sort(),
       categories: categories.filter(c => visible(c.id) && rows.some(r => r.ancestors.has(c.id))).sort((a, b) => a.name.localeCompare(b.name)) },
     suggestions: state.q.length >= 2 ? categories.filter(c => visible(c.id) && normalizeSearch(c.name).includes(normalizeSearch(state.q)))

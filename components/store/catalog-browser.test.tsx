@@ -13,10 +13,8 @@ vi.mock('next/navigation', async () => {
 })
 vi.mock('./product-card', () => ({ ProductCard: ({ product }: { product: { id: string; name: string } }) => <a href={'/products/' + product.id}>{product.name}</a> }))
 const product = { id: '10000000-0000-4000-8000-000000000001', name: 'Lipstick' }
-const data = (url = '/api/products/search', name = 'Lipstick') => {
-  const params = new URL(url, 'http://localhost').searchParams
-  const page = Number(params.get('page') || 1)
-  return { products: [{ ...product, name }], total: 50, page, pageSize: 24, hasMore: page < 3, sales: [], validUntil: Date.now() + 60000,
+const data = (_url = '/api/products/search', name = 'Lipstick') => {
+  return { products: Array.from({ length: 50 }, (_, index) => ({ ...product, id: product.id + index, name })), total: 50, sales: [], validUntil: Date.now() + 60000,
     facets: { brands: ['Rare Beauty'], categories: [{ id: 'lips', name: 'Lips', slug: 'lips', is_active: true, parent_id: null }] }, suggestions: [] }
 }
 let host: HTMLDivElement, root: Root, clock = 0
@@ -43,14 +41,17 @@ async function type(value: string) {
   const input = host.querySelector<HTMLInputElement>('#catalog-search')!
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) })
 }
-it('hydrates URL query, filters, sort and page and requests the complete result count', async () => {
+it('hydrates URL query, filters and sort and displays all results without pagination', async () => {
   window.history.replaceState(null, '', '/search?q=lipstick&brand=Rare+Beauty&sort=price_asc&page=2')
   await render()
   expect(host.querySelector('#catalog-search')).toHaveValue('lipstick')
   expect(host.querySelector('#catalog-sort')).toHaveValue('price_asc')
-  expect(host).toHaveTextContent('50 results'); expect(host).toHaveTextContent('Page 2 of 3')
+  expect(host).toHaveTextContent('50 results')
+  expect(host.querySelectorAll('a[href^="/products/"]')).toHaveLength(50)
+  expect(host.querySelector('nav[aria-label="Product pages"]')).toBeNull()
+  expect(host).not.toHaveTextContent('Previous'); expect(host).not.toHaveTextContent('Next')
   const request = new URL(mocks.fetch.mock.calls[0][0], 'http://localhost')
-  expect(request.searchParams.get('page')).toBe('2'); expect(request.searchParams.get('brand')).toBe('Rare Beauty')
+  expect(request.searchParams.has('page')).toBe(false); expect(request.searchParams.get('brand')).toBe('Rare Beauty')
 })
 it('keeps filter drafts private until Show results and discards them when dismissed', async () => {
   await render(); await click('Filters')

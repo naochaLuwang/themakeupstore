@@ -4,9 +4,10 @@ import { GET } from './route'
 const mocks = vi.hoisted(() => ({ search: vi.fn() }))
 vi.mock('@/lib/storefront-catalog-server', () => ({ searchStoreCatalog: mocks.search }))
 beforeEach(() => { vi.clearAllMocks(); mocks.search.mockResolvedValue({ products: [], total: 0 }) })
-it('passes parsed query, filter, scope and page intent to one catalog implementation', async () => {
+it('passes parsed query, filter, scope while ignoring legacy page intent to one catalog implementation', async () => {
   await GET(new Request('https://store.test/api/products/search?q=lipstick&brand=Rare&category=lips&stock=in&page=2&scope=face&suggest=1'))
-  expect(mocks.search).toHaveBeenCalledWith(expect.objectContaining({ q: 'lipstick', brands: ['Rare'], categories: ['lips'], inStock: true, page: 2, sort: 'relevance' }), expect.objectContaining({ category: 'face' }), 5)
+  expect(mocks.search.mock.calls[0][0]).not.toHaveProperty('page')
+  expect(mocks.search).toHaveBeenCalledWith(expect.objectContaining({ q: 'lipstick', brands: ['Rare'], categories: ['lips'], inStock: true, sort: 'relevance' }), expect.objectContaining({ category: 'face' }), 5)
 })
 it('returns a retryable error instead of claiming a failed catalog has no matches', async () => {
   mocks.search.mockRejectedValue(new Error('Private database error'))

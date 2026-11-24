@@ -14,13 +14,14 @@ const product = (id: string, overrides: Partial<CatalogProduct> = {}): CatalogPr
 })
 const state = (query = '') => readCatalogState(new URLSearchParams(query), true)
 describe('storefront catalog discovery', () => {
-  it('round-trips query, multiple filters, sort and page through a shareable URL', () => {
+  it('round-trips query, multiple filters, sort through a shareable URL', () => {
     const input = state('q=rare+beauty&brand=Rare+Beauty&brand=Rare+Beauty&category=lips&stock=in&price=500-1000&sort=price_asc&page=3')
     expect(readCatalogState(catalogParams(input, true), true)).toEqual(input)
     expect(input.brands).toHaveLength(1)
+    expect(catalogParams(input, true).has('page')).toBe(false)
     expect(state().sort).toBe('relevance')
     expect(readCatalogState(new URLSearchParams()).sort).toBe('newest')
-    expect(state('page=Infinity&sort=bad&price=bad')).toMatchObject({ page: 1, sort: 'relevance', price: '' })
+    expect(state('page=Infinity&sort=bad&price=bad')).toMatchObject({ sort: 'relevance', price: '' })
   })
   it('ranks actual product-name matches above incidental description matches', () => {
     const exact = product('exact'), incidental = product('incidental', { name: 'Highlighter', description: 'Pair with a lipstick' })
@@ -33,14 +34,17 @@ describe('storefront catalog discovery', () => {
       expect(searchScore(p, query, 'Lipstick')).toBeGreaterThan(0)
     expect(searchScore(p, 'rare eyeliner', 'Lipstick')).toBe(0)
   })
-  it('filters and sorts the complete matching catalog before pagination', () => {
+  it('shows the complete filtered and sorted catalog without pagination', () => {
     const all = Array.from({ length: 525 }, (_, i) => product(String(i), { product_variants: [{ id: 'v-' + i, price: 1000 - i, stock: 2, title: 'Rose' }] }))
     const result = queryCatalog(all, categories, [], state('q=lipstick&sort=price_asc'))
     expect(result.total).toBe(525)
     expect(result.products[0].id).toBe('524')
-    expect(result.products).toHaveLength(24)
-    expect(queryCatalog(all, categories, [], state('q=lipstick&sort=price_asc&page=2')).products[0].id).toBe('500')
-    expect(queryCatalog(all, categories, [], state('page=99999')).page).toBe(22)
+    expect(result.products).toHaveLength(525)
+    expect(queryCatalog(all, categories, [], state('q=lipstick&sort=price_asc&page=2')).products).toEqual(result.products)
+    expect(queryCatalog(all, categories, [], state('page=99999')).products).toHaveLength(525)
+    const suggestions = queryCatalog(all, categories, [], state('q=lipstick'), {}, Date.now(), 5)
+    expect(suggestions.products).toHaveLength(5)
+    expect(suggestions.total).toBe(525)
   })
   it('matches punctuated brands, joined brand numbers and case variants consistently', () => {
     expect(searchScore(product('mac', { brand: 'M.A.C' }), 'mac lipstick', '')).toBeGreaterThan(0)
