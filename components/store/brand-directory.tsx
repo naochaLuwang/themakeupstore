@@ -43,9 +43,8 @@ export function BrandDirectory({ categories }: { categories: CatalogCategory[] }
       <div className="grid grid-cols-3 gap-y-2">{group.brands.map(category => {
         const parent = byId.get(category.parent_id!)
         const section = parent && ['exclusive', 'essentials'].includes(parent.slug) ? parent.slug : 'categories'
-        return <Link key={category.id} href={`/${section}/${category.slug}`} className="relative mx-0.5 flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded border border-gray-200 p-2 text-center transition-colors hover:border-gray-300 focus-visible:outline-pink-600">
-          {category.image_url ? <Image src={category.image_url} alt="" width={240} height={180} className="h-3/4 w-4/5 object-contain" /> : <span aria-hidden="true" className="text-2xl font-light tracking-widest text-gray-400">{category.name.charAt(0)}</span>}
-          <span className="max-w-full text-[10px] font-medium text-gray-500 md:text-xs">{category.name}</span>
+        return <Link key={category.id} href={`/${section}/${category.slug}`} aria-label={category.name} className="relative mx-0.5 flex aspect-square items-center justify-center overflow-hidden rounded border border-gray-200 p-2 text-center transition-colors hover:border-gray-300 focus-visible:outline-pink-600">
+          {category.image_url ? <Image src={category.image_url} alt="" width={240} height={180} className="h-4/5 w-4/5 object-contain" /> : <span aria-hidden="true" className="text-2xl font-light tracking-widest text-gray-400">{category.name.charAt(0)}</span>}
         </Link>
       })}</div>
     </section>)}
