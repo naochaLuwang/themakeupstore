@@ -5,6 +5,7 @@ import { HomeMobile } from "./home-mobile"
 import { HomeDesktop } from "./home-desktop"
 import { HomeTablet } from "./home-tablet"
 import { ProductCard } from "@/components/store/product-card"
+import { productInStock } from "@/lib/product-stock"
 
 export const metadata: Metadata = {
     title: "Home",
@@ -55,15 +56,9 @@ export default async function GatewayPage() {
   const parentCatData = parentCatDataRes.data
   const showcaseItems = showcaseItemsRes.data
   const childrenData = childrenDataRes.data
-  const fentyProducts = (fentyProdDataRes.data || []).filter((p: any) => {
-    const variants = p.product_variants || []
-    return variants.length === 0 || variants.some((v: any) => Number(v.stock) > 0)
-  })
+  const fentyProducts = (fentyProdDataRes.data || []).filter(productInStock)
 
-  const inStockProducts = (prodData || []).filter((p: any) => {
-    const variants = p.product_variants || []
-    return variants.length === 0 || variants.some((v: any) => Number(v.stock) > 0)
-  }).slice(0, 12)
+  const inStockProducts = (prodData || []).filter(productInStock).slice(0, 12)
 
   const heroProduct = fentyProducts[0] || inStockProducts.find((p: any) => p.thumbnail_url || p.product_variants?.[0]?.image_url)
 
@@ -71,10 +66,7 @@ export default async function GatewayPage() {
     !BRAND_BLACKLIST.some(name => b.name.toLowerCase() === name.toLowerCase())
   )
 
-  const kikoProducts = (kikoProdData || []).filter((p: any) => {
-    const variants = p.product_variants || []
-    return variants.length === 0 || variants.some((v: any) => Number(v.stock) > 0)
-  }).map((p: any) => {
+  const kikoProducts = (kikoProdData || []).filter(productInStock).map((p: any) => {
     const discountPct = Math.max(0, ...(p.product_variants || []).map((v: any) => {
       const base = Number(v.price) || 0
       if (base <= 0) return 0
@@ -171,10 +163,7 @@ export default async function GatewayPage() {
         .from("products")
         .select("id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, category_id, product_categories(category_id), product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url)").eq("status", "active")
         .in("id", funIds)
-      funSizeProducts = (funProds || []).filter((p: any) => {
-        const v = p.product_variants || []
-        return v.length === 0 || v.some((x: any) => Number(x.stock) > 0)
-      })
+      funSizeProducts = (funProds || []).filter(productInStock)
     }
   }
 

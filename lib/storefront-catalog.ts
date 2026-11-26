@@ -1,4 +1,5 @@
 import { productFlashPricing, type FlashSaleRow, type CatalogPricingProduct } from '@/lib/flash-sale-helper'
+import { productInStock } from '@/lib/product-stock'
 
 export type CatalogSort = 'relevance' | 'newest' | 'price_asc' | 'price_desc' | 'name'
 export interface CatalogCategory { id: string; name: string; slug: string; parent_id: string | null; is_active: boolean; image_url?: string | null }
@@ -90,7 +91,7 @@ export function searchScore(product: CatalogProduct, query: string, categoryName
   if (words(product.brand || '').join(' ') === phrase) score += 250
   return score
 }
-export const catalogInStock = (p: CatalogProduct) => p.product_variants.some(v => Number(v.stock) > 0)
+export const catalogInStock = productInStock
 export function browseCategoryFacets(categories: CatalogCategory[]) {
   const byId = new Map(categories.map(c => [c.id, c]))
   return categories.filter(category => {
@@ -149,7 +150,9 @@ export function queryCatalog(products: CatalogProduct[], categories: CatalogCate
     (!state.brands.length || brands.has(normalizeSearch(row.product.brand || ''))) && (!state.inStock || row.stock) &&
     (!range || (row.price >= range.min && row.price < range.max)))
   filtered.sort((a, b) => {
-    if (state.sort === 'relevance') return b.score - a.score || Number(b.stock) - Number(a.stock) || a.product.id.localeCompare(b.product.id)
+    const stock = Number(b.stock) - Number(a.stock)
+    if (stock) return stock
+    if (state.sort === 'relevance') return b.score - a.score || a.product.id.localeCompare(b.product.id)
     if (state.sort === 'price_asc') return a.price - b.price || a.product.id.localeCompare(b.product.id)
     if (state.sort === 'price_desc') return b.price - a.price || a.product.id.localeCompare(b.product.id)
     if (state.sort === 'name') return a.product.name.localeCompare(b.product.name) || a.product.id.localeCompare(b.product.id)

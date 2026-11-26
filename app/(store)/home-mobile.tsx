@@ -8,6 +8,7 @@ import {
   Search, Heart, ShoppingBag, Rocket, ArrowRight, X,
 } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
+import { outOfStockLast } from "@/lib/product-stock"
 import { KylieBanner } from "@/components/store/kylie-banner"
 import { FunSizeSection } from "@/components/store/fun-size-section"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
@@ -85,7 +86,8 @@ interface Props {
 export function HomeMobile({ banner, categories, products, forever52Products, parentCategories, shelfProducts, showcaseItems, funSizeProducts }: Props) {
   const [mounted, setMounted] = useState(false)
   const [showAppBanner, setShowAppBanner] = useState(false)
-  const recentlyViewed = useRecentlyViewed(s => s.items)
+  const viewedItems = useRecentlyViewed(s => s.items)
+  const recentlyViewed = outOfStockLast(viewedItems)
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {

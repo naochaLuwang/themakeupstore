@@ -1,6 +1,8 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { readCatalogPages } from "@/lib/catalog-pages"
+import { outOfStockLast } from "@/lib/product-stock"
 
 const PAGE_SIZE = 20
 
@@ -47,20 +49,15 @@ export async function fetchEssentialsProducts({
 }) {
     const supabase = await createClient()
     const from = page * PAGE_SIZE
-    const to = from + PAGE_SIZE - 1
-
-    const { data: products, error } = await supabase
+    // Partition the complete collection before choosing a scroll batch. Sorting
+    // each batch alone would leave available products behind earlier sold-outs.
+    const products = await readCatalogPages((start, end) => supabase
         .from('products')
         .select('*, product_variants(id, price, stock, hex_code, discount_type, discount_value), product_categories!inner(category_id)')
         .in('product_categories.category_id', categoryIds)
         .eq('status', 'active')
-        .range(from, to)
-        .order('created_at', { ascending: false })
-
-    if (error) {
-        console.error("Error fetching essentials products:", error)
-        return { products: [], hasMore: false }
-    }
+        .order('created_at', { ascending: false }).order('id')
+        .range(start, end))
 
     const seen = new Set<string>()
     const deduped = (products || []).filter((p: any) => {
@@ -75,7 +72,7 @@ export async function fetchEssentialsProducts({
     }))
 
     return {
-        products: processed,
-        hasMore: processed.length === PAGE_SIZE,
+        products: outOfStockLast(processed).slice(from, from + PAGE_SIZE),
+        hasMore: from + PAGE_SIZE < processed.length,
     }
 }

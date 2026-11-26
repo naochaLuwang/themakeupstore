@@ -5,6 +5,8 @@ import { createClient } from '@/utils/supabase/client'
 import { ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { ProductCard } from '@/components/store/product-card'
+import { outOfStockLast } from '@/lib/product-stock'
+import { readCatalogPages } from '@/lib/catalog-pages'
 
 const EDITS = [
   { id: 'lips', title: 'The Lip Edit', subtitle: 'Stains, glosses, and lipsticks that define the season', gradient: 'from-rose-900 via-rose-800 to-pink-900', accent: '#f43f5e', explore: '/search?q=lip' },
@@ -45,11 +47,11 @@ export default function MidYearSalePage() {
           )
           if (matched.length === 0) continue
 
-          const { data: pc } = await supabase
+          const pc = await readCatalogPages((from, to) => supabase
             .from('product_categories')
             .select('products(id, name, slug, base_price, thumbnail_url, brand, tag, discount_type, discount_value, has_variants, status, category_id, product_categories(category_id), product_variants(id, price, stock, hex_code, discount_type, discount_value, title, image_url))')
             .in('category_id', matched.map((c: any) => c.id))
-            .limit(40)
+            .order('product_id').order('category_id').range(from, to))
 
           const seen = new Set<string>()
           const prods: any[] = []
@@ -61,7 +63,7 @@ export default function MidYearSalePage() {
             }
           }
 
-          if (prods.length > 0) sectionProducts[key] = prods.slice(0, 4)
+          if (prods.length > 0) sectionProducts[key] = outOfStockLast(prods).slice(0, 4)
         }
 
         setSections(sectionProducts)

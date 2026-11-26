@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ProductCard } from "@/components/store/product-card"
+import { outOfStockLast } from "@/lib/product-stock"
 import { FunSizeSection } from "@/components/store/fun-size-section"
 import { ArrowRight, TrendingUp, Truck, ShieldCheck, Package, Headphones } from "lucide-react"
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed"
@@ -59,7 +60,8 @@ export function HomeDesktop({ banner, categories, products, forever52Products, p
   const hero = banner
   const heroImage = "/web-home.webp"
   const featuredProduct = products[0]
-  const recentlyViewed = useRecentlyViewed(s => s.items)
+  const viewedItems = useRecentlyViewed(s => s.items)
+  const recentlyViewed = outOfStockLast(viewedItems)
 
   return (
     <div className="bg-white min-h-screen">

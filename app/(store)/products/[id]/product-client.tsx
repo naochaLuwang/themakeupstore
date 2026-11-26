@@ -22,6 +22,9 @@ import { ReviewCard } from "@/components/store/review-card"
 import { useFlashSales } from "@/components/store/flash-sales-provider"
 import { useFlashSaleClock } from "@/hooks/use-flash-sale-clock"
 import { useProductPromo } from "@/components/store/promotion-badge-context"
+import { outOfStockLast, productInStock } from "@/lib/product-stock"
+import { readCatalogPages } from "@/lib/catalog-pages"
+import type { CatalogProduct } from "@/lib/storefront-catalog"
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "name"
 
@@ -207,31 +210,34 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
                         if (children?.length) children.forEach((c: any) => targetCatIds.push(c.id))
                     }
                     targetCatIds = [...new Set(targetCatIds)]
-                    const { data: catProducts } = await supabase
+                    const catProducts = await readCatalogPages<{ product_id: string }>((from, to) => supabase
                         .from("product_categories")
                         .select("product_id")
                         .in("category_id", targetCatIds)
                         .neq("product_id", initialProduct.id)
-                        .limit(15)
+                        .order("product_id").order("category_id").range(from, to))
                     if (catProducts && catProducts.length > 0) {
-                        const ids = [...new Set(catProducts.map((c: any) => c.product_id))]
-                        const { data: similar } = await supabase
-                            .from("products")
-                            .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)").eq("status", "active")
-                            .in("id", ids)
-                            .limit(10)
-                        if (similar) setSimilarProducts(similar.filter((p: any) => p.thumbnail_url))
+                        const ids = [...new Set(catProducts.map(c => c.product_id))]
+                        const similar = []
+                        for (let offset = 0; offset < ids.length; offset += 100) {
+                            similar.push(...await readCatalogPages<CatalogProduct>((from, to) => supabase
+                                .from("products")
+                                .select("id, name, slug, created_at, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)").eq("status", "active")
+                                .in("id", ids.slice(offset, offset + 100))
+                                .order("id").range(from, to)))
+                        }
+                        setSimilarProducts(outOfStockLast(similar.filter(p => p.thumbnail_url)).slice(0, 10))
                     }
                 }
 
                 if (initialProduct.brand) {
-                    const { data: brandData } = await supabase
+                    const brandData = await readCatalogPages<CatalogProduct>((from, to) => supabase
                         .from("products")
-                        .select("id, name, slug, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)").eq("status", "active")
+                        .select("id, name, slug, created_at, base_price, thumbnail_url, brand, category_id, tag, discount_type, discount_value, has_variants, status, product_categories(category_id), product_variants(id, price, stock, discount_type, discount_value, hex_code, title, image_url)").eq("status", "active")
                         .eq("brand", initialProduct.brand)
                         .neq("id", initialProduct.id)
-                        .limit(10)
-                    if (brandData) setBrandProducts(brandData)
+                        .order("id").range(from, to))
+                    setBrandProducts(outOfStockLast(brandData).slice(0, 10))
                 }
             } catch (e) {
                 console.error("Failed to initialize product page", e)
@@ -293,9 +299,7 @@ export default function ProductClient({ initialProduct, activeBXGY, activeGift, 
 
     const hasVariants = product?.has_variants && product?.product_variants?.length > 0
     const selectedVariantOOS = selectedVariantData?.stock != null && Number(selectedVariantData.stock) <= 0
-    const productIsOutOfStock = product?.product_variants && product.product_variants.length > 0
-        ? product.product_variants!.every((v: any) => v.stock != null && Number(v.stock) <= 0)
-        : (product?.stock != null && Number(product.stock) <= 0)
+    const productIsOutOfStock = !productInStock(product)
     const showOOSButton = productIsOutOfStock || (hasVariants && selectedVariant && selectedVariantOOS)
 
     const imageList = selectedVariantData?.images?.length

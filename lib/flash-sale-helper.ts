@@ -1,3 +1,5 @@
+import { productInStock } from '@/lib/product-stock'
+
 export interface FlashTargets {
   product_ids: string[]
   variant_ids: { product_id: string; variant_id: string }[]
@@ -110,7 +112,7 @@ export function productFlashPricing(product: CatalogPricingProduct, sales: Flash
 export function pricedFlashCatalog<T extends CatalogPricingProduct>(items:T[], sales:FlashSaleRow[], now:number,
   options:{sort?:string;min?:number;max?:number;outOfStockLast?:boolean}={}) {
   return items.map(p=>({...p,_effectivePrice:productFlashPricing(p,sales,now).salePrice,
-    _outOfStock:!!p.product_variants?.length&&p.product_variants.every(v=>v.stock!=null&&Number(v.stock)<=0)}))
+    _outOfStock:!productInStock(p)}))
     .filter(p=>p._effectivePrice>=(options.min??0)&&p._effectivePrice<(options.max??Infinity))
     .sort((a,b)=>{
       const stock=options.outOfStockLast===false?0:Number(a._outOfStock)-Number(b._outOfStock)

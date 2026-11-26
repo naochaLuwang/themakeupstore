@@ -9,6 +9,7 @@ import { useCart } from "@/components/store/use-cart"
 import Link from "next/link"
 import { Capacitor } from "@capacitor/core"
 import { Share } from "@capacitor/share"
+import { outOfStockLast } from "@/lib/product-stock"
 
 export default function WishlistPage() {
     const [items, setItems] = React.useState<any[]>([])
@@ -34,10 +35,10 @@ export default function WishlistPage() {
             .eq('user_id', user.id)
 
         if (data) {
-            setItems(data.map((item: any) => ({
+            setItems(outOfStockLast(data.filter((item: { product: unknown }) => item.product).map((item: any) => ({
                 ...item.product,
                 wishlist_id: item.id
-            })))
+            }))))
         }
 
         setLoading(false)

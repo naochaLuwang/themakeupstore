@@ -2,6 +2,16 @@
 
 Implemented locally on 22 November 2026. Web deployment is pending.
 
+## Stock ordering — 26 November 2026
+
+Available products now precede sold-out products for every catalog sort, including search relevance. Newest, actual flash price and name/relevance ordering remain intact within each availability group. This covers `/exclusive/[slug]`, `/essentials/[slug]`, Shop, Search/suggestions, categories, concerns, New Arrivals, Fun Size and skincare/accessory collections. Counts and filters still include sold-out products unless In Stock Only is selected.
+
+`lib/product-stock.ts` defines availability as at least one variant with positive, finite stock, including default variants on products without shades. Zero, negative, missing or invalid stock does not count as available; legacy `products.stock` is ignored. Product-card/detail sold-out states and the existing `/exclusive` sorter use this same rule.
+
+The Essentials root sorts its complete candidate collection before returning 20-product scroll batches. Exclusive root, product/cart recommendations and Offers read complete, deterministically ordered database ranges before stock ordering and their existing display caps; duplicate category links remain deduplicated. Failed later ranges reject instead of displaying a partial candidate collection. Wishlist and recently viewed card rows use a stable partition without mutating stored history. Recently viewed cards use their existing saved stock snapshots; this change does not add live inventory subscriptions. Homepage curated rows retain their existing available-only behavior.
+
+Validation: all 676 web tests, TypeScript and the production build pass. New regressions cover all five sorts, a sold-out exact search match, default/mixed-shade/negative/missing stock, stable immutable ordering, late-range available products, Essentials scroll boundaries, duplicate links, incomplete reads and the rendered Offers cap. Touched-source lint adds no findings against HEAD. Built-browser checks at 390/1440px verify all four collection sorts, all 839 Shop products (517 available, 322 sold out at verification), 85 search results, category ordering and the Exclusive/Essentials roots, without page errors or horizontal overflow. Saved-history fixtures at 390/768/1440px verify Homepage/Cart recently viewed ordering before display caps and unchanged persisted history. Browser checks stubbed traffic logging and prohibited data writes. No SQL, native, dependency or production-data changes; web deployment remains pending.
+
 ## Requested restoration — 24 November 2026
 
 `/brands` reads categories directly, independently of products and promotions. Active child categories use the original non-brand name exclusions, alphabetical ordering, Exclusive/Essentials grouping, category logos and category destinations. Categories with no products remain listed; inactive ancestors, missing parents and cycles stay hidden. Product `brand` values no longer create directory tiles.

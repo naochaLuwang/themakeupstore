@@ -1,5 +1,6 @@
 "use client"
 import { pricedFlashCatalog } from "@/lib/flash-sale-helper"
+import { readCatalogPages } from "@/lib/catalog-pages"
 import { useFlashSales } from "@/components/store/flash-sales-provider"
 
 import * as React from "react"
@@ -89,10 +90,11 @@ export default function ExclusivePage() {
 
             const categoryIds = [parent.id, ...(subs?.map((s: any) => s.id) || [])]
 
-            const { data: junction } = await supabase
+            const junction = await readCatalogPages<{ product_id: string }>((from, to) => supabase
                 .from("product_categories")
                 .select("product_id")
                 .in("category_id", categoryIds)
+                .order("product_id").order("category_id").range(from, to))
 
             const linkedProductIds = junction?.map((j: any) => j.product_id) || []
 
@@ -117,7 +119,8 @@ export default function ExclusivePage() {
                 query = query.order("created_at", { ascending: false })
             }
 
-            const { data: prodData } = await query
+            query = query.order("id")
+            const prodData = await readCatalogPages((from, to) => query.range(from, to))
             setRawProducts(prodData || [])
 
             if (availableBrands.length === 0) {

@@ -17,6 +17,9 @@ import { usePromotions } from "@/hooks/use-promotions"
 import dynamic from "next/dynamic"
 import { CartOfferCards } from "@/components/store/cart-offer-cards"
 import { cartStockIssue } from "@/lib/cart-stock"
+import { outOfStockLast } from "@/lib/product-stock"
+import { readCatalogPages } from "@/lib/catalog-pages"
+import type { CatalogProduct } from "@/lib/storefront-catalog"
 
 const OfferProductsPanel = dynamic(() => import("@/components/store/offer-products-panel"), { ssr: false })
 
@@ -29,7 +32,8 @@ export default function CartPage() {
     const [couponCode, setCouponCode] = useState("")
     const [applyingCoupon, setApplyingCoupon] = useState(false)
     const supabase = createClient()
-    const recentlyViewed = useRecentlyViewed((s) => s.items)
+    const viewedItems = useRecentlyViewed((s) => s.items)
+    const recentlyViewed = outOfStockLast(viewedItems)
     const clearRecentlyViewed = useRecentlyViewed((s) => s.clear)
 
     useEffect(() => { document.title = "Shopping Cart | THE MAKEUP STORE WANGKHEI" }, [])
@@ -89,13 +93,14 @@ export default function CartPage() {
                     if (data?.length) {
                         const brand = data[0].brand
                         if (brand) {
-                            supabase
+                            readCatalogPages<CatalogProduct>((from, to) => supabase
                                 .from("products")
                                 .select("*, product_categories(category_id), product_variants(id, price, stock, title, image_url)").eq("status", "active")
                                 .eq("brand", brand)
                                 .not("id", "in", `(${productIds.join(",")})`)
-                                .limit(6)
-                                .then(({ data: recs }: any) => setRecommendations(recs || []))
+                                .order("id").range(from, to))
+                                .then(recs => setRecommendations(outOfStockLast(recs).slice(0, 6)))
+                                .catch(() => setRecommendations([]))
                         }
                     }
                 })

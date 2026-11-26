@@ -17,6 +17,7 @@ import { useProductPromo } from "@/components/store/promotion-badge-context"
 import { productFlashPricing, variantFlashPricing, flashSaleMatchesTarget, flashSaleStatus, type FlashSaleRow } from "@/lib/flash-sale-helper"
 import type { ActiveFlashSale } from "@/lib/active-flash-sales"
 import { useFlashSales } from "@/components/store/flash-sales-provider"
+import { productInStock } from "@/lib/product-stock"
 
 function FlashSaleCountdown({ endsAt }: { endsAt: string }) {
     const [timeLeft, setTimeLeft] = useState(() => {
@@ -140,9 +141,7 @@ export function ProductCard({ product, priority, activeFlashSale, upcomingFlashS
     const hasVariants = product.has_variants && variants.length > 0
     const { salePrice, mrp, discountPercentage, discountAmount, hasDiscount } = pricing
 
-    const productIsOutOfStock = variants.length > 0
-        ? variants.every((v: any) => v.stock != null && Number(v.stock) <= 0)
-        : (product.stock != null && Number(product.stock) <= 0)
+    const productIsOutOfStock = !productInStock(product)
 
     const inBag = useMemo(() => cartItems.some((i) => i.productId === product.id), [cartItems, product.id])
 

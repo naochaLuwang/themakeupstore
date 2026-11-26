@@ -3,16 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
 import { queryCatalog, type CatalogCategory, type CatalogConcern, type CatalogProduct, type CatalogScope, type CatalogState } from './storefront-catalog'
 import type { FlashSaleRow } from './flash-sale-helper'
+import { readCatalogPages } from './catalog-pages'
 
-export async function readCatalogPages<T>(read: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>, size = 250) {
-  const rows: T[] = []
-  for (let from = 0; ; from += size) {
-    const result = await read(from, from + size - 1)
-    if (result.error || !result.data) throw new Error('Catalog unavailable')
-    rows.push(...result.data)
-    if (result.data.length < size) return rows
-  }
-}
+export { readCatalogPages } from './catalog-pages'
 // Anonymous catalog-only reads. Cache each small database page independently:
 // the complete catalog can exceed Next's 2 MB limit for one cache entry.
 function catalogReader() {

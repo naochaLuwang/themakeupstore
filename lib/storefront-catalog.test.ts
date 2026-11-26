@@ -68,6 +68,28 @@ describe('storefront catalog discovery', () => {
     const out = product('out', { product_variants: [{ id: 'v', price: 400, stock: 0, title: 'Default' }] })
     expect(queryCatalog([out, product('in')], categories, [], state('stock=in')).products.map(p => p.id)).toEqual(['in'])
   })
+  it.each(['relevance', 'newest', 'price_asc', 'price_desc', 'name'])(
+    'puts sold-outs last for %s while retaining the sort in both groups', sort => {
+      const items = [
+        product('out-a', { name: 'Lipstick A', created_at: '2026-11-25', product_variants: [{ id: 'oa', title: 'Default', price: 50, stock: 0 }], has_variants: false }),
+        product('in-a', { name: 'Lipstick C', created_at: '2026-11-23', product_variants: [{ id: 'ia', title: 'Rose', price: 200, stock: 1 }, { id: 'ib', title: 'Pink', price: 10, stock: -10 }] }),
+        product('out-b', { name: 'Lipstick B', created_at: '2026-11-26', product_variants: [{ id: 'ob', title: 'Pink', price: 400, stock: -1 }] }),
+        product('in-b', { name: 'Lipstick D', created_at: '2026-11-24', product_variants: [{ id: 'ic', title: 'Default', price: 300, stock: 2 }], has_variants: false }),
+      ]
+      const result = queryCatalog(items, categories, [], state('q=lipstick&sort=' + sort))
+      const descending = ['newest', 'price_desc'].includes(sort)
+      expect(result.products.map(p => p.id)).toEqual(descending
+        ? ['in-b', 'in-a', 'out-b', 'out-a'] : ['in-a', 'in-b', 'out-a', 'out-b'])
+      expect(result.total).toBe(4)
+      expect(queryCatalog(items, categories, [], state('q=lipstick&sort=' + sort), {}, Date.now(), 2).products.map(p => p.id))
+        .toEqual(result.products.slice(0, 2).map(p => p.id))
+    })
+  it('ranks an available search match before a sold-out exact match and keeps stock filtering', () => {
+    const out = product('out', { product_variants: [{ id: 'v', title: 'Rose', price: 100, stock: 0 }] })
+    const available = product('in', { name: 'Highlighter', description: 'Use with matte lipstick' })
+    expect(queryCatalog([out, available], categories, [], state('q=matte+lipstick')).products.map(p => p.id)).toEqual(['in', 'out'])
+    expect(queryCatalog([out, available], categories, [], state('q=matte+lipstick&stock=in')).products.map(p => p.id)).toEqual(['in'])
+  })
   it('uses actual flash prices and expiry boundaries for price filters and sorting', () => {
     const now = Date.parse('2026-11-22T00:00:00Z')
     const sale: FlashSaleRow = { id: 'sale', scope: 'product', product_id: 'sale-product', category_id: null, brand: null, discount_type: 'percentage', discount_value: 80, label: 'Sale', starts_at: new Date(now - 1000).toISOString(), ends_at: new Date(now + 1000).toISOString(), is_active: true }
